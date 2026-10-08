@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "shining_stars",
+  "project_id": "bf9955ca-1a3f-4d3f-9919-fd97b2613006"
+}
