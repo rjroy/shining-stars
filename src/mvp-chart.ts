@@ -1,0 +1,51 @@
+import type { ChartConfig } from './chart';
+
+/**
+ * Hand-authored rehearsal chart for the provisional excerpt, not a verified
+ * transcription. These timings demonstrate the input loop only.
+ */
+export const MVP_CHART: ChartConfig = {
+  sourceStart: 107.1,
+  duration: 65.8,
+  twilightAt: 39.2,
+  notes: [
+    { id: 'a01', time: 1.2, lane: 0 },
+    { id: 'a02', time: 2.8, lane: 2 },
+    { id: 'a03', time: 4.3, lane: 1 },
+    { id: 'a04', time: 5.9, lane: 3 },
+    { id: 'a05', time: 7.5, lane: 0 },
+    { id: 'a06', time: 9.1, lane: 2 },
+    { id: 'a07', time: 10.8, lane: 3 },
+    { id: 'a08', time: 12.4, lane: 1 },
+    { id: 'a09', time: 14.0, lane: 0 },
+    { id: 'a10', time: 15.7, lane: 2 },
+    { id: 'a11', time: 17.3, lane: 1 },
+    { id: 'a12', time: 18.9, lane: 3 },
+    { id: 'a13', time: 20.6, lane: 0 },
+    { id: 'a14', time: 22.2, lane: 2 },
+    { id: 'a15', time: 23.8, lane: 1 },
+    { id: 'a16', time: 25.5, lane: 3 },
+    { id: 'a17', time: 27.1, lane: 0 },
+    { id: 'a18', time: 28.7, lane: 2 },
+    { id: 'a19', time: 30.4, lane: 1 },
+    { id: 'a20', time: 32.0, lane: 3 },
+    { id: 'a21', time: 33.6, lane: 0 },
+    { id: 'a22', time: 35.3, lane: 2 },
+    { id: 'a23', time: 36.8, lane: 1 },
+    { id: 't01', time: 40.5, lane: 3 },
+    { id: 't02', time: 42.1, lane: 1 },
+    { id: 't03', time: 43.8, lane: 0 },
+    { id: 't04', time: 45.4, lane: 2 },
+    { id: 't05', time: 47.0, lane: 3 },
+    { id: 't06', time: 48.7, lane: 1 },
+    { id: 't07', time: 50.3, lane: 0 },
+    { id: 't08', time: 52.0, lane: 2 },
+    { id: 't09', time: 53.6, lane: 3 },
+    { id: 't10', time: 55.3, lane: 1 },
+    { id: 't11', time: 56.9, lane: 0 },
+    { id: 't12', time: 58.6, lane: 2 },
+    { id: 't13', time: 60.2, lane: 3 },
+    { id: 't14', time: 61.9, lane: 1 },
+    { id: 't15', time: 63.8, lane: 0 },
+  ],
+};

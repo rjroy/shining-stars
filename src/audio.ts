@@ -128,6 +128,7 @@ export function createAudioTransport<
   let error: string | null = null;
   let disposed = false;
   let playbackEpoch = 0;
+  let pendingResumeEpoch: number | null = null;
   let loadEpoch = 0;
   let loadPromise: Promise<AudioTransportSnapshot> | null = null;
   let disposePromise: Promise<void> | null = null;
@@ -280,6 +281,13 @@ export function createAudioTransport<
     }
 
     if (status !== 'starting' && status !== 'playing') {
+      return;
+    }
+    if (
+      context.state === 'suspended' &&
+      status === 'starting' &&
+      pendingResumeEpoch === playbackEpoch
+    ) {
       return;
     }
 
@@ -467,9 +475,13 @@ export function createAudioTransport<
     transition('starting', trigger);
 
     log({ operation: 'context-resume', outcome: 'attempt' });
+    pendingResumeEpoch = requestEpoch;
     try {
       await context.resume();
     } catch (resumeFailure) {
+      if (pendingResumeEpoch === requestEpoch) {
+        pendingResumeEpoch = null;
+      }
       const message = errorMessage(resumeFailure);
       log({ operation: 'context-resume', outcome: 'failure' });
       if (disposed || requestEpoch !== playbackEpoch || status !== 'starting') {
@@ -479,6 +491,9 @@ export function createAudioTransport<
       throw resumeFailure;
     }
 
+    if (pendingResumeEpoch === requestEpoch) {
+      pendingResumeEpoch = null;
+    }
     if (disposed || requestEpoch !== playbackEpoch || status !== 'starting') {
       return snapshot();
     }

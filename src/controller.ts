@@ -1,0 +1,242 @@
+import type { AudioTransport, AudioTransportSnapshot } from './audio';
+import type { GameSession, GameSnapshot, PressResult } from './game';
+
+export interface ControllerSnapshot {
+  readonly audio: AudioTransportSnapshot;
+  readonly game: GameSnapshot;
+  readonly inputOffset: number;
+  readonly visualOffset: number;
+  readonly feedback: PressResult | null;
+}
+
+export interface ControllerDependencies {
+  readonly audio: AudioTransport;
+  readonly createGame: (inputOffset: number) => GameSession;
+  readonly inputOffset?: number;
+  readonly visualOffset?: number;
+  readonly render?: (snapshot: ControllerSnapshot) => void;
+}
+
+export interface GameController {
+  snapshot(): ControllerSnapshot;
+  start(): Promise<ControllerSnapshot>;
+  resume(): Promise<ControllerSnapshot>;
+  restart(): Promise<ControllerSnapshot>;
+  pause(): ControllerSnapshot;
+  blur(): ControllerSnapshot;
+  keyDown(code: string, repeat?: boolean): ControllerSnapshot;
+  keyUp(code: string): ControllerSnapshot;
+  update(): ControllerSnapshot;
+  dispose(): Promise<void>;
+}
+
+const KEY_LANES: Readonly<Record<string, 0 | 1 | 2 | 3>> = {
+  KeyD: 0,
+  KeyF: 1,
+  KeyJ: 2,
+  KeyK: 3,
+};
+
+/** Coordinate audio transport, deterministic game state, and an optional renderer. */
+export function createGameController(
+  dependencies: ControllerDependencies,
+): GameController {
+  const inputOffset = dependencies.inputOffset ?? 0;
+  const visualOffset = dependencies.visualOffset ?? 0;
+  let game = dependencies.createGame(inputOffset);
+  let feedback: PressResult | null = null;
+  const pressedKeys = new Set<string>();
+  let controlEpoch = 0;
+  let disposed = false;
+  let disposePromise: Promise<void> | null = null;
+
+  function snapshot(): ControllerSnapshot {
+    return {
+      audio: dependencies.audio.snapshot(),
+      game: game.snapshot(),
+      inputOffset,
+      visualOffset,
+      feedback: feedback === null ? null : { ...feedback },
+    };
+  }
+
+  function publish(): ControllerSnapshot {
+    const current = snapshot();
+    if (!disposed) {
+      dependencies.render?.(current);
+    }
+    return current;
+  }
+
+  function currentGameTime(audioSnapshot: AudioTransportSnapshot): number {
+    const gameTime = game.snapshot().transportTime;
+    if (
+      !Number.isFinite(audioSnapshot.position) ||
+      !Number.isFinite(audioSnapshot.duration) ||
+      audioSnapshot.duration < 0
+    ) {
+      return gameTime;
+    }
+
+    return Math.min(
+      audioSnapshot.duration,
+      Math.max(0, audioSnapshot.position),
+    );
+  }
+
+  function advanceGame(audioSnapshot: AudioTransportSnapshot): void {
+    if (
+      game.snapshot().status === 'playing' &&
+      (audioSnapshot.status === 'playing' ||
+        audioSnapshot.status === 'results' ||
+        audioSnapshot.status === 'paused')
+    ) {
+      game.advanceTo(currentGameTime(audioSnapshot));
+    }
+  }
+
+  function beginControlAction(): number {
+    controlEpoch += 1;
+    return controlEpoch;
+  }
+
+  function isCurrentAction(epoch: number): boolean {
+    return !disposed && epoch === controlEpoch;
+  }
+
+  async function start(): Promise<ControllerSnapshot> {
+    if (disposed) {
+      return snapshot();
+    }
+
+    const requestEpoch = beginControlAction();
+    pressedKeys.clear();
+    feedback = null;
+    const loaded = await dependencies.audio.load();
+    if (!isCurrentAction(requestEpoch)) {
+      return snapshot();
+    }
+
+    if (loaded.status !== 'ready') {
+      return publish();
+    }
+
+    await dependencies.audio.start();
+    if (!isCurrentAction(requestEpoch)) {
+      return snapshot();
+    }
+    return publish();
+  }
+
+  async function resume(): Promise<ControllerSnapshot> {
+    if (disposed) {
+      return snapshot();
+    }
+
+    const requestEpoch = beginControlAction();
+    pressedKeys.clear();
+    feedback = null;
+    await dependencies.audio.resume();
+    if (!isCurrentAction(requestEpoch)) {
+      return snapshot();
+    }
+    return publish();
+  }
+
+  async function restart(): Promise<ControllerSnapshot> {
+    if (disposed) {
+      return snapshot();
+    }
+
+    const requestEpoch = beginControlAction();
+    pressedKeys.clear();
+    feedback = null;
+    game = dependencies.createGame(inputOffset);
+    await dependencies.audio.restart();
+    if (!isCurrentAction(requestEpoch)) {
+      return snapshot();
+    }
+    return publish();
+  }
+
+  function pause(): ControllerSnapshot {
+    if (disposed) {
+      return snapshot();
+    }
+
+    beginControlAction();
+    pressedKeys.clear();
+    feedback = null;
+    const pausedAudio = dependencies.audio.pause();
+    advanceGame(pausedAudio);
+    return publish();
+  }
+
+  function keyDown(code: string, repeat = false): ControllerSnapshot {
+    if (disposed) {
+      return snapshot();
+    }
+
+    const lane = KEY_LANES[code];
+    if (lane === undefined || repeat || pressedKeys.has(code)) {
+      return snapshot();
+    }
+    pressedKeys.add(code);
+
+    const audioSnapshot = dependencies.audio.update();
+    if (audioSnapshot.status !== 'playing') {
+      return publish();
+    }
+
+    const transportTime = currentGameTime(audioSnapshot);
+    advanceGame(audioSnapshot);
+    if (game.snapshot().status === 'playing') {
+      feedback = game.press(lane, transportTime);
+    }
+    return publish();
+  }
+
+  function keyUp(code: string): ControllerSnapshot {
+    if (disposed) {
+      return snapshot();
+    }
+    pressedKeys.delete(code);
+    return snapshot();
+  }
+
+  function update(): ControllerSnapshot {
+    if (disposed) {
+      return snapshot();
+    }
+
+    const audioSnapshot = dependencies.audio.update();
+    advanceGame(audioSnapshot);
+    return publish();
+  }
+
+  function dispose(): Promise<void> {
+    if (disposePromise !== null) {
+      return disposePromise;
+    }
+
+    disposed = true;
+    beginControlAction();
+    pressedKeys.clear();
+    feedback = null;
+    disposePromise = dependencies.audio.dispose();
+    return disposePromise;
+  }
+
+  return {
+    snapshot,
+    start,
+    resume,
+    restart,
+    pause,
+    blur: pause,
+    keyDown,
+    keyUp,
+    update,
+    dispose,
+  };
+}

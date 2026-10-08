@@ -274,6 +274,27 @@ describe('audio transport', () => {
     ]);
   });
 
+  it('keeps a pending start alive when the render loop updates before context resume resolves', async () => {
+    const harness = createHarness();
+    await harness.transport.load();
+    const resumeGate = deferred<void>();
+    harness.context.resumeBehavior = () =>
+      resumeGate.promise.then(() => harness.context.setState('running'));
+
+    const start = harness.transport.start();
+    expect(harness.transport.snapshot().status).toBe('starting');
+
+    harness.transport.update();
+    resumeGate.resolve(undefined);
+    await start;
+
+    expect(harness.context.sources).toHaveLength(1);
+    expect(harness.transport.snapshot()).toMatchObject({
+      status: 'starting',
+      hasActiveSource: true,
+    });
+  });
+
   it('does not schedule when resume resolves without the context reaching running', async () => {
     const harness = createHarness();
     await harness.transport.load();
