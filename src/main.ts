@@ -4,6 +4,8 @@ import { createBrowserAudioContextAdapter } from './browser-audio';
 import { createGameController, type GameController } from './controller';
 import { createGame } from './game';
 import { MVP_CHART } from './mvp-chart';
+import { createBrightvaleScene, type BrightvaleScene } from './scene';
+import { projectSceneState } from './scene-state';
 import { createGameUI } from './ui';
 
 const appRoot = document.querySelector<HTMLElement>('#app');
@@ -30,15 +32,35 @@ const ui = createGameUI(appRoot, MVP_CHART, {
 
 let controller: GameController | null = null;
 let audioContext: AudioContext | null = null;
+let scene: BrightvaleScene | null = null;
 let animationFrame = 0;
 let disposed = false;
 let playbackActionPending = false;
 let playbackActionCancelled = false;
+const reducedMotionQuery = window.matchMedia(
+  '(prefers-reduced-motion: reduce)',
+);
+let reducedMotion = reducedMotionQuery.matches;
+
+function renderSnapshot(
+  snapshot: ReturnType<GameController['snapshot']>,
+): void {
+  ui.render(snapshot, audioContext?.currentTime ?? 0);
+  scene?.update(
+    projectSceneState(snapshot, MVP_CHART.twilightAt, reducedMotion),
+    snapshot.game.transportTime,
+  );
+}
 
 function renderCurrent(): void {
   if (controller !== null) {
-    ui.render(controller.snapshot(), audioContext?.currentTime ?? 0);
+    renderSnapshot(controller.snapshot());
   }
+}
+
+function onReducedMotionChange(event: MediaQueryListEvent): void {
+  reducedMotion = event.matches;
+  renderCurrent();
 }
 
 async function runAction(
@@ -157,6 +179,9 @@ function dispose(): void {
   window.removeEventListener('keyup', onKeyUp);
   window.removeEventListener('blur', pauseWhenHidden);
   document.removeEventListener('visibilitychange', onVisibilityChange);
+  reducedMotionQuery.removeEventListener('change', onReducedMotionChange);
+  scene?.destroy();
+  scene = null;
   ui.destroy();
   if (controller !== null) void controller.dispose();
   else if (audioContext !== null) void audioContext.close();
@@ -173,6 +198,15 @@ try {
     );
   }
   audioContext = new window.AudioContext();
+  const sceneHost = appRoot.querySelector<HTMLElement>('.play-surface');
+  if (sceneHost !== null) {
+    scene = createBrightvaleScene(sceneHost, () => {
+      ui.setSceneFallback(
+        'The city view is unavailable here, but the song and rhythm lanes still work.',
+      );
+      scene = null;
+    });
+  }
   const adaptedContext = createBrowserAudioContextAdapter(audioContext);
   const audio = createAudioTransport(
     {
@@ -199,13 +233,14 @@ try {
     createGame: (offset) => createGame(MVP_CHART, offset),
     inputOffset,
     visualOffset,
-    render: (snapshot) => ui.render(snapshot, audioContext?.currentTime ?? 0),
+    render: renderSnapshot,
   });
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', pauseWhenHidden);
   document.addEventListener('visibilitychange', onVisibilityChange);
+  reducedMotionQuery.addEventListener('change', onReducedMotionChange);
 
   const frame = (): void => {
     if (disposed || controller === null) return;
