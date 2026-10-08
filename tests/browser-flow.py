@@ -1,0 +1,806 @@
+#!/usr/bin/env python3
+"""Exercise two complete, real-clock game runs in Chromium via WebDriver."""
+
+import json
+import argparse
+import re
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+OUTPUT = Path("/tmp/opencode/brightvale-stage5")
+SOURCE_START = 107.1
+EXCERPT_DURATION = 65.8
+HANDOFF_TIME = 39.2
+FINAL_NOTE_TIME = 63.8
+
+
+def request(base, method, path, payload=None, timeout=30):
+    body = None if payload is None else json.dumps(payload).encode()
+    req = urllib.request.Request(
+        base + path,
+        data=body,
+        method=method,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            raw = response.read()
+    except urllib.error.HTTPError as error:
+        raise RuntimeError(
+            f"{method} {path} returned {error.code}: "
+            f"{error.read().decode(errors='replace')}"
+        ) from error
+    decoded = json.loads(raw) if raw else {}
+    value = decoded.get("value")
+    if isinstance(value, dict) and value.get("error") and value.get("message"):
+        raise RuntimeError(f"WebDriver {method} {path}: {value}")
+    return value
+
+
+def execute(driver, session, script, args=None):
+    return request(
+        driver,
+        "POST",
+        f"/session/{session}/execute/sync",
+        {"script": script, "args": args or []},
+    )
+
+
+def wait_for(driver, session, expression, timeout=30):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if execute(driver, session, f"return Boolean({expression})"):
+            return
+        time.sleep(0.1)
+    diagnostics = execute(
+        driver,
+        session,
+        "return ({panels:[...document.querySelectorAll('[data-panel]')].map(p=>"
+        "({name:p.dataset.panel,hidden:p.hidden})),time:"
+        "document.querySelector('[data-time]')?.textContent,mode:"
+        "document.querySelector('[data-mode-label]')?.textContent,audit:(()=>{"
+        "const a=window.__brightvaleFlow;return {state:a.context?.state,"
+        "time:a.context?.currentTime,starts:a.starts,keys:a.keys,"
+        "visibility:a.visibility,stops:a.stops,active:a.activeSources}})()})",
+    )
+    raise TimeoutError(f"Timed out waiting for {expression}; state={diagnostics}")
+
+
+def click(driver, session, selector):
+    element = request(
+        driver,
+        "POST",
+        f"/session/{session}/element",
+        {"using": "css selector", "value": selector},
+    )["element-6066-11e4-a52e-4f735466cecf"]
+    request(driver, "POST", f"/session/{session}/element/{element}/click", {})
+
+
+def send_key(driver, session, value, repeat=False):
+    path = f"/session/{session}/actions"
+    key_source = {"type": "key", "id": "brightvale-keys"}
+    if repeat:
+        for _ in range(2):
+            request(
+                driver,
+                "POST",
+                path,
+                {"actions": [{**key_source, "actions": [{"type": "keyDown", "value": value}]}]},
+            )
+        request(driver, "DELETE", path, {})
+        return
+
+    request(
+        driver,
+        "POST",
+        path,
+        {
+            "actions": [
+                {
+                    **key_source,
+                    "actions": [
+                        {"type": "keyDown", "value": value},
+                        {"type": "keyUp", "value": value},
+                    ],
+                }
+            ]
+        },
+    )
+    request(driver, "DELETE", path, {})
+
+
+def screenshot(driver, session, filename):
+    import base64
+
+    encoded = request(driver, "GET", f"/session/{session}/screenshot")
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    (OUTPUT / filename).write_bytes(base64.b64decode(encoded))
+
+
+def create_session(driver, url):
+    capabilities = {
+        "capabilities": {
+            "alwaysMatch": {
+                "browserName": "chrome",
+                "goog:chromeOptions": {
+                    "binary": "/usr/bin/chromium",
+                    "args": [
+                        "--headless=new",
+                        "--no-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--window-size=1440,1000",
+                    ],
+                },
+            }
+        }
+    }
+    session = request(driver, "POST", "/session", capabilities, timeout=45)[
+        "sessionId"
+    ]
+    request(
+        driver,
+        "POST",
+        f"/session/{session}/timeouts",
+        {"script": 15000, "pageLoad": 60000, "implicit": 0},
+    )
+    instrumentation = r"""(()=>{
+      const audit={contexts:[],starts:[],keys:[],visibility:[],stops:0,
+        activeSources:0,maxActiveSources:0,firstResultsVisibleAt:null,
+        firstResultsSourceActive:null,negativeControlShownAt:null,
+        negativeControlSourceActive:null};
+      window.__brightvaleFlow=audit;
+      const NativeContext=window.AudioContext;
+      window.AudioContext=class extends NativeContext{
+        constructor(...args){super(...args);audit.contexts.push(this);audit.context=this}
+        createBufferSource(){
+          const source=super.createBufferSource();
+          const start=source.start.bind(source),stop=source.stop.bind(source);
+          const becameInactive=()=>{
+            if(source.__brightvaleActive){
+              source.__brightvaleActive=false;audit.activeSources--;
+            }
+          };
+          source.addEventListener('ended',becameInactive,{once:true});
+          source.start=(...values)=>{
+            source.__brightvaleActive=true;audit.activeSources++;
+            audit.maxActiveSources=Math.max(audit.maxActiveSources,audit.activeSources);
+            audit.starts.push({values,time:this.currentTime,state:this.state});
+            return start(...values);
+          };
+          source.stop=(...values)=>{
+            audit.stops++;becameInactive();return stop(...values);
+          };
+          return source;
+        }
+      };
+      window.addEventListener('keydown',event=>audit.keys.push({
+        code:event.code,repeat:event.repeat,target:event.target?.tagName,
+        time:audit.context?.currentTime??null
+      }),true);
+      document.addEventListener('visibilitychange',()=>audit.visibility.push({
+        state:document.visibilityState,time:audit.context?.currentTime??null
+      }),true);
+      const resultVisibilityObserver=new MutationObserver(()=>{
+        const panel=document.querySelector('[data-panel=results]');
+        if(panel&&!panel.hidden&&audit.firstResultsVisibleAt===null&&audit.context){
+          audit.firstResultsVisibleAt=audit.context.currentTime;
+          audit.firstResultsSourceActive=audit.activeSources>0;
+        }
+      });
+      const observeResults=()=>resultVisibilityObserver.observe(
+        document.documentElement,
+        {subtree:true,attributes:true,attributeFilter:['hidden']}
+      );
+      if(document.documentElement)observeResults();
+      else document.addEventListener('DOMContentLoaded',observeResults,{once:true});
+    })();"""
+    request(
+        driver,
+        "POST",
+        f"/session/{session}/goog/cdp/execute",
+        {
+            "cmd": "Page.addScriptToEvaluateOnNewDocument",
+            "params": {"source": instrumentation},
+        },
+    )
+    request(driver, "POST", f"/session/{session}/url", {"url": url}, timeout=70)
+    wait_for(driver, session, "document.readyState==='complete'", timeout=30)
+    wait_for(
+        driver,
+        session,
+        "!document.querySelector('[data-panel=ready]').hidden",
+    )
+    return session
+
+
+def browser_state(driver, session):
+    return execute(
+        driver,
+        session,
+        "const a=window.__brightvaleFlow;return ({audit:{currentTime:"
+        "a.context.currentTime,contextState:a.context.state,starts:a.starts,"
+        "keys:a.keys,visibility:a.visibility,stops:a.stops,"
+        "activeSources:a.activeSources,maxActiveSources:a.maxActiveSources,"
+        "firstResultsVisibleAt:a.firstResultsVisibleAt,"
+        "firstResultsSourceActive:a.firstResultsSourceActive,"
+        "negativeControlShownAt:a.negativeControlShownAt,"
+        "negativeControlSourceActive:a.negativeControlSourceActive},mode:"
+        "document.querySelector('[data-mode-label]').textContent,resourceName:"
+        "document.querySelector('[data-resource-name]').textContent,resourceValue:"
+        "document.querySelector('[data-resource-value]').textContent,time:"
+        "document.querySelector('[data-time]').textContent,panels:"
+        "[...document.querySelectorAll('[data-panel]')].filter(p=>!p.hidden)"
+        ".map(p=>p.dataset.panel),results:[...document.querySelectorAll("
+        "'[data-result-grid] .result-line')].map(x=>x.innerText),resultText:"
+        "document.querySelector('[data-panel=results]').innerText})",
+    )
+
+
+def assert_first_results_after_audio_tail(
+    scenario, first_visible, scheduled_end, final_note_target
+):
+    end_threshold = scheduled_end - 0.05
+    tail_threshold = final_note_target + 1.95
+    if first_visible < end_threshold or first_visible < tail_threshold:
+        raise AssertionError(
+            f"{scenario} results became visible too early: "
+            f"firstVisible={first_visible:.3f}s, "
+            f"finalNote={final_note_target:.3f}s, "
+            f"scheduledEnd={scheduled_end:.3f}s, "
+            f"endThreshold={end_threshold:.3f}s, "
+            f"tailThreshold={tail_threshold:.3f}s"
+        )
+
+
+def audio_clock(driver, session):
+    return execute(
+        driver,
+        session,
+        "return window.__brightvaleFlow.context.currentTime",
+    )
+
+
+def wait_for_clock(driver, session, target, timeout=90):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        now = audio_clock(driver, session)
+        if now >= target:
+            return now
+        time.sleep(min(0.02, max(0.001, target - now)))
+    raise TimeoutError(
+        f"AudioContext.currentTime did not reach {target:.3f}s "
+        f"(last={audio_clock(driver, session):.3f}s)"
+    )
+
+
+def latest_start(driver, session):
+    state = browser_state(driver, session)
+    if not state["audit"]["starts"]:
+        raise AssertionError("No native AudioBufferSourceNode.start was observed")
+    return state["audit"]["starts"][-1]
+
+
+def press_at_note(driver, session, start, note_time, key, repeat=False):
+    when, offset = start["values"][0], start["values"][1]
+    position_at_start = offset - SOURCE_START
+    target = when + (note_time - position_at_start)
+    if target <= audio_clock(driver, session):
+        raise AssertionError(f"Key target {note_time}s already passed at {target:.3f}")
+    wait_for_clock(driver, session, target - 0.06)
+    before = len(browser_state(driver, session)["audit"]["keys"])
+    send_key(driver, session, key, repeat=repeat)
+    state = browser_state(driver, session)
+    events = state["audit"]["keys"][before:]
+    matching = [event for event in events if event["code"] == f"Key{key.upper()}"]
+    if not matching:
+        raise AssertionError(f"WebDriver key {key!r} produced no matching keydown")
+    actual_time = matching[0]["time"]
+    error = actual_time - target
+    result = {
+        "key": key,
+        "targetTransportTime": note_time,
+        "targetContextTime": target,
+        "actualContextTime": actual_time,
+        "timingErrorSeconds": error,
+        "repeatObserved": any(event["repeat"] for event in matching),
+        "resource": state["resourceValue"],
+    }
+    if abs(error) > 0.15:
+        raise AssertionError(f"WebDriver key landed outside Good window: {result}")
+    return result
+
+
+def assert_no_source_overlap(state, scenario):
+    active = state["audit"]["activeSources"]
+    peak = state["audit"]["maxActiveSources"]
+    if peak > 1:
+        raise AssertionError(f"{scenario}: more than one scheduled source at once ({peak})")
+    return {"activeAtCheck": active, "maxActive": peak, "intentionalStops": state["audit"]["stops"]}
+
+
+def all_miss_run(driver, url, early_results_negative_control=False):
+    session = create_session(driver, url)
+    try:
+        click(driver, session, '[data-panel="ready"] [data-action="start"]')
+        wait_for(driver, session, "window.__brightvaleFlow.starts.length===1", timeout=45)
+        start = latest_start(driver, session)
+        if start["state"] != "running":
+            raise AssertionError(f"All-miss source was scheduled while context={start['state']}")
+        if abs(start["values"][1] - SOURCE_START) > 0.001:
+            raise AssertionError(f"Unexpected excerpt source offset: {start}")
+        if early_results_negative_control:
+            execute(
+                driver,
+                session,
+                "const a=window.__brightvaleFlow,target=a.starts[0].values[0]+63.8;"
+                "a.negativeControlTimer=setInterval(()=>{"
+                "if(a.context.currentTime>=target){clearInterval(a.negativeControlTimer);"
+                "const panel=document.querySelector('[data-panel=results]');"
+                "a.negativeControlShownAt=a.context.currentTime;"
+                "a.negativeControlSourceActive=a.activeSources>0;"
+                "a.negativeControlUntil=target+0.5;panel.hidden=false;"
+                "a.negativeControlObserver=new MutationObserver(()=>{"
+                "if(a.context.currentTime<a.negativeControlUntil&&panel.hidden)"
+                "panel.hidden=false});"
+                "a.negativeControlObserver.observe(panel,{attributes:true,"
+                "attributeFilter:['hidden']});"
+                "}},10)",
+            )
+        screenshot(driver, session, "all-miss-playing.png")
+
+        wait_for(
+            driver,
+            session,
+            "document.querySelector('[data-mode-label]').textContent.includes('Twilight')",
+            timeout=55,
+        )
+        mode_state = browser_state(driver, session)
+        if mode_state["resourceName"] != "City Answer":
+            raise AssertionError(f"Twilight mode did not expose City Answer: {mode_state}")
+        if mode_state["resourceValue"] != "0":
+            raise AssertionError(
+                f"All-miss handoff should convert zero Resonance; got {mode_state['resourceValue']}"
+            )
+        screenshot(driver, session, "all-miss-twilight.png")
+
+        scheduled_end = start["values"][0] + start["values"][2]
+        visible_condition = (
+            "window.__brightvaleFlow.firstResultsVisibleAt!==null"
+            if early_results_negative_control
+            else "!document.querySelector('[data-panel=results]').hidden"
+        )
+        wait_for(driver, session, visible_condition, timeout=85)
+        first_visible = browser_state(driver, session)["audit"][
+            "firstResultsVisibleAt"
+        ]
+        if first_visible is None:
+            raise AssertionError("MutationObserver did not capture first results visibility")
+        latest_note_target = start["values"][0] + FINAL_NOTE_TIME
+        if early_results_negative_control:
+            screenshot(driver, session, "early-results-negative-control.png")
+            control_state = browser_state(driver, session)["audit"]
+            control_time = control_state["negativeControlShownAt"]
+            if (
+                control_time is None
+                or abs(control_time - latest_note_target) > 0.05
+                or not control_state["negativeControlSourceActive"]
+            ):
+                raise AssertionError(
+                    "Early-results control did not show the actual results panel "
+                    "near the final note while the source remained active: "
+                    f"at={control_time}, note={latest_note_target}, active="
+                    f"{control_state['negativeControlSourceActive']}"
+                )
+        assert_first_results_after_audio_tail(
+            "all-miss", first_visible, scheduled_end, latest_note_target
+        )
+        wait_for(driver, session, "window.__brightvaleFlow.activeSources===0", timeout=3)
+        result = browser_state(driver, session)
+        result_time = result["audit"]["currentTime"]
+        result_blob = "\n".join(result["results"]).lower()
+        required = [
+            "audience · accuracy",
+            "0 perfect · 0 good · 23 missed",
+            "0 earned · 0 spent",
+            "0 unused points discarded",
+            "twilight · accuracy",
+            "0 perfect · 0 good · 15 missed",
+            "city answer",
+            "0 perfect · 0 good · 38 missed",
+        ]
+        absent = [text for text in required if text not in result_blob]
+        if absent:
+            raise AssertionError(f"All-miss result panel missing {absent}: {result_blob}")
+        lower_result = result["resultText"].lower()
+        if "game over" in lower_result or "surrender" in lower_result:
+            raise AssertionError("Results presented a game-over state")
+        screenshot(driver, session, "all-miss-results.png")
+        click(driver, session, '[data-panel="results"] [data-action="restart"]')
+        wait_for(driver, session, "window.__brightvaleFlow.starts.length===2", timeout=10)
+        reset_state = browser_state(driver, session)
+        reset_source = reset_state["audit"]["starts"][-1]
+        if abs(reset_source["values"][1] - SOURCE_START) > 0.001:
+            raise AssertionError(f"Restart did not reset source offset to excerpt start: {reset_source}")
+        if reset_state["audit"]["maxActiveSources"] > 1:
+            raise AssertionError("Restart overlapped its new source with the completed source")
+        return {
+            "scenario": "all-miss",
+            "audioSource": start,
+            "twilightMode": mode_state["mode"],
+            "resultAudioTime": result_time,
+            "firstResultsVisibleAudioTime": first_visible,
+            "scheduledAudioEnd": scheduled_end,
+            "resultLines": result["results"],
+            "sourceAccounting": assert_no_source_overlap(result, "all-miss"),
+            "resultRestartResetSource": reset_source,
+            "restartMaxActiveSources": reset_state["audit"]["maxActiveSources"],
+            "screenshots": [
+                str(OUTPUT / name)
+                for name in [
+                    "all-miss-playing.png",
+                    "all-miss-twilight.png",
+                    "all-miss-results.png",
+                ]
+            ],
+        }
+    finally:
+        request(driver, "DELETE", f"/session/{session}", {}, timeout=10)
+
+
+def strategic_run(driver, url):
+    session = create_session(driver, url)
+    try:
+        click(driver, session, '[data-panel="ready"] [data-action="start"]')
+        wait_for(driver, session, "window.__brightvaleFlow.starts.length===1", timeout=45)
+        first_start = latest_start(driver, session)
+        if first_start["state"] != "running":
+            raise AssertionError(f"Strategic source was scheduled while {first_start['state']}")
+        hits = []
+
+        for note_time, key in [(1.2, "d"), (2.8, "j"), (4.3, "f"), (5.9, "k")]:
+            hit = press_at_note(
+                driver,
+                session,
+                latest_start(driver, session),
+                note_time,
+                key,
+                repeat=(note_time == 1.2),
+            )
+            hits.append(hit)
+            if note_time == 1.2 and hit["resource"] != "2":
+                raise AssertionError(
+                    f"Held-key repeat attempt changed the single-hit score: {hit}"
+                )
+
+        # A real WebDriver key sent to a focused input must not reach the lane model.
+        before_editable = browser_state(driver, session)["resourceValue"]
+        execute(
+            driver,
+            session,
+            "const input=document.createElement('input');input.id='stage5-editable';"
+            "document.body.append(input);input.focus()",
+        )
+        target_start = latest_start(driver, session)
+        when, offset = target_start["values"][0], target_start["values"][1]
+        input_target = when + (7.5 - (offset - SOURCE_START))
+        wait_for_clock(driver, session, input_target - 0.05)
+        send_key(driver, session, "d")
+        after_editable = browser_state(driver, session)
+        if after_editable["resourceValue"] != before_editable:
+            raise AssertionError(
+                "Editable input key changed game resources: "
+                f"before={before_editable} after={after_editable['resourceValue']}"
+            )
+        execute(
+            driver,
+            session,
+            "document.querySelector('#stage5-editable')?.remove();"
+            "document.activeElement?.blur();document.body.tabIndex=-1;document.body.focus()",
+        )
+
+        send_key(driver, session, "\ue00c")
+        wait_for(
+            driver,
+            session,
+            "!document.querySelector('[data-panel=pause]').hidden",
+            timeout=5,
+        )
+        paused_at = execute(
+            driver,
+            session,
+            "return window.__brightvaleFlow.context.currentTime",
+        )
+        pre_pause_source = latest_start(driver, session)
+        source_position = max(0, paused_at - pre_pause_source["values"][0])
+        expected_resume_offset = pre_pause_source["values"][1] + source_position
+        before_resume_starts = len(browser_state(driver, session)["audit"]["starts"])
+        click(driver, session, '[data-panel="pause"] [data-action="resume"]')
+        wait_for(
+            driver,
+            session,
+            f"window.__brightvaleFlow.starts.length==={before_resume_starts + 1}",
+            timeout=10,
+        )
+        resumed_after_escape = latest_start(driver, session)
+        if abs(resumed_after_escape["values"][1] - expected_resume_offset) > 0.2:
+            raise AssertionError(
+                "Resume after Escape did not preserve excerpt position: "
+                f"expected offset {expected_resume_offset}, got {resumed_after_escape}"
+            )
+        screenshot(driver, session, "strategic-resumed.png")
+
+        wait_for(
+            driver,
+            session,
+            "window.__brightvaleFlow.context.currentTime >= "
+            f"window.__brightvaleFlow.starts[{before_resume_starts}].values[0]",
+            timeout=5,
+        )
+        # Switching to another real browser tab should pause without auto-resume.
+        original_handle = request(driver, "GET", f"/session/{session}/window/handles")[0]
+        new_handle = request(
+            driver,
+            "POST",
+            f"/session/{session}/window/new",
+            {"type": "tab"},
+        )["handle"]
+        request(
+            driver,
+            "POST",
+            f"/session/{session}/window",
+            {"handle": new_handle},
+        )
+        time.sleep(0.5)
+        request(
+            driver,
+            "POST",
+            f"/session/{session}/window",
+            {"handle": original_handle},
+        )
+        wait_for(
+            driver,
+            session,
+            "!document.querySelector('[data-panel=pause]').hidden",
+            timeout=5,
+        )
+        hidden_events = [
+            event
+            for event in browser_state(driver, session)["audit"]["visibility"]
+            if event["state"] == "hidden"
+        ]
+        if not hidden_events:
+            raise AssertionError("Switching browser tabs did not emit a hidden transition")
+        hidden_time = hidden_events[-1]["time"]
+        hidden_source = latest_start(driver, session)
+        expected_hidden_resume_offset = hidden_source["values"][1] + max(
+            0, hidden_time - hidden_source["values"][0]
+        )
+        start_count_before_explicit_resume = len(
+            browser_state(driver, session)["audit"]["starts"]
+        )
+        time.sleep(0.4)
+        if len(browser_state(driver, session)["audit"]["starts"]) != start_count_before_explicit_resume:
+            raise AssertionError("Audio auto-resumed merely because the tab became visible")
+        click(driver, session, '[data-panel="pause"] [data-action="resume"]')
+        wait_for(
+            driver,
+            session,
+            "window.__brightvaleFlow.starts.length==="
+            f"{start_count_before_explicit_resume + 1}",
+            timeout=10,
+        )
+        resumed_after_hidden = latest_start(driver, session)
+        if abs(resumed_after_hidden["values"][1] - expected_hidden_resume_offset) > 0.25:
+            raise AssertionError(
+                "Explicit resume after hidden-tab pause lost its position: "
+                f"expected offset {expected_hidden_resume_offset}, got {resumed_after_hidden}"
+            )
+
+        twilight_hit = press_at_note(
+            driver,
+            session,
+            latest_start(driver, session),
+            40.5,
+            "k",
+        )
+        hits.append(twilight_hit)
+        twilight_state = browser_state(driver, session)
+        if not twilight_state["mode"].startswith("Twilight"):
+            raise AssertionError(f"Twilight phase not active after its note: {twilight_state}")
+        screenshot(driver, session, "strategic-twilight-hit.png")
+
+        active_start = latest_start(driver, session)
+        active_when, active_offset, remaining_duration = active_start["values"]
+        scheduled_end = active_when + remaining_duration
+        final_note_target = (
+            active_when + FINAL_NOTE_TIME - (active_offset - SOURCE_START)
+        )
+        wait_for(
+            driver,
+            session,
+            "window.__brightvaleFlow.firstResultsVisibleAt!==null",
+            timeout=85,
+        )
+        timing_state = browser_state(driver, session)
+        first_visible = timing_state["audit"]["firstResultsVisibleAt"]
+        if first_visible is None:
+            raise AssertionError("MutationObserver did not capture strategic results visibility")
+        assert_first_results_after_audio_tail(
+            "strategic", first_visible, scheduled_end, final_note_target
+        )
+
+        wait_for(driver, session, "window.__brightvaleFlow.activeSources===0", timeout=3)
+        result = browser_state(driver, session)
+        lines = result["results"]
+        audience_line = next(
+            (line for line in lines if line.lower().startswith("audience · accuracy")), ""
+        )
+        twilight_line = next(
+            (line for line in lines if line.lower().startswith("twilight · accuracy")), ""
+        )
+        resource_line = next((line for line in lines if "earned" in line.lower()), "")
+        answer_line = next(
+            (line for line in lines if line.lower().startswith("city answer")), ""
+        )
+        audience_counts = re.search(r"(\d+) perfect · (\d+) good · (\d+) missed", audience_line)
+        twilight_counts = re.search(r"(\d+) perfect · (\d+) good · (\d+) missed", twilight_line)
+        earned_spent = re.search(r"(\d+) earned · (\d+) spent", resource_line)
+        discarded = re.search(r"(\d+) unused points discarded", resource_line)
+        answer = re.search(r"City Answer\s+(\d+)", answer_line, re.IGNORECASE)
+        if not all((audience_counts, twilight_counts, earned_spent, discarded, answer)):
+            raise AssertionError(f"Could not read final resource/count accounting: {lines}")
+        audience_hits = int(audience_counts.group(1)) + int(audience_counts.group(2))
+        twilight_hits = int(twilight_counts.group(1)) + int(twilight_counts.group(2))
+        earned, spent, discarded_points, final_answer = (
+            int(earned_spent.group(1)),
+            int(earned_spent.group(2)),
+            int(discarded.group(1)),
+            int(answer.group(1)),
+        )
+        expected_answer = min(100, spent * 2 + twilight_hits * 2)
+        if audience_hits < 2 or twilight_hits < 1:
+            raise AssertionError(
+                f"Strategic inputs did not produce intended hits: audience={audience_hits}, "
+                f"twilight={twilight_hits}, lines={lines}, inputEvents={hits}"
+            )
+        if earned != audience_hits * 2:
+            raise AssertionError(
+                f"Audience earned accounting disagrees with hits: {earned} vs {audience_hits * 2}"
+            )
+        if spent != min(earned, 40) or discarded_points != earned - spent:
+            raise AssertionError(
+                f"Boundary conversion not accounted once: earned={earned}, spent={spent}, "
+                f"discarded={discarded_points}"
+            )
+        if final_answer != expected_answer:
+            raise AssertionError(
+                f"City Answer mismatch: expected {expected_answer}, got {final_answer}"
+            )
+        final_context_time = result["audit"]["currentTime"]
+        if result["audit"]["maxActiveSources"] > 1:
+            raise AssertionError("Strategic run had overlapping active audio sources")
+        if result["audit"]["activeSources"] != 0:
+            raise AssertionError("Final excerpt source remained active after results")
+        screenshot(driver, session, "strategic-results.png")
+        return {
+            "scenario": "strategic-hits",
+            "timedWebDriverKeys": hits,
+            "webdriverRepeatEventObserved": hits[0]["repeatObserved"],
+            "editableInputResourceBeforeAfter": [
+                before_editable,
+                after_editable["resourceValue"],
+            ],
+            "escapeResumeOffset": {
+                "expected": expected_resume_offset,
+                "actual": resumed_after_escape["values"][1],
+            },
+            "hiddenTabResumeOffset": {
+                "expected": expected_hidden_resume_offset,
+                "actual": resumed_after_hidden["values"][1],
+            },
+            "hiddenEvents": hidden_events,
+            "noAutoResumeAfterTabSwitch": True,
+            "audienceHits": audience_hits,
+            "twilightHits": twilight_hits,
+            "earned": earned,
+            "spent": spent,
+            "discarded": discarded_points,
+            "cityAnswer": final_answer,
+            "expectedCityAnswer": expected_answer,
+            "results": lines,
+            "audioStartCount": len(result["audit"]["starts"]),
+            "intentionalStopCount": result["audit"]["stops"],
+            "maxActiveSources": result["audit"]["maxActiveSources"],
+            "finalContextTime": final_context_time,
+            "firstResultsVisibleAudioTime": first_visible,
+            "scheduledExcerptEnd": scheduled_end,
+            "screenshots": [
+                str(OUTPUT / name)
+                for name in [
+                    "strategic-resumed.png",
+                    "strategic-twilight-hit.png",
+                    "strategic-results.png",
+                ]
+            ],
+        }
+    finally:
+        request(driver, "DELETE", f"/session/{session}", {}, timeout=10)
+
+
+def run(url, scenario="both", early_results_negative_control=False):
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    chromedriver = subprocess.Popen(
+        ["/usr/bin/chromedriver", f"--port={port}", "--allowed-ips="],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    driver = f"http://127.0.0.1:{port}"
+    try:
+        for _ in range(120):
+            if chromedriver.poll() is not None:
+                raise RuntimeError("chromedriver exited before becoming ready")
+            try:
+                request(driver, "GET", "/status", timeout=1)
+                break
+            except Exception:
+                time.sleep(0.1)
+        else:
+            raise TimeoutError("chromedriver did not become ready")
+        results = {}
+        if scenario in ("both", "all-miss"):
+            results["allMiss"] = all_miss_run(
+                driver, url, early_results_negative_control
+            )
+        if scenario in ("both", "strategic"):
+            results["strategic"] = strategic_run(driver, url)
+        results["screenshotsDirectory"] = str(OUTPUT)
+        results["clock"] = "native AudioContext.currentTime; normal requestAnimationFrame"
+        results["input"] = "WebDriver keyboard actions; synthetic clock/audio not used"
+        return results
+    finally:
+        chromedriver.terminate()
+        try:
+            chromedriver.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            chromedriver.kill()
+            chromedriver.wait(timeout=5)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("url", help="running dev-server URL")
+    parser.add_argument(
+        "--scenario", choices=("both", "all-miss", "strategic"), default="both"
+    )
+    parser.add_argument(
+        "--early-results-negative-control",
+        action="store_true",
+        help="force the actual results panel visible at the final note; expected to fail timing",
+    )
+    args = parser.parse_args()
+    if args.early_results_negative_control and args.scenario != "all-miss":
+        parser.error("--early-results-negative-control requires --scenario all-miss")
+    try:
+        results = run(
+            args.url,
+            args.scenario,
+            args.early_results_negative_control,
+        )
+    except Exception as error:
+        print(f"browser flow failed: {error}", file=sys.stderr)
+        return 1
+    print(json.dumps(results, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
