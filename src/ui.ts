@@ -13,6 +13,7 @@ export interface UIActions {
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
+  setSceneFallback(message: string | null): void;
   showFatal(message: string): void;
   destroy(): void;
 }
@@ -65,6 +66,7 @@ export function createGameUI(
             <strong data-resource-value>0</strong>
           </div>
         </div>
+        <p class="scene-fallback" data-scene-fallback role="status" hidden></p>
 
         <div class="stage-frame">
           <div class="stage-topline">
@@ -318,6 +320,12 @@ export function createGameUI(
     setBusy(message) {
       hasAttemptedStart = message !== null || hasAttemptedStart;
       busyMessage = message;
+    },
+    setSceneFallback(message) {
+      const status = root.querySelector<HTMLElement>('[data-scene-fallback]');
+      if (status === null) return;
+      status.textContent = message ?? '';
+      status.hidden = message === null;
     },
     showFatal(message) {
       fatalMessage = message;
