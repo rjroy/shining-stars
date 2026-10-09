@@ -5,7 +5,7 @@ import {
   type AudioContextPort,
   type AudioSourcePort,
 } from './audio';
-import { createGameController } from './controller';
+import { createGameController, type ControllerSnapshot } from './controller';
 import type { ChartConfig } from './chart';
 import { createGame } from './game';
 
@@ -35,9 +35,15 @@ class TestContext
 {
   currentTime = 0;
   state = 'suspended';
+  resumeCalls = 0;
+  nextResumeGate: Promise<void> | null = null;
   readonly sources: TestSource[] = [];
 
   async resume(): Promise<void> {
+    this.resumeCalls += 1;
+    const gate = this.nextResumeGate;
+    this.nextResumeGate = null;
+    if (gate !== null) await gate;
     this.state = 'running';
     this.dispatchEvent(new Event('statechange'));
   }
@@ -66,6 +72,36 @@ const chart: ChartConfig = {
   allowedDifficulties: ['normal'],
   notes: [{ id: 'early-note', time: 0.5, lane: 0 }],
 };
+
+interface Deferred<T> {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+  readonly reject: (reason?: unknown) => void;
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((accept, fail) => {
+    resolve = accept;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+function cancelWithoutPublishing(
+  controller: ReturnType<typeof createGameController>,
+): ControllerSnapshot {
+  const operation = (
+    controller as unknown as {
+      pauseWithoutPublishing?: () => ControllerSnapshot;
+    }
+  ).pauseWithoutPublishing;
+  expect(operation).toBeTypeOf('function');
+  return operation === undefined
+    ? controller.snapshot()
+    : operation.call(controller);
+}
 
 describe('audio and controller timing integration', () => {
   it('judges from fresh audio time on keydown without waiting for an update frame', async () => {
@@ -242,12 +278,128 @@ describe('audio and controller timing integration', () => {
 
     await controller.dispose();
   });
+
+  it('does not start audio when a pending load completes after silent cancellation', async () => {
+    const context = new TestContext();
+    const fetch = deferred<ArrayBuffer>();
+    const { audio, controller, rendered } = createIntegrationController(
+      context,
+      [{ id: 'pending-load-note', time: 1, lane: 0 }],
+      100,
+      () => fetch.promise,
+    );
+    const pendingStart = controller.start();
+    await Promise.resolve();
+    expect(audio.snapshot().status).toBe('loading');
+
+    const rendersBeforeCancel = rendered.length;
+    const cancelled = cancelWithoutPublishing(controller);
+    expect(cancelled.audio.status).toBe('paused');
+    expect(rendered).toHaveLength(rendersBeforeCancel);
+    fetch.resolve(new ArrayBuffer(8));
+
+    await pendingStart;
+
+    expect(audio.snapshot().status).toBe('ready');
+    expect(audio.snapshot().hasActiveSource).toBe(false);
+    expect(context.sources).toHaveLength(0);
+    expect(rendered).toHaveLength(rendersBeforeCancel);
+
+    await controller.dispose();
+  });
+
+  it.each(['start', 'resume', 'restart'] as const)(
+    'silently cancels a pending %s gesture without scheduling or overlapping audio',
+    async (action) => {
+      const context = new TestContext();
+      const { audio, controller, rendered } = createIntegrationController(
+        context,
+        [{ id: 'pending-action-note', time: 1, lane: 0 }],
+      );
+      await audio.load();
+
+      if (action === 'resume') {
+        await controller.start();
+        context.currentTime = 1;
+        controller.update();
+        controller.pause();
+        expect(audio.snapshot().status).toBe('paused');
+      }
+
+      const existingSources = context.sources.length;
+      const resumesBeforeAction = context.resumeCalls;
+      const gesture = deferred<void>();
+      context.nextResumeGate = gesture.promise;
+
+      const pendingAction =
+        action === 'start'
+          ? controller.start()
+          : action === 'resume'
+            ? controller.resume()
+            : controller.restart();
+      if (action === 'start') await Promise.resolve();
+      expect(context.resumeCalls).toBe(resumesBeforeAction + 1);
+
+      const rendersBeforeCancel = rendered.length;
+      const cancelled = cancelWithoutPublishing(controller);
+      expect(rendered).toHaveLength(rendersBeforeCancel);
+      expect(cancelled.audio.status).toBe('paused');
+      expect(cancelled.feedback).toBeNull();
+      expect(audio.snapshot().hasActiveSource).toBe(false);
+
+      gesture.resolve();
+      await pendingAction;
+
+      expect(audio.snapshot().status).toBe('paused');
+      expect(audio.snapshot().hasActiveSource).toBe(false);
+      expect(context.sources).toHaveLength(existingSources);
+      expect(
+        context.sources.every(
+          (source) => source.startCalls === source.stopCalls,
+        ),
+      ).toBe(true);
+      expect(rendered).toHaveLength(rendersBeforeCancel);
+
+      await controller.dispose();
+    },
+  );
+
+  it('does not resurrect playback when a canceled context-resume gesture rejects', async () => {
+    const context = new TestContext();
+    const { audio, controller, rendered } = createIntegrationController(
+      context,
+      [{ id: 'pending-action-note', time: 1, lane: 0 }],
+    );
+    await audio.load();
+    const gesture = deferred<void>();
+    context.nextResumeGate = gesture.promise;
+    const pendingStart = controller.start();
+    await Promise.resolve();
+    expect(context.resumeCalls).toBe(1);
+
+    const rendersBeforeCancel = rendered.length;
+    const cancelled = cancelWithoutPublishing(controller);
+    expect(cancelled.audio.status).toBe('paused');
+    expect(rendered).toHaveLength(rendersBeforeCancel);
+    gesture.reject(new Error('synthetic gesture rejection after cancellation'));
+
+    await expect(pendingStart).resolves.toMatchObject({
+      audio: { status: 'paused', hasActiveSource: false },
+      feedback: null,
+    });
+    expect(context.sources).toHaveLength(0);
+    expect(audio.snapshot().status).toBe('paused');
+    expect(rendered).toHaveLength(rendersBeforeCancel);
+
+    await controller.dispose();
+  });
 });
 
 function createIntegrationController(
   context: TestContext,
   notes: ChartConfig['notes'],
   twilightStrength = 100,
+  fetchAudio: () => Promise<ArrayBuffer> = async () => new ArrayBuffer(8),
 ) {
   const chart: ChartConfig = {
     sourceStart: 0,
@@ -265,14 +417,16 @@ function createIntegrationController(
     },
     {
       context,
-      fetchAudio: async () => new ArrayBuffer(8),
+      fetchAudio,
     },
   );
+  const rendered: ControllerSnapshot[] = [];
   const controller = createGameController({
     audio,
     createGame: (inputOffset) => createGame(chart, inputOffset),
+    render: (snapshot) => rendered.push(snapshot),
   });
-  return { audio, controller };
+  return { audio, controller, rendered };
 }
 
 async function beginPlayback(

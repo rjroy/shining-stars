@@ -101,6 +101,34 @@ interface Harness {
   >;
 }
 
+interface FeedbackEventContract {
+  readonly eventId: number;
+  readonly runId: number;
+  readonly noteId: string;
+  readonly quality: 'perfect' | 'good';
+  readonly timingErrorSeconds: number;
+  readonly onsetTransportTime: number;
+}
+
+interface ControllerWithSilentCancel {
+  pauseWithoutPublishing?: () => ControllerSnapshot;
+}
+
+function cancelWithoutPublishing(
+  controller: ReturnType<typeof createGameController>,
+): ControllerSnapshot {
+  const operation = (controller as unknown as ControllerWithSilentCancel)
+    .pauseWithoutPublishing;
+  expect(operation).toBeTypeOf('function');
+  return operation === undefined
+    ? controller.snapshot()
+    : operation.call(controller);
+}
+
+function feedbackEvent(snapshot: ControllerSnapshot): FeedbackEventContract {
+  return snapshot.feedback as unknown as FeedbackEventContract;
+}
+
 function createHarness(audio = new FakeAudio()): Harness {
   const games: GameSession[] = [];
   const render = vi.fn<(snapshot: ControllerSnapshot) => void>();
@@ -484,6 +512,176 @@ describe('game controller', () => {
     harness.controller.update();
 
     expect(harness.render).toHaveBeenCalledWith(harness.controller.snapshot());
+  });
+
+  it('publishes immutable event metadata at the exact judged transport time', () => {
+    const harness = createHarness();
+    const game = harness.games[0];
+    if (game === undefined) throw new Error('Expected the initial game.');
+    const press = vi.spyOn(game, 'press');
+    setPlaying(harness.audio, 0.61);
+
+    harness.controller.keyDown('KeyD');
+
+    expect(press).toHaveBeenCalledWith(0, 0.61);
+    const firstSnapshot = harness.controller.snapshot();
+    const event = feedbackEvent(firstSnapshot);
+    const pressResult = press.mock.results[0]?.value;
+    if (pressResult === null || pressResult === undefined) {
+      throw new Error('Expected the controller press to judge a note.');
+    }
+    expect(pressResult).toMatchObject({
+      noteId: 'a1',
+      quality: 'perfect',
+    });
+    expect(event).toMatchObject({
+      noteId: 'a1',
+      quality: 'perfect',
+      timingErrorSeconds: pressResult.timingErrorSeconds,
+      onsetTransportTime: 0.61,
+    });
+    expect(event.eventId).toEqual(expect.any(Number));
+    expect(event.runId).toEqual(expect.any(Number));
+
+    // Mutating a consumer's snapshot must not alter the controller-owned event.
+    const mutableCopy = firstSnapshot.feedback as unknown as {
+      noteId: string;
+      onsetTransportTime: number;
+    };
+    mutableCopy.noteId = 'mutated';
+    mutableCopy.onsetTransportTime = 99;
+    expect(harness.controller.snapshot().feedback).toMatchObject({
+      noteId: 'a1',
+      onsetTransportTime: 0.61,
+    });
+  });
+
+  it('assigns a fresh event ID to each judgment and a fresh run ID after restart', async () => {
+    const harness = createHarness();
+    setPlaying(harness.audio, 0.61);
+    harness.controller.keyDown('KeyD');
+    const first = feedbackEvent(harness.controller.snapshot());
+
+    harness.controller.keyUp('KeyD');
+    setPlaying(harness.audio, 1.11);
+    harness.controller.keyDown('KeyD');
+    const nextJudgment = feedbackEvent(harness.controller.snapshot());
+
+    expect(nextJudgment.noteId).toBe('a2');
+    expect(nextJudgment.eventId).toBeGreaterThan(first.eventId);
+    expect(nextJudgment.runId).toBe(first.runId);
+
+    await harness.controller.restart();
+    setPlaying(harness.audio, 0.61);
+    harness.controller.keyDown('KeyD');
+    const nextRun = feedbackEvent(harness.controller.snapshot());
+
+    expect(nextRun).toMatchObject({
+      noteId: first.noteId,
+      quality: first.quality,
+    });
+    expect(nextRun.eventId).toBeGreaterThan(nextJudgment.eventId);
+    expect(nextRun.runId).toBeGreaterThan(first.runId);
+    expect(nextRun.onsetTransportTime).toBe(first.onsetTransportTime);
+  });
+
+  it('clears feedback through start/count-in, pause/resume, restart, results, and disposal', async () => {
+    const harness = createHarness();
+    setPlaying(harness.audio, 0.61);
+    harness.controller.keyDown('KeyD');
+    expect(harness.controller.snapshot().feedback).not.toBeNull();
+
+    // A new start enters the transport's starting/count-in state.
+    harness.audio.state = { ...harness.audio.state, status: 'ready' };
+    const starting = harness.controller.start();
+    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect((await starting).audio.status).toBe('starting');
+    expect(harness.controller.snapshot().feedback).toBeNull();
+
+    harness.controller.pause();
+    expect(harness.controller.snapshot().feedback).toBeNull();
+    await harness.controller.resume();
+    expect(harness.controller.snapshot().feedback).toBeNull();
+
+    setPlaying(harness.audio, 1.11);
+    harness.controller.keyDown('KeyD');
+    expect(harness.controller.snapshot().feedback).not.toBeNull();
+    harness.audio.state = { ...harness.audio.state, status: 'error' };
+    harness.controller.update();
+    expect(harness.controller.snapshot().feedback).toBeNull();
+
+    // Restore a synthetic playing point and judge in the restarted run.
+    await harness.controller.restart();
+    expect(harness.controller.snapshot().feedback).toBeNull();
+    setPlaying(harness.audio, 0.61);
+    harness.controller.keyDown('KeyD');
+    expect(harness.controller.snapshot().feedback).not.toBeNull();
+
+    setPlaying(harness.audio, 4);
+    expect(harness.controller.update().game.status).toBe('results');
+    expect(harness.controller.snapshot().feedback).toBeNull();
+
+    await harness.controller.dispose();
+    expect(harness.controller.snapshot().feedback).toBeNull();
+  });
+
+  it('does not create a press-feedback event for an overdue miss or unmatched lane', () => {
+    const harness = createHarness();
+    setPlaying(harness.audio, 0.9);
+
+    harness.controller.keyDown('KeyK');
+
+    const snapshot = harness.controller.snapshot();
+    expect(snapshot.game.notes[0]).toMatchObject({
+      id: 'a1',
+      outcome: 'miss',
+    });
+    expect(snapshot.feedback).toBeNull();
+  });
+
+  it('silently cancels playback, catches up to audio time, clears feedback, and does not publish', () => {
+    const harness = createHarness();
+    setPlaying(harness.audio, 0.61);
+    harness.controller.keyDown('KeyD');
+    const rendersBeforeCancel = harness.render.mock.calls.length;
+    harness.audio.state = { ...harness.audio.state, position: 0.9 };
+
+    const cancelled = cancelWithoutPublishing(harness.controller);
+
+    expect(harness.audio.calls).toContain('pause');
+    expect(cancelled.audio.status).toBe('paused');
+    expect(cancelled.game.transportTime).toBe(0.9);
+    expect(cancelled.feedback).toBeNull();
+    expect(harness.render).toHaveBeenCalledTimes(rendersBeforeCancel);
+
+    // The key held before cancellation must not remain latched.
+    setPlaying(harness.audio, 1.11);
+    harness.controller.keyDown('KeyD');
+    expect(harness.controller.snapshot().game.notes[1]?.outcome).toBe(
+      'perfect',
+    );
+  });
+
+  it('invalidates pending load/start without scheduling audio or publishing from cancellation', async () => {
+    const audio = new FakeAudio();
+    const harness = createHarness(audio);
+    const loadRequest = deferred<AudioTransportSnapshot>();
+    vi.spyOn(audio, 'load').mockImplementation(() => {
+      audio.calls.push('load');
+      return loadRequest.promise;
+    });
+
+    const pendingStart = harness.controller.start();
+    expect(audio.calls).toEqual(['load']);
+    const rendersBeforeCancel = harness.render.mock.calls.length;
+
+    cancelWithoutPublishing(harness.controller);
+    loadRequest.resolve({ ...audio.snapshot(), status: 'ready' });
+    await pendingStart;
+
+    expect(audio.calls).toEqual(['load', 'pause']);
+    expect(audio.snapshot().status).toBe('paused');
+    expect(harness.render).toHaveBeenCalledTimes(rendersBeforeCancel);
   });
 
   it('disposes audio and prevents late updates from changing game state', async () => {
