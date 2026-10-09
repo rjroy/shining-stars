@@ -58,6 +58,27 @@ export interface GameplayFrame {
 
 export const VISIBLE_NOTE_SECONDS = 2.4;
 export const FEEDBACK_VISIBLE_SECONDS = 0.65;
+export const LOGICAL_PLAYFIELD_WIDTH = 480;
+export const LOGICAL_PLAYFIELD_HEIGHT = 240;
+
+/** Fit the logical 2:1 board inside its measured CSS slot without stretching. */
+export function containPlayfield(available: ScreenRect): ScreenRect {
+  const scale = Math.max(
+    0,
+    Math.min(
+      available.width / LOGICAL_PLAYFIELD_WIDTH,
+      available.height / LOGICAL_PLAYFIELD_HEIGHT,
+    ),
+  );
+  const width = LOGICAL_PLAYFIELD_WIDTH * scale;
+  const height = LOGICAL_PLAYFIELD_HEIGHT * scale;
+  return {
+    x: available.x + (available.width - width) / 2,
+    y: available.y + (available.height - height) / 2,
+    width,
+    height,
+  };
+}
 
 function formatTime(seconds: number): string {
   const safeSeconds = Math.max(0, Math.floor(seconds));
@@ -76,7 +97,9 @@ export function projectGameplayFrame(
 ): GameplayFrame {
   const { game, audio } = snapshot;
   const profile = getDifficultyProfile(game.difficulty);
-  const runwayTravelPx = layout.board.height * 0.64;
+  const board = containPlayfield(layout.board);
+  const fittedLayout = { ...layout, board };
+  const runwayTravelPx = board.height * 0.64;
   const timingWindows = projectTimingWindowGeometry(
     game.difficulty,
     runwayTravelPx,
@@ -109,18 +132,18 @@ export function projectGameplayFrame(
           onsetTransportTime: event.onsetTransportTime,
         }
       : null;
-  const laneWidth = layout.board.width / 4;
+  const laneWidth = board.width / 4;
   const milliseconds = (seconds: number) => Math.round(seconds * 1000);
 
   return {
-    layout,
+    layout: fittedLayout,
     transportTime: game.transportTime,
     difficulty: game.difficulty,
     playing,
     reducedMotion,
     lanes: [0, 1, 2, 3].map((index) => ({
       index: index as 0 | 1 | 2 | 3,
-      x: layout.board.x + laneWidth * index,
+      x: board.x + laneWidth * index,
       width: laneWidth,
     })),
     notes,

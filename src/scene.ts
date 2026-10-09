@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { GameplayFrame } from './gameplay-frame';
+import { LOGICAL_PLAYFIELD_HEIGHT, type GameplayFrame } from './gameplay-frame';
 import type { SceneStateProjection } from './scene-state';
 
 export interface BrightvaleScene {
@@ -84,34 +84,73 @@ function placePlane(
 function paintText(
   layer: CanvasTextLayer,
   value: string,
+  availableWidth: number,
   displayedHeight: number,
-): void {
-  if (layer.value === value && layer.renderedHeight === displayedHeight) return;
-  layer.value = value;
-  layer.renderedHeight = displayedHeight;
+  resizeCanvas: (layer: CanvasTextLayer, width: number, height: number) => void,
+): number {
+  if (
+    layer.value === value &&
+    layer.renderedHeight === displayedHeight &&
+    layer.renderedWidth === availableWidth
+  )
+    return layer.renderedAspect;
   const context = layer.context;
-  if (context === null) return;
-  context.clearRect(0, 0, layer.canvas.width, layer.canvas.height);
-  context.fillStyle = String(layer.mesh.userData.textColor);
+  if (context === null) return layer.canvas.width / layer.canvas.height;
+  const height = layer.canvas.height;
   let textureFontSize =
-    (Number(layer.mesh.userData.fontSize) * layer.canvas.height) /
+    (Number(layer.mesh.userData.fontSize) * height) /
     Math.max(1, displayedHeight);
   context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
-  const availableWidth = layer.canvas.width - 16;
-  const measuredWidth = context.measureText(value).width;
-  if (measuredWidth > availableWidth) {
-    textureFontSize *= availableWidth / measuredWidth;
+  const sourceWidthLimit = Math.max(
+    1,
+    (availableWidth * height) / Math.max(1, displayedHeight) - 16,
+  );
+  let measuredWidth = context.measureText(value).width;
+  if (measuredWidth > sourceWidthLimit) {
+    textureFontSize *= sourceWidthLimit / measuredWidth;
     context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
+    measuredWidth = context.measureText(value).width;
   }
-  context.textAlign = layer.mesh.userData.rightAligned ? 'right' : 'left';
-  context.textBaseline = 'middle';
-  context.fillText(
+  const width = Math.max(24, Math.ceil(measuredWidth + 16));
+  if (layer.canvas.width !== width || layer.canvas.height !== height) {
+    resizeCanvas(layer, width, height);
+  } else {
+    context.clearRect(0, 0, width, height);
+  }
+  const paintContext = layer.context;
+  if (paintContext === null) return layer.renderedAspect;
+  paintContext.font = `500 ${textureFontSize}px Manrope, sans-serif`;
+  paintContext.fillStyle = String(layer.mesh.userData.textColor);
+  paintContext.textAlign = layer.mesh.userData.rightAligned
+    ? 'right'
+    : layer.mesh.userData.centerAligned
+      ? 'center'
+      : 'left';
+  paintContext.textBaseline = 'middle';
+  paintContext.fillText(
     value,
-    layer.mesh.userData.rightAligned ? layer.canvas.width - 8 : 8,
-    layer.canvas.height / 2,
-    availableWidth,
+    layer.mesh.userData.rightAligned
+      ? layer.canvas.width - 8
+      : layer.mesh.userData.centerAligned
+        ? layer.canvas.width / 2
+        : 8,
+    height / 2,
+    width - 16,
   );
   if (layer.texture !== null) layer.texture.needsUpdate = true;
+  layer.value = value;
+  layer.renderedHeight = displayedHeight;
+  layer.renderedWidth = availableWidth;
+  layer.renderedAspect = width / height;
+  return layer.renderedAspect;
+}
+
+function createTextTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
 }
 
 interface BuildingInstance {
@@ -124,13 +163,15 @@ interface BuildingInstance {
 }
 
 interface CanvasTextLayer {
-  readonly canvas: HTMLCanvasElement;
-  readonly context: CanvasRenderingContext2D | null;
-  readonly texture: THREE.CanvasTexture | null;
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D | null;
+  texture: THREE.CanvasTexture | null;
   readonly material: THREE.MeshBasicMaterial;
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
   value: string;
   renderedHeight: number;
+  renderedWidth: number;
+  renderedAspect: number;
 }
 
 const BUILDINGS: readonly BuildingInstance[] = [
@@ -600,10 +641,7 @@ export function createBrightvaleScene(
         typeof document === 'undefined' ? null : canvas.getContext('2d');
       let texture: THREE.CanvasTexture | null = null;
       if (context !== null) {
-        texture = new THREE.CanvasTexture(canvas);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
+        texture = createTextTexture(canvas);
         textures.add(texture);
       }
       const material = ownMaterial(
@@ -624,6 +662,7 @@ export function createBrightvaleScene(
       mesh.userData.textColor = color;
       mesh.userData.fontSize = fontSize;
       mesh.userData.rightAligned = rightAligned;
+      mesh.userData.centerAligned = role === 'lane-key';
       parent.add(mesh);
       return {
         canvas,
@@ -633,7 +672,33 @@ export function createBrightvaleScene(
         mesh,
         value: '',
         renderedHeight: 0,
+        renderedWidth: 0,
+        renderedAspect: canvas.width / canvas.height,
       };
+    }
+    function resizeTextCanvas(
+      layer: CanvasTextLayer,
+      width: number,
+      height: number,
+    ): void {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('Unable to create text canvas');
+
+      const texture = createTextTexture(canvas);
+      const oldTexture = layer.texture;
+      layer.canvas = canvas;
+      layer.context = context;
+      layer.texture = texture;
+      layer.material.map = texture;
+      layer.material.opacity = 1;
+      textures.add(texture);
+      if (oldTexture !== null) {
+        textures.delete(oldTexture);
+        oldTexture.dispose();
+      }
     }
     const stageBackdropMaterial = ownMaterial(
       new THREE.MeshBasicMaterial({
@@ -1013,13 +1078,26 @@ export function createBrightvaleScene(
       z: number,
       screenHeight: number,
     ): void {
-      paintText(layer, value, rect.height);
-      placePlane(
-        layer.mesh,
-        rect.x,
-        rect.y,
+      const aspect = paintText(
+        layer,
+        value,
         rect.width,
         rect.height,
+        resizeTextCanvas,
+      );
+      const width = Math.min(rect.width, rect.height * aspect);
+      const textHeight = width / aspect;
+      const x = layer.mesh.userData.rightAligned
+        ? rect.x + rect.width - width
+        : layer.mesh.userData.centerAligned
+          ? rect.x + (rect.width - width) / 2
+          : rect.x;
+      placePlane(
+        layer.mesh,
+        x,
+        rect.y + (rect.height - textHeight) / 2,
+        width,
+        textHeight,
         z,
         screenHeight,
       );
@@ -1072,6 +1150,7 @@ export function createBrightvaleScene(
       const height = layout.height;
       const stage = layout.stage;
       const board = layout.board;
+      const boardScale = board.height / LOGICAL_PLAYFIELD_HEIGHT;
       const hitY = board.y + board.height * 0.82;
 
       placePlane(
@@ -1149,7 +1228,14 @@ export function createBrightvaleScene(
       );
       placeText(legendText, layout.legend, frame.legendLabel, 3, height);
       legendText.mesh.visible = frame.playing;
-      placeText(feedbackText, layout.feedback, frame.feedbackLabel, 3, height);
+      const countdownVisible = frame.countdownLabel.length > 0;
+      placeText(
+        feedbackText,
+        layout.feedback,
+        countdownVisible ? frame.countdownLabel : frame.feedbackLabel,
+        3,
+        height,
+      );
       feedbackText.mesh.material.color.set(
         activeFeedback?.quality === 'perfect'
           ? 0xffd475
@@ -1179,9 +1265,9 @@ export function createBrightvaleScene(
         if (index < 3) {
           placePlane(
             laneDividers[index]!,
-            lane.x + lane.width - 0.5,
+            lane.x + lane.width - 0.5 * boardScale,
             board.y,
-            1,
+            boardScale,
             board.height,
             2,
             height,
@@ -1207,16 +1293,16 @@ export function createBrightvaleScene(
           goodX,
           goodY,
           goodWidth,
-          1,
+          boardScale,
           4,
           height,
         );
         placePlane(
           goodEdges[index * 2 + 1]!,
           goodX,
-          goodY + goodHeight - 1,
+          goodY + goodHeight - boardScale,
           goodWidth,
-          1,
+          boardScale,
           4,
           height,
         );
@@ -1238,25 +1324,25 @@ export function createBrightvaleScene(
           perfectX,
           perfectY,
           perfectWidth,
-          1,
+          boardScale,
           6,
           height,
         );
         placePlane(
           perfectEdges[index * 2 + 1]!,
           perfectX,
-          perfectY + perfectHeight - 1,
+          perfectY + perfectHeight - boardScale,
           perfectWidth,
-          1,
+          boardScale,
           6,
           height,
         );
         placePlane(
           hitPads[index]!,
           lane.x + lane.width * 0.13,
-          hitY - 9,
+          hitY - 9 * boardScale,
           lane.width * 0.74,
-          18,
+          18 * boardScale,
           7,
           height,
         );
@@ -1265,23 +1351,31 @@ export function createBrightvaleScene(
           laneKeyLabels[index]!,
           {
             x: lane.x + lane.width * 0.3,
-            y: board.y + 8,
+            y: board.y + 8 * boardScale,
             width: lane.width * 0.4,
-            height: 22,
+            height: 22 * boardScale,
           },
           keyText,
           8,
           height,
         );
       }
-      placePlane(hitLine, board.x, hitY - 1, board.width, 2, 8, height);
+      placePlane(
+        hitLine,
+        board.x,
+        hitY - boardScale,
+        board.width,
+        2 * boardScale,
+        8,
+        height,
+      );
       placeText(
         hitLabel,
         {
-          x: board.x + board.width - 45,
-          y: hitY - 19,
-          width: 38,
-          height: 14,
+          x: board.x + board.width - 45 * boardScale,
+          y: hitY - 19 * boardScale,
+          width: 38 * boardScale,
+          height: 14 * boardScale,
         },
         'HIT',
         9,
@@ -1306,7 +1400,7 @@ export function createBrightvaleScene(
         const centerX = lane.x + lane.width / 2;
         const centerY =
           board.y + board.height * (1 - projected.bottomPercent / 100);
-        const noteWidth = Math.min(lane.width * 0.52, 52);
+        const noteWidth = Math.min(lane.width * 0.52, 52 * boardScale);
         const noteHeight = noteWidth / 1.2;
         pool.note.material =
           projected.lane % 2 === 0 ? noteGoldMaterial : noteMintMaterial;
@@ -1315,14 +1409,18 @@ export function createBrightvaleScene(
         pool.note.position.set(centerX, height - centerY, 12);
         pool.note.rotation.z = projected.lane % 2 === 0 ? -0.04 : 0.04;
         pool.note.visible = frame.playing;
-        pool.outline.scale.set(noteWidth + 2, noteHeight + 2, 1);
+        pool.outline.scale.set(
+          noteWidth + 2 * boardScale,
+          noteHeight + 2 * boardScale,
+          1,
+        );
         pool.outline.position.set(centerX, height - centerY, 11);
         pool.outline.rotation.z = pool.note.rotation.z;
         pool.outline.renderOrder = 11;
         pool.outline.visible = frame.playing;
         pool.note.renderOrder = 12;
         const windows = projected.timingWindows ?? frame.timingWindows;
-        const envelopeWidth = Math.min(lane.width * 0.78, 80);
+        const envelopeWidth = Math.min(lane.width * 0.78, 80 * boardScale);
         placePlane(
           pool.good,
           centerX - envelopeWidth / 2,
@@ -1345,10 +1443,8 @@ export function createBrightvaleScene(
         pool.perfect.visible = frame.playing;
       }
 
-      const countdownVisible = frame.countdownLabel.length > 0;
       if (countdownVisible) {
         feedbackBacker.visible = true;
-        paintText(feedbackText, frame.countdownLabel, layout.feedback.height);
       }
 
       renderer.setViewport(0, 0, width, height);

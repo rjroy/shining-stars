@@ -317,8 +317,11 @@ h1 {
 .lane-board {
   position: relative;
   display: grid;
+  width: min(100%, 820px);
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  height: clamp(290px, 43vh, 410px);
+  aspect-ratio: 2 / 1;
+  height: auto;
+  max-height: 410px;
   margin: 14px auto 7px;
   overflow: hidden;
   background: transparent;
@@ -639,9 +642,6 @@ button:disabled {
   }
   .stage-topline {
     font-size: 0.56rem;
-  }
-  .lane-board {
-    height: clamp(260px, 42vh, 360px);
   }
   .performance-controls {
     align-items: flex-start;
