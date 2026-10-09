@@ -37,6 +37,7 @@ class FakeAudio implements AudioTransport {
       duration: 4,
       scheduledWhen: null,
       hasActiveSource: false,
+      loaded: status !== 'loading',
       disposed: false,
       error: null,
     };
@@ -673,14 +674,17 @@ describe('game controller', () => {
 
     const pendingStart = harness.controller.start();
     expect(audio.calls).toEqual(['load']);
+    audio.state = { ...audio.state, status: 'loading' };
     const rendersBeforeCancel = harness.render.mock.calls.length;
 
-    cancelWithoutPublishing(harness.controller);
-    loadRequest.resolve({ ...audio.snapshot(), status: 'ready' });
+    const cancelled = cancelWithoutPublishing(harness.controller);
+    expect(cancelled.audio.status).toBe('loading');
+    audio.state = { ...audio.state, status: 'ready' };
+    loadRequest.resolve(audio.snapshot());
     await pendingStart;
 
-    expect(audio.calls).toEqual(['load', 'pause']);
-    expect(audio.snapshot().status).toBe('paused');
+    expect(audio.calls).toEqual(['load']);
+    expect(audio.snapshot().status).toBe('ready');
     expect(harness.render).toHaveBeenCalledTimes(rendersBeforeCancel);
   });
 

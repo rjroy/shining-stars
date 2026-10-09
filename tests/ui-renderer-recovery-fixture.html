@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brightvale UI renderer recovery probe</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <style>
+      body {
+        padding: 16px;
+      }
+      #results {
+        font: 13px/1.5 monospace;
+        white-space: pre-wrap;
+      }
+      #app {
+        max-width: 960px;
+        margin: 16px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>UI renderer recovery probe</h1>
+    <pre id="results">Running real GameUI lifecycle assertions…</pre>
+    <div id="app"></div>
+    <script type="module">
+      import { createGame } from '/src/game.ts';
+      import { MVP_CHART } from '/src/mvp-chart.ts';
+      import { createGameUI } from '/src/ui.ts';
+
+      const results = [];
+      const actionCalls = [];
+      const resultsElement = document.querySelector('#results');
+      const checks = [];
+      const record = (name, pass, detail = '') => {
+        checks.push({ name, pass, detail });
+        resultsElement.textContent = checks
+          .map(
+            ({ name: label, pass: ok, detail: note }) =>
+              `${ok ? 'PASS' : 'FAIL'} ${label}${note ? ` — ${note}` : ''}`,
+          )
+          .join('\n');
+      };
+      const actions = {
+        start() {
+          actionCalls.push('start');
+        },
+        pause() {
+          actionCalls.push('pause');
+        },
+        resume() {
+          actionCalls.push('resume');
+        },
+        restart() {
+          actionCalls.push('restart');
+        },
+        selectDifficulty() {},
+        onRendererRetry() {
+          results.push('renderer-retry');
+        },
+      };
+      const ui = createGameUI(
+        document.querySelector('#app'),
+        MVP_CHART,
+        actions,
+      );
+      const gameAt = (time = 0) => {
+        const game = createGame(MVP_CHART, 0, 'normal');
+        return time === 0 ? game.snapshot() : game.advanceTo(time);
+      };
+      const snapshot = (
+        status,
+        position = 0,
+        error = null,
+        {
+          loaded = status !== 'loading',
+          pendingPlaybackRequests = false,
+          selectedDifficulty = 'normal',
+        } = {},
+      ) => ({
+        audio: {
+          status,
+          position,
+          duration: MVP_CHART.duration,
+          scheduledWhen: null,
+          hasActiveSource: false,
+          disposed: false,
+          error,
+          loaded,
+        },
+        game: gameAt(position),
+        inputOffset: 0,
+        visualOffset: 0,
+        selectedDifficulty,
+        feedback: null,
+        pendingPlaybackRequests,
+      });
+      const visiblePanel = (name) =>
+        !document.querySelector(`[data-panel="${name}"]`).hidden;
+      const button = (action) =>
+        document.querySelector(`[data-action="${action}"]`);
+
+      ui.setRendererStatus(true);
+      ui.render(snapshot('ready', 0, null, { loaded: true }), 0);
+      record(
+        'initial loaded renderer-ready snapshot shows Start and difficulty selection',
+        visiblePanel('ready') &&
+          !button('start').disabled &&
+          !document.querySelector('[data-difficulty-select]').disabled,
+      );
+      ui.render(snapshot('loading', 0, null, { loaded: false }), 0);
+      record(
+        'pristine initial load stays on Ready with no pending playback request',
+        visiblePanel('ready') &&
+          !visiblePanel('pause') &&
+          !button('start').disabled,
+      );
+      ui.render(snapshot('paused', 0, null, { loaded: false }), 0);
+      record(
+        'unloaded paused transport before a run offers Start, not Resume',
+        visiblePanel('ready') &&
+          !visiblePanel('pause') &&
+          !button('start').disabled,
+      );
+      ui.render(snapshot('ready', 0, null, { loaded: true }), 0);
+
+      ui.setBusy('Loading the selected recording…');
+      ui.render(
+        snapshot('loading', 0, null, {
+          loaded: false,
+          pendingPlaybackRequests: true,
+        }),
+        0,
+      );
+      ui.setBusy(null);
+      const canceledLoadReady = snapshot('ready', 0, null, { loaded: true });
+      ui.render(canceledLoadReady, 0);
+      ui.resetPlaybackAttempt();
+      ui.render(canceledLoadReady, 0);
+      record(
+        'late canceled load returning to ready restores Start and difficulty, not Pause',
+        visiblePanel('ready') &&
+          !visiblePanel('pause') &&
+          !button('start').disabled &&
+          !document.querySelector('[data-difficulty-select]').disabled,
+      );
+
+      ui.setBusy('Loading remains in progress…');
+      ui.resetPlaybackAttempt();
+      ui.render(snapshot('loading', 0, null, { loaded: false }), 0);
+      record(
+        'reset changes no active busy message or lock',
+        !document.querySelector('[data-busy]').hidden &&
+          document.querySelector('[data-busy]').textContent ===
+            'Loading remains in progress…' &&
+          button('start').disabled,
+      );
+      ui.setBusy(null);
+      ui.render(snapshot('ready', 0, null, { loaded: true }), 0);
+
+      ui.setBusy('Finishing audio load…');
+      ui.render(
+        snapshot('loading', 0, null, {
+          loaded: false,
+          pendingPlaybackRequests: true,
+        }),
+        0,
+      );
+      ui.setBusy(null);
+      const pendingLoad = snapshot('loading', 0, null, {
+        loaded: false,
+        pendingPlaybackRequests: true,
+      });
+      ui.render(pendingLoad, 0);
+      record(
+        'pending audio load keeps all playback actions and difficulty locked with visible progress',
+        ['start', 'resume', 'restart'].every(
+          (action) => button(action).disabled,
+        ) &&
+          document.querySelector('[data-difficulty-select]').disabled &&
+          !button('pause').disabled &&
+          !button('pause').hidden &&
+          !document.querySelector('[data-pending-status]').hidden &&
+          document.querySelector('[data-pending-status]').textContent ===
+            'Finishing audio load…' &&
+          document.querySelector('.play-surface').getAttribute('aria-busy') ===
+            'true',
+      );
+      button('start').click();
+      button('resume').click();
+      button('restart').click();
+      button('pause').click();
+      record(
+        'pending audio request never invokes or queues playback; Pause stays usable',
+        actionCalls.filter((action) => action !== 'pause').length === 0 &&
+          actionCalls.includes('pause'),
+      );
+
+      ui.render(
+        snapshot('paused', 0, null, {
+          loaded: false,
+          pendingPlaybackRequests: true,
+        }),
+        0,
+      );
+      record(
+        'pending paused but unloaded retry cannot expose Resume or enable restart',
+        !visiblePanel('pause') &&
+          ['start', 'resume', 'restart'].every(
+            (action) => button(action).disabled,
+          ) &&
+          document.querySelector('[data-difficulty-select]').disabled &&
+          !document.querySelector('[data-pending-status]').hidden,
+      );
+
+      ui.resetPlaybackAttempt();
+      ui.render(snapshot('ready', 0, null, { loaded: true }), 0);
+      record(
+        'settled loaded request restores Start without replaying it',
+        visiblePanel('ready') &&
+          !button('start').disabled &&
+          !document.querySelector('[data-difficulty-select]').disabled &&
+          results.length === 0,
+      );
+
+      ui.render(snapshot('paused', 1, null, { loaded: true }), 1);
+      record(
+        'a real loaded paused run shows Resume without an attempted-start side channel',
+        visiblePanel('pause') &&
+          !visiblePanel('ready') &&
+          !button('resume').disabled,
+      );
+
+      ui.setRendererStatus(false, 'Renderer lost; playback is locked.');
+      const audioError = 'The recording could not be decoded.';
+      ui.render(snapshot('error', 1, audioError, { loaded: false }), 1);
+      record(
+        'renderer loss locks audio Retry and offers separate renderer Retry',
+        button('start').disabled &&
+          !button('renderer-retry').disabled &&
+          document.querySelector('[data-renderer-message]').textContent ===
+            'Renderer lost; playback is locked.',
+      );
+      record(
+        'audio error remains visible independently of renderer status',
+        visiblePanel('error') &&
+          document.querySelector('[data-audio-error]').textContent ===
+            audioError,
+      );
+      ui.render(
+        snapshot('error', 1, audioError, {
+          loaded: false,
+          pendingPlaybackRequests: true,
+        }),
+        1,
+      );
+      record(
+        'audio Retry remains locked while a retry request is still pending',
+        button('start').disabled &&
+          !document.querySelector('[data-pending-status]').hidden &&
+          document.querySelector('[data-audio-error]').textContent ===
+            audioError,
+      );
+      ui.setRendererStatus(true);
+      ui.render(snapshot('error', 1, audioError, { loaded: false }), 1);
+      record(
+        'renderer recovery preserves the audio error and enables only audio Retry',
+        visiblePanel('error') &&
+          !button('start').disabled &&
+          button('renderer-retry').disabled &&
+          document.querySelector('[data-audio-error]').textContent ===
+            audioError,
+      );
+
+      const resultSnapshot = snapshot('results', MVP_CHART.duration, null, {
+        loaded: true,
+        selectedDifficulty: 'hard',
+      });
+      ui.resetPlaybackAttempt();
+      ui.render(resultSnapshot, 0);
+      record(
+        'results allow next-run difficulty selection while showing the frozen run profile',
+        visiblePanel('results') &&
+          !document.querySelector('[data-difficulty-select]').disabled &&
+          document.querySelector('[data-difficulty-select]').value === 'hard' &&
+          document
+            .querySelector('[data-difficulty-rules]')
+            .textContent.includes('Perfect ±75 ms'),
+      );
+      ui.render(
+        snapshot('results', MVP_CHART.duration, null, {
+          loaded: true,
+          pendingPlaybackRequests: true,
+          selectedDifficulty: 'hard',
+        }),
+        0,
+      );
+      record(
+        'pending restart at results locks next-run difficulty and restart actions',
+        document.querySelector('[data-difficulty-select]').disabled &&
+          button('start').disabled &&
+          button('restart').disabled &&
+          !document.querySelector('[data-pending-status]').hidden,
+      );
+
+      window.__uiRendererRecoveryProbe = { checks, ui, actionCalls };
+      ui.destroy();
+      resultsElement.dataset.outcome = checks.every(({ pass }) => pass)
+        ? 'pass'
+        : 'fail';
+      resultsElement.textContent = checks
+        .map(
+          ({ name, pass, detail }) =>
+            `${pass ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`,
+        )
+        .join('\n');
+    </script>
+  </body>
+</html>

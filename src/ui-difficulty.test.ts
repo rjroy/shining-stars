@@ -37,11 +37,22 @@ describe('difficulty presentation contract', () => {
     expect(ui).toMatch(/profile\.twilight\.perfect\.damage/);
   });
 
-  it('allows profile selection during initial transport loading, then locks after start is requested', () => {
-    expect(ui).toMatch(/let hasAttemptedStart = false/);
+  it('allows unrequested initial loading, then locks selection while a request is pending', () => {
     expect(ui).toMatch(
-      /audio\.status\s*===\s*'loading'\s*&&\s*hasAttemptedStart/,
+      /pendingPlaybackRequests\s*=\s*snapshot\.pendingPlaybackRequests/,
     );
+    expect(ui).toMatch(
+      /audio\.status\s*===\s*'paused'\s*&&\s*audio\.loaded\s*&&\s*!pendingPlaybackRequests/,
+    );
+    const selectorDisableRule = ui.slice(
+      ui.indexOf('const disabled =', ui.indexOf('const difficultySelect')),
+      ui.indexOf(
+        'if (difficultySelect.disabled',
+        ui.indexOf('const difficultySelect'),
+      ),
+    );
+    expect(selectorDisableRule).toMatch(/pendingPlaybackRequests/);
+    expect(selectorDisableRule).not.toMatch(/audio\.status\s*===\s*'loading'/);
     expect(ui).toMatch(/audio\.status\s*===\s*'starting'/);
     expect(ui).toMatch(/audio\.status\s*===\s*'playing'/);
     expect(ui).toMatch(/audio\.status\s*===\s*'paused'/);
@@ -49,6 +60,7 @@ describe('difficulty presentation contract', () => {
     expect(ui).toMatch(/difficultySelect\.disabled/);
     expect(ui).toMatch(/isResults/);
     expect(ui).toMatch(/isReady/);
+    expect(ui).not.toMatch(/hasAttemptedStart/);
   });
 
   it('shows the finished run profile in results, separately from the next selection', () => {

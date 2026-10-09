@@ -10,6 +10,8 @@ export interface ControllerSnapshot {
   /** Profile chosen for the next fresh run; a finished run keeps its own profile. */
   readonly selectedDifficulty: Difficulty;
   readonly feedback: ControllerFeedbackEvent | null;
+  /** Pending public Start/Resume/Restart operations, including canceled ones. */
+  readonly pendingPlaybackRequests: boolean;
 }
 
 /** Immutable judgment identity plus the original game press result. */
@@ -67,6 +69,7 @@ export function createGameController(
   let controlEpoch = 0;
   let pendingTransportRequests = 0;
   let hasTransportRequestBeenMade = false;
+  let pendingRestartEpoch: number | null = null;
   let disposed = false;
   let terminalAudioStopHandled = false;
   let disposePromise: Promise<void> | null = null;
@@ -79,6 +82,7 @@ export function createGameController(
       visualOffset,
       selectedDifficulty,
       feedback: feedback === null ? null : { ...feedback },
+      pendingPlaybackRequests: pendingTransportRequests > 0,
     };
   }
 
@@ -158,23 +162,15 @@ export function createGameController(
     feedback = null;
     try {
       const loaded = await dependencies.audio.load();
-      if (!isCurrentAction(requestEpoch)) {
-        return snapshot();
+      if (isCurrentAction(requestEpoch) && loaded.status === 'ready') {
+        await dependencies.audio.start();
       }
-
-      if (loaded.status !== 'ready') {
-        return publish();
-      }
-
-      await dependencies.audio.start();
-      if (!isCurrentAction(requestEpoch)) {
-        return snapshot();
-      }
-      stopAudioForTerminalGame();
-      return publish();
     } finally {
       pendingTransportRequests -= 1;
     }
+    if (!isCurrentAction(requestEpoch)) return snapshot();
+    stopAudioForTerminalGame();
+    return publish();
   }
 
   async function resume(): Promise<ControllerSnapshot> {
@@ -193,14 +189,12 @@ export function createGameController(
     feedback = null;
     try {
       await dependencies.audio.resume();
-      if (!isCurrentAction(requestEpoch)) {
-        return snapshot();
-      }
-      stopAudioForTerminalGame();
-      return publish();
     } finally {
       pendingTransportRequests -= 1;
     }
+    if (!isCurrentAction(requestEpoch)) return snapshot();
+    stopAudioForTerminalGame();
+    return publish();
   }
 
   async function restart(): Promise<ControllerSnapshot> {
@@ -211,6 +205,7 @@ export function createGameController(
     const requestEpoch = beginControlAction();
     hasTransportRequestBeenMade = true;
     pendingTransportRequests += 1;
+    pendingRestartEpoch = requestEpoch;
     pressedKeys.clear();
     feedback = null;
     game = dependencies.createGame(inputOffset, selectedDifficulty);
@@ -218,13 +213,14 @@ export function createGameController(
     terminalAudioStopHandled = false;
     try {
       await dependencies.audio.restart();
-      if (!isCurrentAction(requestEpoch)) {
-        return snapshot();
-      }
-      return publish();
     } finally {
       pendingTransportRequests -= 1;
+      if (pendingRestartEpoch === requestEpoch) {
+        pendingRestartEpoch = null;
+      }
     }
+    if (!isCurrentAction(requestEpoch)) return snapshot();
+    return publish();
   }
 
   function selectDifficulty(difficulty: Difficulty): ControllerSnapshot {
@@ -288,7 +284,14 @@ export function createGameController(
     beginControlAction();
     pressedKeys.clear();
     feedback = null;
-    const pausedAudio = dependencies.audio.pause();
+    const audioSnapshot = dependencies.audio.snapshot();
+    const pausedAudio =
+      audioSnapshot.status === 'starting' ||
+      audioSnapshot.status === 'playing' ||
+      audioSnapshot.hasActiveSource ||
+      (audioSnapshot.status === 'loading' && pendingRestartEpoch !== null)
+        ? dependencies.audio.pause()
+        : audioSnapshot;
     advanceGame(pausedAudio);
     return snapshot();
   }

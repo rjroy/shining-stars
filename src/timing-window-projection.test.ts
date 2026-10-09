@@ -33,6 +33,7 @@ function makeSnapshot(): ControllerSnapshot {
       duration: chart.duration,
       scheduledWhen: null,
       hasActiveSource: true,
+      loaded: true,
       disposed: false,
       error: null,
     },
@@ -51,6 +52,7 @@ function makeSnapshot(): ControllerSnapshot {
     visualOffset: 0,
     selectedDifficulty: 'normal',
     feedback: null,
+    pendingPlaybackRequests: false,
   };
 }
 

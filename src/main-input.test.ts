@@ -1,7 +1,8 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const harness = vi.hoisted(() => ({
   actions: null as null | Record<string, () => unknown>,
+  ui: null as null | Record<string, (...args: unknown[]) => unknown>,
   listeners: new Map<string, (event: unknown) => void>(),
   snapshot: null as null | {
     audio: { status: string };
@@ -12,6 +13,7 @@ const harness = vi.hoisted(() => ({
   gameplayFrame: { gameplayProjection: true },
   sceneCreated: false,
   renderSnapshot: null as null | ((snapshot: unknown) => void),
+  rendererUnavailable: null as null | (() => void),
 }));
 
 vi.mock('./styles.css', () => ({}));
@@ -27,8 +29,9 @@ vi.mock('./controller', () => ({
 }));
 vi.mock('./game', () => ({ createGame: vi.fn() }));
 vi.mock('./scene', () => ({
-  createBrightvaleScene: vi.fn(() => {
+  createBrightvaleScene: vi.fn((_host, onUnavailable) => {
     harness.sceneCreated = true;
+    harness.rendererUnavailable = onUnavailable;
     return harness.scene;
   }),
 }));
@@ -41,15 +44,18 @@ vi.mock('./gameplay-frame', () => ({
 vi.mock('./ui', () => ({
   createGameUI: vi.fn((_root, _chart, actions) => {
     harness.actions = actions;
-    return {
+    const ui = {
       render: vi.fn(),
       setBusy: vi.fn(),
       setSceneFallback: vi.fn(),
       setRendererStatus: vi.fn(),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
+      resetPlaybackAttempt: vi.fn(),
       showFatal: vi.fn(),
       destroy: vi.fn(),
     };
+    harness.ui = ui;
+    return ui;
   }),
 }));
 
@@ -105,6 +111,7 @@ describe('main keyboard routing', () => {
       keyUp: vi.fn(),
       update: vi.fn(),
       dispose: vi.fn(async () => undefined),
+      pauseWithoutPublishing: vi.fn(() => harness.snapshot),
     };
     harness.scene = {
       update: vi.fn(),
@@ -127,13 +134,11 @@ describe('main keyboard routing', () => {
   it('keeps every playback route closed while renderer availability is false', async () => {
     expect(harness.sceneCreated).toBe(true);
     if (harness.snapshot === null) throw new Error('snapshot not initialized');
-    harness.renderSnapshot?.(harness.snapshot);
-    expect(harness.scene?.updateFrame).toHaveBeenCalled();
-    expect(harness.scene?.update).not.toHaveBeenCalled();
-    expect(harness.scene?.updateFrame).toHaveBeenCalledWith({
-      city: { cityProjection: true },
-      gameplay: { gameplayProjection: true },
-    });
+    harness.rendererUnavailable?.();
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+      false,
+      expect.any(String),
+    );
 
     const keydown = harness.listeners.get('keydown');
     if (keydown === undefined || harness.controller === null) {
@@ -200,5 +205,18 @@ describe('main keyboard routing', () => {
       preventDefault: vi.fn(),
     });
     expect.soft(harness.controller.pause).toHaveBeenCalled();
+  });
+
+  afterAll(async () => {
+    for (const [name, listener] of harness.listeners) {
+      window.removeEventListener(name, listener as EventListener);
+    }
+    cancelAnimationFrame(1);
+    harness.scene?.destroy();
+    harness.ui?.destroy();
+    await harness.controller?.dispose();
+    harness.listeners.clear();
+    vi.unstubAllGlobals();
+    vi.resetModules();
   });
 });

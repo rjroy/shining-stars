@@ -20,6 +20,8 @@ export interface UIActions {
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
+  /** Clear only the UI's attempted-start marker after a canceled, unstarted load. */
+  resetPlaybackAttempt(): void;
   setSceneFallback(message: string | null): void;
   setRendererStatus(available: boolean, message?: string): void;
   getGameplayLayout(): import('./gameplay-frame').GameplayLayout;
@@ -114,6 +116,7 @@ export function createGameUI(
           <span data-renderer-message>3D playfield is not ready for this test build. Playback is locked.</span>
           <button class="text-button" type="button" data-action="renderer-retry" disabled>Retry 3D view</button>
         </div>
+        <p class="renderer-status pending-playback-status" data-pending-status role="status" aria-live="polite" hidden>Finishing audio load…</p>
 
         <div class="stage-frame">
           <div class="stage-topline" aria-hidden="true">
@@ -185,10 +188,10 @@ export function createGameUI(
   ];
   let busyMessage: string | null = null;
   let fatalMessage: string | null = null;
-  let hasAttemptedStart = false;
   let rendererAvailable = false;
   let rendererMessage =
     '3D playfield is not ready for this test build. Playback is locked.';
+  let pendingPlaybackRequests = false;
   let resultsRendered = false;
   let gameplayLayout: import('./gameplay-frame').GameplayLayout = {
     width: Math.max(1, playSurface?.clientWidth ?? 1),
@@ -249,6 +252,11 @@ export function createGameUI(
     const button = target.closest<HTMLButtonElement>('[data-action]');
     if (button === null || button.disabled) return;
     const action = button.dataset.action;
+    if (
+      pendingPlaybackRequests &&
+      ['start', 'resume', 'restart'].includes(action ?? '')
+    )
+      return;
     if (action === 'start') actions.start();
     else if (action === 'pause') actions.pause();
     else if (action === 'resume') actions.resume();
@@ -263,7 +271,7 @@ export function createGameUI(
       !target.matches('[data-difficulty-select]')
     )
       return;
-    if (target.disabled) return;
+    if (target.disabled || pendingPlaybackRequests) return;
     actions.selectDifficulty(target.value as Difficulty);
   }
 
@@ -306,14 +314,20 @@ export function createGameUI(
 
   function render(snapshot: ControllerSnapshot, audioNow: number): void {
     const { audio, game } = snapshot;
+    pendingPlaybackRequests = snapshot.pendingPlaybackRequests;
     const isError = audio.status === 'error' || fatalMessage !== null;
     const isResults = game.status === 'results';
     const isPaused =
-      audio.status === 'paused' && hasAttemptedStart && !isError && !isResults;
-    const isReady =
-      (!hasAttemptedStart || busyMessage !== null) && !isError && !isResults;
+      audio.status === 'paused' &&
+      audio.loaded &&
+      !pendingPlaybackRequests &&
+      !isError &&
+      !isResults;
     const isStarting = audio.status === 'starting';
     const isPlaying = audio.status === 'playing' && game.status === 'playing';
+    const isReady =
+      !isPaused && !isPlaying && !isStarting && !isError && !isResults;
+    playSurface?.setAttribute('aria-busy', String(pendingPlaybackRequests));
     const judgment = snapshot.feedback;
     const isJudgmentVisible =
       judgment !== null &&
@@ -331,11 +345,11 @@ export function createGameUI(
       if (difficultySelect.value !== nextDifficulty)
         difficultySelect.value = nextDifficulty;
       const disabled =
+        pendingPlaybackRequests ||
         busyMessage !== null ||
         isStarting ||
         isPlaying ||
         isPaused ||
-        (audio.status === 'loading' && hasAttemptedStart) ||
         audio.status === 'error';
       if (difficultySelect.disabled !== disabled)
         difficultySelect.disabled = disabled;
@@ -360,11 +374,13 @@ export function createGameUI(
     for (const actionButton of actionButtons) {
       const action = actionButton.dataset.action;
       const disabled =
-        (busyMessage !== null && action !== 'pause') ||
-        (action === 'renderer-retry'
-          ? rendererAvailable || actions.onRendererRetry === undefined
-          : ['start', 'resume', 'restart'].includes(action ?? '') &&
-            !rendererAvailable);
+        action === 'pause'
+          ? false
+          : action === 'renderer-retry'
+            ? rendererAvailable || actions.onRendererRetry === undefined
+            : pendingPlaybackRequests ||
+              !rendererAvailable ||
+              busyMessage !== null;
       if (actionButton.disabled !== disabled) actionButton.disabled = disabled;
     }
     const rendererStatus = root.querySelector<HTMLElement>(
@@ -372,11 +388,18 @@ export function createGameUI(
     );
     if (rendererStatus !== null && rendererStatus.hidden !== rendererAvailable)
       rendererStatus.hidden = rendererAvailable;
+    const pendingStatus = root.querySelector<HTMLElement>(
+      '[data-pending-status]',
+    );
+    if (pendingStatus !== null) {
+      const hidden = !pendingPlaybackRequests;
+      if (pendingStatus.hidden !== hidden) pendingStatus.hidden = hidden;
+    }
     setText(root, '[data-renderer-message]', rendererMessage);
     const busy = root.querySelector<HTMLElement>('[data-busy]');
     if (busy !== null) {
-      if (busy.hidden !== (busyMessage === null))
-        busy.hidden = busyMessage === null;
+      const hidden = busyMessage === null || pendingPlaybackRequests;
+      if (busy.hidden !== hidden) busy.hidden = hidden;
       setElementText(busy, busyMessage ?? '');
     }
     const error = root.querySelector<HTMLElement>('[data-error]');
@@ -388,9 +411,9 @@ export function createGameUI(
     setText(
       root,
       '[data-audio-error]',
-      busyMessage ??
-        fatalMessage ??
+      fatalMessage ??
         audio.error ??
+        busyMessage ??
         'Check the selected track and try again.',
     );
 
@@ -451,7 +474,11 @@ export function createGameUI(
       '[data-action="pause"]',
     );
     if (pauseButton !== null) {
-      const hidden = !isPlaying && !isStarting && audio.status !== 'loading';
+      const hidden =
+        !pendingPlaybackRequests &&
+        !isPlaying &&
+        !isStarting &&
+        audio.status !== 'loading';
       if (pauseButton.hidden !== hidden) pauseButton.hidden = hidden;
     }
 
@@ -485,8 +512,10 @@ export function createGameUI(
   return {
     render,
     setBusy(message) {
-      hasAttemptedStart = message !== null || hasAttemptedStart;
       busyMessage = message;
+    },
+    resetPlaybackAttempt() {
+      // Lifecycle panels and controls are derived from the next controller snapshot.
     },
     setSceneFallback(message) {
       const status = root.querySelector<HTMLElement>('[data-scene-fallback]');

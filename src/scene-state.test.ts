@@ -41,6 +41,7 @@ function makeSnapshot(
       duration: chart.duration,
       scheduledWhen: null,
       hasActiveSource: true,
+      loaded: true,
       disposed: false,
       error: null,
     },
@@ -49,6 +50,7 @@ function makeSnapshot(
     visualOffset: 0,
     selectedDifficulty: 'normal',
     feedback: null,
+    pendingPlaybackRequests: false,
   };
 }
 

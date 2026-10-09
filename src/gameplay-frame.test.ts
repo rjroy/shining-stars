@@ -44,6 +44,7 @@ function snapshot(
       duration: chart.duration,
       scheduledWhen: null,
       hasActiveSource: true,
+      loaded: true,
       disposed: false,
       error: null,
     },
@@ -59,6 +60,7 @@ function snapshot(
       runId: 3,
       onsetTransportTime: 12,
     },
+    pendingPlaybackRequests: false,
     ...overrides,
   };
 }

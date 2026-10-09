@@ -291,16 +291,39 @@ describe('audio and controller timing integration', () => {
     const pendingStart = controller.start();
     await Promise.resolve();
     expect(audio.snapshot().status).toBe('loading');
+    const pendingSnapshot = controller.snapshot() as ControllerSnapshot & {
+      readonly pendingPlaybackRequests?: boolean;
+      readonly audio: ControllerSnapshot['audio'] & {
+        readonly loaded?: boolean;
+      };
+    };
+    expect(pendingSnapshot.pendingPlaybackRequests).toBe(true);
+    expect(pendingSnapshot.audio.loaded).toBe(false);
 
     const rendersBeforeCancel = rendered.length;
     const cancelled = cancelWithoutPublishing(controller);
-    expect(cancelled.audio.status).toBe('paused');
+    expect(cancelled.audio.status).toBe('loading');
     expect(rendered).toHaveLength(rendersBeforeCancel);
     fetch.resolve(new ArrayBuffer(8));
 
-    await pendingStart;
+    const completion = (await pendingStart) as ControllerSnapshot & {
+      readonly pendingPlaybackRequests?: boolean;
+      readonly audio: ControllerSnapshot['audio'] & {
+        readonly loaded?: boolean;
+      };
+    };
 
     expect(audio.snapshot().status).toBe('ready');
+    expect(
+      (
+        audio.snapshot() as ControllerSnapshot['audio'] & {
+          readonly loaded?: boolean;
+        }
+      ).loaded,
+    ).toBe(true);
+    expect(completion.pendingPlaybackRequests).toBe(false);
+    expect(completion.audio.loaded).toBe(true);
+    expect(controller.snapshot().pendingPlaybackRequests).toBe(false);
     expect(audio.snapshot().hasActiveSource).toBe(false);
     expect(context.sources).toHaveLength(0);
     expect(rendered).toHaveLength(rendersBeforeCancel);
