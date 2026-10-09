@@ -3,6 +3,7 @@ import { createAudioTransport } from './audio';
 import { createBrowserAudioContextAdapter } from './browser-audio';
 import { createGameController, type GameController } from './controller';
 import { createGame } from './game';
+import { projectGameplayFrame } from './gameplay-frame';
 import { MVP_CHART } from './mvp-chart';
 import { createBrightvaleScene, type BrightvaleScene } from './scene';
 import { projectSceneState } from './scene-state';
@@ -40,6 +41,8 @@ let animationFrame = 0;
 let disposed = false;
 let playbackActionPending = false;
 let playbackActionCancelled = false;
+// Phase 2 is intentionally non-shippable; phase 3 replaces this closed gate.
+const playbackAvailable = false;
 const reducedMotionQuery = window.matchMedia(
   '(prefers-reduced-motion: reduce)',
 );
@@ -49,10 +52,16 @@ function renderSnapshot(
   snapshot: ReturnType<GameController['snapshot']>,
 ): void {
   ui.render(snapshot, audioContext?.currentTime ?? 0);
-  scene?.update(
-    projectSceneState(snapshot, MVP_CHART, reducedMotion),
-    snapshot.game.transportTime,
-  );
+  scene?.updateFrame({
+    city: projectSceneState(snapshot, MVP_CHART, reducedMotion),
+    gameplay: projectGameplayFrame(
+      snapshot,
+      MVP_CHART,
+      ui.getGameplayLayout(),
+      reducedMotion,
+      audioContext?.currentTime ?? 0,
+    ),
+  });
 }
 
 function renderCurrent(): void {
@@ -70,7 +79,7 @@ async function runAction(
   action: () => Promise<unknown> | undefined,
   message = 'Preparing the song…',
 ): Promise<void> {
-  if (controller === null || disposed) return;
+  if (controller === null || disposed || !playbackAvailable) return;
   ui.setBusy(message);
   renderCurrent();
   try {
@@ -87,6 +96,7 @@ function runPlaybackAction(
   action: () => Promise<unknown> | undefined,
   message: string,
 ): Promise<void> {
+  if (!playbackAvailable) return Promise.resolve();
   return runAction(async () => {
     playbackActionCancelled = false;
     playbackActionPending = true;
@@ -107,7 +117,7 @@ function runPlaybackAction(
 }
 
 function startOrRetry(): Promise<unknown> | undefined {
-  if (controller === null) return undefined;
+  if (controller === null || !playbackAvailable) return undefined;
   return controller.snapshot().audio.status === 'error'
     ? controller.restart()
     : controller.start();
@@ -127,12 +137,19 @@ function onKeyDown(event: KeyboardEvent): void {
     )
       return;
     event.preventDefault();
+    if (!playbackAvailable) return;
     const snapshot = controller.snapshot();
     const status = snapshot.audio.status;
     if (snapshot.game.status === 'results') {
-      void runAction(() => controller?.restart(), 'Starting the song again…');
+      void runPlaybackAction(
+        () => controller?.restart(),
+        'Starting the song again…',
+      );
     } else if (status === 'paused') {
-      void runAction(() => controller?.resume(), 'Preparing to resume…');
+      void runPlaybackAction(
+        () => controller?.resume(),
+        'Preparing to resume…',
+      );
     } else if (
       status === 'loading' ||
       status === 'ready' ||
@@ -152,12 +169,14 @@ function onKeyDown(event: KeyboardEvent): void {
   }
   if (/^Key[DFJK]$/.test(event.code)) {
     event.preventDefault();
+    if (!playbackAvailable) return;
     controller.keyDown(event.code, event.repeat);
   }
 }
 
 function onKeyUp(event: KeyboardEvent): void {
-  if (/^Key[DFJK]$/.test(event.code)) controller?.keyUp(event.code);
+  if (playbackAvailable && /^Key[DFJK]$/.test(event.code))
+    controller?.keyUp(event.code);
 }
 
 function pauseWhenHidden(): void {
@@ -205,8 +224,9 @@ try {
   const sceneHost = appRoot.querySelector<HTMLElement>('.play-surface');
   if (sceneHost !== null) {
     scene = createBrightvaleScene(sceneHost, () => {
-      ui.setSceneFallback(
-        'The city view is unavailable here, but the song and rhythm lanes still work.',
+      ui.setRendererStatus(
+        false,
+        'The three-dimensional playfield could not start. Playback is locked.',
       );
       scene = null;
     });

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brightvale Three.js scene probe</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #101827;
+        color: #f4f0df;
+        font: 14px sans-serif;
+      }
+      body {
+        padding: 20px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      #probe {
+        position: relative;
+        width: min(640px, calc(100vw - 40px));
+        height: min(480px, calc(100vh - 140px));
+        min-height: 360px;
+        overflow: hidden;
+        background: #152237;
+      }
+      .stage-frame {
+        position: absolute;
+        inset: 4%;
+      }
+      .stage-topline {
+        position: absolute;
+        left: 6%;
+        top: 6%;
+        width: 88%;
+        height: 24px;
+      }
+      .lane-board {
+        position: absolute;
+        left: 6%;
+        top: 17%;
+        width: 88%;
+        height: 62%;
+      }
+      .timing-window-legend {
+        position: absolute;
+        left: 6%;
+        top: 81%;
+        width: 88%;
+        height: 24px;
+      }
+      .feedback-row {
+        position: absolute;
+        left: 6%;
+        top: 89%;
+        width: 88%;
+        height: 25px;
+      }
+      #probe-status {
+        margin-top: 10px;
+        color: #b9cbd4;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Controlled gameplay scene probe (no audio)</h1>
+    <div id="probe" aria-hidden="true">
+      <div class="stage-frame"></div>
+      <div class="stage-topline"></div>
+      <div class="lane-board"></div>
+      <div class="timing-window-legend"></div>
+      <div class="feedback-row"></div>
+    </div>
+    <p id="probe-status">Creating a WebGL scene with a fixed test frame…</p>
+    <script type="module">
+      import { createBrightvaleScene } from '/src/scene.ts';
+      import { projectTimingWindowGeometry } from '/src/note-projection.ts';
+
+      const host = document.querySelector('#probe');
+      const box = (selector) => {
+        const rect = document.querySelector(selector).getBoundingClientRect();
+        const hostRect = host.getBoundingClientRect();
+        return {
+          x: rect.left - hostRect.left,
+          y: rect.top - hostRect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+      };
+      const width = host.clientWidth;
+      const height = host.clientHeight;
+      const stage = box('.stage-frame');
+      const board = box('.lane-board');
+      const header = box('.stage-topline');
+      const legend = box('.timing-window-legend');
+      const feedbackRow = box('.feedback-row');
+      const difficulty =
+        new URLSearchParams(location.search).get('difficulty') === 'hard'
+          ? 'hard'
+          : 'normal';
+      const goodWindows = projectTimingWindowGeometry(
+        difficulty,
+        board.height * 0.64,
+        2.4,
+      );
+      const lanes = [0, 1, 2, 3].map((index) => ({
+        index,
+        x: board.x + (index * board.width) / 4,
+        width: board.width / 4,
+      }));
+      const sceneState = {
+        phase: 'audience',
+        cityIntensity: 0.5,
+        cityBrightness: 0.61,
+        transitionProgress: 0,
+        motion: {
+          powerLinePulse: false,
+          buildingPulse: false,
+          windTravel: false,
+          cameraPush: 0,
+        },
+        playerDefiant: true,
+        twilightConsumed: false,
+      };
+      const gameplay = {
+        layout: {
+          width,
+          height,
+          stage,
+          board,
+          header,
+          legend,
+          feedback: feedbackRow,
+        },
+        transportTime: 12.2,
+        difficulty,
+        playing: true,
+        reducedMotion: false,
+        lanes,
+        notes: [
+          {
+            id: 'probe-0',
+            lane: 0,
+            progress: 0.18,
+            bottomPercent: 70.48,
+            timingWindows: goodWindows,
+          },
+          {
+            id: 'probe-1',
+            lane: 1,
+            progress: 0.43,
+            bottomPercent: 54.48,
+            timingWindows: goodWindows,
+          },
+          {
+            id: 'probe-2',
+            lane: 2,
+            progress: 0.69,
+            bottomPercent: 37.84,
+            timingWindows: goodWindows,
+          },
+          {
+            id: 'probe-3',
+            lane: 3,
+            progress: 0.92,
+            bottomPercent: 23.12,
+            timingWindows: goodWindows,
+          },
+        ],
+        noteCapacity: 4,
+        timingWindows: goodWindows,
+        feedback: {
+          eventId: 1,
+          runId: 1,
+          noteId: 'probe-2',
+          quality: 'perfect',
+          onsetTransportTime: 12,
+        },
+        timeLabel: '00:12',
+        legendLabel: `Good ±${difficulty === 'hard' ? 100 : 150} ms · Perfect ±${difficulty === 'hard' ? 50 : 75} ms`,
+        feedbackLabel: 'Perfect',
+        countdownLabel: '',
+      };
+      const scene = createBrightvaleScene(host, () => {
+        document.querySelector('#probe-status').textContent =
+          'WebGL scene initialization failed.';
+      });
+      if (scene === null) throw new Error('WebGL scene initialization failed');
+      scene.updateFrame({ city: sceneState, gameplay });
+      window.__brightvaleSceneProbe = { scene, gameplay };
+      document.querySelector('#probe-status').textContent =
+        'Rendered controlled frame: four lanes, notes, targets, and Perfect feedback. No audio/controller is initialized.';
+    </script>
+  </body>
+</html>

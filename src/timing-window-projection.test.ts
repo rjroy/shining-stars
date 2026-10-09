@@ -1,11 +1,58 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import type { ChartConfig } from './chart';
+import type { ControllerSnapshot } from './controller';
 import { getDifficultyProfile, type Difficulty } from './game-balance';
 import { projectNotes, projectTimingWindowGeometry } from './note-projection';
+import { projectGameplayFrame, type GameplayLayout } from './gameplay-frame';
 
-const uiSource = readFileSync(new URL('./ui.ts', import.meta.url), 'utf8');
 const chartNotes = [{ id: 'target', lane: 0, time: 2 }] as const;
 const states = [{ id: 'target', phase: 'audience' as const, outcome: null }];
+const chart: ChartConfig = {
+  sourceStart: 0,
+  duration: 20,
+  twilightAt: 10,
+  twilightStrength: 100,
+  allowedDifficulties: ['normal', 'hard'],
+  notes: [...chartNotes],
+};
+const layout: GameplayLayout = {
+  width: 640,
+  height: 480,
+  stage: { x: 0, y: 0, width: 640, height: 480 },
+  board: { x: 0, y: 0, width: 640, height: 300 },
+  header: { x: 0, y: 0, width: 640, height: 20 },
+  legend: { x: 0, y: 340, width: 640, height: 20 },
+  feedback: { x: 0, y: 380, width: 640, height: 20 },
+};
+
+function makeSnapshot(): ControllerSnapshot {
+  return {
+    audio: {
+      status: 'playing',
+      position: 1,
+      duration: chart.duration,
+      scheduledWhen: null,
+      hasActiveSource: true,
+      disposed: false,
+      error: null,
+    },
+    game: {
+      transportTime: 1,
+      phase: 'audience',
+      status: 'playing',
+      renown: 0,
+      personalStrength: 100,
+      twilightStrength: 100,
+      difficulty: 'hard',
+      notes: states,
+      result: null,
+    },
+    inputOffset: 0,
+    visualOffset: 0,
+    selectedDifficulty: 'normal',
+    feedback: null,
+  };
+}
 
 function projectWithWindowGeometry(
   difficulty: Difficulty,
@@ -72,24 +119,16 @@ describe('difficulty timing-window projection', () => {
     }
   });
 
-  it('uses the shared active-run geometry for fixed bands and note envelopes', () => {
-    expect(uiSource).toMatch(/data-timing-target/);
-    expect(uiSource).toMatch(/data-timing-envelope/);
-    expect(uiSource).toMatch(/projectNotes\([\s\S]{0,180}game\.difficulty/);
-    expect(uiSource).not.toMatch(
-      /projectNotes\([\s\S]{0,180}selectedDifficulty/,
+  it('projects GPU notes and target geometry from the active run profile, not the next selection', () => {
+    const frame = projectGameplayFrame(makeSnapshot(), chart, layout, false);
+    const activeGeometry = projectTimingWindowGeometry(
+      'hard',
+      layout.board.height * 0.64,
+      2.4,
     );
-    expect(uiSource).toContain(
-      '--good-half-height:${timingWindows.goodHalfHeightPx.toFixed(2)}px',
-    );
-    expect(uiSource).toContain(
-      '--perfect-half-height:${timingWindows.perfectHalfHeightPx.toFixed(2)}px',
-    );
-    expect(uiSource).toContain(
-      '--good-envelope-height:${note.timingWindows?.goodEnvelopeHeightPx.toFixed(2)',
-    );
-    expect(uiSource).toContain(
-      '--perfect-envelope-height:${note.timingWindows?.perfectEnvelopeHeightPx.toFixed(2)',
-    );
+
+    expect(frame.difficulty).toBe('hard');
+    expect(frame.notes[0]?.timingWindows).toEqual(activeGeometry);
+    expect(frame.timingWindows).toEqual(activeGeometry);
   });
 });
