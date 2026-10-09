@@ -10,6 +10,7 @@ import { createGame, type GameSession, type HitQuality } from './game';
 interface ChartOptions {
   readonly duration?: number;
   readonly twilightAt?: number;
+  readonly twilightStrength?: number;
 }
 
 function makeChart(
@@ -20,6 +21,7 @@ function makeChart(
     sourceStart: 0,
     duration: options.duration ?? 10,
     twilightAt: options.twilightAt ?? 5,
+    twilightStrength: options.twilightStrength ?? 100,
     notes,
   };
 
@@ -126,7 +128,7 @@ describe('game model', () => {
     const game = makeGame([note('lane-zero', 2)]);
 
     expect(game.press(1, 2)).toBeNull();
-    expect(game.snapshot()).toMatchObject({ resonance: 0, resonanceEarned: 0 });
+    expect(game.snapshot()).toMatchObject({ renown: 0, personalStrength: 0 });
     expect(game.snapshot().notes).toEqual([
       { id: 'lane-zero', phase: 'audience', outcome: null },
     ]);
@@ -134,7 +136,7 @@ describe('game model', () => {
       noteId: 'lane-zero',
       quality: 'perfect',
     });
-    expect(game.snapshot()).toMatchObject({ resonance: 2, resonanceEarned: 2 });
+    expect(game.snapshot()).toMatchObject({ renown: 3, personalStrength: 0 });
   });
 
   it('keeps the exact offset-adjusted miss deadline eligible and misses only after it', () => {
@@ -176,7 +178,7 @@ describe('game model', () => {
     },
   );
 
-  it('uses transport time for phase changes and transfers Resonance once, including a jump to end', () => {
+  it('uses transport time for phase changes and transfers Renown once, including a jump to end', () => {
     const inputOffset = 0.2;
     const game = makeGame(
       [note('audience', 2), note('twilight', 7)],
@@ -188,17 +190,17 @@ describe('game model', () => {
     const atBoundary = game.snapshot();
 
     expect(atBoundary.phase).toBe('twilight');
-    expect(atBoundary).toMatchObject({ resonance: 0, cityAnswer: 4 });
+    expect(atBoundary).toMatchObject({ renown: 3, personalStrength: 3 });
     game.advanceTo(5);
-    expect(game.snapshot().cityAnswer).toBe(4);
+    expect(game.snapshot().personalStrength).toBe(3);
 
     game.advanceTo(10);
     expect(game.snapshot().status).toBe('results');
     expect(game.snapshot().result).toMatchObject({
-      resonanceEarned: 2,
-      resonanceSpent: 2,
-      resonanceDiscarded: 0,
-      cityAnswer: 4,
+      renown: 3,
+      personalStrength: 0,
+      twilightStrength: 100,
+      outcome: 'defeat',
     });
   });
 
@@ -220,22 +222,22 @@ describe('game model', () => {
     expect(sparse.snapshot()).toEqual(frequent.snapshot());
     expect(sparse.snapshot()).toMatchObject({
       status: 'results',
-      resonanceEarned: 2,
-      cityAnswer: 4,
+      renown: 3,
+      personalStrength: 0,
       notes: [
         { id: 'audience', outcome: 'perfect' },
         { id: 'twilight', outcome: 'miss' },
       ],
       result: {
-        resonanceEarned: 2,
-        resonanceSpent: 2,
-        resonanceDiscarded: 0,
-        cityAnswer: 4,
+        renown: 3,
+        personalStrength: 0,
+        twilightStrength: 100,
+        outcome: 'defeat',
       },
     });
   });
 
-  it('caps audience Resonance at 100 and reports only actually earned points', () => {
+  it('keeps audience Renown uncapped and transfers the full total at Twilight', () => {
     const audienceNotes = Array.from({ length: 60 }, (_, index) =>
       note(`audience-${index}`, 1 + index * 0.5),
     );
@@ -248,20 +250,19 @@ describe('game model', () => {
       game.press(0, audienceNote.time);
     }
     expect(game.snapshot()).toMatchObject({
-      resonance: 100,
-      resonanceEarned: 100,
+      renown: 180,
     });
 
     game.advanceTo(60);
     expect(game.snapshot().result).toMatchObject({
-      resonanceEarned: 100,
-      resonanceSpent: 40,
-      resonanceDiscarded: 60,
-      cityAnswer: 80,
+      renown: 180,
+      personalStrength: 180,
+      twilightStrength: 100,
+      outcome: 'survived',
     });
   });
 
-  it('adds two City Answer per Twilight hit and caps City Answer at 100', () => {
+  it('applies Twilight combat values to independent strengths', () => {
     const audienceNotes = Array.from({ length: 20 }, (_, index) =>
       note(`audience-${index}`, 1 + index * 0.5),
     );
@@ -271,33 +272,37 @@ describe('game model', () => {
     const game = makeGame([...audienceNotes, ...twilightNotes], 0, {
       duration: 40,
       twilightAt: 20,
+      twilightStrength: 100,
     });
 
     for (const audienceNote of audienceNotes) {
       game.press(0, audienceNote.time);
     }
     game.advanceTo(20);
-    expect(game.snapshot().cityAnswer).toBe(80);
+    expect(game.snapshot().personalStrength).toBe(60);
+    expect(game.snapshot().twilightStrength).toBe(100);
 
     for (const twilightNote of twilightNotes) {
       game.press(0, twilightNote.time);
     }
-    expect(game.snapshot().cityAnswer).toBe(100);
+    expect(game.snapshot().personalStrength).toBe(60);
+    expect(game.snapshot().twilightStrength).toBe(55);
   });
 
-  it('completes an all-miss run without surrender and leaves resources unchanged', () => {
+  it('defeats an all-miss run at the zero-Renown handoff', () => {
     const game = makeGame([note('audience-miss', 2), note('twilight-miss', 7)]);
 
     game.advanceTo(10);
 
     expect(game.snapshot()).toMatchObject({
       status: 'results',
-      resonance: 0,
-      resonanceEarned: 0,
-      cityAnswer: 0,
+      renown: 0,
+      personalStrength: 0,
+      twilightStrength: 100,
+      result: { outcome: 'defeat' },
       notes: [
         { id: 'audience-miss', phase: 'audience', outcome: 'miss' },
-        { id: 'twilight-miss', phase: 'twilight', outcome: 'miss' },
+        { id: 'twilight-miss', phase: 'twilight', outcome: null },
       ],
     });
   });
@@ -316,6 +321,7 @@ describe('game model', () => {
     expect(game.snapshot().result).toMatchObject({
       audience: { perfect: 1, good: 1, miss: 0, accuracy: 100 },
       twilight: { perfect: 0, good: 0, miss: 1, accuracy: 0 },
+      outcome: 'survived',
       overall: {
         perfect: 1,
         good: 1,
@@ -355,15 +361,18 @@ describe('game model', () => {
     const firstRun = createGame(chart);
 
     firstRun.press(0, 2);
-    expect(firstRun.snapshot()).toMatchObject({ resonance: 2, cityAnswer: 0 });
+    expect(firstRun.snapshot()).toMatchObject({
+      renown: 3,
+      personalStrength: 0,
+    });
     const nextRun = createGame(chart);
 
     expect(nextRun.snapshot()).toMatchObject({
       transportTime: 0,
       status: 'playing',
-      resonance: 0,
-      resonanceEarned: 0,
-      cityAnswer: 0,
+      renown: 0,
+      personalStrength: 0,
+      twilightStrength: 100,
       notes: [{ id: 'audience', phase: 'audience', outcome: null }],
     });
   });

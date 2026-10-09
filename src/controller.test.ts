@@ -8,6 +8,7 @@ const chart: ChartConfig = {
   sourceStart: 0,
   duration: 4,
   twilightAt: 2,
+  twilightStrength: 100,
   notes: [
     { id: 'a1', time: 0.5, lane: 0 },
     { id: 'a2', time: 1, lane: 0 },
@@ -196,7 +197,7 @@ describe('game controller', () => {
     expect(
       harness.controller.snapshot().game.notes.map((note) => note.outcome),
     ).toEqual([null, null, null, null]);
-    expect(harness.controller.snapshot().game.resonance).toBe(0);
+    expect(harness.controller.snapshot().game.renown).toBe(0);
   });
 
   it('pauses from the freshest audio position and clears held-key state', async () => {
@@ -274,6 +275,13 @@ describe('game controller', () => {
 
   it('does not advance the game beyond the audio excerpt position', () => {
     const harness = createHarness();
+    setPlaying(harness.audio, 0.6);
+    harness.controller.keyDown('KeyD');
+    harness.audio.state = { ...harness.audio.state, position: 1 };
+    harness.controller.keyDown('KeyF');
+    harness.audio.state = { ...harness.audio.state, position: 1.1 };
+    harness.controller.keyUp('KeyD');
+    harness.controller.keyDown('KeyD');
     harness.audio.state = {
       ...harness.audio.state,
       status: 'playing',

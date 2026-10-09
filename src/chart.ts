@@ -14,6 +14,8 @@ export interface ChartConfig {
   readonly duration: number;
   /** Audience-to-Twilight boundary, relative to the excerpt. */
   readonly twilightAt: number;
+  /** Initial Twilight Strength for this song. */
+  readonly twilightStrength: number;
   readonly notes: readonly ChartNote[];
 }
 
@@ -21,6 +23,7 @@ export type ChartIssueCode =
   | 'invalid-source-start'
   | 'invalid-duration'
   | 'invalid-twilight'
+  | 'invalid-twilight-strength'
   | 'duplicate-note-id'
   | 'non-finite-note-time'
   | 'invalid-lane'
@@ -90,6 +93,15 @@ export function validateChart(chart: ChartConfig): readonly ChartIssue[] {
       issue(
         'invalid-twilight',
         'Twilight boundary must be finite and strictly inside the excerpt.',
+      ),
+    );
+  }
+
+  if (!Number.isFinite(chart.twilightStrength) || chart.twilightStrength <= 0) {
+    issues.push(
+      issue(
+        'invalid-twilight-strength',
+        'Initial Twilight Strength must be finite and positive.',
       ),
     );
   }

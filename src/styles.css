@@ -219,6 +219,20 @@ h1 {
     monospace;
   font-variant-numeric: tabular-nums;
 }
+.twilight-resources {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 12px;
+  margin-top: 8px;
+  text-align: right;
+}
+.twilight-resources > span {
+  display: grid;
+  gap: 3px;
+}
+.twilight-resources strong {
+  font-size: 1rem;
+}
 
 .stage-frame {
   position: relative;
@@ -502,6 +516,8 @@ button:disabled {
   left: 50%;
   top: 52%;
   width: min(490px, calc(100% - 36px));
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
   padding: clamp(22px, 4vw, 36px);
   transform: translate(-50%, -50%);
   border: 1px solid rgb(231 241 225 / 20%);
@@ -596,6 +612,15 @@ button:disabled {
   background: var(--line);
   border: 1px solid var(--line);
 }
+.result-grid .result-outcome-copy {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 12px;
+  background: #101b2d;
+  color: var(--mint);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
 .result-line {
   display: grid;
   align-content: start;
@@ -662,6 +687,14 @@ button:disabled {
     min-width: 82px;
     padding-left: 12px;
   }
+  .twilight-resources {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    justify-items: end;
+  }
+  .twilight-resources .resource-name {
+    font-size: 0.56rem;
+  }
   .stage-frame {
     padding: 10px 10px 12px;
   }
@@ -684,6 +717,7 @@ button:disabled {
     right: 13px;
     left: 13px;
     width: auto;
+    max-height: calc(100% - 24px);
     padding: 23px 19px;
     transform: translateY(-50%);
     animation-name: settle-mobile;

@@ -1,5 +1,7 @@
 import type { ControllerSnapshot } from './controller';
+import type { ChartConfig } from './chart';
 import type { GamePhase } from './game';
+import { GAME_BALANCE } from './game-balance';
 
 export interface SceneMotionState {
   readonly powerLinePulse: boolean;
@@ -30,18 +32,26 @@ export interface SceneStateProjection {
  */
 export function projectSceneState(
   snapshot: ControllerSnapshot,
-  twilightAt: number,
+  chart: ChartConfig,
   reducedMotion = false,
 ): SceneStateProjection {
   const game = snapshot.game;
   const phase = game.phase;
-  const sourceValue = phase === 'audience' ? game.resonance : game.cityAnswer;
-  const cityIntensity = clamp01(sourceValue / 100);
+  const audiencePotential =
+    chart.notes.filter((note) => note.time < chart.twilightAt).length *
+    GAME_BALANCE.audience.perfect;
+  const cityIntensity =
+    phase === 'audience'
+      ? clamp01(audiencePotential === 0 ? 0 : game.renown / audiencePotential)
+      : clamp01(
+          (chart.twilightStrength - game.twilightStrength) /
+            chart.twilightStrength,
+        );
   const transitionProgress = reducedMotion
     ? phase === 'twilight'
       ? 1
       : 0
-    : clamp01((game.transportTime - twilightAt) / 2);
+    : clamp01((game.transportTime - chart.twilightAt) / 2);
   const motionEnabled = !reducedMotion;
 
   return {

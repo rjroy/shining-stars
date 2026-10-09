@@ -21,6 +21,7 @@ DEFAULT_SONG_ID = "the-first-shining-star"
 DEFAULT_SOURCE_START = 107.1
 DEFAULT_DURATION = 65.8
 DEFAULT_BOUNDARY = 39.2
+DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
 DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
@@ -179,12 +180,16 @@ def render_mvp_chart(
     duration=65.8,
     twilight_at=39.2,
     source_sha256="",
+    twilight_strength=DEFAULT_TWILIGHT_STRENGTH,
 ):
     source_start = _finite_number(source_start, "source_start")
     duration = _finite_number(duration, "duration")
     twilight_at = _finite_number(twilight_at, "twilight_at")
+    twilight_strength = _finite_number(twilight_strength, "twilight_strength")
     if source_start < 0 or duration <= 0 or not 0 < twilight_at < duration:
         raise ValueError("invalid chart configuration")
+    if twilight_strength <= 0:
+        raise ValueError("twilight_strength must be positive")
     if not re.fullmatch(r"[0-9a-fA-F]{64}", source_sha256):
         raise ValueError("source_sha256 must be a 64-character SHA-256 hex digest")
     generated_notes = []
@@ -221,6 +226,7 @@ def render_mvp_chart(
         f"  sourceStart: {source_start!r},\n"
         f"  duration: {duration!r},\n"
         f"  twilightAt: {twilight_at!r},\n"
+        f"  twilightStrength: {twilight_strength!r},\n"
         "  notes: [\n"
         f"{body}\n"
         "  ],\n"
@@ -260,6 +266,9 @@ def _validate_song_settings(song_id, settings):
     start_time = _finite_number(settings.get("start_time"), "start_time")
     twilight_time = _finite_number(settings.get("twilight_time"), "twilight_time")
     duration = _finite_number(settings.get("duration"), "duration")
+    twilight_strength = _finite_number(
+        settings.get("twilight_strength"), "twilight_strength"
+    )
     minimum_delta = _finite_number(settings.get("minimum_delta"), "minimum_delta")
     stride = settings.get("stride")
     lane_rules = settings.get("lane_rules")
@@ -267,6 +276,8 @@ def _validate_song_settings(song_id, settings):
         raise ValueError("start_time must be non-negative")
     if duration <= 0:
         raise ValueError("duration must be positive")
+    if twilight_strength <= 0:
+        raise ValueError("twilight_strength must be positive")
     if not 0 < twilight_time < duration:
         raise ValueError("twilight_time must be inside the excerpt")
     if minimum_delta < 0:
@@ -291,6 +302,7 @@ def _validate_song_settings(song_id, settings):
         "start_time": start_time,
         "twilight_time": twilight_time,
         "duration": duration,
+        "twilight_strength": twilight_strength,
         "minimum_delta": minimum_delta,
         "stride": stride,
         "lane_rules": {"type": "pattern", "data": list(lane_rules["data"])},
@@ -325,6 +337,7 @@ def _chart_config(args, song_id, settings):
         "song_id": song_id,
         "source_start": source_start,
         "duration": duration,
+        "twilight_strength": settings["twilight_strength"],
         "boundary": boundary,
         "stride": settings["stride"] if args.stride is None else args.stride,
         "lane_pattern": list(lane_pattern),
@@ -355,6 +368,7 @@ def _render_from_artifact(artifact, config):
         duration=config["duration"],
         twilight_at=config["boundary"],
         source_sha256=artifact["source_sha256"],
+        twilight_strength=config["twilight_strength"],
     )
 
 

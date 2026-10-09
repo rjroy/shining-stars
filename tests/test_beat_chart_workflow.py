@@ -67,6 +67,7 @@ class BeatChartWorkflowTests(unittest.TestCase):
             "start_time": 107.1,
             "twilight_time": 39.2,
             "duration": 65.8,
+            "twilight_strength": 100,
             "minimum_delta": 64,
             "stride": 2,
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
@@ -506,6 +507,8 @@ class BeatChartWorkflowTests(unittest.TestCase):
             [note["source_time"] for note in artifact["notes"]],
             [107.1 + 1.0, 107.1 + 1.128, 107.1 + 1.3],
         )
+        self.assertEqual(artifact["config"]["twilight_strength"], 100)
+        self.assertIn("twilightStrength: 100", self.chart.read_text(encoding="utf-8"))
 
 
 class SongAuthoringConfigTests(unittest.TestCase):
@@ -519,6 +522,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         "start_time": 107.1,
                         "twilight_time": 39.2,
                         "duration": 65.8,
+                        "twilight_strength": 100,
                         "minimum_delta": 64,
                         "stride": 2,
                         "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
@@ -539,6 +543,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 "start_time": 107.1,
                 "twilight_time": 39.2,
                 "duration": 65.8,
+                "twilight_strength": 100,
                 "minimum_delta": 64,
                 "stride": 2,
                 "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
@@ -555,6 +560,10 @@ class SongAuthoringConfigTests(unittest.TestCase):
             for field, value in (
                 ("start_time", True),
                 ("duration", float("inf")),
+                ("twilight_strength", 0),
+                ("twilight_strength", -1),
+                ("twilight_strength", float("inf")),
+                ("twilight_strength", False),
                 ("minimum_delta", False),
                 ("stride", True),
                 ("lane_rules", {"type": "pattern", "data": [0, True]}),

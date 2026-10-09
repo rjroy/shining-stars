@@ -19,6 +19,7 @@ guessed excerpt settings. The active entry is:
       "start_time": 107.1,
       "twilight_time": 39.2,
       "duration": 65.8,
+      "twilight_strength": 100,
       "minimum_delta": 64,
       "stride": 2,
       "lane_rules": { "type": "pattern", "data": [0, 2, 1, 3] }
@@ -28,10 +29,13 @@ guessed excerpt settings. The active entry is:
 ```
 
 `start_time`, `twilight_time`, and `duration` are seconds; Twilight time is
-relative to the excerpt. `minimum_delta` is milliseconds. `stride` is a
+relative to the excerpt. `twilight_strength` is the finite, positive initial
+Twilight Strength for the song. `minimum_delta` is milliseconds. `stride` is a
 positive integer, and the supported lane rule is a non-empty `pattern` of lane
-numbers 0 through 3. The loader rejects invalid/non-finite timings, negative
-minimum delta, invalid stride, and unsupported lane rules.
+numbers 0 through 3. The loader rejects invalid/non-finite timings or strength,
+negative minimum delta, invalid stride, and unsupported lane rules. The
+strength is recorded in the provenance artifact and emitted as
+`MVP_CHART.twilightStrength`.
 
 ## Generate
 

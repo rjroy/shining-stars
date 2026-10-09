@@ -48,6 +48,7 @@ export function createGameController(
   const pressedKeys = new Set<string>();
   let controlEpoch = 0;
   let disposed = false;
+  let terminalAudioStopHandled = false;
   let disposePromise: Promise<void> | null = null;
 
   function snapshot(): ControllerSnapshot {
@@ -84,6 +85,17 @@ export function createGameController(
     );
   }
 
+  function stopAudioForTerminalGame(): void {
+    if (game.snapshot().status !== 'results') return;
+
+    pressedKeys.clear();
+    if (terminalAudioStopHandled) return;
+    terminalAudioStopHandled = true;
+    if (dependencies.audio.snapshot().hasActiveSource) {
+      dependencies.audio.pause();
+    }
+  }
+
   function advanceGame(audioSnapshot: AudioTransportSnapshot): void {
     if (
       game.snapshot().status === 'playing' &&
@@ -93,6 +105,7 @@ export function createGameController(
     ) {
       game.advanceTo(currentGameTime(audioSnapshot));
     }
+    stopAudioForTerminalGame();
   }
 
   function beginControlAction(): number {
@@ -107,6 +120,10 @@ export function createGameController(
   async function start(): Promise<ControllerSnapshot> {
     if (disposed) {
       return snapshot();
+    }
+    if (game.snapshot().status === 'results') {
+      stopAudioForTerminalGame();
+      return publish();
     }
 
     const requestEpoch = beginControlAction();
@@ -125,12 +142,17 @@ export function createGameController(
     if (!isCurrentAction(requestEpoch)) {
       return snapshot();
     }
+    stopAudioForTerminalGame();
     return publish();
   }
 
   async function resume(): Promise<ControllerSnapshot> {
     if (disposed) {
       return snapshot();
+    }
+    if (game.snapshot().status === 'results') {
+      stopAudioForTerminalGame();
+      return publish();
     }
 
     const requestEpoch = beginControlAction();
@@ -140,6 +162,7 @@ export function createGameController(
     if (!isCurrentAction(requestEpoch)) {
       return snapshot();
     }
+    stopAudioForTerminalGame();
     return publish();
   }
 
@@ -152,6 +175,7 @@ export function createGameController(
     pressedKeys.clear();
     feedback = null;
     game = dependencies.createGame(inputOffset);
+    terminalAudioStopHandled = false;
     await dependencies.audio.restart();
     if (!isCurrentAction(requestEpoch)) {
       return snapshot();
@@ -162,6 +186,11 @@ export function createGameController(
   function pause(): ControllerSnapshot {
     if (disposed) {
       return snapshot();
+    }
+
+    if (game.snapshot().status === 'results') {
+      stopAudioForTerminalGame();
+      return publish();
     }
 
     beginControlAction();
@@ -175,6 +204,10 @@ export function createGameController(
   function keyDown(code: string, repeat = false): ControllerSnapshot {
     if (disposed) {
       return snapshot();
+    }
+    if (game.snapshot().status === 'results') {
+      stopAudioForTerminalGame();
+      return publish();
     }
 
     const lane = KEY_LANES[code];
@@ -192,6 +225,7 @@ export function createGameController(
     advanceGame(audioSnapshot);
     if (game.snapshot().status === 'playing') {
       feedback = game.press(lane, transportTime);
+      stopAudioForTerminalGame();
     }
     return publish();
   }
@@ -207,6 +241,10 @@ export function createGameController(
   function update(): ControllerSnapshot {
     if (disposed) {
       return snapshot();
+    }
+    if (game.snapshot().status === 'results') {
+      stopAudioForTerminalGame();
+      return publish();
     }
 
     const audioSnapshot = dependencies.audio.update();

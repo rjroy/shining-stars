@@ -1,8 +1,10 @@
 import { validateChart, type ChartConfig, type ChartLane } from './chart';
+import { GAME_BALANCE } from './game-balance';
 
 export type GamePhase = 'audience' | 'twilight';
 export type GameStatus = 'playing' | 'results';
 export type HitQuality = 'perfect' | 'good';
+export type GameOutcome = 'victory' | 'defeat' | 'survived';
 export type NoteOutcome = HitQuality | 'miss' | null;
 
 export interface GameNoteState {
@@ -22,19 +24,19 @@ export interface GameResult {
   readonly audience: GamePhaseStats;
   readonly twilight: GamePhaseStats;
   readonly overall: GamePhaseStats;
-  readonly resonanceEarned: number;
-  readonly resonanceSpent: number;
-  readonly resonanceDiscarded: number;
-  readonly cityAnswer: number;
+  readonly renown: number;
+  readonly personalStrength: number;
+  readonly twilightStrength: number;
+  readonly outcome: GameOutcome;
 }
 
 export interface GameSnapshot {
   readonly transportTime: number;
   readonly phase: GamePhase;
   readonly status: GameStatus;
-  readonly resonance: number;
-  readonly resonanceEarned: number;
-  readonly cityAnswer: number;
+  readonly renown: number;
+  readonly personalStrength: number;
+  readonly twilightStrength: number;
   readonly notes: readonly GameNoteState[];
   readonly result: GameResult | null;
 }
@@ -81,11 +83,6 @@ const MAX_INPUT_OFFSET_SECONDS = 0.2;
 const MISS_EVENT_ORDER = 1;
 const HANDOFF_EVENT_ORDER = 0;
 const END_EVENT_ORDER = 2;
-const RESONANCE_CAP = 100;
-const RESONANCE_SPEND_CAP = 40;
-const CITY_ANSWER_CAP = 100;
-const CITY_ANSWER_PER_RESONANCE = 2;
-const RESOURCE_PER_HIT = 2;
 const COMPARISON_ULPS = 8;
 
 type Comparison = -1 | 0 | 1;
@@ -151,7 +148,7 @@ function makeStats(notes: readonly MutableGameNote[]): {
     }
   }
 
-  const totalNotes = notes.length;
+  const totalNotes = counts.perfect + counts.good + counts.miss;
   const accuracy =
     totalNotes === 0
       ? null
@@ -175,10 +172,10 @@ function copyResult(result: GameResult | null): GameResult | null {
     audience: { ...result.audience },
     twilight: { ...result.twilight },
     overall: { ...result.overall },
-    resonanceEarned: result.resonanceEarned,
-    resonanceSpent: result.resonanceSpent,
-    resonanceDiscarded: result.resonanceDiscarded,
-    cityAnswer: result.cityAnswer,
+    renown: result.renown,
+    personalStrength: result.personalStrength,
+    twilightStrength: result.twilightStrength,
+    outcome: result.outcome,
   };
 }
 
@@ -214,15 +211,13 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
   let currentTransportTime = 0;
   let phase: GamePhase = 'audience';
   let status: GameStatus = 'playing';
-  let resonance = 0;
-  let resonanceEarned = 0;
-  let resonanceSpent = 0;
-  let resonanceDiscarded = 0;
-  let cityAnswer = 0;
+  let renown = 0;
+  let personalStrength = 0;
+  let twilightStrength = chart.twilightStrength;
   let boundaryProcessed = false;
   let result: GameResult | null = null;
 
-  function buildResult(): GameResult {
+  function buildResult(outcome: GameOutcome): GameResult {
     const audienceNotes = notes.filter((note) => note.phase === 'audience');
     const twilightNotes = notes.filter((note) => note.phase === 'twilight');
     const audienceStats = makeStats(audienceNotes).stats;
@@ -233,11 +228,32 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       audience: audienceStats,
       twilight: twilightStats,
       overall: overallStats,
-      resonanceEarned,
-      resonanceSpent,
-      resonanceDiscarded,
-      cityAnswer,
+      renown,
+      personalStrength,
+      twilightStrength,
+      outcome,
     };
+  }
+
+  function finish(outcome: GameOutcome): void {
+    if (status === 'results') return;
+    status = 'results';
+    result = buildResult(outcome);
+  }
+
+  function isFinished(): boolean {
+    return status === 'results';
+  }
+
+  function applyTwilightOutcome(outcome: NoteOutcome): void {
+    if (outcome === null) return;
+    const balance = GAME_BALANCE.twilight[outcome];
+    personalStrength = Math.max(0, personalStrength - balance.personalCost);
+    twilightStrength = Math.max(0, twilightStrength - balance.damage);
+
+    // When one hit exhausts both strengths, victory takes precedence.
+    if (twilightStrength === 0) finish('victory');
+    else if (personalStrength === 0) finish('defeat');
   }
 
   function resolveMiss(note: MutableGameNote): void {
@@ -253,13 +269,8 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
 
     boundaryProcessed = true;
     phase = 'twilight';
-    resonanceSpent = Math.min(resonance, RESONANCE_SPEND_CAP);
-    resonanceDiscarded = resonance - resonanceSpent;
-    resonance = 0;
-    cityAnswer = Math.min(
-      CITY_ANSWER_CAP,
-      cityAnswer + resonanceSpent * CITY_ANSWER_PER_RESONANCE,
-    );
+    personalStrength = renown;
+    if (personalStrength === 0) finish('defeat');
   }
 
   function processEventsThrough(targetTime: number): void {
@@ -307,18 +318,21 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
 
       if (event.kind === 'miss') {
         if (compareTimingValues(targetTime, event.time) > 0) {
-          resolveMiss(event.note);
+          if (event.note.outcome === null) {
+            resolveMiss(event.note);
+            if (event.note.phase === 'twilight') {
+              applyTwilightOutcome('miss');
+              if (isFinished()) currentTransportTime = event.time;
+            }
+          }
         }
       } else if (compareTimingValues(targetTime, event.time) >= 0) {
         if (event.kind === 'boundary') {
           processBoundary();
+          if (isFinished()) currentTransportTime = event.time;
         } else {
-          for (const note of notes) {
-            resolveMiss(note);
-          }
           currentTransportTime = chart.duration;
-          status = 'results';
-          result = buildResult();
+          finish('survived');
         }
       }
     }
@@ -342,9 +356,9 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       transportTime: currentTransportTime,
       phase,
       status,
-      resonance,
-      resonanceEarned,
-      cityAnswer,
+      renown,
+      personalStrength,
+      twilightStrength,
       notes: notes.map((note) => ({
         id: note.id,
         phase: note.phase,
@@ -444,11 +458,9 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
 
       selected.outcome = quality;
       if (phase === 'audience') {
-        const previousResonance = resonance;
-        resonance = Math.min(RESONANCE_CAP, resonance + RESOURCE_PER_HIT);
-        resonanceEarned += resonance - previousResonance;
+        renown += GAME_BALANCE.audience[quality];
       } else {
-        cityAnswer = Math.min(CITY_ANSWER_CAP, cityAnswer + RESOURCE_PER_HIT);
+        applyTwilightOutcome(quality);
       }
 
       return {

@@ -11,6 +11,7 @@ const validConfig: ChartConfig = {
   sourceStart: 107.1,
   duration: 65.8,
   twilightAt: 39.2,
+  twilightStrength: 100,
   notes: [
     { id: 'audience-note', time: 10, lane: 0 },
     { id: 'twilight-note', time: 50, lane: 3 },
@@ -35,6 +36,23 @@ describe('validateChart', () => {
   it('allows an empty chart for the later No notes result', () => {
     expect(validateChart(withConfig({ notes: [] }))).toEqual([]);
   });
+
+  it.each([
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])(
+    'requires a finite positive initial Twilight Strength (%s)',
+    (twilightStrength) => {
+      const invalidConfig = {
+        ...validConfig,
+        twilightStrength,
+      } as unknown as ChartConfig;
+      expectIssue(invalidConfig, 'invalid-twilight-strength' as ChartIssueCode);
+    },
+  );
 
   it.each([
     -0.01,

@@ -47,7 +47,7 @@ function renderSnapshot(
 ): void {
   ui.render(snapshot, audioContext?.currentTime ?? 0);
   scene?.update(
-    projectSceneState(snapshot, MVP_CHART.twilightAt, reducedMotion),
+    projectSceneState(snapshot, MVP_CHART, reducedMotion),
     snapshot.game.transportTime,
   );
 }
@@ -124,11 +124,12 @@ function onKeyDown(event: KeyboardEvent): void {
     )
       return;
     event.preventDefault();
-    const status = controller.snapshot().audio.status;
-    if (status === 'paused') {
-      void runAction(() => controller?.resume(), 'Preparing to resume…');
-    } else if (status === 'results') {
+    const snapshot = controller.snapshot();
+    const status = snapshot.audio.status;
+    if (snapshot.game.status === 'results') {
       void runAction(() => controller?.restart(), 'Starting the song again…');
+    } else if (status === 'paused') {
+      void runAction(() => controller?.resume(), 'Preparing to resume…');
     } else if (
       status === 'loading' ||
       status === 'ready' ||

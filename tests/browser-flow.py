@@ -43,6 +43,7 @@ AUDIENCE_NOTE_COUNT = sum(
 TWILIGHT_NOTE_COUNT = sum(
     note["relative_time"] > HANDOFF_TIME for note in CHART_NOTES
 )
+INITIAL_TWILIGHT_STRENGTH = CHART_CONFIG["twilight_strength"]
 LANE_KEYS = {0: "d", 1: "f", 2: "j", 3: "k"}
 AUDIENCE_NOTES = [
     note for note in CHART_NOTES if note["relative_time"] < HANDOFF_TIME
@@ -144,7 +145,6 @@ def send_key(driver, session, value, repeat=False):
             ]
         },
     )
-    request(driver, "DELETE", path, {})
 
 
 def screenshot(driver, session, filename):
@@ -184,8 +184,7 @@ def create_session(driver, url):
     instrumentation = r"""(()=>{
       const audit={contexts:[],starts:[],keys:[],visibility:[],stops:0,
         activeSources:0,maxActiveSources:0,firstResultsVisibleAt:null,
-        firstResultsSourceActive:null,negativeControlShownAt:null,
-        negativeControlSourceActive:null};
+        firstResultsSourceActive:null};
       window.__brightvaleFlow=audit;
       const NativeContext=window.AudioContext;
       window.AudioContext=class extends NativeContext{
@@ -257,15 +256,17 @@ def browser_state(driver, session):
         session,
         "const a=window.__brightvaleFlow;return ({audit:{currentTime:"
         "a.context.currentTime,contextState:a.context.state,starts:a.starts,"
-        "keys:a.keys,visibility:a.visibility,stops:a.stops,"
-        "activeSources:a.activeSources,maxActiveSources:a.maxActiveSources,"
-        "firstResultsVisibleAt:a.firstResultsVisibleAt,"
-        "firstResultsSourceActive:a.firstResultsSourceActive,"
-        "negativeControlShownAt:a.negativeControlShownAt,"
-        "negativeControlSourceActive:a.negativeControlSourceActive},mode:"
-        "document.querySelector('[data-mode-label]').textContent,resourceName:"
-        "document.querySelector('[data-resource-name]').textContent,resourceValue:"
-        "document.querySelector('[data-resource-value]').textContent,time:"
+         "keys:a.keys,visibility:a.visibility,stops:a.stops,"
+         "activeSources:a.activeSources,maxActiveSources:a.maxActiveSources,"
+         "firstResultsVisibleAt:a.firstResultsVisibleAt,"
+         "firstResultsSourceActive:a.firstResultsSourceActive,},mode:"
+         "document.querySelector('[data-mode-label]').textContent,resourceName:"
+         "document.querySelector('[data-resource-name]').textContent,resourceValue:"
+         "document.querySelector('[data-resource-value]').textContent,personalStrength:"
+         "document.querySelector('[data-personal-strength]').textContent,twilightStrength:"
+         "document.querySelector('[data-twilight-strength]').textContent,rulesText:"
+         "document.querySelector('[data-panel=ready]').textContent,resultTitle:"
+         "document.querySelector('[data-result-title]').textContent,time:"
         "document.querySelector('[data-time]').textContent,panels:"
         "[...document.querySelectorAll('[data-panel]')].filter(p=>!p.hidden)"
         ".map(p=>p.dataset.panel),results:[...document.querySelectorAll("
@@ -338,12 +339,55 @@ def press_at_note(driver, session, start, note_time, key, repeat=False):
         "targetContextTime": target,
         "actualContextTime": actual_time,
         "timingErrorSeconds": error,
+        "quality": "perfect" if abs(error) <= 0.075 else "good",
         "repeatObserved": any(event["repeat"] for event in matching),
         "resource": state["resourceValue"],
+        "personalStrength": state["personalStrength"],
+        "twilightStrength": state["twilightStrength"],
+        "panels": state["panels"],
     }
     if abs(error) > 0.15:
         raise AssertionError(f"WebDriver key landed outside Good window: {result}")
     return result
+
+
+def balance_from_ui(state):
+    audience = re.search(
+        r"perfect hits earn (\d+) Renown, good hits earn (\d+), and misses earn (\d+)",
+        state["rulesText"],
+        re.IGNORECASE,
+    )
+    twilight = re.search(
+        r"Misses cost (\d+) Personal Strength; good hits cost (\d+) and deal "
+        r"(\d+) damage; perfect hits cost (\d+) and deal (\d+) damage",
+        state["rulesText"],
+        re.IGNORECASE,
+    )
+    if audience is None or twilight is None:
+        raise AssertionError(f"Could not read scoring rules from ready panel: {state['rulesText']}")
+    miss_cost, good_cost, good_damage, perfect_cost, perfect_damage = map(
+        int, twilight.groups()
+    )
+    return {
+        "audience": {
+            "perfect": int(audience.group(1)),
+            "good": int(audience.group(2)),
+            "miss": int(audience.group(3)),
+        },
+        "twilight": {
+            "miss": {"personalCost": miss_cost, "damage": 0},
+            "good": {"personalCost": good_cost, "damage": good_damage},
+            "perfect": {"personalCost": perfect_cost, "damage": perfect_damage},
+        },
+    }
+
+
+def result_strength(lines, label):
+    line = next((value for value in lines if value.lower().startswith(label.lower())), "")
+    match = re.search(rf"{re.escape(label)}\s+(\d+)", line, re.IGNORECASE)
+    if match is None:
+        raise AssertionError(f"Missing {label!r} result value in {lines}")
+    return int(match.group(1))
 
 
 def assert_no_source_overlap(state, scenario):
@@ -354,7 +398,7 @@ def assert_no_source_overlap(state, scenario):
     return {"activeAtCheck": active, "maxActive": peak, "intentionalStops": state["audit"]["stops"]}
 
 
-def all_miss_run(driver, url, early_results_negative_control=False):
+def all_miss_run(driver, url):
     session = create_session(driver, url)
     try:
         click(driver, session, '[data-panel="ready"] [data-action="start"]')
@@ -364,25 +408,6 @@ def all_miss_run(driver, url, early_results_negative_control=False):
             raise AssertionError(f"All-miss source was scheduled while context={start['state']}")
         if abs(start["values"][1] - SOURCE_START) > 0.001:
             raise AssertionError(f"Unexpected excerpt source offset: {start}")
-        if early_results_negative_control:
-            execute(
-                driver,
-                session,
-                "const a=window.__brightvaleFlow,target=a.starts[0].values[0]+"
-                f"{FINAL_NOTE_TIME};"
-                "a.negativeControlTimer=setInterval(()=>{"
-                "if(a.context.currentTime>=target){clearInterval(a.negativeControlTimer);"
-                "const panel=document.querySelector('[data-panel=results]');"
-                "a.negativeControlShownAt=a.context.currentTime;"
-                "a.negativeControlSourceActive=a.activeSources>0;"
-                "a.negativeControlUntil=target+0.5;panel.hidden=false;"
-                "a.negativeControlObserver=new MutationObserver(()=>{"
-                "if(a.context.currentTime<a.negativeControlUntil&&panel.hidden)"
-                "panel.hidden=false});"
-                "a.negativeControlObserver.observe(panel,{attributes:true,"
-                "attributeFilter:['hidden']});"
-                "}},10)",
-            )
         screenshot(driver, session, "all-miss-playing.png")
 
         wait_for(
@@ -392,45 +417,38 @@ def all_miss_run(driver, url, early_results_negative_control=False):
             timeout=55,
         )
         mode_state = browser_state(driver, session)
-        if mode_state["resourceName"] != "City Answer":
-            raise AssertionError(f"Twilight mode did not expose City Answer: {mode_state}")
+        if mode_state["resourceName"] != "Twilight combat":
+            raise AssertionError(f"Twilight mode did not expose combat strengths: {mode_state}")
         if mode_state["resourceValue"] != "0":
             raise AssertionError(
-                f"All-miss handoff should convert zero Resonance; got {mode_state['resourceValue']}"
+                f"All-miss handoff should preserve zero Renown; got {mode_state['resourceValue']}"
             )
+        if mode_state["personalStrength"] != "0":
+            raise AssertionError(f"Zero-Renown handoff should immediately defeat: {mode_state}")
+        if float(mode_state["twilightStrength"]) != INITIAL_TWILIGHT_STRENGTH:
+            raise AssertionError(f"Handoff changed initial Twilight Strength: {mode_state}")
         screenshot(driver, session, "all-miss-twilight.png")
 
         scheduled_end = start["values"][0] + start["values"][2]
-        visible_condition = (
-            "window.__brightvaleFlow.firstResultsVisibleAt!==null"
-            if early_results_negative_control
-            else "!document.querySelector('[data-panel=results]').hidden"
+        handoff_target = start["values"][0] + HANDOFF_TIME
+        wait_for(
+            driver,
+            session,
+            "!document.querySelector('[data-panel=results]').hidden",
+            timeout=4,
         )
-        wait_for(driver, session, visible_condition, timeout=85)
         first_visible = browser_state(driver, session)["audit"][
             "firstResultsVisibleAt"
         ]
         if first_visible is None:
             raise AssertionError("MutationObserver did not capture first results visibility")
-        latest_note_target = start["values"][0] + FINAL_NOTE_TIME
-        if early_results_negative_control:
-            screenshot(driver, session, "early-results-negative-control.png")
-            control_state = browser_state(driver, session)["audit"]
-            control_time = control_state["negativeControlShownAt"]
-            if (
-                control_time is None
-                or abs(control_time - latest_note_target) > 0.05
-                or not control_state["negativeControlSourceActive"]
-            ):
-                raise AssertionError(
-                    "Early-results control did not show the actual results panel "
-                    "near the final note while the source remained active: "
-                    f"at={control_time}, note={latest_note_target}, active="
-                    f"{control_state['negativeControlSourceActive']}"
-                )
-        assert_first_results_after_audio_tail(
-            "all-miss", first_visible, scheduled_end, latest_note_target
-        )
+        if abs(first_visible - handoff_target) > 1.0:
+            raise AssertionError(
+                "Zero-Renown defeat did not appear at the Twilight handoff: "
+                f"visible={first_visible:.3f}s, handoff={handoff_target:.3f}s"
+            )
+        if first_visible >= scheduled_end - 0.5:
+            raise AssertionError("Zero-Renown defeat waited for the natural audio end")
         wait_for(driver, session, "window.__brightvaleFlow.activeSources===0", timeout=3)
         result = browser_state(driver, session)
         result_time = result["audit"]["currentTime"]
@@ -438,19 +456,34 @@ def all_miss_run(driver, url, early_results_negative_control=False):
         required = [
             "audience · accuracy",
             f"0 perfect · 0 good · {AUDIENCE_NOTE_COUNT} missed",
-            "0 earned · 0 spent",
-            "0 unused points discarded",
+            "renown earned",
+            "personal strength remaining",
+            "twilight strength remaining",
             "twilight · accuracy",
-            f"0 perfect · 0 good · {TWILIGHT_NOTE_COUNT} missed",
-            "city answer",
-            f"0 perfect · 0 good · {len(CHART_NOTES)} missed",
+            "no notes",
+            "0 perfect · 0 good · 0 missed",
+            "whole performance",
         ]
         absent = [text for text in required if text not in result_blob]
         if absent:
-            raise AssertionError(f"All-miss result panel missing {absent}: {result_blob}")
+            raise AssertionError(f"Zero-Renown defeat panel missing {absent}: {result_blob}")
+        if result["resultTitle"] != "Defeat":
+            raise AssertionError(f"All-miss result title was not Defeat: {result}")
+        if result_strength(result["results"], "Renown earned") != 0:
+            raise AssertionError(f"Unexpected Renown in all-miss result: {result['results']}")
+        if result_strength(result["results"], "Personal Strength remaining") != 0:
+            raise AssertionError(f"Unexpected Personal Strength: {result['results']}")
+        if result_strength(result["results"], "Twilight Strength remaining") != int(
+            INITIAL_TWILIGHT_STRENGTH
+        ):
+            raise AssertionError(f"Unexpected Twilight Strength: {result['results']}")
+        if result["audit"]["stops"] != 1 or result["audit"]["firstResultsSourceActive"]:
+            raise AssertionError(f"Early defeat did not stop its source exactly once: {result['audit']}")
         lower_result = result["resultText"].lower()
-        if "game over" in lower_result or "surrender" in lower_result:
-            raise AssertionError("Results presented a game-over state")
+        if "a missed note is not surrender." not in lower_result:
+            raise AssertionError(
+                "Results omitted the message that a missed note is not surrender"
+            )
         screenshot(driver, session, "all-miss-results.png")
         click(driver, session, '[data-panel="results"] [data-action="restart"]')
         wait_for(driver, session, "window.__brightvaleFlow.starts.length===2", timeout=10)
@@ -467,6 +500,7 @@ def all_miss_run(driver, url, early_results_negative_control=False):
             "resultAudioTime": result_time,
             "firstResultsVisibleAudioTime": first_visible,
             "scheduledAudioEnd": scheduled_end,
+            "handoffAudioTime": handoff_target,
             "resultLines": result["results"],
             "sourceAccounting": assert_no_source_overlap(result, "all-miss"),
             "resultRestartResetSource": reset_source,
@@ -493,6 +527,8 @@ def strategic_run(driver, url):
         if first_start["state"] != "running":
             raise AssertionError(f"Strategic source was scheduled while {first_start['state']}")
         hits = []
+        balance = balance_from_ui(browser_state(driver, session))
+        expected_renown = 0
 
         strategic_notes = AUDIENCE_NOTES[:2]
         for index, note in enumerate(strategic_notes):
@@ -507,9 +543,11 @@ def strategic_run(driver, url):
                 repeat=(index == 0),
             )
             hits.append(hit)
-            if index == 0 and hit["resource"] != "2":
+            expected_renown += balance["audience"][hit["quality"]]
+            if int(hit["resource"]) != expected_renown:
                 raise AssertionError(
-                    f"Held-key repeat attempt changed the single-hit score: {hit}"
+                    f"Audience Renown disagrees with displayed shared balance: "
+                    f"expected={expected_renown}, hit={hit}"
                 )
 
         # A real WebDriver key sent to a focused input must not reach the lane model.
@@ -641,18 +679,100 @@ def strategic_run(driver, url):
                 f"expected offset {expected_hidden_resume_offset}, got {resumed_after_hidden}"
             )
 
-        twilight_hit = press_at_note(
+        # Lifecycle checks can consume enough wall-clock time to pass combat
+        # notes. Restart from the pause/results panel, then run combat against
+        # a fresh source with a deterministic chart-relative input plan.
+        lifecycle_state = browser_state(driver, session)
+        if "results" not in lifecycle_state["panels"] and "pause" not in lifecycle_state["panels"]:
+            send_key(driver, session, "\ue00c")
+            wait_for(
+                driver,
+                session,
+                "!document.querySelector('[data-panel=pause]').hidden || "
+                "!document.querySelector('[data-panel=results]').hidden",
+                timeout=5,
+            )
+            lifecycle_state = browser_state(driver, session)
+        restart_panel = (
+            "results" if "results" in lifecycle_state["panels"] else "pause"
+        )
+        starts_before_combat_restart = len(lifecycle_state["audit"]["starts"])
+        click(
             driver,
             session,
-            latest_start(driver, session),
-            TWILIGHT_NOTES[0]["relative_time"],
-            LANE_KEYS[TWILIGHT_NOTES[0]["lane"]],
+            f'[data-panel="{restart_panel}"] [data-action="restart"]',
         )
-        hits.append(twilight_hit)
-        twilight_state = browser_state(driver, session)
-        if not twilight_state["mode"].startswith("Twilight"):
-            raise AssertionError(f"Twilight phase not active after its note: {twilight_state}")
-        screenshot(driver, session, "strategic-twilight-hit.png")
+        wait_for(
+            driver,
+            session,
+            "window.__brightvaleFlow.starts.length==="
+            f"{starts_before_combat_restart + 1}",
+            timeout=10,
+        )
+        combat_start = latest_start(driver, session)
+        if abs(combat_start["values"][1] - SOURCE_START) > 0.001:
+            raise AssertionError(f"Combat restart did not reset source offset: {combat_start}")
+        if combat_start["state"] != "running":
+            raise AssertionError(f"Combat restart source was not scheduled while running: {combat_start}")
+        execute(
+            driver,
+            session,
+            "const a=window.__brightvaleFlow;a.firstResultsVisibleAt=null;"
+            "a.firstResultsSourceActive=null",
+        )
+        combat_stop_baseline = browser_state(driver, session)["audit"]["stops"]
+        lifecycle_hits = hits
+        hits = []
+        expected_renown = 0
+        combat_audience_notes = AUDIENCE_NOTES
+        for note in combat_audience_notes:
+            hit = press_at_note(
+                driver,
+                session,
+                combat_start,
+                note["relative_time"],
+                LANE_KEYS[note["lane"]],
+            )
+            hits.append(hit)
+            expected_renown += balance["audience"][hit["quality"]]
+            if int(hit["resource"]) != expected_renown:
+                raise AssertionError(
+                    f"Fresh combat audience Renown mismatch: "
+                    f"expected={expected_renown}, hit={hit}"
+                )
+        worst_case_twilight_miss_cost = (
+            TWILIGHT_NOTE_COUNT * balance["twilight"]["miss"]["personalCost"]
+        )
+        if expected_renown <= worst_case_twilight_miss_cost:
+            raise AssertionError(
+                "Fresh combat setup did not build enough Renown to exceed the "
+                f"chart's worst-case Twilight miss cost: {expected_renown} <= "
+                f"{worst_case_twilight_miss_cost}"
+            )
+
+        expected_personal = expected_renown
+        expected_twilight = INITIAL_TWILIGHT_STRENGTH
+        twilight_hits = []
+        for note in TWILIGHT_NOTES:
+            hit = press_at_note(
+                driver,
+                session,
+                combat_start,
+                note["relative_time"],
+                LANE_KEYS[note["lane"]],
+            )
+            hits.append(hit)
+            twilight_hits.append(hit)
+            applied = balance["twilight"][hit["quality"]]
+            expected_personal = max(0, expected_personal - applied["personalCost"])
+            expected_twilight = max(0, expected_twilight - applied["damage"])
+            if int(hit["personalStrength"]) != expected_personal:
+                raise AssertionError(f"Twilight personal-cost mismatch at note {note}: {hit}")
+            if int(hit["twilightStrength"]) != expected_twilight:
+                raise AssertionError(f"Twilight damage mismatch at note {note}: {hit}")
+            if "results" in hit["panels"]:
+                break
+        screenshot(driver, session, "strategic-combat-outcome.png")
 
         active_start = latest_start(driver, session)
         active_when, active_offset, remaining_duration = active_start["values"]
@@ -663,17 +783,13 @@ def strategic_run(driver, url):
         wait_for(
             driver,
             session,
-            "window.__brightvaleFlow.firstResultsVisibleAt!==null",
+            "!document.querySelector('[data-panel=results]').hidden",
             timeout=85,
         )
         timing_state = browser_state(driver, session)
         first_visible = timing_state["audit"]["firstResultsVisibleAt"]
         if first_visible is None:
             raise AssertionError("MutationObserver did not capture strategic results visibility")
-        assert_first_results_after_audio_tail(
-            "strategic", first_visible, scheduled_end, final_note_target
-        )
-
         wait_for(driver, session, "window.__brightvaleFlow.activeSources===0", timeout=3)
         result = browser_state(driver, session)
         lines = result["results"]
@@ -683,54 +799,109 @@ def strategic_run(driver, url):
         twilight_line = next(
             (line for line in lines if line.lower().startswith("twilight · accuracy")), ""
         )
-        resource_line = next((line for line in lines if "earned" in line.lower()), "")
-        answer_line = next(
-            (line for line in lines if line.lower().startswith("city answer")), ""
-        )
         audience_counts = re.search(r"(\d+) perfect · (\d+) good · (\d+) missed", audience_line)
         twilight_counts = re.search(r"(\d+) perfect · (\d+) good · (\d+) missed", twilight_line)
-        earned_spent = re.search(r"(\d+) earned · (\d+) spent", resource_line)
-        discarded = re.search(r"(\d+) unused points discarded", resource_line)
-        answer = re.search(r"City Answer\s+(\d+)", answer_line, re.IGNORECASE)
-        if not all((audience_counts, twilight_counts, earned_spent, discarded, answer)):
-            raise AssertionError(f"Could not read final resource/count accounting: {lines}")
-        audience_hits = int(audience_counts.group(1)) + int(audience_counts.group(2))
-        twilight_hits = int(twilight_counts.group(1)) + int(twilight_counts.group(2))
-        earned, spent, discarded_points, final_answer = (
-            int(earned_spent.group(1)),
-            int(earned_spent.group(2)),
-            int(discarded.group(1)),
-            int(answer.group(1)),
+        if not all((audience_counts, twilight_counts)):
+            raise AssertionError(f"Could not read final accuracy/count lines: {lines}")
+        audience_perfect, audience_good, audience_missed = map(
+            int, audience_counts.groups()
         )
-        expected_answer = min(100, spent * 2 + twilight_hits * 2)
-        if audience_hits < 2 or twilight_hits < 1:
+        twilight_perfect, twilight_good, twilight_missed = map(
+            int, twilight_counts.groups()
+        )
+        audience_hits = audience_perfect + audience_good
+        twilight_hit_count = twilight_perfect + twilight_good
+        unresolved_twilight_notes = TWILIGHT_NOTE_COUNT - (
+            twilight_hit_count + twilight_missed
+        )
+        if unresolved_twilight_notes < 0:
+            raise AssertionError(f"More Twilight notes resolved than the chart contains: {lines}")
+        earned = (
+            audience_perfect * balance["audience"]["perfect"]
+            + audience_good * balance["audience"]["good"]
+            + audience_missed * balance["audience"]["miss"]
+        )
+        expected_personal = max(
+            0,
+            earned
+            - twilight_good * balance["twilight"]["good"]["personalCost"]
+            - twilight_missed * balance["twilight"]["miss"]["personalCost"],
+        )
+        expected_twilight = max(
+            0,
+            INITIAL_TWILIGHT_STRENGTH
+            - twilight_perfect * balance["twilight"]["perfect"]["damage"]
+            - twilight_good * balance["twilight"]["good"]["damage"],
+        )
+        if audience_hits < 2 or twilight_hit_count < 1:
             raise AssertionError(
                 f"Strategic inputs did not produce intended hits: audience={audience_hits}, "
-                f"twilight={twilight_hits}, lines={lines}, inputEvents={hits}"
+                f"twilight={twilight_hit_count}, lines={lines}, inputEvents={hits}"
             )
-        if earned != audience_hits * 2:
+        if result_strength(lines, "Renown earned") != earned:
+            raise AssertionError(f"Renown total mismatch: expected {earned}, lines={lines}")
+        if result_strength(lines, "Personal Strength remaining") != expected_personal:
             raise AssertionError(
-                f"Audience earned accounting disagrees with hits: {earned} vs {audience_hits * 2}"
+                f"Personal Strength mismatch: expected {expected_personal}, lines={lines}"
             )
-        if spent != min(earned, 40) or discarded_points != earned - spent:
+        if result_strength(lines, "Twilight Strength remaining") != expected_twilight:
             raise AssertionError(
-                f"Boundary conversion not accounted once: earned={earned}, spent={spent}, "
-                f"discarded={discarded_points}"
+                f"Twilight Strength mismatch: expected {expected_twilight}, lines={lines}"
             )
-        if final_answer != expected_answer:
+        expected_outcome = (
+            "Victory"
+            if expected_twilight == 0
+            else "Defeat"
+            if expected_personal == 0
+            else "Survived"
+        )
+        if result["resultTitle"] != expected_outcome:
             raise AssertionError(
-                f"City Answer mismatch: expected {expected_answer}, got {final_answer}"
+                f"Result outcome {result['resultTitle']!r} disagrees with strengths "
+                f"(expected {expected_outcome}): {lines}"
+            )
+        if expected_outcome == "Victory" and twilight_missed != 0:
+            raise AssertionError(
+                f"Victory incorrectly counted future Twilight notes as misses: {lines}"
+            )
+        if (
+            TWILIGHT_NOTE_COUNT * balance["twilight"]["perfect"]["damage"]
+            >= INITIAL_TWILIGHT_STRENGTH
+            and expected_outcome != "Victory"
+        ):
+            raise AssertionError(
+                "Configured chart supports a perfect-hit victory, but the strategic "
+                f"browser run did not achieve it: {hits}"
             )
         final_context_time = result["audit"]["currentTime"]
         if result["audit"]["maxActiveSources"] > 1:
             raise AssertionError("Strategic run had overlapping active audio sources")
         if result["audit"]["activeSources"] != 0:
             raise AssertionError("Final excerpt source remained active after results")
+        if expected_outcome == "Survived":
+            assert_first_results_after_audio_tail(
+                "strategic", first_visible, scheduled_end, final_note_target
+            )
+            combat_source_stops = result["audit"]["stops"] - combat_stop_baseline
+            if combat_source_stops != 0:
+                raise AssertionError(
+                    "Natural survival explicitly stopped its source during combat"
+                )
+        else:
+            if first_visible >= scheduled_end - 0.5:
+                raise AssertionError("Combat result waited for natural audio completion")
+            combat_source_stops = result["audit"]["stops"] - combat_stop_baseline
+            if combat_source_stops != 1:
+                raise AssertionError(
+                    f"Combat result did not stop its source once: {result['audit']}"
+                )
+            if result["audit"]["firstResultsSourceActive"]:
+                raise AssertionError("Combat results appeared while audio was still active")
         screenshot(driver, session, "strategic-results.png")
         return {
             "scenario": "strategic-hits",
             "timedWebDriverKeys": hits,
-            "webdriverRepeatEventObserved": hits[0]["repeatObserved"],
+            "webdriverRepeatEventObserved": lifecycle_hits[0]["repeatObserved"],
             "editableInputResourceBeforeAfter": [
                 before_editable,
                 after_editable["resourceValue"],
@@ -746,15 +917,16 @@ def strategic_run(driver, url):
             "hiddenEvents": hidden_events,
             "noAutoResumeAfterTabSwitch": True,
             "audienceHits": audience_hits,
-            "twilightHits": twilight_hits,
+            "twilightHits": twilight_hit_count,
+            "unresolvedTwilightNotes": unresolved_twilight_notes,
             "earned": earned,
-            "spent": spent,
-            "discarded": discarded_points,
-            "cityAnswer": final_answer,
-            "expectedCityAnswer": expected_answer,
+            "personalStrength": expected_personal,
+            "twilightStrength": expected_twilight,
+            "outcome": expected_outcome,
             "results": lines,
             "audioStartCount": len(result["audit"]["starts"]),
             "intentionalStopCount": result["audit"]["stops"],
+            "combatSourceStops": combat_source_stops,
             "maxActiveSources": result["audit"]["maxActiveSources"],
             "finalContextTime": final_context_time,
             "firstResultsVisibleAudioTime": first_visible,
@@ -763,7 +935,7 @@ def strategic_run(driver, url):
                 str(OUTPUT / name)
                 for name in [
                     "strategic-resumed.png",
-                    "strategic-twilight-hit.png",
+                    "strategic-combat-outcome.png",
                     "strategic-results.png",
                 ]
             ],
@@ -772,7 +944,7 @@ def strategic_run(driver, url):
         request(driver, "DELETE", f"/session/{session}", {}, timeout=10)
 
 
-def run(url, scenario="both", early_results_negative_control=False):
+def run(url, scenario="both"):
     OUTPUT.mkdir(parents=True, exist_ok=True)
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -796,9 +968,7 @@ def run(url, scenario="both", early_results_negative_control=False):
             raise TimeoutError("chromedriver did not become ready")
         results = {}
         if scenario in ("both", "all-miss"):
-            results["allMiss"] = all_miss_run(
-                driver, url, early_results_negative_control
-            )
+            results["allMiss"] = all_miss_run(driver, url)
         if scenario in ("both", "strategic"):
             results["strategic"] = strategic_run(driver, url)
         results["screenshotsDirectory"] = str(OUTPUT)
@@ -820,20 +990,9 @@ def main():
     parser.add_argument(
         "--scenario", choices=("both", "all-miss", "strategic"), default="both"
     )
-    parser.add_argument(
-        "--early-results-negative-control",
-        action="store_true",
-        help="force the actual results panel visible at the final note; expected to fail timing",
-    )
     args = parser.parse_args()
-    if args.early_results_negative_control and args.scenario != "all-miss":
-        parser.error("--early-results-negative-control requires --scenario all-miss")
     try:
-        results = run(
-            args.url,
-            args.scenario,
-            args.early_results_negative_control,
-        )
+        results = run(args.url, args.scenario)
     except Exception as error:
         print(f"browser flow failed: {error}", file=sys.stderr)
         return 1

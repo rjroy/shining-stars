@@ -2,6 +2,7 @@ import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
 import { projectNotes } from './note-projection';
+import { GAME_BALANCE } from './game-balance';
 
 export interface UIActions {
   readonly start: () => void;
@@ -61,9 +62,13 @@ export function createGameUI(
             <p class="mode-label" data-mode-label>Audience performance</p>
             <h1 data-title>Sing with Brightvale</h1>
           </div>
-          <div class="resource-readout" aria-live="polite">
-            <span class="resource-name" data-resource-name>Resonance</span>
+          <div class="resource-readout" aria-live="polite" aria-atomic="true">
+            <span class="resource-name" data-resource-name>Renown</span>
             <strong data-resource-value>0</strong>
+            <div class="twilight-resources" data-twilight-resources hidden>
+              <span><span class="resource-name">Personal Strength</span> <strong data-personal-strength>0</strong></span>
+              <span><span class="resource-name">Twilight Strength</span> <strong data-twilight-strength>0</strong></span>
+            </div>
           </div>
         </div>
         <p class="scene-fallback" data-scene-fallback role="status" hidden></p>
@@ -97,7 +102,7 @@ export function createGameUI(
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
           <p class="dialog-overline">The First Shining Star · provisional excerpt</p>
           <h2 id="ready-title">Your voice leads. Brightvale answers.</h2>
-          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. Good and perfect hits build Resonance. At the handoff, up to 40 is automatically spent to strengthen the city; anything beyond 40 is discarded. Misses cost nothing and never mean surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
+          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. In the audience, perfect hits earn ${GAME_BALANCE.audience.perfect} Renown, good hits earn ${GAME_BALANCE.audience.good}, and misses earn ${GAME_BALANCE.audience.miss}. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. Misses cost ${GAME_BALANCE.twilight.miss.personalCost} Personal Strength; good hits cost ${GAME_BALANCE.twilight.good.personalCost} and deal ${GAME_BALANCE.twilight.good.damage} damage; perfect hits cost ${GAME_BALANCE.twilight.perfect.personalCost} and deal ${GAME_BALANCE.twilight.perfect.damage} damage. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
           <p class="chart-notice">Aubio onset chart · density configured per song</p>
           <button class="primary-button" type="button" data-action="start">Begin performance <span aria-hidden="true">↗</span></button>
           <p class="loading-message" data-busy hidden></p>
@@ -113,8 +118,8 @@ export function createGameUI(
 
         <section class="dialog-panel result-panel" data-panel="results" aria-labelledby="result-title" hidden>
           <p class="dialog-overline">The song has settled</p>
-          <h2 id="result-title">Brightvale heard you.</h2>
-          <p class="result-boundary">A miss is a missed note, not a choice to let the Twilight in.</p>
+          <h2 id="result-title" data-result-title>Brightvale heard you.</h2>
+          <p class="result-boundary">A missed note is not surrender.</p>
           <div class="result-grid" data-result-grid></div>
           <button class="primary-button" type="button" data-action="restart">Sing again <span aria-hidden="true">↗</span></button>
         </section>
@@ -161,14 +166,25 @@ export function createGameUI(
     const result = game.result;
     const grid = root.querySelector<HTMLElement>('[data-result-grid]');
     if (result === null || grid === null) return;
-    const earned = result.resonanceEarned;
-    const spent = result.resonanceSpent;
-    const discarded = result.resonanceDiscarded;
+    const outcomeLabels = {
+      victory: 'Victory',
+      defeat: 'Defeat',
+      survived: 'Survived',
+    } as const;
+    setText(root, '[data-result-title]', outcomeLabels[result.outcome]);
+    const enemySummary =
+      result.outcome === 'survived'
+        ? 'The enemy remains undefeated.'
+        : result.outcome === 'victory'
+          ? 'The enemy has been defeated.'
+          : 'Your strength ran out before the enemy fell.';
     grid.innerHTML = `
+      <p class="result-outcome-copy">${enemySummary}</p>
+      <div class="result-line"><span>Renown earned</span><strong>${result.renown}</strong><small>Perfect ${GAME_BALANCE.audience.perfect} · good ${GAME_BALANCE.audience.good} · miss ${GAME_BALANCE.audience.miss}</small></div>
+      <div class="result-line"><span>Personal Strength remaining</span><strong>${result.personalStrength}</strong><small>${result.outcome === 'defeat' ? 'Exhausted' : 'You stood your ground'}</small></div>
+      <div class="result-line"><span>Twilight Strength remaining</span><strong>${result.twilightStrength}</strong><small>${enemySummary}</small></div>
       <div class="result-line"><span>Audience · accuracy</span><strong>${accuracyLabel(result.audience.accuracy)}</strong><small>${phaseStatsLabel(result.audience)}</small></div>
-      <div class="result-line"><span>Resonance</span><strong>${earned} earned · ${spent} spent</strong><small>${discarded} unused ${discarded === 1 ? 'point' : 'points'} discarded</small></div>
       <div class="result-line"><span>Twilight · accuracy</span><strong>${accuracyLabel(result.twilight.accuracy)}</strong><small>${phaseStatsLabel(result.twilight)}</small></div>
-      <div class="result-line"><span>City Answer</span><strong>${result.cityAnswer}</strong><small>City contribution · not a measure of personal safety</small></div>
       <div class="result-line result-total"><span>Whole performance</span><strong>${accuracyLabel(result.overall.accuracy)}</strong><small>${phaseStatsLabel(result.overall)}</small></div>`;
   }
 
@@ -237,13 +253,16 @@ export function createGameUI(
     setText(
       root,
       '[data-resource-name]',
-      game.phase === 'audience' ? 'Resonance' : 'City Answer',
+      game.phase === 'audience' ? 'Renown' : 'Twilight combat',
     );
-    setText(
-      root,
-      '[data-resource-value]',
-      String(game.phase === 'audience' ? game.resonance : game.cityAnswer),
+    setText(root, '[data-resource-value]', String(game.renown));
+    const twilightResources = root.querySelector<HTMLElement>(
+      '[data-twilight-resources]',
     );
+    if (twilightResources !== null)
+      twilightResources.hidden = game.phase !== 'twilight';
+    setText(root, '[data-personal-strength]', String(game.personalStrength));
+    setText(root, '[data-twilight-strength]', String(game.twilightStrength));
     setText(
       root,
       '[data-time]',

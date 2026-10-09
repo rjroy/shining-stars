@@ -6,6 +6,7 @@ export const MVP_CHART: ChartConfig = {
   sourceStart: 107.1,
   duration: 65.8,
   twilightAt: 39.2,
+  twilightStrength: 100.0,
   notes: [
     { id: 'a01', time: 1.214102, lane: 0 }, // rounded onset time: 1.214102
     { id: 'a02', time: 3.198477, lane: 2 }, // rounded onset time: 3.198477

@@ -14,6 +14,8 @@ npm run dev
 
 The browser entry is `index.html`; `src/main.ts` owns the application lifecycle and wires the chart, game, audio transport, and UI. The selected MP3 remains in `data/music/` and is imported as a Vite asset URL; do not copy it into a public directory or modify the original recording. The active chart is generated from detected onsets; its timing is still provisional and has not been listening-verified.
 
+Per-song authoring settings, including initial Twilight Strength, live in `data/charts/song-authoring.json`; see the [chart workflow](docs/beat-chart-workflow.md) for the schema and validation rules.
+
 ## Music chart authoring dependencies
 
 - **aubio** provides `aubioonset` for offline onset-timestamp extraction. The user installed Arch's `aubio 0.4.9-25`; the executable is `/usr/bin/aubioonset`.
@@ -50,18 +52,4 @@ For the full gameplay flow, use the normal animation-frame loop and the actual b
 python3 tests/browser-flow.py http://127.0.0.1:5173/
 ```
 
-This runs all-miss and timed-WebDriver-key scenarios through the full excerpt and takes about two real-time track runs. It characterizes the provisional chart and UI resource accounting; it does not verify musical timing by listening or represent human performance. Screenshots are saved under `/tmp/opencode/brightvale-stage5/`.
-
-For two full-length gameplay-flow checks on the real `AudioContext.currentTime` clock, use the separate normal-animation-frame browser run:
-
-```sh
-python3 tests/browser-flow.py http://127.0.0.1:5173/
-```
-
-This takes about two real-time excerpt runs. WebDriver sends timed lane keys against the generated beat-derived chart; the run characterizes interaction and resource accounting, not musical accuracy or listening verification. Screenshots and JSON diagnostics go under `/tmp/opencode/brightvale-stage5/`.
-
-The timing assertion can be checked with a test-only negative control (expected nonzero exit) that reveals the actual results panel at the final chart note while its audio source is still active:
-
-```sh
-python3 tests/browser-flow.py http://127.0.0.1:5173/ --scenario all-miss --early-results-negative-control
-```
+This runs two native-audio, real-`AudioContext.currentTime` WebDriver scenarios with the normal animation-frame loop: all-miss defeat at the Twilight handoff, and a timed strategic run that reaches a combat outcome when the configured chart supports it. It checks displayed Renown/strengths, unresolved future notes, early audio stopping, source non-overlap, and restart from the configured excerpt offset. The run characterizes interaction and scoring, not musical accuracy or listening verification. Screenshots and JSON diagnostics go under `/tmp/opencode/brightvale-stage5/`.

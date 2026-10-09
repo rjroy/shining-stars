@@ -41,7 +41,8 @@
     "minimum_delta_ms": 64.0,
     "song_id": "the-first-shining-star",
     "source_start": 107.1,
-    "stride": 2
+    "stride": 2,
+    "twilight_strength": 100.0
   },
   "notes": [
     {
