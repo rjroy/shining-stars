@@ -351,8 +351,58 @@ h1 {
   position: absolute;
   inset: 0;
 }
+.timing-target {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+.timing-target-good {
+  position: absolute;
+  right: 8%;
+  bottom: calc(18% - var(--good-half-height));
+  left: 8%;
+  height: var(--good-band-height);
+  border-top: 1px dashed rgb(255 212 117 / 78%);
+  border-bottom: 1px dashed rgb(255 212 117 / 78%);
+  background: rgb(255 212 117 / 7%);
+}
+.timing-target-perfect {
+  position: absolute;
+  top: 50%;
+  left: 16%;
+  width: 68%;
+  height: var(--perfect-band-height);
+  transform: translateY(-50%);
+  border-top: 1px solid rgb(197 245 231 / 88%);
+  border-bottom: 1px solid rgb(197 245 231 / 88%);
+  background: rgb(157 231 208 / 10%);
+}
+.note-envelope {
+  position: absolute;
+  z-index: 2;
+  bottom: var(--note-bottom);
+  left: 50%;
+  width: min(78%, 80px);
+  height: var(--good-envelope-height);
+  transform: translate(-50%, 50%);
+  border: 1px dashed rgb(255 212 117 / 92%);
+  background: rgb(255 212 117 / 12%);
+  pointer-events: none;
+}
+.note-envelope-perfect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: var(--perfect-envelope-height);
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(197 245 231 / 96%);
+  background: rgb(157 231 208 / 20%);
+}
 .note {
   position: absolute;
+  z-index: 2;
   left: 50%;
   bottom: var(--note-bottom);
   width: min(52%, 52px);
@@ -383,6 +433,14 @@ h1 {
   background: var(--accent);
   box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
   pointer-events: none;
+}
+.timing-window-legend {
+  margin: 4px 0 10px;
+  color: #d7e7df;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
 }
 .hit-line span {
   position: absolute;

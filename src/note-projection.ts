@@ -1,5 +1,19 @@
 import type { GameNoteState } from './game';
 import type { ChartNote } from './chart';
+import { getDifficultyProfile, type Difficulty } from './game-balance';
+
+export interface TimingWindowGeometry {
+  readonly goodHalfHeightPx: number;
+  readonly goodEnvelopeHeightPx: number;
+  readonly perfectHalfHeightPx: number;
+  readonly perfectEnvelopeHeightPx: number;
+}
+
+export interface NoteProjectionOptions {
+  readonly difficulty: Difficulty;
+  /** Distance the note travels between the runway's start and hit line. */
+  readonly runwayTravelPx: number;
+}
 
 export interface ProjectedNote {
   readonly id: string;
@@ -8,6 +22,26 @@ export interface ProjectedNote {
   readonly progress: number;
   /** CSS offset that places progress 1 on the fixed hit line. */
   readonly bottomPercent: number;
+  readonly timingWindows?: TimingWindowGeometry;
+}
+
+/** Convert the active profile's symmetric timing windows into measured pixels. */
+export function projectTimingWindowGeometry(
+  difficulty: Difficulty,
+  runwayTravelPx: number,
+  visibleSeconds: number,
+): TimingWindowGeometry {
+  const timing = getDifficultyProfile(difficulty).timing;
+  const pixelsPerSecond = runwayTravelPx / visibleSeconds;
+  const goodHalfHeightPx = timing.goodWindowSeconds * pixelsPerSecond;
+  const perfectHalfHeightPx = timing.perfectWindowSeconds * pixelsPerSecond;
+
+  return {
+    goodHalfHeightPx,
+    goodEnvelopeHeightPx: goodHalfHeightPx * 2,
+    perfectHalfHeightPx,
+    perfectEnvelopeHeightPx: perfectHalfHeightPx * 2,
+  };
 }
 
 /** Project unresolved notes in the approach runway, keeping overdue notes on the hit line until judged. */
@@ -16,7 +50,16 @@ export function projectNotes(
   chartNotes: readonly ChartNote[],
   transportTime: number,
   visibleSeconds: number,
+  options?: NoteProjectionOptions,
 ): ProjectedNote[] {
+  const timingWindows =
+    options === undefined
+      ? undefined
+      : projectTimingWindowGeometry(
+          options.difficulty,
+          options.runwayTravelPx,
+          visibleSeconds,
+        );
   const stateById = new Map(states.map((state) => [state.id, state]));
 
   return chartNotes.flatMap((note) => {
@@ -37,6 +80,7 @@ export function projectNotes(
         lane: note.lane,
         progress,
         bottomPercent: 18 + (1 - progress) * 64,
+        ...(timingWindows === undefined ? {} : { timingWindows }),
       },
     ];
   });

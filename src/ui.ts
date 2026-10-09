@@ -1,7 +1,7 @@
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
-import { projectNotes } from './note-projection';
+import { projectNotes, projectTimingWindowGeometry } from './note-projection';
 import {
   defaultDifficulty,
   getDifficultyProfile,
@@ -118,6 +118,7 @@ export function createGameUI(
             <div class="lane" data-lane="3" aria-label="K lane"><span class="lane-key">K</span><div class="note-track"></div><span class="hit-pad"></span></div>
             <div class="hit-line" aria-hidden="true"><span>HIT</span></div>
           </div>
+          <p class="timing-window-legend" data-timing-legend hidden></p>
           <div class="feedback-row" aria-live="polite">
             <span data-feedback>Notes meet the line here</span>
             <span data-countdown aria-hidden="true"></span>
@@ -168,12 +169,25 @@ export function createGameUI(
     </main>`;
 
   const laneTracks = [...root.querySelectorAll<HTMLElement>('.note-track')];
+  const laneBoard = root.querySelector<HTMLElement>('.lane-board');
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
   let busyMessage: string | null = null;
   let fatalMessage: string | null = null;
   let hasAttemptedStart = false;
   let lastFeedbackId = '';
   let feedbackTime: number | null = null;
+  let runwayTravelPx = (laneBoard?.clientHeight ?? 0) * 0.64;
+  const measureRunway = () => {
+    runwayTravelPx = (laneBoard?.clientHeight ?? 0) * 0.64;
+  };
+  const runwayResizeObserver =
+    laneBoard !== null && typeof ResizeObserver === 'function'
+      ? new ResizeObserver(measureRunway)
+      : null;
+  if (laneBoard !== null) {
+    if (runwayResizeObserver !== null) runwayResizeObserver.observe(laneBoard);
+    else window.addEventListener('resize', measureRunway);
+  }
 
   function onClick(event: Event): void {
     const target = event.target;
@@ -248,7 +262,8 @@ export function createGameUI(
       '[data-difficulty-select]',
     );
     const nextDifficulty = snapshot.selectedDifficulty;
-    const activeDifficulty = isResults ? game.difficulty : nextDifficulty;
+    const activeDifficulty =
+      isPlaying || isStarting || isResults ? game.difficulty : nextDifficulty;
     if (difficultySelect !== null) {
       difficultySelect.value = nextDifficulty;
       difficultySelect.disabled =
@@ -376,26 +391,49 @@ export function createGameUI(
     );
     if (pauseButton !== null) pauseButton.hidden = !isPlaying && !isStarting;
 
-    const projected =
-      isPlaying || isStarting
-        ? projectNotes(
-            game.notes,
-            chart.notes,
-            game.transportTime,
-            VISIBLE_NOTE_SECONDS,
-          )
-        : [];
+    const showTimingWindows = isPlaying || isStarting;
+    const timingLegend = root.querySelector<HTMLElement>(
+      '[data-timing-legend]',
+    );
+    if (timingLegend !== null) {
+      timingLegend.hidden = !showTimingWindows;
+      const profile = getDifficultyProfile(game.difficulty);
+      const toMilliseconds = (seconds: number) => Math.round(seconds * 1000);
+      timingLegend.textContent =
+        `Good ±${toMilliseconds(profile.timing.goodWindowSeconds)} ms · ` +
+        `Perfect ±${toMilliseconds(profile.timing.perfectWindowSeconds)} ms` +
+        ' — centered on the hit line; notes stop there.';
+    }
+    const timingWindows = projectTimingWindowGeometry(
+      game.difficulty,
+      runwayTravelPx,
+      VISIBLE_NOTE_SECONDS,
+    );
+    const projected = showTimingWindows
+      ? projectNotes(
+          game.notes,
+          chart.notes,
+          game.transportTime,
+          VISIBLE_NOTE_SECONDS,
+          { difficulty: game.difficulty, runwayTravelPx },
+        )
+      : [];
     const byLane = [0, 1, 2, 3].map((lane) =>
       projected.filter((note) => note.lane === lane),
     );
     laneTracks.forEach((track, lane) => {
-      track.innerHTML =
+      track.innerHTML = `${
+        showTimingWindows
+          ? `<span class="timing-target" aria-hidden="true"><span class="timing-target-good" data-timing-target style="--good-half-height:${timingWindows.goodHalfHeightPx.toFixed(2)}px;--good-band-height:${timingWindows.goodEnvelopeHeightPx.toFixed(2)}px"><span class="timing-target-perfect" style="--perfect-half-height:${timingWindows.perfectHalfHeightPx.toFixed(2)}px;--perfect-band-height:${timingWindows.perfectEnvelopeHeightPx.toFixed(2)}px"></span></span></span>`
+          : ''
+      }${
         byLane[lane]
           ?.map(
             (note) =>
-              `<span class="note" data-note-id="${note.id}" style="--note-bottom:${note.bottomPercent.toFixed(2)}%"></span>`,
+              `<span class="note-envelope" data-timing-envelope data-note-id="${note.id}" style="--note-bottom:${note.bottomPercent.toFixed(2)}%;--good-envelope-height:${note.timingWindows?.goodEnvelopeHeightPx.toFixed(2) ?? '0'}px;--perfect-envelope-height:${note.timingWindows?.perfectEnvelopeHeightPx.toFixed(2) ?? '0'}px"><span class="note-envelope-perfect"></span></span><span class="note" data-note-id="${note.id}" style="--note-bottom:${note.bottomPercent.toFixed(2)}%"></span>`,
           )
-          .join('') ?? '';
+          .join('') ?? ''
+      }`;
     });
 
     if (isResults) renderResults(game);
@@ -421,6 +459,9 @@ export function createGameUI(
     destroy() {
       root.removeEventListener('click', onClick);
       root.removeEventListener('change', onChange);
+      runwayResizeObserver?.disconnect();
+      if (runwayResizeObserver === null)
+        window.removeEventListener('resize', measureRunway);
       root.replaceChildren();
     },
   };
