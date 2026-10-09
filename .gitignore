@@ -54,3 +54,7 @@ yarn-error.log*
 .beads-credential-key
 .beads/proxieddb/
 /.lore/local/
+
+# Vite and local lint caches
+/.vite/
+/.eslintcache
