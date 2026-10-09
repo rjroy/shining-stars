@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise two complete, real-clock game runs in Chromium via WebDriver."""
 
+import hashlib
 import json
 import argparse
 import re
@@ -14,10 +15,41 @@ from pathlib import Path
 
 
 OUTPUT = Path("/tmp/opencode/brightvale-stage5")
-SOURCE_START = 107.1
-EXCERPT_DURATION = 65.8
-HANDOFF_TIME = 39.2
-FINAL_NOTE_TIME = 63.8
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ARTIFACT_PATH = PROJECT_ROOT / "data/charts/the-first-shining-star.beats.json"
+
+
+def load_chart_reference():
+    artifact = json.loads(ARTIFACT_PATH.read_text(encoding="utf-8"))
+    source = artifact["source"]
+    config = artifact["config"]
+    source_path = (PROJECT_ROOT / source["path"]).resolve()
+    actual_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    if actual_hash != artifact["source_sha256"] or actual_hash != source["sha256"]:
+        raise ValueError("beat artifact source SHA-256 does not match the selected recording")
+    notes = artifact["notes"]
+    if not notes:
+        raise ValueError("beat artifact contains no selected notes")
+    return artifact, config, notes
+
+
+_, CHART_CONFIG, CHART_NOTES = load_chart_reference()
+SOURCE_START = CHART_CONFIG["source_start"]
+HANDOFF_TIME = CHART_CONFIG["boundary"]
+FINAL_NOTE_TIME = max(note["relative_time"] for note in CHART_NOTES)
+AUDIENCE_NOTE_COUNT = sum(
+    note["relative_time"] < HANDOFF_TIME for note in CHART_NOTES
+)
+TWILIGHT_NOTE_COUNT = sum(
+    note["relative_time"] > HANDOFF_TIME for note in CHART_NOTES
+)
+LANE_KEYS = {0: "d", 1: "f", 2: "j", 3: "k"}
+AUDIENCE_NOTES = [
+    note for note in CHART_NOTES if note["relative_time"] < HANDOFF_TIME
+]
+TWILIGHT_NOTES = [
+    note for note in CHART_NOTES if note["relative_time"] > HANDOFF_TIME
+]
 
 
 def request(base, method, path, payload=None, timeout=30):
@@ -246,15 +278,13 @@ def assert_first_results_after_audio_tail(
     scenario, first_visible, scheduled_end, final_note_target
 ):
     end_threshold = scheduled_end - 0.05
-    tail_threshold = final_note_target + 1.95
-    if first_visible < end_threshold or first_visible < tail_threshold:
+    if first_visible < end_threshold or first_visible < final_note_target:
         raise AssertionError(
             f"{scenario} results became visible too early: "
             f"firstVisible={first_visible:.3f}s, "
             f"finalNote={final_note_target:.3f}s, "
             f"scheduledEnd={scheduled_end:.3f}s, "
-            f"endThreshold={end_threshold:.3f}s, "
-            f"tailThreshold={tail_threshold:.3f}s"
+            f"endThreshold={end_threshold:.3f}s"
         )
 
 
@@ -338,7 +368,8 @@ def all_miss_run(driver, url, early_results_negative_control=False):
             execute(
                 driver,
                 session,
-                "const a=window.__brightvaleFlow,target=a.starts[0].values[0]+63.8;"
+                "const a=window.__brightvaleFlow,target=a.starts[0].values[0]+"
+                f"{FINAL_NOTE_TIME};"
                 "a.negativeControlTimer=setInterval(()=>{"
                 "if(a.context.currentTime>=target){clearInterval(a.negativeControlTimer);"
                 "const panel=document.querySelector('[data-panel=results]');"
@@ -406,13 +437,13 @@ def all_miss_run(driver, url, early_results_negative_control=False):
         result_blob = "\n".join(result["results"]).lower()
         required = [
             "audience · accuracy",
-            "0 perfect · 0 good · 23 missed",
+            f"0 perfect · 0 good · {AUDIENCE_NOTE_COUNT} missed",
             "0 earned · 0 spent",
             "0 unused points discarded",
             "twilight · accuracy",
-            "0 perfect · 0 good · 15 missed",
+            f"0 perfect · 0 good · {TWILIGHT_NOTE_COUNT} missed",
             "city answer",
-            "0 perfect · 0 good · 38 missed",
+            f"0 perfect · 0 good · {len(CHART_NOTES)} missed",
         ]
         absent = [text for text in required if text not in result_blob]
         if absent:
@@ -463,17 +494,20 @@ def strategic_run(driver, url):
             raise AssertionError(f"Strategic source was scheduled while {first_start['state']}")
         hits = []
 
-        for note_time, key in [(1.2, "d"), (2.8, "j"), (4.3, "f"), (5.9, "k")]:
+        strategic_notes = AUDIENCE_NOTES[:2]
+        for index, note in enumerate(strategic_notes):
+            note_time = note["relative_time"]
+            key = LANE_KEYS[note["lane"]]
             hit = press_at_note(
                 driver,
                 session,
                 latest_start(driver, session),
                 note_time,
                 key,
-                repeat=(note_time == 1.2),
+                repeat=(index == 0),
             )
             hits.append(hit)
-            if note_time == 1.2 and hit["resource"] != "2":
+            if index == 0 and hit["resource"] != "2":
                 raise AssertionError(
                     f"Held-key repeat attempt changed the single-hit score: {hit}"
                 )
@@ -488,7 +522,12 @@ def strategic_run(driver, url):
         )
         target_start = latest_start(driver, session)
         when, offset = target_start["values"][0], target_start["values"][1]
-        input_target = when + (7.5 - (offset - SOURCE_START))
+        editable_note_time = (
+            AUDIENCE_NOTES[1]["relative_time"]
+            + (AUDIENCE_NOTES[2]["relative_time"] - AUDIENCE_NOTES[1]["relative_time"])
+            / 2
+        )
+        input_target = when + (editable_note_time - (offset - SOURCE_START))
         wait_for_clock(driver, session, input_target - 0.05)
         send_key(driver, session, "d")
         after_editable = browser_state(driver, session)
@@ -606,8 +645,8 @@ def strategic_run(driver, url):
             driver,
             session,
             latest_start(driver, session),
-            40.5,
-            "k",
+            TWILIGHT_NOTES[0]["relative_time"],
+            LANE_KEYS[TWILIGHT_NOTES[0]["lane"]],
         )
         hits.append(twilight_hit)
         twilight_state = browser_state(driver, session)

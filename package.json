@@ -11,6 +11,9 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "chart:generate": "python3 scripts/beat_chart.py",
+    "chart:check": "python3 scripts/beat_chart.py --check",
+    "test:chart": "python3 -m unittest tests/test_beat_chart.py tests/test_beat_chart_workflow.py",
     "lint": "eslint .",
     "format": "prettier --write package.json package-lock.json tsconfig.json vite.config.ts eslint.config.js .prettierrc.json index.html 'src/**/*.{ts,css}' README.md",
     "format:check": "prettier --check package.json package-lock.json tsconfig.json vite.config.ts eslint.config.js .prettierrc.json index.html 'src/**/*.{ts,css}' README.md"
