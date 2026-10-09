@@ -28,6 +28,9 @@ const ui = createGameUI(appRoot, MVP_CHART, {
     runPlaybackAction(() => controller?.resume(), 'Preparing to resume…'),
   restart: () =>
     runPlaybackAction(() => controller?.restart(), 'Starting the song again…'),
+  selectDifficulty: (difficulty) => {
+    controller?.selectDifficulty(difficulty);
+  },
 });
 
 let controller: GameController | null = null;
@@ -231,7 +234,8 @@ try {
   );
   controller = createGameController({
     audio,
-    createGame: (offset) => createGame(MVP_CHART, offset),
+    createGame: (offset, difficulty) =>
+      createGame(MVP_CHART, offset, difficulty),
     inputOffset,
     visualOffset,
     render: renderSnapshot,

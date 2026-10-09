@@ -6,6 +6,7 @@
       "twilight_time": 39.2,
       "duration": 65.8,
       "twilight_strength": 100,
+      "allowed_difficulties": ["normal", "hard"],
       "minimum_delta": 64,
       "stride": 2,
       "lane_rules": {

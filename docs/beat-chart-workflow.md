@@ -20,6 +20,7 @@ guessed excerpt settings. The active entry is:
       "twilight_time": 39.2,
       "duration": 65.8,
       "twilight_strength": 100,
+      "allowed_difficulties": ["normal", "hard"],
       "minimum_delta": 64,
       "stride": 2,
       "lane_rules": { "type": "pattern", "data": [0, 2, 1, 3] }
@@ -35,7 +36,23 @@ positive integer, and the supported lane rule is a non-empty `pattern` of lane
 numbers 0 through 3. The loader rejects invalid/non-finite timings or strength,
 negative minimum delta, invalid stride, and unsupported lane rules. The
 strength is recorded in the provenance artifact and emitted as
-`MVP_CHART.twilightStrength`.
+`MVP_CHART.twilightStrength`. `allowed_difficulties` is a non-empty ordered list
+of unique profile IDs and is emitted as `MVP_CHART.allowedDifficulties`; the
+current song allows Normal and Hard. Normal is selected by default when allowed,
+otherwise the first declared profile is used. The selection is fixed for a run
+and can change only while idle or after results. Difficulty changes rewards,
+combat values, and timing windows, not the charted notes or initial Twilight
+Strength.
+
+The shared, validated profiles live in `data/charts/difficulty-profiles.json`
+and are consumed by both the TypeScript game and the Python generator. Easy uses
+Perfect/Good windows of 250/500 ms, Audience rewards 2/1/0, and Twilight
+cost/damage P/G/M of 0/0/2 and 2/1/0. Normal uses 75/150 ms, rewards 3/2/0,
+and cost/damage 0/1/3 and 3/2/0. Hard uses 50/100 ms, rewards 5/3/0, and
+cost/damage 0/2/3 and 5/3/0. The chart guard uses the widest Good window among
+the allowed profiles plus the existing 200 ms input-offset limit. Consequently
+the current Normal/Hard combination retains the existing 150 ms guard and
+chart timestamps.
 
 ## Generate
 

@@ -1,4 +1,5 @@
 import type { AudioTransport, AudioTransportSnapshot } from './audio';
+import { isDifficulty, type Difficulty } from './game-balance';
 import type { GameSession, GameSnapshot, PressResult } from './game';
 
 export interface ControllerSnapshot {
@@ -6,12 +7,17 @@ export interface ControllerSnapshot {
   readonly game: GameSnapshot;
   readonly inputOffset: number;
   readonly visualOffset: number;
+  /** Profile chosen for the next fresh run; a finished run keeps its own profile. */
+  readonly selectedDifficulty: Difficulty;
   readonly feedback: PressResult | null;
 }
 
 export interface ControllerDependencies {
   readonly audio: AudioTransport;
-  readonly createGame: (inputOffset: number) => GameSession;
+  readonly createGame: (
+    inputOffset: number,
+    difficulty?: Difficulty,
+  ) => GameSession;
   readonly inputOffset?: number;
   readonly visualOffset?: number;
   readonly render?: (snapshot: ControllerSnapshot) => void;
@@ -22,6 +28,7 @@ export interface GameController {
   start(): Promise<ControllerSnapshot>;
   resume(): Promise<ControllerSnapshot>;
   restart(): Promise<ControllerSnapshot>;
+  selectDifficulty(difficulty: Difficulty): ControllerSnapshot;
   pause(): ControllerSnapshot;
   blur(): ControllerSnapshot;
   keyDown(code: string, repeat?: boolean): ControllerSnapshot;
@@ -44,9 +51,12 @@ export function createGameController(
   const inputOffset = dependencies.inputOffset ?? 0;
   const visualOffset = dependencies.visualOffset ?? 0;
   let game = dependencies.createGame(inputOffset);
+  let selectedDifficulty = game.snapshot().difficulty;
   let feedback: PressResult | null = null;
   const pressedKeys = new Set<string>();
   let controlEpoch = 0;
+  let pendingTransportRequests = 0;
+  let hasTransportRequestBeenMade = false;
   let disposed = false;
   let terminalAudioStopHandled = false;
   let disposePromise: Promise<void> | null = null;
@@ -57,6 +67,7 @@ export function createGameController(
       game: game.snapshot(),
       inputOffset,
       visualOffset,
+      selectedDifficulty,
       feedback: feedback === null ? null : { ...feedback },
     };
   }
@@ -127,23 +138,29 @@ export function createGameController(
     }
 
     const requestEpoch = beginControlAction();
+    hasTransportRequestBeenMade = true;
+    pendingTransportRequests += 1;
     pressedKeys.clear();
     feedback = null;
-    const loaded = await dependencies.audio.load();
-    if (!isCurrentAction(requestEpoch)) {
-      return snapshot();
-    }
+    try {
+      const loaded = await dependencies.audio.load();
+      if (!isCurrentAction(requestEpoch)) {
+        return snapshot();
+      }
 
-    if (loaded.status !== 'ready') {
+      if (loaded.status !== 'ready') {
+        return publish();
+      }
+
+      await dependencies.audio.start();
+      if (!isCurrentAction(requestEpoch)) {
+        return snapshot();
+      }
+      stopAudioForTerminalGame();
       return publish();
+    } finally {
+      pendingTransportRequests -= 1;
     }
-
-    await dependencies.audio.start();
-    if (!isCurrentAction(requestEpoch)) {
-      return snapshot();
-    }
-    stopAudioForTerminalGame();
-    return publish();
   }
 
   async function resume(): Promise<ControllerSnapshot> {
@@ -156,14 +173,20 @@ export function createGameController(
     }
 
     const requestEpoch = beginControlAction();
+    hasTransportRequestBeenMade = true;
+    pendingTransportRequests += 1;
     pressedKeys.clear();
     feedback = null;
-    await dependencies.audio.resume();
-    if (!isCurrentAction(requestEpoch)) {
-      return snapshot();
+    try {
+      await dependencies.audio.resume();
+      if (!isCurrentAction(requestEpoch)) {
+        return snapshot();
+      }
+      stopAudioForTerminalGame();
+      return publish();
+    } finally {
+      pendingTransportRequests -= 1;
     }
-    stopAudioForTerminalGame();
-    return publish();
   }
 
   async function restart(): Promise<ControllerSnapshot> {
@@ -172,13 +195,53 @@ export function createGameController(
     }
 
     const requestEpoch = beginControlAction();
+    hasTransportRequestBeenMade = true;
+    pendingTransportRequests += 1;
     pressedKeys.clear();
     feedback = null;
-    game = dependencies.createGame(inputOffset);
+    game = dependencies.createGame(inputOffset, selectedDifficulty);
     terminalAudioStopHandled = false;
-    await dependencies.audio.restart();
-    if (!isCurrentAction(requestEpoch)) {
-      return snapshot();
+    try {
+      await dependencies.audio.restart();
+      if (!isCurrentAction(requestEpoch)) {
+        return snapshot();
+      }
+      return publish();
+    } finally {
+      pendingTransportRequests -= 1;
+    }
+  }
+
+  function selectDifficulty(difficulty: Difficulty): ControllerSnapshot {
+    if (disposed) return snapshot();
+    if (!isDifficulty(difficulty)) {
+      throw new RangeError(`Unknown difficulty '${String(difficulty)}'.`);
+    }
+    if (difficulty === selectedDifficulty) return snapshot();
+
+    const gameAtResults = game.snapshot().status === 'results';
+    const audioStatus = dependencies.audio.snapshot().status;
+    const loadingBeforeAnyRequest =
+      audioStatus === 'loading' &&
+      !hasTransportRequestBeenMade &&
+      pendingTransportRequests === 0;
+    if (
+      pendingTransportRequests > 0 ||
+      (!gameAtResults && audioStatus !== 'ready' && !loadingBeforeAnyRequest)
+    ) {
+      throw new RangeError(
+        'Difficulty can only change while idle or after the run has finished.',
+      );
+    }
+
+    // Construct first so unknown/disallowed choices cannot partially mutate
+    // controller selection or discard the previous idle game.
+    const nextGame = dependencies.createGame(inputOffset, difficulty);
+    selectedDifficulty = difficulty;
+    if (!gameAtResults) {
+      game = nextGame;
+      pressedKeys.clear();
+      feedback = null;
     }
     return publish();
   }
@@ -270,6 +333,7 @@ export function createGameController(
     start,
     resume,
     restart,
+    selectDifficulty,
     pause,
     blur: pause,
     keyDown,

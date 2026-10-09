@@ -17,6 +17,7 @@ function chart(
     duration: options.duration ?? 12,
     twilightAt: options.twilightAt ?? 5,
     twilightStrength: options.twilightStrength ?? 100,
+    allowedDifficulties: ['normal'],
     notes,
   } as unknown as ChartConfig;
 }

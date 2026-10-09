@@ -2,13 +2,18 @@ import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
 import { projectNotes } from './note-projection';
-import { GAME_BALANCE } from './game-balance';
+import {
+  defaultDifficulty,
+  getDifficultyProfile,
+  type Difficulty,
+} from './game-balance';
 
 export interface UIActions {
   readonly start: () => void;
   readonly pause: () => void;
   readonly resume: () => void;
   readonly restart: () => void;
+  readonly selectDifficulty: (difficulty: Difficulty) => void;
 }
 
 export interface GameUI {
@@ -17,6 +22,17 @@ export interface GameUI {
   setSceneFallback(message: string | null): void;
   showFatal(message: string): void;
   destroy(): void;
+}
+
+function profileSummary(
+  profile: ReturnType<typeof getDifficultyProfile>,
+): string {
+  const milliseconds = (seconds: number) => Math.round(seconds * 1000);
+  return `Perfect ±${milliseconds(profile.timing.perfectWindowSeconds)} ms · Good ±${milliseconds(profile.timing.goodWindowSeconds)} ms. Audience Renown: Perfect ${profile.audience.perfect}, Good ${profile.audience.good}, Miss ${profile.audience.miss}. Twilight: Miss costs ${profile.twilight.miss.personalCost}; Good costs ${profile.twilight.good.personalCost} and deals ${profile.twilight.good.damage}; Perfect costs ${profile.twilight.perfect.personalCost} and deals ${profile.twilight.perfect.damage}.`;
+}
+
+function difficultyLabel(difficulty: Difficulty): string {
+  return `${difficulty[0]?.toUpperCase()}${difficulty.slice(1)}`;
 }
 
 const VISIBLE_NOTE_SECONDS = 2.4;
@@ -43,6 +59,7 @@ export function createGameUI(
   chart: ChartConfig,
   actions: UIActions,
 ): GameUI {
+  const initialDifficulty = defaultDifficulty(chart.allowedDifficulties);
   root.innerHTML = `
     <main class="experience" aria-label="Brightvale rhythm performance">
       <header class="masthead">
@@ -69,6 +86,22 @@ export function createGameUI(
               <span><span class="resource-name">Personal Strength</span> <strong data-personal-strength>0</strong></span>
               <span><span class="resource-name">Twilight Strength</span> <strong data-twilight-strength>0</strong></span>
             </div>
+          </div>
+          <div class="difficulty-control">
+            <label class="resource-name" for="difficulty">Next run difficulty</label>
+            <select id="difficulty" data-difficulty-select aria-describedby="difficulty-help">
+              ${chart.allowedDifficulties
+                .map(
+                  (difficulty) =>
+                    `<option value="${difficulty}"${difficulty === initialDifficulty ? ' selected' : ''}>${difficultyLabel(difficulty)}</option>`,
+                )
+                .join('')}
+            </select>
+            <span class="difficulty-help" id="difficulty-help">Applies to the next run.</span>
+            <details class="difficulty-details">
+              <summary>Difficulty rules</summary>
+              <p data-difficulty-rules id="difficulty-rules"></p>
+            </details>
           </div>
         </div>
         <p class="scene-fallback" data-scene-fallback role="status" hidden></p>
@@ -102,7 +135,7 @@ export function createGameUI(
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
           <p class="dialog-overline">The First Shining Star · provisional excerpt</p>
           <h2 id="ready-title">Your voice leads. Brightvale answers.</h2>
-          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. In the audience, perfect hits earn ${GAME_BALANCE.audience.perfect} Renown, good hits earn ${GAME_BALANCE.audience.good}, and misses earn ${GAME_BALANCE.audience.miss}. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. Misses cost ${GAME_BALANCE.twilight.miss.personalCost} Personal Strength; good hits cost ${GAME_BALANCE.twilight.good.personalCost} and deal ${GAME_BALANCE.twilight.good.damage} damage; perfect hits cost ${GAME_BALANCE.twilight.perfect.personalCost} and deal ${GAME_BALANCE.twilight.perfect.damage} damage. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
+          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
           <p class="chart-notice">Aubio onset chart · density configured per song</p>
           <button class="primary-button" type="button" data-action="start">Begin performance <span aria-hidden="true">↗</span></button>
           <p class="loading-message" data-busy hidden></p>
@@ -154,7 +187,19 @@ export function createGameUI(
     else if (action === 'restart') actions.restart();
   }
 
+  function onChange(event: Event): void {
+    const target = event.target;
+    if (
+      !(target instanceof HTMLSelectElement) ||
+      !target.matches('[data-difficulty-select]')
+    )
+      return;
+    if (target.disabled) return;
+    actions.selectDifficulty(target.value as Difficulty);
+  }
+
   root.addEventListener('click', onClick);
+  root.addEventListener('change', onChange);
 
   function showPanel(name: string | null): void {
     for (const panel of panels) {
@@ -179,8 +224,9 @@ export function createGameUI(
           ? 'The enemy has been defeated.'
           : 'Your strength ran out before the enemy fell.';
     grid.innerHTML = `
+      <p class="result-outcome-copy">Difficulty: ${difficultyLabel(result.difficulty)}</p>
       <p class="result-outcome-copy">${enemySummary}</p>
-      <div class="result-line"><span>Renown earned</span><strong>${result.renown}</strong><small>Perfect ${GAME_BALANCE.audience.perfect} · good ${GAME_BALANCE.audience.good} · miss ${GAME_BALANCE.audience.miss}</small></div>
+      <div class="result-line"><span>Renown earned</span><strong>${result.renown}</strong><small>${profileSummary(getDifficultyProfile(result.difficulty))}</small></div>
       <div class="result-line"><span>Personal Strength remaining</span><strong>${result.personalStrength}</strong><small>${result.outcome === 'defeat' ? 'Exhausted' : 'You stood your ground'}</small></div>
       <div class="result-line"><span>Twilight Strength remaining</span><strong>${result.twilightStrength}</strong><small>${enemySummary}</small></div>
       <div class="result-line"><span>Audience · accuracy</span><strong>${accuracyLabel(result.audience.accuracy)}</strong><small>${phaseStatsLabel(result.audience)}</small></div>
@@ -192,11 +238,32 @@ export function createGameUI(
     const { audio, game } = snapshot;
     const isError = audio.status === 'error' || fatalMessage !== null;
     const isResults = game.status === 'results';
-    const isPaused = audio.status === 'paused' && hasAttemptedStart && !isError;
+    const isPaused =
+      audio.status === 'paused' && hasAttemptedStart && !isError && !isResults;
     const isReady =
       (!hasAttemptedStart || busyMessage !== null) && !isError && !isResults;
     const isStarting = audio.status === 'starting';
     const isPlaying = audio.status === 'playing' && game.status === 'playing';
+    const difficultySelect = root.querySelector<HTMLSelectElement>(
+      '[data-difficulty-select]',
+    );
+    const nextDifficulty = snapshot.selectedDifficulty;
+    const activeDifficulty = isResults ? game.difficulty : nextDifficulty;
+    if (difficultySelect !== null) {
+      difficultySelect.value = nextDifficulty;
+      difficultySelect.disabled =
+        busyMessage !== null ||
+        isStarting ||
+        isPlaying ||
+        isPaused ||
+        (audio.status === 'loading' && hasAttemptedStart) ||
+        audio.status === 'error';
+    }
+    setText(
+      root,
+      '[data-difficulty-rules]',
+      profileSummary(getDifficultyProfile(activeDifficulty)),
+    );
 
     showPanel(
       isResults
@@ -353,6 +420,7 @@ export function createGameUI(
     },
     destroy() {
       root.removeEventListener('click', onClick);
+      root.removeEventListener('change', onChange);
       root.replaceChildren();
     },
   };

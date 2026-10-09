@@ -12,6 +12,7 @@ const validConfig: ChartConfig = {
   duration: 65.8,
   twilightAt: 39.2,
   twilightStrength: 100,
+  allowedDifficulties: ['normal', 'hard'],
   notes: [
     { id: 'audience-note', time: 10, lane: 0 },
     { id: 'twilight-note', time: 50, lane: 3 },
@@ -20,6 +21,17 @@ const validConfig: ChartConfig = {
 
 function withConfig(overrides: Partial<ChartConfig> = {}): ChartConfig {
   return { ...validConfig, ...overrides };
+}
+
+function withDifficultyConfig(
+  notes: readonly ChartNote[],
+  allowedDifficulties: readonly ('easy' | 'normal' | 'hard')[],
+): ChartConfig {
+  return {
+    ...validConfig,
+    notes,
+    allowedDifficulties,
+  } as ChartConfig;
 }
 
 function expectIssue(config: ChartConfig, expected: ChartIssueCode): void {
@@ -36,6 +48,21 @@ describe('validateChart', () => {
   it('allows an empty chart for the later No notes result', () => {
     expect(validateChart(withConfig({ notes: [] }))).toEqual([]);
   });
+
+  it.each([
+    { allowedDifficulties: [] as unknown[] },
+    { allowedDifficulties: ['normal', 'normal'] },
+    { allowedDifficulties: ['easy', 'expert'] },
+  ])(
+    'rejects malformed allowed difficulty lists ($allowedDifficulties)',
+    ({ allowedDifficulties }) => {
+      const invalid = {
+        ...validConfig,
+        allowedDifficulties,
+      } as unknown as ChartConfig;
+      expectIssue(invalid, 'invalid-allowed-difficulties');
+    },
+  );
 
   it.each([
     0,
@@ -126,6 +153,31 @@ describe('validateChart', () => {
     expectIssue(withConfig({ notes: [earlyNote] }), 'before-excerpt-start');
   });
 
+  it('uses the maximum allowed Good window plus the input offset for excerpt-start safety', () => {
+    const easyEdge: ChartNote = { id: 'easy-start-edge', time: 0.7, lane: 0 };
+    const easyTooEarly: ChartNote = {
+      id: 'easy-before-start',
+      time: 0.69,
+      lane: 0,
+    };
+    const normalEdge: ChartNote = {
+      id: 'normal-start-edge',
+      time: 0.35,
+      lane: 0,
+    };
+
+    expect(validateChart(withDifficultyConfig([easyEdge], ['easy']))).toEqual(
+      [],
+    );
+    expectIssue(
+      withDifficultyConfig([easyTooEarly], ['easy']),
+      'before-excerpt-start',
+    );
+    expect(
+      validateChart(withDifficultyConfig([normalEdge], ['normal', 'hard'])),
+    ).toEqual([]);
+  });
+
   it("requires an audience envelope's latest edge strictly before the handoff guard", () => {
     const edgeNote: ChartNote = { id: 'audience-edge', time: 38.35, lane: 0 };
 
@@ -135,11 +187,35 @@ describe('validateChart', () => {
     );
   });
 
+  it('uses the maximum allowed Good window to protect the Audience side of Twilight handoff', () => {
+    const audienceEdge: ChartNote = {
+      id: 'easy-audience-handoff',
+      time: 38.1,
+      lane: 0,
+    };
+    expectIssue(
+      withDifficultyConfig([audienceEdge], ['easy', 'normal']),
+      'audience-window-near-twilight',
+    );
+  });
+
   it("requires a Twilight envelope's earliest edge strictly after the handoff guard", () => {
     const edgeNote: ChartNote = { id: 'twilight-edge', time: 40.05, lane: 0 };
 
     expectIssue(
       withConfig({ notes: [edgeNote] }),
+      'twilight-window-near-audience',
+    );
+  });
+
+  it('uses the maximum allowed Good window to protect the Twilight side of handoff', () => {
+    const twilightEdge: ChartNote = {
+      id: 'easy-twilight-handoff',
+      time: 40.3,
+      lane: 0,
+    };
+    expectIssue(
+      withDifficultyConfig([twilightEdge], ['easy', 'normal']),
       'twilight-window-near-audience',
     );
   });
@@ -164,6 +240,19 @@ describe('validateChart', () => {
     const lateNote: ChartNote = { id: 'too-late', time: 64.951, lane: 0 };
 
     expectIssue(withConfig({ notes: [lateNote] }), 'after-excerpt-end');
+  });
+
+  it('uses the maximum allowed Good window plus the input offset for excerpt-end safety', () => {
+    const endEdge: ChartNote = { id: 'easy-end-edge', time: 64.6, lane: 0 };
+    const tooLate: ChartNote = { id: 'easy-too-late', time: 64.7, lane: 0 };
+
+    expect(validateChart(withDifficultyConfig([endEdge], ['easy']))).toEqual(
+      [],
+    );
+    expectIssue(withDifficultyConfig([tooLate], ['easy']), 'after-excerpt-end');
+    expect(
+      validateChart(withDifficultyConfig([tooLate], ['normal', 'hard'])),
+    ).toEqual([]);
   });
 
   it('rejects simultaneous notes rather than authoring a chord', () => {

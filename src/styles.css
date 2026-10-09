@@ -226,12 +226,62 @@ h1 {
   margin-top: 8px;
   text-align: right;
 }
+.twilight-resources[hidden] {
+  display: none;
+}
 .twilight-resources > span {
   display: grid;
   gap: 3px;
 }
 .twilight-resources strong {
   font-size: 1rem;
+}
+.difficulty-control {
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  gap: 5px;
+  min-width: 145px;
+  max-width: 220px;
+}
+.difficulty-control select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 30px 0 10px;
+  border: 1px solid rgb(225 237 232 / 30%);
+  border-radius: 2px;
+  background: #101b2d;
+  color: var(--cream);
+  font:
+    600 0.78rem 'Manrope',
+    'Avenir Next',
+    sans-serif;
+}
+.difficulty-control select:disabled {
+  cursor: not-allowed;
+  color: #d1d8dc;
+}
+.difficulty-details {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+.difficulty-details summary {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.difficulty-details p {
+  position: absolute;
+  z-index: 4;
+  width: min(360px, calc(100vw - 48px));
+  margin: 7px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  background: #101b2d;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 35%);
+  color: var(--cream);
+  font-size: 0.72rem;
+  line-height: 1.55;
 }
 
 .stage-frame {
@@ -681,6 +731,7 @@ button:disabled {
     padding: 24px 13px 19px;
   }
   .play-heading {
+    flex-wrap: wrap;
     margin-bottom: 22px;
   }
   .resource-readout {
@@ -694,6 +745,10 @@ button:disabled {
   }
   .twilight-resources .resource-name {
     font-size: 0.56rem;
+  }
+  .difficulty-control {
+    flex: 1 1 100%;
+    max-width: none;
   }
   .stage-frame {
     padding: 10px 10px 12px;

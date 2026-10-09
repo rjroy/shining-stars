@@ -8,12 +8,11 @@ describe('gameplay copy', () => {
   it('explains Renown rewards and that audience misses do not remove Renown', () => {
     expect(uiSource).toMatch(/Renown/i);
     expect(uiSource).toMatch(
-      /perfect hits earn \$\{GAME_BALANCE\.audience\.perfect\}/i,
+      /Audience Renown: Perfect \$\{profile\.audience\.perfect\}/i,
     );
-    expect(uiSource).toMatch(
-      /good hits earn \$\{GAME_BALANCE\.audience\.good\}/i,
-    );
-    expect(uiSource).toMatch(/misses earn \$\{GAME_BALANCE\.audience\.miss\}/i);
+    expect(uiSource).toMatch(/Good \$\{profile\.audience\.good\}/i);
+    expect(uiSource).toMatch(/Miss \$\{profile\.audience\.miss\}/i);
+    expect(uiSource).toMatch(/getDifficultyProfile\(activeDifficulty\)/);
   });
 
   it('explains both Twilight strengths and all combat costs and damage', () => {

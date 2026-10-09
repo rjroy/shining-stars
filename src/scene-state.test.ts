@@ -3,6 +3,7 @@ import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
 import { GAME_BALANCE } from './game-balance';
+import { getDifficultyProfile } from './game-balance';
 import { projectSceneState } from './scene-state';
 
 const chart: ChartConfig = {
@@ -10,6 +11,7 @@ const chart: ChartConfig = {
   duration: 20,
   twilightAt: 10,
   twilightStrength: 100,
+  allowedDifficulties: ['normal'],
   notes: [1, 2, 3, 4].map((time, index) => ({
     id: `a${index}`,
     time,
@@ -27,6 +29,7 @@ function makeSnapshot(
     renown: 0,
     personalStrength: 0,
     twilightStrength: chart.twilightStrength,
+    difficulty: 'normal',
     notes: [],
     result: null,
     ...gameOverrides,
@@ -44,6 +47,7 @@ function makeSnapshot(
     game,
     inputOffset: 0,
     visualOffset: 0,
+    selectedDifficulty: 'normal',
     feedback: null,
   };
 }
@@ -57,6 +61,27 @@ describe('projectSceneState', () => {
       chart,
     );
     expect(projected.cityIntensity).toBeCloseTo(0.5);
+  });
+
+  it('normalizes audience scene intensity using the active run profile', () => {
+    const hardPotential =
+      chart.notes.filter((note) => note.time < chart.twilightAt).length *
+      getDifficultyProfile('hard').audience.perfect;
+    const projected = projectSceneState(
+      makeSnapshot({ difficulty: 'hard', renown: hardPotential / 2 }),
+      chart,
+    );
+    expect(projected.cityIntensity).toBeCloseTo(0.5);
+  });
+
+  it('does not use next-run selection to normalize a finished run', () => {
+    const runSnapshot = {
+      ...makeSnapshot({ difficulty: 'hard', renown: 10 }),
+      selectedDifficulty: 'normal' as const,
+    };
+    const hardPotential = 4 * getDifficultyProfile('hard').audience.perfect;
+    const projected = projectSceneState(runSnapshot, chart);
+    expect(projected.cityIntensity).toBe(10 / hardPotential);
   });
 
   it('tracks the share of Twilight strength defeated, not player strength', () => {

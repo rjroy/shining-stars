@@ -63,6 +63,7 @@ const chart: ChartConfig = {
   duration: 10,
   twilightAt: 5,
   twilightStrength: 100,
+  allowedDifficulties: ['normal'],
   notes: [{ id: 'early-note', time: 0.5, lane: 0 }],
 };
 
@@ -253,6 +254,7 @@ function createIntegrationController(
     duration: 10,
     twilightAt: 2,
     twilightStrength,
+    allowedDifficulties: ['normal'],
     notes,
   };
   const audio = createAudioTransport(

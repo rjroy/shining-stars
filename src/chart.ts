@@ -1,3 +1,10 @@
+import {
+  DIFFICULTY_PROFILES,
+  maximumGoodWindowSeconds,
+  parseAllowedDifficulties,
+  type Difficulty,
+} from './game-balance';
+
 export type ChartLane = 0 | 1 | 2 | 3;
 
 export interface ChartNote {
@@ -16,6 +23,8 @@ export interface ChartConfig {
   readonly twilightAt: number;
   /** Initial Twilight Strength for this song. */
   readonly twilightStrength: number;
+  /** Difficulties permitted for this song, in preferred fallback order. */
+  readonly allowedDifficulties: readonly Difficulty[];
   readonly notes: readonly ChartNote[];
 }
 
@@ -24,6 +33,7 @@ export type ChartIssueCode =
   | 'invalid-duration'
   | 'invalid-twilight'
   | 'invalid-twilight-strength'
+  | 'invalid-allowed-difficulties'
   | 'duplicate-note-id'
   | 'non-finite-note-time'
   | 'invalid-lane'
@@ -40,10 +50,7 @@ export interface ChartIssue {
   readonly noteId?: string;
 }
 
-const MAX_HIT_WINDOW_SECONDS = 0.15;
 const MAX_INPUT_OFFSET_SECONDS = 0.2;
-const MAX_TIMING_ENVELOPE_SECONDS =
-  MAX_HIT_WINDOW_SECONDS + MAX_INPUT_OFFSET_SECONDS;
 const HANDOFF_GUARD_SECONDS = 0.5;
 
 function isChartLane(lane: number): lane is ChartLane {
@@ -106,6 +113,25 @@ export function validateChart(chart: ChartConfig): readonly ChartIssue[] {
     );
   }
 
+  let maxGoodWindowSeconds =
+    DIFFICULTY_PROFILES.normal.timing.goodWindowSeconds;
+  try {
+    const allowedDifficulties = parseAllowedDifficulties(
+      chart.allowedDifficulties,
+    );
+    maxGoodWindowSeconds = maximumGoodWindowSeconds(allowedDifficulties);
+  } catch (error) {
+    issues.push(
+      issue(
+        'invalid-allowed-difficulties',
+        error instanceof Error
+          ? error.message
+          : 'Allowed difficulties must be a non-empty list of known profiles.',
+      ),
+    );
+  }
+  const timingEnvelopeSeconds = maxGoodWindowSeconds + MAX_INPUT_OFFSET_SECONDS;
+
   const seenIds = new Set<string>();
   const seenTimes = new Set<number>();
   for (const note of chart.notes) {
@@ -150,8 +176,8 @@ export function validateChart(chart: ChartConfig): readonly ChartIssue[] {
       );
     }
 
-    const earliest = note.time - MAX_TIMING_ENVELOPE_SECONDS;
-    const latest = note.time + MAX_TIMING_ENVELOPE_SECONDS;
+    const earliest = note.time - timingEnvelopeSeconds;
+    const latest = note.time + timingEnvelopeSeconds;
 
     if (earliest < 0) {
       issues.push(

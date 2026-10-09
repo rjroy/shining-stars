@@ -19,6 +19,7 @@ interface OnsetArtifact {
     readonly source_start: number;
     readonly duration: number;
     readonly twilight_strength: number;
+    readonly allowed_difficulties: readonly ('easy' | 'normal' | 'hard')[];
     readonly boundary: number;
     readonly stride: number;
     readonly minimum_delta_ms: number;
@@ -90,6 +91,10 @@ describe('MVP onset-detected chart', () => {
     expect(MVP_CHART.sourceStart).toBe(artifact.config.source_start);
     expect(MVP_CHART.duration).toBe(artifact.config.duration);
     expect(MVP_CHART.twilightStrength).toBe(artifact.config.twilight_strength);
+    expect(MVP_CHART).toHaveProperty(
+      'allowedDifficulties',
+      artifact.config.allowed_difficulties,
+    );
     expect(MVP_CHART.twilightAt).toBe(artifact.config.boundary);
     expect(artifact.config.minimum_delta_ms).toBe(64);
     expect(MVP_CHART.notes).toHaveLength(artifact.notes.length);

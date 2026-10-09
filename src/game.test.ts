@@ -11,7 +11,16 @@ interface ChartOptions {
   readonly duration?: number;
   readonly twilightAt?: number;
   readonly twilightStrength?: number;
+  readonly allowedDifficulties?: readonly TestDifficulty[];
 }
+
+type TestDifficulty = 'easy' | 'normal' | 'hard';
+
+const createGameWithDifficulty = createGame as unknown as (
+  chart: ChartConfig,
+  inputOffset: number,
+  difficulty: TestDifficulty,
+) => GameSession;
 
 function makeChart(
   notes: readonly ChartNote[],
@@ -22,6 +31,7 @@ function makeChart(
     duration: options.duration ?? 10,
     twilightAt: options.twilightAt ?? 5,
     twilightStrength: options.twilightStrength ?? 100,
+    allowedDifficulties: options.allowedDifficulties ?? ['normal'],
     notes,
   };
 
@@ -35,6 +45,21 @@ function makeGame(
   options: ChartOptions = {},
 ): GameSession {
   return createGame(makeChart(notes, options), inputOffset);
+}
+
+function makeDifficultyGame(
+  notes: readonly ChartNote[],
+  difficulty: TestDifficulty,
+  options: ChartOptions = {},
+): GameSession {
+  return createGameWithDifficulty(
+    makeChart(notes, {
+      ...options,
+      allowedDifficulties: options.allowedDifficulties ?? [difficulty],
+    }),
+    0,
+    difficulty,
+  );
 }
 
 function note(id: string, time: number, lane: ChartLane = 0): ChartNote {
@@ -375,5 +400,194 @@ describe('game model', () => {
       twilightStrength: 100,
       notes: [{ id: 'audience', phase: 'audience', outcome: null }],
     });
+  });
+
+  it.each([
+    { difficulty: 'easy' as const, perfect: 0.25, good: 0.5 },
+    { difficulty: 'normal' as const, perfect: 0.075, good: 0.15 },
+    { difficulty: 'hard' as const, perfect: 0.05, good: 0.1 },
+  ])(
+    '$difficulty uses inclusive Perfect/Good edges and misses only after its Good edge',
+    ({ difficulty, perfect, good }) => {
+      for (const [error, quality] of [
+        [-good, 'good'],
+        [-perfect, 'perfect'],
+        [perfect, 'perfect'],
+        [good, 'good'],
+      ] as const) {
+        const game = makeDifficultyGame([note('edge', 2)], difficulty);
+        expect(game.snapshot().twilightStrength).toBe(100);
+        expect(game.press(0, 2 + error)).toMatchObject({
+          noteId: 'edge',
+          quality,
+        });
+        expect(game.snapshot()).toHaveProperty('difficulty', difficulty);
+      }
+
+      const outsidePerfect = makeDifficultyGame(
+        [note('outside-perfect', 2)],
+        difficulty,
+      );
+      expect(outsidePerfect.press(0, 2 + perfect + 0.0001)).toMatchObject({
+        noteId: 'outside-perfect',
+        quality: 'good',
+      });
+
+      const lateGame = makeDifficultyGame([note('deadline', 2)], difficulty);
+      expect(lateGame.press(0, 2 + good + 0.0001)).toBeNull();
+      expect(lateGame.snapshot().notes[0]?.outcome).toBe('miss');
+    },
+  );
+
+  it('selects the nearest overlapping Easy note and breaks an exact tie earlier', () => {
+    const easy = makeDifficultyGame(
+      [note('earlier', 2), note('later', 2.8)],
+      'easy',
+    );
+
+    expect(easy.press(0, 2.4)).toMatchObject({
+      noteId: 'earlier',
+      quality: 'good',
+    });
+    expect(easy.press(0, 2.4)).toMatchObject({ noteId: 'later' });
+
+    const hard = makeDifficultyGame(
+      [note('earlier', 2), note('later', 2.8)],
+      'hard',
+    );
+    expect(hard.press(0, 2.4)).toBeNull();
+  });
+
+  it.each([
+    {
+      difficulty: 'easy' as const,
+      audiencePerfect: 2,
+      audienceGood: 1,
+      goodCost: 0,
+      missCost: 2,
+      goodDamage: 1,
+      perfectDamage: 2,
+      expectedRenown: 3,
+    },
+    {
+      difficulty: 'normal' as const,
+      audiencePerfect: 3,
+      audienceGood: 2,
+      goodCost: 1,
+      missCost: 3,
+      goodDamage: 2,
+      perfectDamage: 3,
+      expectedRenown: 5,
+    },
+    {
+      difficulty: 'hard' as const,
+      audiencePerfect: 5,
+      audienceGood: 3,
+      goodCost: 2,
+      missCost: 3,
+      goodDamage: 3,
+      perfectDamage: 5,
+      expectedRenown: 8,
+    },
+  ])(
+    '$difficulty applies its shared Audience rewards and Twilight combat values',
+    ({
+      difficulty,
+      audiencePerfect,
+      audienceGood,
+      goodCost,
+      missCost,
+      goodDamage,
+      perfectDamage,
+      expectedRenown,
+    }) => {
+      const goodOffset = (0.075 + 0.15) / 2;
+      const game = makeDifficultyGame(
+        [
+          note('audience-perfect', 1),
+          note('audience-good', 2),
+          note('audience-miss', 3),
+          note('twilight-good', 6.3),
+          note('twilight-perfect', 7.3),
+          note('twilight-miss', 8.3),
+        ],
+        difficulty,
+      );
+
+      expect(game.press(0, 1)?.quality).toBe('perfect');
+      const difficultyGoodOffset =
+        difficulty === 'easy'
+          ? (0.25 + 0.5) / 2
+          : difficulty === 'normal'
+            ? goodOffset
+            : (0.05 + 0.1) / 2;
+      expect(game.press(0, 2 + difficultyGoodOffset)?.quality).toBe('good');
+      const goodWindow =
+        difficulty === 'easy' ? 0.5 : difficulty === 'normal' ? 0.15 : 0.1;
+      game.advanceTo(3 + goodWindow + 0.001);
+      const audienceSnapshot = game.snapshot();
+      expect(audienceSnapshot).toMatchObject({
+        renown: audiencePerfect + audienceGood,
+      });
+      expect(
+        audienceSnapshot.notes
+          .slice(0, 3)
+          .map(({ id, outcome }) => ({ id, outcome })),
+      ).toEqual([
+        { id: 'audience-perfect', outcome: 'perfect' },
+        { id: 'audience-good', outcome: 'good' },
+        { id: 'audience-miss', outcome: 'miss' },
+      ]);
+
+      game.advanceTo(5);
+      expect(game.snapshot().personalStrength).toBe(expectedRenown);
+      expect(game.press(0, 6.3 + difficultyGoodOffset)?.quality).toBe('good');
+      expect(game.press(0, 7.3)?.quality).toBe('perfect');
+      game.advanceTo(8.3 + goodWindow + 0.001);
+      expect(game.snapshot()).toMatchObject({
+        renown: expectedRenown,
+        personalStrength: expectedRenown - goodCost - missCost,
+        twilightStrength: 100 - goodDamage - perfectDamage,
+        notes: [
+          { id: 'audience-perfect', outcome: 'perfect' },
+          { id: 'audience-good', outcome: 'good' },
+          { id: 'audience-miss', outcome: 'miss' },
+          { id: 'twilight-good', outcome: 'good' },
+          { id: 'twilight-perfect', outcome: 'perfect' },
+          { id: 'twilight-miss', outcome: 'miss' },
+        ],
+      });
+    },
+  );
+
+  it('defaults to Normal when allowed and the first declared profile otherwise', () => {
+    const normalFirst = makeChart([note('normal-default', 2)], {
+      allowedDifficulties: ['hard', 'normal'],
+    });
+    expect(createGame(normalFirst).snapshot()).toHaveProperty(
+      'difficulty',
+      'normal',
+    );
+
+    const declaredFirst = makeChart([note('first-default', 2)], {
+      allowedDifficulties: ['hard', 'easy'],
+    });
+    expect(createGame(declaredFirst).snapshot()).toHaveProperty(
+      'difficulty',
+      'hard',
+    );
+  });
+
+  it('rejects a difficulty not allowed for the chart', () => {
+    const normalHardChart = makeChart([note('allowed', 2)], {
+      allowedDifficulties: ['normal', 'hard'],
+    });
+
+    expect(() =>
+      createGameWithDifficulty(normalHardChart, 0, 'easy'),
+    ).toThrow();
+    expect(() =>
+      createGameWithDifficulty(normalHardChart, 0, 'expert' as TestDifficulty),
+    ).toThrow();
   });
 });

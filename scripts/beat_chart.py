@@ -17,6 +17,7 @@ DEFAULT_SOURCE = PROJECT_ROOT / "data/music/The First Shining Star (Remastered).
 DEFAULT_ARTIFACT = PROJECT_ROOT / "data/charts/the-first-shining-star.beats.json"
 DEFAULT_CHART = PROJECT_ROOT / "src/mvp-chart.ts"
 DEFAULT_SONG_CONFIG = PROJECT_ROOT / "data/charts/song-authoring.json"
+DEFAULT_DIFFICULTY_PROFILES = PROJECT_ROOT / "data/charts/difficulty-profiles.json"
 DEFAULT_SONG_ID = "the-first-shining-star"
 DEFAULT_SOURCE_START = 107.1
 DEFAULT_DURATION = 65.8
@@ -25,6 +26,7 @@ DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
 DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
+MAX_INPUT_OFFSET_SECONDS = 0.2
 
 
 def _finite_number(value, name):
@@ -60,10 +62,83 @@ def _validate_config(source_start, duration, boundary, stride, lane_pattern):
     return source_start, duration, boundary, lane_pattern
 
 
-def _chart_time_is_valid(time, duration, boundary):
+def load_difficulty_profiles(path=None):
+    """Load and validate the shared gameplay profiles used by runtime and tooling."""
+    if path is None:
+        path = DEFAULT_DIFFICULTY_PROFILES
+    document = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(document, dict) or not isinstance(document.get("profiles"), dict):
+        raise ValueError("difficulty profile file must contain a profiles object")
+    profiles = document["profiles"]
+    if set(profiles) != {"easy", "normal", "hard"}:
+        raise ValueError("difficulty profiles must define easy, normal, and hard")
+
+    validated = {}
+    for difficulty in ("easy", "normal", "hard"):
+        profile = profiles[difficulty]
+        if not isinstance(profile, dict):
+            raise ValueError(f"difficulty profile {difficulty} must be an object")
+        timing = profile.get("timing")
+        audience = profile.get("audience")
+        twilight = profile.get("twilight")
+        if not all(isinstance(value, dict) for value in (timing, audience, twilight)):
+            raise ValueError(f"difficulty profile {difficulty} has an invalid shape")
+
+        perfect_ms = _finite_number(timing.get("perfect_ms"), "perfect_ms")
+        good_ms = _finite_number(timing.get("good_ms"), "good_ms")
+        if perfect_ms <= 0 or good_ms < perfect_ms:
+            raise ValueError(f"difficulty profile {difficulty} has invalid timing windows")
+        parsed_audience = {}
+        for quality in ("perfect", "good", "miss"):
+            value = _finite_number(audience.get(quality), f"audience.{quality}")
+            if value < 0:
+                raise ValueError(f"audience.{quality} must be non-negative")
+            parsed_audience[quality] = value
+        parsed_twilight = {}
+        for quality in ("perfect", "good", "miss"):
+            outcome = twilight.get(quality)
+            if not isinstance(outcome, dict):
+                raise ValueError(f"twilight.{quality} must be an object")
+            cost = _finite_number(outcome.get("personal_cost"), f"twilight.{quality}.personal_cost")
+            damage = _finite_number(outcome.get("damage"), f"twilight.{quality}.damage")
+            if cost < 0 or damage < 0:
+                raise ValueError(f"twilight.{quality} values must be non-negative")
+            parsed_twilight[quality] = {
+                "personal_cost": cost,
+                "damage": damage,
+            }
+        validated[difficulty] = {
+            "timing": {"perfect_ms": perfect_ms, "good_ms": good_ms},
+            "audience": parsed_audience,
+            "twilight": parsed_twilight,
+        }
+    return validated
+
+
+def _validate_allowed_difficulties(value, profiles=None):
+    if profiles is None:
+        profiles = load_difficulty_profiles()
+    if not isinstance(value, list) or not value:
+        raise ValueError("allowed_difficulties must be a non-empty array")
+    allowed = []
+    seen = set()
+    for difficulty in value:
+        if not isinstance(difficulty, str) or difficulty not in profiles:
+            raise ValueError(f"unknown allowed difficulty: {difficulty!r}")
+        if difficulty in seen:
+            raise ValueError(f"duplicate allowed difficulty: {difficulty}")
+        seen.add(difficulty)
+        allowed.append(difficulty)
+    return allowed
+
+
+def _chart_time_is_valid(time, duration, boundary, good_window_seconds=None):
     """Match the runtime chart validator's hit-envelope arithmetic exactly."""
-    earliest = time - 0.35
-    latest = time + 0.35
+    if good_window_seconds is None:
+        good_window_seconds = load_difficulty_profiles()["normal"]["timing"]["good_ms"] / 1000
+    timing_envelope = good_window_seconds + MAX_INPUT_OFFSET_SECONDS
+    earliest = time - timing_envelope
+    latest = time + timing_envelope
     if earliest < 0:
         return False
     if time == boundary:
@@ -111,6 +186,7 @@ def select_notes(
     stride=DEFAULT_STRIDE,
     lane_pattern=(0, 2, 1, 3),
     minimum_delta_ms=DEFAULT_MINIMUM_DELTA_MS,
+    allowed_difficulties=("normal",),
 ):
     source_start, duration, boundary, lane_pattern = _validate_config(
         source_start, duration, boundary, stride, lane_pattern
@@ -118,6 +194,15 @@ def select_notes(
     minimum_delta_ms = _finite_number(minimum_delta_ms, "minimum_delta_ms")
     if minimum_delta_ms < 0:
         raise ValueError("minimum_delta_ms must be non-negative")
+    profiles = load_difficulty_profiles()
+    allowed_difficulties = _validate_allowed_difficulties(
+        list(allowed_difficulties), profiles
+    )
+    good_window_seconds = max(
+        profiles[difficulty]["timing"]["good_ms"]
+        for difficulty in allowed_difficulties
+    ) / 1000
+    timing_envelope = good_window_seconds + MAX_INPUT_OFFSET_SECONDS
     try:
         source_onsets = tuple(_finite_number(onset, "onset timestamp") for onset in onsets)
     except TypeError as error:
@@ -154,14 +239,17 @@ def select_notes(
         relative_time = source_time - source_start
         # Apply the raw timestamp guards in source coordinates first, then
         # validate the serialized relative value with chart-validator math.
-        if source_time < source_start + 0.35:
+        if source_time < source_start + timing_envelope:
             continue
-        if source_time > excerpt_end - 0.85:
+        if source_time > excerpt_end - timing_envelope - 0.5:
             continue
-        if boundary_source_time - 0.85 <= source_time <= boundary_source_time + 0.85:
+        handoff_guard = timing_envelope + 0.5
+        if boundary_source_time - handoff_guard <= source_time <= boundary_source_time + handoff_guard:
             continue
         rendered_time = round(relative_time, 6)
-        if not _chart_time_is_valid(rendered_time, duration, boundary):
+        if not _chart_time_is_valid(
+            rendered_time, duration, boundary, good_window_seconds
+        ):
             continue
         selected.append(
             {
@@ -181,6 +269,7 @@ def render_mvp_chart(
     twilight_at=39.2,
     source_sha256="",
     twilight_strength=DEFAULT_TWILIGHT_STRENGTH,
+    allowed_difficulties=("normal",),
 ):
     source_start = _finite_number(source_start, "source_start")
     duration = _finite_number(duration, "duration")
@@ -190,6 +279,14 @@ def render_mvp_chart(
         raise ValueError("invalid chart configuration")
     if twilight_strength <= 0:
         raise ValueError("twilight_strength must be positive")
+    profiles = load_difficulty_profiles()
+    allowed_difficulties = _validate_allowed_difficulties(
+        list(allowed_difficulties), profiles
+    )
+    good_window_seconds = max(
+        profiles[difficulty]["timing"]["good_ms"]
+        for difficulty in allowed_difficulties
+    ) / 1000
     if not re.fullmatch(r"[0-9a-fA-F]{64}", source_sha256):
         raise ValueError("source_sha256 must be a 64-character SHA-256 hex digest")
     generated_notes = []
@@ -205,7 +302,9 @@ def render_mvp_chart(
         if rendered_time in seen_times:
             raise ValueError("simultaneous notes are not supported")
         seen_times.add(rendered_time)
-        if not _chart_time_is_valid(rendered_time, duration, twilight_at):
+        if not _chart_time_is_valid(
+            rendered_time, duration, twilight_at, good_window_seconds
+        ):
             raise ValueError("note time violates chart hit-window guards")
         if rendered_time < twilight_at:
             audience_index += 1
@@ -227,6 +326,7 @@ def render_mvp_chart(
         f"  duration: {duration!r},\n"
         f"  twilightAt: {twilight_at!r},\n"
         f"  twilightStrength: {twilight_strength!r},\n"
+        f"  allowedDifficulties: {allowed_difficulties!r},\n"
         "  notes: [\n"
         f"{body}\n"
         "  ],\n"
@@ -270,6 +370,9 @@ def _validate_song_settings(song_id, settings):
         settings.get("twilight_strength"), "twilight_strength"
     )
     minimum_delta = _finite_number(settings.get("minimum_delta"), "minimum_delta")
+    allowed_difficulties = _validate_allowed_difficulties(
+        settings.get("allowed_difficulties")
+    )
     stride = settings.get("stride")
     lane_rules = settings.get("lane_rules")
     if start_time < 0:
@@ -303,6 +406,7 @@ def _validate_song_settings(song_id, settings):
         "twilight_time": twilight_time,
         "duration": duration,
         "twilight_strength": twilight_strength,
+        "allowed_difficulties": allowed_difficulties,
         "minimum_delta": minimum_delta,
         "stride": stride,
         "lane_rules": {"type": "pattern", "data": list(lane_rules["data"])},
@@ -333,11 +437,18 @@ def _chart_config(args, song_id, settings):
     )
     if minimum_delta_ms < 0:
         raise ValueError("minimum_delta must be non-negative")
+    profiles = load_difficulty_profiles()
+    maximum_allowed_good_window_ms = max(
+        profiles[difficulty]["timing"]["good_ms"]
+        for difficulty in settings["allowed_difficulties"]
+    )
     return {
         "song_id": song_id,
         "source_start": source_start,
         "duration": duration,
         "twilight_strength": settings["twilight_strength"],
+        "allowed_difficulties": settings["allowed_difficulties"],
+        "maximum_allowed_good_window_ms": maximum_allowed_good_window_ms,
         "boundary": boundary,
         "stride": settings["stride"] if args.stride is None else args.stride,
         "lane_pattern": list(lane_pattern),
@@ -359,6 +470,7 @@ def _render_from_artifact(artifact, config):
         stride=config["stride"],
         lane_pattern=config["lane_pattern"],
         minimum_delta_ms=config["minimum_delta_ms"],
+        allowed_difficulties=config["allowed_difficulties"],
     )
     if artifact.get("notes") != notes:
         raise ValueError("cached beat artifact note projection is stale or malformed")
@@ -369,6 +481,7 @@ def _render_from_artifact(artifact, config):
         twilight_at=config["boundary"],
         source_sha256=artifact["source_sha256"],
         twilight_strength=config["twilight_strength"],
+        allowed_difficulties=config["allowed_difficulties"],
     )
 
 
@@ -475,6 +588,7 @@ def _generate(source, artifact_path, chart_path, config, runner):
             stride=config["stride"],
             lane_pattern=config["lane_pattern"],
             minimum_delta_ms=config["minimum_delta_ms"],
+            allowed_difficulties=config["allowed_difficulties"],
         )
         artifact = {
             "schema_version": 1,

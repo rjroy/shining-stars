@@ -10,7 +10,7 @@ export interface ProjectedNote {
   readonly bottomPercent: number;
 }
 
-/** Project only unresolved notes within the short visible approach runway. */
+/** Project unresolved notes in the approach runway, keeping overdue notes on the hit line until judged. */
 export function projectNotes(
   states: readonly GameNoteState[],
   chartNotes: readonly ChartNote[],
@@ -25,7 +25,6 @@ export function projectNotes(
     if (
       state === undefined ||
       state.outcome !== null ||
-      remaining < -0.35 ||
       remaining > visibleSeconds
     ) {
       return [];

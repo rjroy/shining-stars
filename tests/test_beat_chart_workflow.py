@@ -68,6 +68,7 @@ class BeatChartWorkflowTests(unittest.TestCase):
             "twilight_time": 39.2,
             "duration": 65.8,
             "twilight_strength": 100,
+            "allowed_difficulties": ["normal", "hard"],
             "minimum_delta": 64,
             "stride": 2,
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
@@ -508,10 +509,114 @@ class BeatChartWorkflowTests(unittest.TestCase):
             [107.1 + 1.0, 107.1 + 1.128, 107.1 + 1.3],
         )
         self.assertEqual(artifact["config"]["twilight_strength"], 100)
+        self.assertEqual(
+            artifact["config"]["allowed_difficulties"], ["normal", "hard"]
+        )
+        self.assertEqual(
+            artifact["config"]["maximum_allowed_good_window_ms"], 150
+        )
         self.assertIn("twilightStrength: 100", self.chart.read_text(encoding="utf-8"))
+        self.assertIn(
+            "allowedDifficulties: ['normal', 'hard']",
+            self.chart.read_text(encoding="utf-8"),
+        )
+
+    def test_cached_chart_settings_depend_on_allowed_profile_timing(self):
+        profile_path = self.root / "difficulty-profiles.json"
+        profile_document = json.loads(
+            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
+            .read_text(encoding="utf-8")
+        )
+        profile_path.write_text(json.dumps(profile_document), encoding="utf-8")
+        song_config = self.write_song_config(
+            {"the-first-shining-star": self.song_settings(self.source)}
+        )
+        args = [*self.args(), "--song-config", str(song_config)]
+
+        with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", profile_path):
+            self.assertEqual(beat_chart.main(args, runner=self.make_runner()), 0)
+            profile_document["profiles"]["normal"]["timing"]["good_ms"] = 170
+            profile_path.write_text(json.dumps(profile_document), encoding="utf-8")
+            self.calls.clear()
+
+            self.assertNotEqual(
+                beat_chart.main([*args, "--check"], runner=self.make_runner()), 0
+            )
+
+        self.assertEqual(self.calls, [], "profile changes must invalidate cache without tools")
 
 
 class SongAuthoringConfigTests(unittest.TestCase):
+    def test_shared_difficulty_profiles_define_all_runtime_values(self):
+        profile_path = beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json"
+        profile_document = json.loads(profile_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            profile_document,
+            {
+                "profiles": {
+                    "easy": {
+                        "timing": {"perfect_ms": 250, "good_ms": 500},
+                        "audience": {"perfect": 2, "good": 1, "miss": 0},
+                        "twilight": {
+                            "perfect": {"personal_cost": 0, "damage": 2},
+                            "good": {"personal_cost": 0, "damage": 1},
+                            "miss": {"personal_cost": 2, "damage": 0},
+                        },
+                    },
+                    "normal": {
+                        "timing": {"perfect_ms": 75, "good_ms": 150},
+                        "audience": {"perfect": 3, "good": 2, "miss": 0},
+                        "twilight": {
+                            "perfect": {"personal_cost": 0, "damage": 3},
+                            "good": {"personal_cost": 1, "damage": 2},
+                            "miss": {"personal_cost": 3, "damage": 0},
+                        },
+                    },
+                    "hard": {
+                        "timing": {"perfect_ms": 50, "good_ms": 100},
+                        "audience": {"perfect": 5, "good": 3, "miss": 0},
+                        "twilight": {
+                            "perfect": {"personal_cost": 0, "damage": 5},
+                            "good": {"personal_cost": 2, "damage": 3},
+                            "miss": {"personal_cost": 3, "damage": 0},
+                        },
+                    },
+                }
+            },
+        )
+
+    def test_shared_profile_loader_rejects_invalid_timing_and_balance_values(self):
+        original = json.loads(
+            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
+            .read_text(encoding="utf-8")
+        )
+        malformed_profiles = []
+
+        missing_profile = json.loads(json.dumps(original))
+        del missing_profile["profiles"]["hard"]
+        malformed_profiles.append(missing_profile)
+
+        invalid_window = json.loads(json.dumps(original))
+        invalid_window["profiles"]["easy"]["timing"]["good_ms"] = 100
+        malformed_profiles.append(invalid_window)
+
+        negative_reward = json.loads(json.dumps(original))
+        negative_reward["profiles"]["normal"]["audience"]["good"] = -1
+        malformed_profiles.append(negative_reward)
+
+        missing_combat_value = json.loads(json.dumps(original))
+        del missing_combat_value["profiles"]["hard"]["twilight"]["miss"]["damage"]
+        malformed_profiles.append(missing_combat_value)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "difficulty-profiles.json"
+            for index, document in enumerate(malformed_profiles):
+                with self.subTest(index=index):
+                    path.write_text(json.dumps(document), encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        beat_chart.load_difficulty_profiles(path)
+
     def test_loads_selected_song_from_collection_with_requested_settings(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "song-authoring.json"
@@ -523,6 +628,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         "twilight_time": 39.2,
                         "duration": 65.8,
                         "twilight_strength": 100,
+                        "allowed_difficulties": ["normal", "hard"],
                         "minimum_delta": 64,
                         "stride": 2,
                         "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
@@ -544,6 +650,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 "twilight_time": 39.2,
                 "duration": 65.8,
                 "twilight_strength": 100,
+                "allowed_difficulties": ["normal", "hard"],
                 "minimum_delta": 64,
                 "stride": 2,
                 "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
@@ -564,6 +671,12 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 ("twilight_strength", -1),
                 ("twilight_strength", float("inf")),
                 ("twilight_strength", False),
+                ("allowed_difficulties", []),
+                ("allowed_difficulties", ["unknown"]),
+                ("allowed_difficulties", ["normal", "normal"]),
+                ("allowed_difficulties", ["normal", True]),
+                ("allowed_difficulties", "normal"),
+                ("allowed_difficulties", None),
                 ("minimum_delta", False),
                 ("stride", True),
                 ("lane_rules", {"type": "pattern", "data": [0, True]}),
@@ -576,6 +689,12 @@ class SongAuthoringConfigTests(unittest.TestCase):
                     )
                     with self.assertRaises(ValueError):
                         beat_chart.load_song_config(path, "one")
+
+    def test_current_playable_song_config_allows_normal_and_hard(self):
+        selected = beat_chart.load_song_config()
+
+        self.assertEqual(selected["allowed_difficulties"], ["normal", "hard"])
+        self.assertEqual(selected["twilight_strength"], 100)
 
 
 if __name__ == "__main__":

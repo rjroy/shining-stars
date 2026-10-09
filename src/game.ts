@@ -1,5 +1,11 @@
 import { validateChart, type ChartConfig, type ChartLane } from './chart';
-import { GAME_BALANCE } from './game-balance';
+import {
+  defaultDifficulty,
+  getDifficultyProfile,
+  isDifficulty,
+  parseAllowedDifficulties,
+  type Difficulty,
+} from './game-balance';
 
 export type GamePhase = 'audience' | 'twilight';
 export type GameStatus = 'playing' | 'results';
@@ -27,6 +33,7 @@ export interface GameResult {
   readonly renown: number;
   readonly personalStrength: number;
   readonly twilightStrength: number;
+  readonly difficulty: Difficulty;
   readonly outcome: GameOutcome;
 }
 
@@ -37,6 +44,7 @@ export interface GameSnapshot {
   readonly renown: number;
   readonly personalStrength: number;
   readonly twilightStrength: number;
+  readonly difficulty: Difficulty;
   readonly notes: readonly GameNoteState[];
   readonly result: GameResult | null;
 }
@@ -77,8 +85,6 @@ type GameEvent =
     }
   | { readonly kind: 'end'; readonly time: number; readonly order: 2 };
 
-const PERFECT_WINDOW_SECONDS = 0.075;
-const GOOD_WINDOW_SECONDS = 0.15;
 const MAX_INPUT_OFFSET_SECONDS = 0.2;
 const MISS_EVENT_ORDER = 1;
 const HANDOFF_EVENT_ORDER = 0;
@@ -175,12 +181,17 @@ function copyResult(result: GameResult | null): GameResult | null {
     renown: result.renown,
     personalStrength: result.personalStrength,
     twilightStrength: result.twilightStrength,
+    difficulty: result.difficulty,
     outcome: result.outcome,
   };
 }
 
 /** Create a deterministic game model with an input offset frozen for this run. */
-export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
+export function createGame(
+  chart: ChartConfig,
+  inputOffset = 0,
+  requestedDifficulty?: Difficulty,
+): GameSession {
   if (
     !Number.isFinite(inputOffset) ||
     Math.abs(inputOffset) > MAX_INPUT_OFFSET_SECONDS
@@ -199,6 +210,23 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       `Cannot start a game with an invalid chart. ${summary}`,
     );
   }
+
+  const allowedDifficulties = parseAllowedDifficulties(
+    chart.allowedDifficulties,
+  );
+  if (requestedDifficulty !== undefined && !isDifficulty(requestedDifficulty)) {
+    throw new RangeError(
+      `Unknown difficulty '${String(requestedDifficulty)}'.`,
+    );
+  }
+  const difficulty =
+    requestedDifficulty ?? defaultDifficulty(allowedDifficulties);
+  if (!allowedDifficulties.includes(difficulty)) {
+    throw new RangeError(
+      `Difficulty '${difficulty}' is not allowed for this song.`,
+    );
+  }
+  const profile = getDifficultyProfile(difficulty);
 
   const notes: MutableGameNote[] = chart.notes.map((chartNote) => ({
     id: chartNote.id,
@@ -231,6 +259,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       renown,
       personalStrength,
       twilightStrength,
+      difficulty,
       outcome,
     };
   }
@@ -247,7 +276,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
 
   function applyTwilightOutcome(outcome: NoteOutcome): void {
     if (outcome === null) return;
-    const balance = GAME_BALANCE.twilight[outcome];
+    const balance = profile.twilight[outcome];
     personalStrength = Math.max(0, personalStrength - balance.personalCost);
     twilightStrength = Math.max(0, twilightStrength - balance.damage);
 
@@ -288,7 +317,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       if (note.outcome === null) {
         events.push({
           kind: 'miss',
-          time: note.time + GOOD_WINDOW_SECONDS + inputOffset,
+          time: note.time + profile.timing.goodWindowSeconds + inputOffset,
           order: MISS_EVENT_ORDER,
           note,
         });
@@ -359,6 +388,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       renown,
       personalStrength,
       twilightStrength,
+      difficulty,
       notes: notes.map((note) => ({
         id: note.id,
         phase: note.phase,
@@ -406,7 +436,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
           !isInsideInclusiveWindow(
             transportTime,
             note.time,
-            GOOD_WINDOW_SECONDS,
+            profile.timing.goodWindowSeconds,
             inputOffset,
           )
         ) {
@@ -450,7 +480,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
       const quality: HitQuality = isInsideInclusiveWindow(
         transportTime,
         selected.time,
-        PERFECT_WINDOW_SECONDS,
+        profile.timing.perfectWindowSeconds,
         inputOffset,
       )
         ? 'perfect'
@@ -458,7 +488,7 @@ export function createGame(chart: ChartConfig, inputOffset = 0): GameSession {
 
       selected.outcome = quality;
       if (phase === 'audience') {
-        renown += GAME_BALANCE.audience[quality];
+        renown += profile.audience[quality];
       } else {
         applyTwilightOutcome(quality);
       }

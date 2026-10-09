@@ -161,6 +161,30 @@ class SelectNotesTests(unittest.TestCase):
         notes = beat_chart.select_notes([145.4499999], stride=1)
         self.assertEqual(notes, [])
 
+    def test_generator_guards_use_maximum_allowed_good_window_and_input_offset(self):
+        source_start, duration, boundary = 10.0, 10.0, 5.0
+        cases = (
+            (0.69, False),
+            (0.7, True),
+            (4.1, False),
+            (6.19, False),
+            (8.8, True),
+            (8.9, False),
+        )
+
+        for relative_time, expected_to_keep in cases:
+            with self.subTest(relative_time=relative_time):
+                notes = beat_chart.select_notes(
+                    [source_start + relative_time],
+                    source_start=source_start,
+                    duration=duration,
+                    boundary=boundary,
+                    stride=1,
+                    minimum_delta_ms=0,
+                    allowed_difficulties=["easy", "hard"],
+                )
+                self.assertEqual(bool(notes), expected_to_keep)
+
     def test_output_is_sorted_and_contains_no_chords(self):
         notes = beat_chart.select_notes([110.0 + i * 0.25 for i in range(60)], stride=1)
         times = [n["relative_time"] for n in notes]

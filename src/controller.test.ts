@@ -9,25 +9,38 @@ const chart: ChartConfig = {
   duration: 4,
   twilightAt: 2,
   twilightStrength: 100,
+  allowedDifficulties: ['normal', 'hard'],
   notes: [
     { id: 'a1', time: 0.5, lane: 0 },
     { id: 'a2', time: 1, lane: 0 },
     { id: 'a3', time: 0.9, lane: 1 },
     { id: 't1', time: 3, lane: 2 },
   ],
-};
+} as ChartConfig;
+
+type TestDifficulty = 'easy' | 'normal' | 'hard';
+
+const createGameWithDifficulty = createGame as unknown as (
+  chart: ChartConfig,
+  inputOffset: number,
+  difficulty?: TestDifficulty,
+) => GameSession;
 
 class FakeAudio implements AudioTransport {
-  state: AudioTransportSnapshot = {
-    status: 'ready',
-    position: 0,
-    duration: 4,
-    scheduledWhen: null,
-    hasActiveSource: false,
-    disposed: false,
-    error: null,
-  };
+  state: AudioTransportSnapshot;
   readonly calls: string[] = [];
+
+  constructor(status: AudioTransportSnapshot['status'] = 'ready') {
+    this.state = {
+      status,
+      position: 0,
+      duration: 4,
+      scheduledWhen: null,
+      hasActiveSource: false,
+      disposed: false,
+      error: null,
+    };
+  }
 
   snapshot(): AudioTransportSnapshot {
     return { ...this.state };
@@ -88,16 +101,18 @@ interface Harness {
   >;
 }
 
-function createHarness(): Harness {
-  const audio = new FakeAudio();
+function createHarness(audio = new FakeAudio()): Harness {
   const games: GameSession[] = [];
   const render = vi.fn<(snapshot: ControllerSnapshot) => void>();
   const controller = createGameController({
     audio,
     inputOffset: 0.1,
     visualOffset: -0.05,
-    createGame(inputOffset) {
-      const game = createGame(chart, inputOffset);
+    createGame(inputOffset, difficulty) {
+      const game =
+        difficulty === undefined
+          ? createGame(chart, inputOffset)
+          : createGameWithDifficulty(chart, inputOffset, difficulty);
       games.push(game);
       return game;
     },
@@ -109,6 +124,17 @@ function createHarness(): Harness {
 
 function setPlaying(audio: FakeAudio, position: number): void {
   audio.state = { ...audio.state, status: 'playing', position };
+}
+
+function deferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((accept) => {
+    resolve = accept;
+  });
+  return { promise, resolve };
 }
 
 describe('game controller', () => {
@@ -258,6 +284,165 @@ describe('game controller', () => {
     expect(harness.audio.calls).toContain('restart');
     expect(harness.games).toHaveLength(2);
     expect(harness.controller.snapshot().game.notes[0]?.outcome).toBeNull();
+  });
+
+  it('allows allowed profile changes only while idle or at results, freezing each run', async () => {
+    const harness = createHarness();
+    const selectDifficulty = (
+      harness.controller as unknown as {
+        selectDifficulty(difficulty: TestDifficulty): ControllerSnapshot;
+      }
+    ).selectDifficulty.bind(harness.controller);
+
+    expect(harness.controller.snapshot()).toHaveProperty(
+      'selectedDifficulty',
+      'normal',
+    );
+    const originalNoteIds = harness.controller
+      .snapshot()
+      .game.notes.map((note) => note.id);
+    expect(() => selectDifficulty('easy')).toThrow();
+    expect(() => selectDifficulty('expert' as TestDifficulty)).toThrow();
+    expect(harness.controller.snapshot()).toHaveProperty(
+      'selectedDifficulty',
+      'normal',
+    );
+
+    const selectedHard = selectDifficulty('hard');
+    expect(selectedHard).toHaveProperty('selectedDifficulty', 'hard');
+    expect(selectedHard.game).toHaveProperty('difficulty', 'hard');
+    expect(selectedHard.game.notes.map((note) => note.id)).toEqual(
+      originalNoteIds,
+    );
+    await harness.controller.start();
+    expect(harness.controller.snapshot().game).toHaveProperty(
+      'difficulty',
+      'hard',
+    );
+
+    for (const status of [
+      'loading',
+      'starting',
+      'playing',
+      'paused',
+      'error',
+    ] as const) {
+      harness.audio.state = { ...harness.audio.state, status, position: 0.6 };
+      expect(() => selectDifficulty('normal')).toThrow();
+      expect(harness.controller.snapshot()).toHaveProperty(
+        'selectedDifficulty',
+        'hard',
+      );
+    }
+
+    setPlaying(harness.audio, 4);
+    const terminal = harness.controller.update().game;
+    expect(terminal.status).toBe('results');
+    expect(terminal.result).toHaveProperty('difficulty', 'hard');
+    const selectedNormal = selectDifficulty('normal');
+    expect(selectedNormal).toHaveProperty('selectedDifficulty', 'normal');
+    expect(selectedNormal.game).toEqual(terminal);
+
+    await harness.controller.restart();
+    expect(harness.controller.snapshot().game).toHaveProperty(
+      'difficulty',
+      'normal',
+    );
+  });
+
+  it('allows selection during constructor loading before any transport request', () => {
+    const audio = new FakeAudio('loading');
+    const harness = createHarness(audio);
+    const selectDifficulty = (
+      harness.controller as unknown as {
+        selectDifficulty(difficulty: TestDifficulty): ControllerSnapshot;
+      }
+    ).selectDifficulty.bind(harness.controller);
+
+    expect(harness.controller.snapshot().audio.status).toBe('loading');
+    expect(audio.calls).toEqual([]);
+    expect(selectDifficulty('hard')).toHaveProperty(
+      'selectedDifficulty',
+      'hard',
+    );
+    expect(harness.controller.snapshot().game).toHaveProperty(
+      'difficulty',
+      'hard',
+    );
+    expect(audio.calls).toEqual([]);
+  });
+
+  it('freezes selection while load/start requests are pending and after cancellation', async () => {
+    const audio = new FakeAudio();
+    const harness = createHarness(audio);
+    const selectDifficulty = (
+      harness.controller as unknown as {
+        selectDifficulty(difficulty: TestDifficulty): ControllerSnapshot;
+      }
+    ).selectDifficulty.bind(harness.controller);
+    selectDifficulty('hard');
+
+    const loadRequest = deferred<AudioTransportSnapshot>();
+    const startRequest = deferred<AudioTransportSnapshot>();
+    vi.spyOn(audio, 'load').mockImplementation(() => {
+      audio.calls.push('load');
+      return loadRequest.promise;
+    });
+    vi.spyOn(audio, 'start').mockImplementation(() => {
+      audio.calls.push('start');
+      audio.state = { ...audio.state, status: 'starting' };
+      return startRequest.promise;
+    });
+
+    const pendingStart = harness.controller.start();
+    expect(audio.calls).toEqual(['load']);
+    let loadSelectionRejected = false;
+    try {
+      selectDifficulty('normal');
+    } catch {
+      loadSelectionRejected = true;
+    }
+    const selectedDuringLoad = harness.controller.snapshot().selectedDifficulty;
+
+    audio.state = { ...audio.state, status: 'ready' };
+    loadRequest.resolve(audio.snapshot());
+    await Promise.resolve();
+    expect(audio.calls).toEqual(['load', 'start']);
+    let startSelectionRejected = false;
+    try {
+      selectDifficulty('normal');
+    } catch {
+      startSelectionRejected = true;
+    }
+    const selectedDuringStart =
+      harness.controller.snapshot().selectedDifficulty;
+
+    harness.controller.pause();
+    let pausedSelectionRejected = false;
+    try {
+      selectDifficulty('normal');
+    } catch {
+      pausedSelectionRejected = true;
+    }
+    const selectedAfterCancellation =
+      harness.controller.snapshot().selectedDifficulty;
+
+    startRequest.resolve(audio.snapshot());
+    await pendingStart;
+    expect(loadSelectionRejected).toBe(true);
+    expect(selectedDuringLoad).toBe('hard');
+    expect(startSelectionRejected).toBe(true);
+    expect(selectedDuringStart).toBe('hard');
+    expect(pausedSelectionRejected).toBe(true);
+    expect(selectedAfterCancellation).toBe('hard');
+    expect(harness.controller.snapshot()).toHaveProperty(
+      'selectedDifficulty',
+      'hard',
+    );
+    expect(harness.controller.snapshot().game).toHaveProperty(
+      'difficulty',
+      'hard',
+    );
   });
 
   it('advances phases and catches up end/results from transport time once', () => {

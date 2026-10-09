@@ -1,7 +1,7 @@
 import type { ControllerSnapshot } from './controller';
 import type { ChartConfig } from './chart';
 import type { GamePhase } from './game';
-import { GAME_BALANCE } from './game-balance';
+import { getDifficultyProfile } from './game-balance';
 
 export interface SceneMotionState {
   readonly powerLinePulse: boolean;
@@ -37,9 +37,10 @@ export function projectSceneState(
 ): SceneStateProjection {
   const game = snapshot.game;
   const phase = game.phase;
+  const profile = getDifficultyProfile(game.difficulty);
   const audiencePotential =
     chart.notes.filter((note) => note.time < chart.twilightAt).length *
-    GAME_BALANCE.audience.perfect;
+    profile.audience.perfect;
   const cityIntensity =
     phase === 'audience'
       ? clamp01(audiencePotential === 0 ? 0 : game.renown / audiencePotential)
