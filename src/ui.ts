@@ -70,7 +70,7 @@ export function createGameUI(
 
         <div class="stage-frame">
           <div class="stage-topline">
-            <span data-track-state>Beat-derived chart · play-test timing</span>
+            <span data-track-state>Onset-derived chart · play-test timing</span>
             <span class="stage-time" data-time>00:00</span>
           </div>
           <div class="lane-board" aria-label="Four rhythm lanes">
@@ -97,8 +97,8 @@ export function createGameUI(
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
           <p class="dialog-overline">The First Shining Star · provisional excerpt</p>
           <h2 id="ready-title">Your voice leads. Brightvale answers.</h2>
-          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. Good and perfect hits build Resonance. At the handoff, up to 40 is automatically spent to strengthen the city; anything beyond 40 is discarded. Misses cost nothing and never mean surrender. Notes follow aubio-detected beats. Detector timing and the excerpt still need play-testing.</p>
-          <p class="chart-notice">Aubio beat chart · one note per four detected beats</p>
+          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. Good and perfect hits build Resonance. At the handoff, up to 40 is automatically spent to strengthen the city; anything beyond 40 is discarded. Misses cost nothing and never mean surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
+          <p class="chart-notice">Aubio onset chart · density configured per song</p>
           <button class="primary-button" type="button" data-action="start">Begin performance <span aria-hidden="true">↗</span></button>
           <p class="loading-message" data-busy hidden></p>
           <p class="error-message" data-error role="alert" hidden></p>

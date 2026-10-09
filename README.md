@@ -12,11 +12,11 @@ npm ci
 npm run dev
 ```
 
-The browser entry is `index.html`; `src/main.ts` owns the application lifecycle and wires the chart, game, audio transport, and UI. The selected MP3 remains in `data/music/` and is imported as a Vite asset URL; do not copy it into a public directory or modify the original recording. The active chart is generated from detected beats; its timing is still provisional and has not been listening-verified.
+The browser entry is `index.html`; `src/main.ts` owns the application lifecycle and wires the chart, game, audio transport, and UI. The selected MP3 remains in `data/music/` and is imported as a Vite asset URL; do not copy it into a public directory or modify the original recording. The active chart is generated from detected onsets; its timing is still provisional and has not been listening-verified.
 
 ## Music chart authoring dependencies
 
-- **aubio** provides `aubiotrack` for offline beat-timestamp extraction. The user installed Arch's `aubio 0.4.9-25`; the executable is `/usr/bin/aubiotrack`.
+- **aubio** provides `aubioonset` for offline onset-timestamp extraction. The user installed Arch's `aubio 0.4.9-25`; the executable is `/usr/bin/aubioonset`.
 - **FFmpeg** converts source audio to a full-track WAV when needed, preserving the original recording and timestamp origin.
 
 These system tools are for chart authoring, not browser runtime dependencies. Installation is managed by the user; agents must never install software or dependencies on the user's behalf. See [the offline beat-chart workflow](docs/beat-chart-workflow.md) for generation, provenance, and cached-check instructions.

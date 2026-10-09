@@ -1,9 +1,37 @@
-# Offline beat-chart authoring
+# Offline onset-chart authoring
 
-This workflow uses the installed `ffmpeg` and `aubiotrack` executables, Python's
-standard library, and the existing chart model. It is an offline authoring tool;
-neither system tool is a browser dependency. The selected source is
-`data/music/The First Shining Star (Remastered).mp3`.
+This authoring workflow uses the installed `ffmpeg` and aubio's `aubioonset`,
+plus Python's standard library. Neither system tool is a browser dependency. The
+original source audio is never modified.
+
+## Per-song settings
+
+`data/charts/song-authoring.json` is the JSON collection for chart settings.
+Songs are keyed by stable song ID and each entry identifies its source path.
+Only the currently playable song is configured; other audio files do not have
+guessed excerpt settings. The active entry is:
+
+```json
+{
+  "songs": {
+    "the-first-shining-star": {
+      "source": "data/music/The First Shining Star (Remastered).mp3",
+      "start_time": 107.1,
+      "twilight_time": 39.2,
+      "duration": 65.8,
+      "minimum_delta": 64,
+      "stride": 2,
+      "lane_rules": { "type": "pattern", "data": [0, 2, 1, 3] }
+    }
+  }
+}
+```
+
+`start_time`, `twilight_time`, and `duration` are seconds; Twilight time is
+relative to the excerpt. `minimum_delta` is milliseconds. `stride` is a
+positive integer, and the supported lane rule is a non-empty `pattern` of lane
+numbers 0 through 3. The loader rejects invalid/non-finite timings, negative
+minimum delta, invalid stride, and unsupported lane rules.
 
 ## Generate
 
@@ -11,42 +39,74 @@ neither system tool is a browser dependency. The selected source is
 npm run chart:generate
 ```
 
-The command reads the complete original audio without modifying it or trimming
-the input. FFmpeg writes a temporary mono, 44.1 kHz, signed 16-bit PCM WAV;
-aubio emits beat timestamps in seconds from the start of that full track. The
-temporary WAV is removed on success and failure. The command writes:
+The default command selects `the-first-shining-star` from the settings file.
+Use `--song <id>` to select another configured song or `--song-config <path>`
+to read another collection. Existing source and excerpt overrides remain
+available, for example:
 
-- `data/charts/the-first-shining-star.beats.json`: source SHA-256, source path,
-  chart settings, complete beat list, selected-note provenance, and normalized
-  tool commands (temporary paths are represented by placeholders).
-- `src/mvp-chart.ts`: the deterministic `MVP_CHART: ChartConfig` projection,
-  with the source SHA-256 in a comment.
+```sh
+python3 scripts/beat_chart.py --song the-first-shining-star \
+  --source "data/music/The First Shining Star (Remastered).mp3" \
+  --artifact /tmp/first-star.beats.json --chart /tmp/mvp-chart.ts
+```
 
-Both outputs are fully built and validated before either is replaced. Each file
-is replaced atomically on its own; the two-file update is not a transaction.
-If extraction, parsing, selection, or rendering fails, existing outputs remain
-untouched. The chart module is generated output: change settings or the
-workflow, then regenerate, rather than hand-editing generated note times.
+FFmpeg writes a temporary mono, 44.1 kHz, signed 16-bit PCM WAV from the full
+source recording. `aubioonset -T seconds -O hfc -t0.3 -M0.012 -s-90`
+reports onsets in full-track seconds. The 12 ms minimum inter-onset interval
+and -90 dB silence threshold are explicit detector settings recorded in the
+artifact. This detector floor is independent of the configured 64 ms
+`minimum_delta` filter: that filter works only on onsets the detector emits,
+and does not promise to represent every physical sound event. The temporary
+WAV is removed on success and failure. The workflow first selects onsets inside
+the configured excerpt, greedily retains
+the first onset and each later onset at least `minimum_delta` milliseconds
+after the **last retained** onset, then keeps the first and every `stride`
+onsets from that retained list. Equality is retained. For offsets
+`[0, 12, 64, 128, 200, 300, 315, 400]` ms with minimum delta 64, the retained
+offsets are `[0, 64, 128, 200, 300, 400]`; stride 2 produces `[0, 128, 300]`
+and stride 3 produces `[0, 200]`.
 
-The selected excerpt retains the existing settings: source offset `107.1`
-seconds, duration `65.8` seconds, and the audience/Twilight boundary at `39.2`
-seconds relative to the excerpt. Note time is source beat time minus the source
-offset. Selection begins at the first detected beat at or after the excerpt
-start, then takes every fourth beat index in the full detected sequence. It
-does not restart at the handoff boundary. Lanes cycle through `0, 2, 1, 3` for
-selected notes. Chart hit-window and handoff guards can discard centers; the
-workflow never shifts a beat to make it fit. Times are rounded to six decimal
-places, serialized as round-trip-safe numeric literals, and checked again after
-rounding.
+Filtering and stride anchor at the first onset in the excerpt and happen before
+the chart's existing edge and handoff timing guards. Guarded onsets are dropped
+without shifting other onsets or restarting stride at Twilight. The artifact
+preserves every raw onset timestamp and selected onset's original full-track
+index/time. Note times are source onset time minus `start_time`, rounded to six
+decimal places, and validated again after rounding. Lanes cycle through the
+configured pattern over emitted notes.
 
-This is deliberately a low-density, beat-derived starting chart. Aubio beat
-tracking does not infer a reliable downbeat, meter, or melody, and the lane
-pattern is only an abstract assignment. No fixed-tempo grid is fabricated and
-the result is not claimed to be musically perfect or human-verified. Listen to
-the generated chart in the game and adjust the authoring method/settings if its
-musical alignment is unsuitable. Beat intervals can vary substantially within
-the recording; a single average BPM is not a reliable substitute for the
-detected timestamps.
+The command writes:
+
+- `data/charts/the-first-shining-star.beats.json`: source SHA-256 and path,
+  song/config settings, complete onset list, selected-note provenance, and
+  normalized tool commands.
+- `src/mvp-chart.ts`: deterministic `MVP_CHART: ChartConfig` projection with
+  the source SHA-256 in a comment.
+
+Both outputs are fully built and validated before either is replaced. Each
+file is replaced atomically on its own; the pair is not a cross-file
+transaction. This is a low-density onset-derived starting chart, not a claim
+that aubio inferred a downbeat, meter, melody, or human-verified musical fit.
+
+## Author another source safely
+
+The runtime still plays the source configured in `src/main.ts`. If a selected
+song or `--source` override resolves to a different recording, generation and
+check mode reject the live default chart/artifact destinations before hashing
+the source or invoking tools. Supply both output paths and keep them isolated
+from the live destinations:
+
+```sh
+npm run chart:generate -- --song another-song \
+  --artifact /tmp/another-song.beats.json \
+  --chart /tmp/another-song.ts
+npm run chart:check -- --song another-song \
+  --artifact /tmp/another-song.beats.json \
+  --chart /tmp/another-song.ts
+```
+
+An alternate song ID that resolves to the same recording as the runtime may
+still use the live outputs. The safety rule follows the resolved source path,
+not the song ID.
 
 ## Check cached outputs
 
@@ -55,23 +115,10 @@ npm run chart:check
 ```
 
 Check mode does not invoke FFmpeg or aubio. It hashes the current source,
-compares the source path and chart settings with the cached artifact, rebuilds
-the expected chart from the cached full beat list, and compares that text with
-`src/mvp-chart.ts`. It exits nonzero for a changed/missing source, mismatched
-provenance/settings, malformed or stale beat projection, or stale chart. Run
-`npm run chart:generate` to re-extract when source audio, tools, or extraction
-behavior changes. The artifact records the requested executable names and
-commands, not version output; compare installed FFmpeg/aubio versions when
-investigating changed extraction results.
-
-The defaults can be overridden for isolated runs, for example:
-
-```sh
-python3 scripts/beat_chart.py \
-  --source "data/music/The First Shining Star (Remastered).mp3" \
-  --artifact /tmp/first-star.beats.json \
-  --chart /tmp/mvp-chart.ts
-```
-
-The command requires Python 3, FFmpeg, and aubio's `aubiotrack` to already be
-installed. It installs nothing and uses no third-party Python packages.
+compares source path and settings with the cached artifact, rebuilds the
+expected chart from the cached raw onset timestamps, and compares the result
+with `src/mvp-chart.ts`. A changed/missing source, mismatched settings,
+malformed onset projection, or stale chart fails the check. Regenerate after
+changing source audio, aubio/FFmpeg behavior, or authoring settings. The
+workflow requires Python 3, FFmpeg, and the already-installed `aubioonset`; it
+installs nothing and uses no third-party Python packages.
