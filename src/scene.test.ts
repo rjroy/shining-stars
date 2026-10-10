@@ -250,12 +250,15 @@ describe('Brightvale scene resource lifecycle', () => {
     expect(gameplayRoles).toEqual(
       expect.arrayContaining([
         'lane',
-        'note',
         'hit-line',
         'good-band',
         'perfect-band',
+        'note-good-envelope',
+        'note-perfect-envelope',
       ]),
     );
+    expect(gameplayRoles).not.toContain('note');
+    expect(gameplayRoles).not.toContain('note-outline');
     scene?.destroy();
   });
 
@@ -405,7 +408,7 @@ describe('Brightvale scene resource lifecycle', () => {
     scene.destroy();
   });
 
-  it('pools dense notes and expires judgment feedback on the transport clock', () => {
+  it('pools per-note score windows and expires feedback on the transport clock', () => {
     installSceneGlobals();
     const controls = makeRenderer();
     const scene = createBrightvaleScene(
@@ -443,28 +446,40 @@ describe('Brightvale scene resource lifecycle', () => {
       }),
     };
     updateFrame.call(scene, frame);
-    const noteObjects: THREE.Object3D[] = [];
+    const goodWindows: THREE.Object3D[] = [];
+    const perfectWindows: THREE.Object3D[] = [];
     const feedbackObjects: THREE.Object3D[] = [];
     controls.renderedScene?.traverse((object) => {
-      if (object.userData.gameplayRole === 'note') noteObjects.push(object);
+      if (object.userData.gameplayRole === 'note-good-envelope')
+        goodWindows.push(object);
+      if (object.userData.gameplayRole === 'note-perfect-envelope')
+        perfectWindows.push(object);
       if (object.userData.gameplayRole === 'feedback')
         feedbackObjects.push(object);
     });
-    expect(noteObjects.length).toBeGreaterThanOrEqual(notes.length);
+    expect(goodWindows.length).toBeGreaterThanOrEqual(notes.length);
+    expect(perfectWindows.length).toBeGreaterThanOrEqual(notes.length);
+    expect(
+      [...goodWindows, ...perfectWindows].every((object) => object.visible),
+      'only Good and Perfect score windows should appear around note targets',
+    ).toBe(true);
     expect(feedbackObjects.length).toBeGreaterThan(0);
     expect(feedbackObjects.some((object) => object.visible)).toBe(true);
-    const identities = new Set(noteObjects);
+    const identities = new Set([...goodWindows, ...perfectWindows]);
 
     updateFrame.call(scene, {
       ...frame,
       gameplay: { ...frame.gameplay, transportTime: 10.64 },
     });
-    const notesAfterUpdate: THREE.Object3D[] = [];
+    const windowsAfterUpdate: THREE.Object3D[] = [];
     controls.renderedScene?.traverse((object) => {
-      if (object.userData.gameplayRole === 'note')
-        notesAfterUpdate.push(object);
+      if (
+        object.userData.gameplayRole === 'note-good-envelope' ||
+        object.userData.gameplayRole === 'note-perfect-envelope'
+      )
+        windowsAfterUpdate.push(object);
     });
-    expect(new Set(notesAfterUpdate)).toEqual(identities);
+    expect(new Set(windowsAfterUpdate)).toEqual(identities);
     controls.renderedScene?.traverse((object) => {
       if (object.userData.gameplayRole === 'feedback') {
         expect(object.visible).toBe(true);
