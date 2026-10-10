@@ -7,6 +7,7 @@ import { projectGameplayFrame } from './gameplay-frame';
 import { MVP_CHART } from './mvp-chart';
 import { createBrightvaleScene, type BrightvaleScene } from './scene';
 import { projectSceneState } from './scene-state';
+import { parseSongOutputVolume } from './song-volume';
 import { createGameUI } from './ui';
 
 const appRoot = document.querySelector<HTMLElement>('#app');
@@ -324,7 +325,10 @@ try {
     );
   }
   audioContext = new window.AudioContext();
-  const adaptedContext = createBrowserAudioContextAdapter(audioContext);
+  const adaptedContext = createBrowserAudioContextAdapter(
+    audioContext,
+    parseSongOutputVolume(import.meta.env.VITE_SONG_VOLUME),
+  );
   const audio = createAudioTransport(
     {
       sourceUrl: trackUrl,

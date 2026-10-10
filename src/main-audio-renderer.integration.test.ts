@@ -50,7 +50,12 @@ const harness = vi.hoisted(() => ({
     | (() => Promise<{ ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }>),
   decodeFailures: 0,
   contexts: [] as Array<{
-    readonly sources: Array<{ startCalls: number; stopCalls: number }>;
+    readonly sources: Array<{
+      startCalls: number;
+      stopCalls: number;
+      connections: unknown[];
+    }>;
+    readonly gains: Array<{ gain: { value: number }; connections: unknown[] }>;
     currentTime: number;
   }>,
   ui: null as null | { destroy: () => unknown },
@@ -124,8 +129,11 @@ class TestSource extends EventTarget {
   buffer: TestBuffer | null = null;
   startCalls = 0;
   stopCalls = 0;
+  readonly connections: unknown[] = [];
 
-  connect(): void {}
+  connect(destination: unknown): void {
+    this.connections.push(destination);
+  }
   start(): void {
     this.startCalls += 1;
   }
@@ -135,11 +143,21 @@ class TestSource extends EventTarget {
   disconnect(): void {}
 }
 
+class TestGain {
+  readonly gain = { value: 1 };
+  readonly connections: unknown[] = [];
+
+  connect(destination: unknown): void {
+    this.connections.push(destination);
+  }
+}
+
 class TestAudioContext extends EventTarget {
   currentTime = 0;
   state = 'suspended';
   readonly destination = {};
   readonly sources: TestSource[] = [];
+  readonly gains: TestGain[] = [];
 
   constructor() {
     super();
@@ -168,6 +186,12 @@ class TestAudioContext extends EventTarget {
     const source = new TestSource();
     this.sources.push(source);
     return source;
+  }
+
+  createGain(): TestGain {
+    const gain = new TestGain();
+    this.gains.push(gain);
+    return gain;
   }
 }
 
@@ -278,10 +302,29 @@ afterEach(async () => {
   harness.listeners.clear();
   harness.documentListeners.clear();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.resetModules();
 });
 
 describe('main renderer failures with real audio transport and controller', () => {
+  it('uses VITE_SONG_VOLUME on the stable output path across start, pause/resume, and restart', async () => {
+    vi.stubEnv('VITE_SONG_VOLUME', '0');
+    await mountMain(['success']);
+    const context = harness.contexts[0];
+    expect(context?.gains[0]?.gain.value).toBe(0);
+    expect(context?.gains[0]?.connections).toEqual([{}]);
+
+    await invoke('start');
+    expect(context?.sources[0]?.connections).toEqual([context?.gains[0]]);
+    expect(context?.gains[0]?.gain.value).toBe(0);
+    await invoke('pause');
+    await invoke('resume');
+    expect(context?.sources[1]?.connections).toEqual([context?.gains[0]]);
+    await invoke('restart');
+    expect(context?.sources[2]?.connections).toEqual([context?.gains[0]]);
+    expect(context?.gains[0]?.gain.value).toBe(0);
+  });
+
   it('retains a decode error across renderer failure and makes Audio Retry available after 3D recovery', async () => {
     await mountMain(['success', 'success']);
     harness.decodeFailures = 1;

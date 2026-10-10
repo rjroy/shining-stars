@@ -12,6 +12,15 @@ class FakeBuffer implements AudioBufferPort {
 
 class FakeDestination {}
 
+class FakeGain extends FakeDestination {
+  readonly gain = { value: 1 };
+  readonly connections: FakeDestination[] = [];
+
+  connect(destination: FakeDestination): void {
+    this.connections.push(destination);
+  }
+}
+
 class FakeSource extends EventTarget implements AudioSourcePort<FakeBuffer> {
   buffer: FakeBuffer | null = null;
   readonly connections: FakeDestination[] = [];
@@ -35,6 +44,7 @@ class FakeNativeContext
   currentTime = 0;
   state = 'suspended';
   readonly destination = new FakeDestination();
+  readonly gains: FakeGain[] = [];
   readonly sources: FakeSource[] = [];
   readonly decodeInputs: ArrayBuffer[] = [];
   resumeCalls = 0;
@@ -61,6 +71,12 @@ class FakeNativeContext
     return source;
   }
 
+  createGain(): FakeGain {
+    const gain = new FakeGain();
+    this.gains.push(gain);
+    return gain;
+  }
+
   setState(state: string): void {
     this.state = state;
     this.dispatchEvent(new Event('statechange'));
@@ -76,8 +92,29 @@ describe('browser audio context adapter', () => {
     const second = adapter.createBufferSource();
 
     expect(first).not.toBe(second);
-    expect(first.connections).toEqual([nativeContext.destination]);
-    expect(second.connections).toEqual([nativeContext.destination]);
+    expect(first.connections).toEqual([nativeContext.gains[0]]);
+    expect(second.connections).toEqual([nativeContext.gains[0]]);
+    expect(nativeContext.gains[0]?.connections).toEqual([
+      nativeContext.destination,
+    ]);
+  });
+
+  it('sets output volume before source connection and preserves it through playback lifecycle', () => {
+    const nativeContext = new FakeNativeContext();
+    const adapter = createBrowserAudioContextAdapter(nativeContext, 0);
+    expect(nativeContext.gains[0]?.gain.value).toBe(0);
+
+    const first = adapter.createBufferSource();
+    expect(first.connections).toEqual([nativeContext.gains[0]]);
+    expect(nativeContext.gains[0]?.gain.value).toBe(0);
+
+    adapter.setOutputVolume(0.4);
+    expect(adapter.createBufferSource().connections).toEqual([
+      nativeContext.gains[0],
+    ]);
+    expect(nativeContext.gains[0]?.gain.value).toBe(0.4);
+    adapter.setOutputVolume(0);
+    expect(nativeContext.gains[0]?.gain.value).toBe(0);
   });
 
   it('delegates decode and lifecycle calls while exposing live clock and state', async () => {
