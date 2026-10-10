@@ -129,7 +129,6 @@ vi.mock('./ui', () => ({
         harness.events.push(`renderer-status:${available}`);
       }),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
-      resetPlaybackAttempt: vi.fn(),
       showFatal: vi.fn(),
       destroy: vi.fn(),
     };

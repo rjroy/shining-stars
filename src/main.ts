@@ -28,9 +28,7 @@ let disposed = false;
 let rendererAvailable = false;
 let rendererGeneration = 0;
 let playbackActionEpoch = 0;
-let playbackActionSequence = 0;
 let playbackActionPending = false;
-let unstartedPresentationResetSequence: number | null = null;
 let renderingSceneFrame = false;
 let rendererStatusNeedsRender = false;
 let busyActionToken = 0;
@@ -42,10 +40,7 @@ let reducedMotion = reducedMotionQuery.matches;
 const ui = createGameUI(applicationRoot, MVP_CHART, {
   start: () =>
     runPlaybackAction(startOrRetry, 'Loading the selected recording…'),
-  pause: () => {
-    unstartedPresentationResetSequence = null;
-    controller?.pause();
-  },
+  pause: () => controller?.pause(),
   resume: () =>
     runPlaybackAction(
       () =>
@@ -76,18 +71,6 @@ function showRendererStatus(message: string): void {
 }
 
 function invalidatePlaybackForRendererFailure(): void {
-  const snapshotBeforeCancellation = controller?.snapshot();
-  if (
-    playbackActionPending &&
-    snapshotBeforeCancellation !== undefined &&
-    (snapshotBeforeCancellation.audio.status === 'loading' ||
-      snapshotBeforeCancellation.audio.status === 'ready') &&
-    !snapshotBeforeCancellation.audio.hasActiveSource &&
-    snapshotBeforeCancellation.audio.position === 0 &&
-    snapshotBeforeCancellation.game.status !== 'results'
-  ) {
-    unstartedPresentationResetSequence = playbackActionSequence;
-  }
   playbackActionEpoch += 1;
   busyActionToken += 1;
   playbackActionPending = false;
@@ -97,42 +80,6 @@ function invalidatePlaybackForRendererFailure(): void {
     if (renderingSceneFrame) rendererStatusNeedsRender = true;
     else ui.render(snapshot, audioContext?.currentTime ?? 0);
   }
-}
-
-function reconcileUnstartedPlaybackPresentation(
-  actionSequence: number,
-  allowReset: boolean,
-): boolean {
-  const resetSequence = unstartedPresentationResetSequence;
-  if (resetSequence === null) return false;
-  if (
-    resetSequence !== actionSequence ||
-    actionSequence !== playbackActionSequence ||
-    playbackActionPending
-  ) {
-    unstartedPresentationResetSequence = null;
-    return false;
-  }
-
-  const snapshot = controller?.snapshot();
-  if (snapshot === undefined) return false;
-  if (snapshot.pendingPlaybackRequests) return false;
-  const audioHasNotStarted =
-    (snapshot.audio.status === 'loading' ||
-      snapshot.audio.status === 'ready' ||
-      snapshot.audio.status === 'paused') &&
-    !snapshot.audio.hasActiveSource &&
-    snapshot.audio.position === 0 &&
-    snapshot.game.status !== 'results';
-  if (!audioHasNotStarted) {
-    unstartedPresentationResetSequence = null;
-    return false;
-  }
-  if (!allowReset) return false;
-
-  unstartedPresentationResetSequence = null;
-  ui.resetPlaybackAttempt();
-  return true;
 }
 
 function handleRendererUnavailable(generation: number): void {
@@ -212,7 +159,6 @@ function renderSnapshot(
   ) {
     rendererAvailable = true;
     ui.setRendererStatus(true);
-    reconcileUnstartedPlaybackPresentation(playbackActionSequence, true);
     ui.render(snapshot, audioContext?.currentTime ?? 0);
   }
 }
@@ -235,18 +181,12 @@ async function runAction(
   if (controller === null || disposed || !rendererAvailable) return;
   if (playbackActionPending) return;
   if (controller.snapshot().pendingPlaybackRequests) return;
-  const actionSequence = ++playbackActionSequence;
   const epoch = playbackActionEpoch;
   const token = ++busyActionToken;
   playbackActionPending = true;
   ui.setBusy(message);
   renderCurrent();
   if (epoch !== playbackActionEpoch || !rendererAvailable || disposed) {
-    if (
-      reconcileUnstartedPlaybackPresentation(actionSequence, rendererAvailable)
-    ) {
-      renderCurrent();
-    }
     return;
   }
   try {
@@ -260,14 +200,9 @@ async function runAction(
       playbackActionPending = false;
       ui.setBusy(null);
       renderCurrent();
-    } else if (
-      !disposed &&
-      actionSequence === playbackActionSequence &&
-      !playbackActionPending
-    ) {
-      // A canceled action may finish after renderer recovery. Reconcile only
-      // its own unstarted state; never clear a newer action's busy state.
-      reconcileUnstartedPlaybackPresentation(actionSequence, rendererAvailable);
+    } else if (!disposed && !playbackActionPending) {
+      // Publish late controller settlements without taking ownership of a
+      // newer action's busy state.
       renderCurrent();
     }
   }
@@ -326,7 +261,6 @@ function onKeyDown(event: KeyboardEvent): void {
     return;
   }
   if (event.code === 'Escape') {
-    unstartedPresentationResetSequence = null;
     const status = controller.snapshot().audio.status;
     if (status === 'playing' || status === 'starting') {
       event.preventDefault();

@@ -55,7 +55,6 @@ const harness = vi.hoisted(() => ({
   }>,
   ui: null as null | { destroy: () => unknown },
   uiEvents: [] as string[],
-  resetPlaybackAttemptCalls: 0,
   frameCallbacks: [] as Array<() => void>,
   uiRendererAvailable: false,
 }));
@@ -110,10 +109,6 @@ vi.mock('./ui', () => ({
         harness.uiEvents.push(`renderer:${available}`);
       }),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
-      resetPlaybackAttempt: vi.fn(() => {
-        harness.resetPlaybackAttemptCalls += 1;
-        harness.uiEvents.push('reset-attempt');
-      }),
       showFatal: vi.fn(),
       destroy: vi.fn(),
     };
@@ -199,7 +194,6 @@ async function mountMain(sceneModes: string[]): Promise<void> {
   harness.contexts = [];
   harness.ui = null;
   harness.uiEvents = [];
-  harness.resetPlaybackAttemptCalls = 0;
   harness.frameCallbacks = [];
   harness.uiRendererAvailable = false;
 
@@ -300,13 +294,11 @@ describe('main renderer failures with real audio transport and controller', () =
     });
 
     triggerRendererFailure();
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     expect.soft(harness.snapshots.at(-1)?.audio).toMatchObject({
       status: 'error',
       error: 'decode failed',
     });
     await invoke('onRendererRetry');
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     expect.soft(harness.snapshots.at(-1)?.audio).toMatchObject({
       status: 'error',
       error: 'decode failed',
@@ -326,7 +318,6 @@ describe('main renderer failures with real audio transport and controller', () =
     expect.soft(harness.snapshots.at(-1)?.audio.status).toBe('loading');
     expect.soft(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
     expect.soft(harness.snapshots.at(-1)?.audio.loaded).toBe(false);
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     let selectionError: unknown;
     try {
       harness.actions?.selectDifficulty('hard');
@@ -456,11 +447,9 @@ describe('main renderer failures with real audio transport and controller', () =
     expect(harness.snapshots.at(-1)?.audio.status).toBe('paused');
     expect(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
     expect(harness.snapshots.at(-1)?.audio.loaded).toBe(true);
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     await invoke('onRendererRetry');
     expect(context?.sources).toHaveLength(1);
     expect(context?.sources[0]?.startCalls).toBe(1);
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
 
     enter();
     await flushMicrotasks();
@@ -468,7 +457,7 @@ describe('main renderer failures with real audio transport and controller', () =
     expect(context?.sources[1]?.startCalls).toBe(1);
   });
 
-  it('does not reset the start attempt after renderer loss in results', async () => {
+  it('keeps results available across renderer recovery and allows a new run', async () => {
     await mountMain(['success', 'success']);
     await invoke('start');
     const context = harness.contexts[0];
@@ -479,10 +468,13 @@ describe('main renderer failures with real audio transport and controller', () =
     expect(harness.snapshots.at(-1)?.game.status).toBe('results');
 
     triggerRendererFailure();
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     expect(harness.snapshots.at(-1)?.game.status).toBe('results');
     await invoke('onRendererRetry');
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
+    expect(harness.uiRendererAvailable).toBe(true);
+    expect(harness.snapshots.at(-1)?.game.status).toBe('results');
+
+    await invoke('restart');
+    expect(context.sources.at(-1)?.startCalls).toBe(1);
   });
 
   it('cancels an in-flight Audio Retry after renderer loss without starting its late-loaded source', async () => {
@@ -515,7 +507,7 @@ describe('main renderer failures with real audio transport and controller', () =
     expect(context?.sources[0]?.startCalls).toBe(1);
   });
 
-  it('does not auto-start a late load and publishes its ready snapshot after renderer recovery', async () => {
+  it('does not auto-start a late load and publishes ready after renderer recovery', async () => {
     await mountMain(['success', 'success']);
     const fetchGate = deferred<{
       ok: boolean;
@@ -536,22 +528,17 @@ describe('main renderer failures with real audio transport and controller', () =
     await pendingStart;
     await flushMicrotasks();
     expect.soft(harness.contexts[0]?.sources).toHaveLength(0);
-    expect.soft(harness.snapshots.at(-1)?.audio.status).toBe('ready');
-    expect.soft(harness.resetPlaybackAttemptCalls).toBe(1);
-    const busyCleared = harness.uiEvents.lastIndexOf('busy:clear');
-    const reset = harness.uiEvents.lastIndexOf('reset-attempt');
-    const readyRender = harness.uiEvents.lastIndexOf(
-      'render:true:ready:playing',
-    );
-    expect.soft(busyCleared).toBeGreaterThanOrEqual(0);
-    expect.soft(busyCleared).toBeLessThan(reset);
-    expect.soft(reset).toBeLessThan(readyRender);
+    expect(harness.uiEvents).toContain('render:true:ready:playing');
+    expect(harness.snapshots.at(-1)).toMatchObject({
+      audio: { status: 'ready', loaded: true, error: null },
+      pendingPlaybackRequests: false,
+    });
 
     await invoke('start');
     expect(harness.contexts[0]?.sources[0]?.startCalls).toBe(1);
   });
 
-  it('resets an unstarted load completed while renderer is unavailable before rendering Start after retry', async () => {
+  it('publishes a load completed while unavailable and leaves Start available after retry', async () => {
     await mountMain(['success', 'success']);
     const fetchGate = deferred<{
       ok: boolean;
@@ -567,40 +554,32 @@ describe('main renderer failures with real audio transport and controller', () =
       arrayBuffer: async () => new ArrayBuffer(8),
     });
     await pendingStart;
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     expect(harness.contexts[0]?.sources).toHaveLength(0);
+    expect(harness.uiEvents).toContain('render:false:ready:playing');
 
     await invoke('onRendererRetry');
-    expect(harness.resetPlaybackAttemptCalls).toBe(1);
-    const reset = harness.uiEvents.lastIndexOf('reset-attempt');
-    const rendererReady = harness.uiEvents.lastIndexOf('renderer:true');
-    const visibleReady = harness.uiEvents.lastIndexOf(
-      'render:true:ready:playing',
-    );
-    expect(reset).toBeGreaterThan(rendererReady);
-    expect(reset).toBeLessThan(visibleReady);
+    expect(harness.uiRendererAvailable).toBe(true);
+    expect(harness.uiEvents).toContain('render:true:ready:playing');
+    expect(harness.snapshots.at(-1)).toMatchObject({
+      audio: { status: 'ready', loaded: true, error: null },
+      pendingPlaybackRequests: false,
+    });
     expect(harness.contexts[0]?.sources).toHaveLength(0);
 
     await invoke('start');
     expect(harness.contexts[0]?.sources[0]?.startCalls).toBe(1);
   });
 
-  it('resets an attempted start when its pre-action render loses the renderer without loading audio', async () => {
+  it('keeps Start and difficulty available after a pre-action renderer recovery', async () => {
     await mountMain(['pre-action-render-fails', 'success']);
 
     await invoke('start');
     expect(harness.fetchCalls).toBe(0);
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
+    expect(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
 
     await invoke('onRendererRetry');
-    expect(harness.resetPlaybackAttemptCalls).toBe(1);
-    const reset = harness.uiEvents.lastIndexOf('reset-attempt');
-    const rendererReady = harness.uiEvents.lastIndexOf('renderer:true');
-    const visibleReady = harness.uiEvents.lastIndexOf(
-      'render:true:loading:playing',
-    );
-    expect(reset).toBeGreaterThan(rendererReady);
-    expect(reset).toBeLessThan(visibleReady);
+    expect(harness.uiRendererAvailable).toBe(true);
+    expect(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
     expect(harness.fetchCalls).toBe(0);
     let selectionError: unknown;
     try {
@@ -628,7 +607,6 @@ describe('main renderer failures with real audio transport and controller', () =
     await flushMicrotasks();
     triggerRendererFailure();
     await invoke('onRendererRetry');
-    expect(harness.resetPlaybackAttemptCalls).toBe(0);
     const busyCallsBeforeRetry = harness.uiEvents.filter((event) =>
       event.startsWith('busy:'),
     ).length;
@@ -648,6 +626,13 @@ describe('main renderer failures with real audio transport and controller', () =
 
     expect(harness.contexts[0]?.sources).toHaveLength(0);
     expect(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
-    expect(harness.resetPlaybackAttemptCalls).toBe(1);
+    expect(harness.snapshots.at(-1)?.audio).toMatchObject({
+      status: 'ready',
+      loaded: true,
+      error: null,
+    });
+
+    await invoke('start');
+    expect(harness.contexts[0]?.sources[0]?.startCalls).toBe(1);
   });
 });

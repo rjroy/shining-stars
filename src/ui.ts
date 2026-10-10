@@ -20,8 +20,6 @@ export interface UIActions {
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
-  /** Clear only the UI's attempted-start marker after a canceled, unstarted load. */
-  resetPlaybackAttempt(): void;
   setSceneFallback(message: string | null): void;
   setRendererStatus(available: boolean, message?: string): void;
   getGameplayLayout(): import('./gameplay-frame').GameplayLayout;
@@ -510,9 +508,6 @@ export function createGameUI(
     render,
     setBusy(message) {
       busyMessage = message;
-    },
-    resetPlaybackAttempt() {
-      // Lifecycle panels and controls are derived from the next controller snapshot.
     },
     setSceneFallback(message) {
       const status = root.querySelector<HTMLElement>('[data-scene-fallback]');
