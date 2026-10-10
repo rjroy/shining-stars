@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
-import { projectGameplayFrame, type GameplayLayout } from './gameplay-frame';
+import {
+  FEEDBACK_VISIBLE_SECONDS,
+  isFeedbackWithinVisibleAge,
+  projectGameplayFrame,
+  type GameplayLayout,
+} from './gameplay-frame';
 import { projectTimingWindowGeometry } from './note-projection';
 
 const chart: ChartConfig = {
@@ -137,5 +142,50 @@ describe('shared gameplay timing geometry', () => {
     );
     expect(result.feedback).toBeNull();
     expect(result.notes).toEqual([]);
+  });
+
+  it('keeps frame feedback boundaries and count-in/run identity guards', () => {
+    expect(isFeedbackWithinVisibleAge(0.999, 1)).toBe(false);
+    expect(isFeedbackWithinVisibleAge(1, 1)).toBe(true);
+    expect(isFeedbackWithinVisibleAge(1.649, 1)).toBe(true);
+    expect(isFeedbackWithinVisibleAge(FEEDBACK_VISIBLE_SECONDS, 0)).toBe(false);
+
+    const atTransportTime = (
+      transportTime: number,
+      overrides: Partial<ControllerSnapshot> = {},
+    ) =>
+      projectGameplayFrame(
+        snapshot({
+          game: { ...snapshot().game, transportTime },
+          ...overrides,
+        }),
+        chart,
+        layout,
+        false,
+      );
+
+    expect(atTransportTime(11.999).feedback).toBeNull();
+    expect(atTransportTime(12).feedback).toMatchObject({ runId: 3 });
+    expect(atTransportTime(12.649).feedback).toMatchObject({ runId: 3 });
+    expect(
+      atTransportTime(FEEDBACK_VISIBLE_SECONDS, {
+        feedback: {
+          ...snapshot().feedback!,
+          onsetTransportTime: 0,
+        },
+        game: { ...snapshot().game, transportTime: FEEDBACK_VISIBLE_SECONDS },
+      }).feedback,
+    ).toBeNull();
+
+    const countIn = atTransportTime(12, {
+      audio: { ...snapshot().audio, status: 'starting' },
+    });
+    expect(countIn.playing).toBe(true);
+    expect(countIn.feedback).toMatchObject({ runId: 3 });
+
+    const invalidRun = atTransportTime(12, {
+      feedback: { ...snapshot().feedback!, runId: 0 },
+    });
+    expect(invalidRun.feedback).toBeNull();
   });
 });

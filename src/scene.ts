@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { LOGICAL_PLAYFIELD_HEIGHT, type GameplayFrame } from './gameplay-frame';
+import {
+  isFeedbackWithinVisibleAge,
+  LOGICAL_PLAYFIELD_HEIGHT,
+  type GameplayFrame,
+} from './gameplay-frame';
 import { RUNWAY_HIT_LINE_TOP_FRACTION } from './note-projection';
 import type { SceneStateProjection } from './scene-state';
 
@@ -1071,8 +1075,10 @@ export function createBrightvaleScene(
       const activeFeedback =
         frame.feedback !== null &&
         frame.playing &&
-        frame.transportTime >= frame.feedback.onsetTransportTime &&
-        frame.transportTime - frame.feedback.onsetTransportTime < 0.65
+        isFeedbackWithinVisibleAge(
+          frame.transportTime,
+          frame.feedback.onsetTransportTime,
+        )
           ? frame.feedback
           : null;
       const width = layout.width;

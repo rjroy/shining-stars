@@ -8,6 +8,23 @@ import { getDifficultyProfile } from './game-balance';
 const ui = readFileSync(resolve(process.cwd(), 'src/ui.ts'), 'utf8');
 
 describe('difficulty presentation contract', () => {
+  it('keeps accessible judgment feedback gated by actual playback and its age', () => {
+    const visibilityRule = ui.slice(
+      ui.indexOf('const isJudgmentVisible'),
+      ui.indexOf('const difficultySelect'),
+    );
+    expect(visibilityRule).toMatch(/judgment !== null/);
+    expect(visibilityRule).toMatch(/isPlaying/);
+    expect(visibilityRule).toMatch(
+      /isFeedbackWithinVisibleAge\(\s*game\.transportTime,\s*judgment\.onsetTransportTime,\s*\)/,
+    );
+    expect(ui).toMatch(
+      /isPlaying = audio\.status === 'playing' && game\.status === 'playing'/,
+    );
+    expect(ui).toMatch(/!isJudgmentVisible \|\| judgment === null/);
+    expect(ui).toMatch(/role="status" aria-live="polite"/);
+  });
+
   it('offers only chart-allowed profiles and defaults through the shared helper', () => {
     expect(ui).toMatch(/chart\.allowedDifficulties/);
     expect(ui).toMatch(/defaultDifficulty\(/);

@@ -1,7 +1,7 @@
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
-import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
+import { isFeedbackWithinVisibleAge } from './gameplay-frame';
 import {
   defaultDifficulty,
   getDifficultyProfile,
@@ -327,9 +327,10 @@ export function createGameUI(
     const isJudgmentVisible =
       judgment !== null &&
       isPlaying &&
-      game.transportTime >= judgment.onsetTransportTime &&
-      game.transportTime - judgment.onsetTransportTime <
-        FEEDBACK_VISIBLE_SECONDS;
+      isFeedbackWithinVisibleAge(
+        game.transportTime,
+        judgment.onsetTransportTime,
+      );
     const difficultySelect = root.querySelector<HTMLSelectElement>(
       '[data-difficulty-select]',
     );

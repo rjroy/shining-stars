@@ -547,6 +547,65 @@ describe('Brightvale scene resource lifecycle', () => {
     scene?.destroy();
   });
 
+  it('shows feedback from exact onset until the exclusive transport-age limit', () => {
+    installSceneGlobals();
+    const controls = makeRenderer();
+    const scene = createBrightvaleScene(
+      makeHost(),
+      vi.fn(),
+      () => controls.renderer,
+    );
+    if (scene === null) throw new Error('scene renderer failed to initialize');
+
+    const feedback = {
+      eventId: 9,
+      runId: 2,
+      noteId: 'scene-feedback',
+      quality: 'good' as const,
+      onsetTransportTime: 1,
+    };
+    const samples = [
+      { transportTime: 0.999, onsetTransportTime: 1, active: false },
+      { transportTime: 1, onsetTransportTime: 1, active: true },
+      { transportTime: 1.649, onsetTransportTime: 1, active: true },
+      { transportTime: 0.65, onsetTransportTime: 0, active: false },
+      {
+        transportTime: 1.2,
+        onsetTransportTime: 1,
+        active: false,
+        playing: false,
+      },
+    ];
+
+    try {
+      for (const sample of samples) {
+        scene.updateFrame({
+          city: state,
+          gameplay: makeGameplayFrame({
+            transportTime: sample.transportTime,
+            playing: sample.playing ?? true,
+            feedback: {
+              ...feedback,
+              onsetTransportTime: sample.onsetTransportTime,
+            },
+          }),
+        });
+        let feedbackMesh: THREE.Object3D | undefined;
+        let backdrop: THREE.Object3D | undefined;
+        controls.renderedScene?.traverse((object) => {
+          if (object.userData.gameplayRole === 'feedback')
+            feedbackMesh = object;
+          if (object.userData.gameplayRole === 'feedback-backdrop')
+            backdrop = object;
+        });
+        expect(feedbackMesh?.userData.activeJudgement).toBe(sample.active);
+        expect(backdrop?.visible).toBe(sample.active);
+      }
+    } finally {
+      scene.destroy();
+    }
+  });
+
   it('disposes shared gameplay meshes, geometry, and materials once', () => {
     installSceneGlobals();
     const controls = makeRenderer();
