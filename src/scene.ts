@@ -3,8 +3,6 @@ import { LOGICAL_PLAYFIELD_HEIGHT, type GameplayFrame } from './gameplay-frame';
 import type { SceneStateProjection } from './scene-state';
 
 export interface BrightvaleScene {
-  /** Render from the authoritative game clock; this scene owns no animation loop. */
-  update(state: SceneStateProjection, transportTime: number): void;
   /** Render city and the complete gameplay surface in the shared context. */
   updateFrame(frame: {
     readonly city: SceneStateProjection;
@@ -206,8 +204,6 @@ export function createBrightvaleScene(
   let fallbackShown = false;
   let onContextLost: ((event: Event) => void) | null = null;
   let resizeListener: (() => void) | null = null;
-  let lastState: SceneStateProjection | null = null;
-  let lastTransportTime = 0;
   let lastFrame: {
     readonly city: SceneStateProjection;
     readonly gameplay: GameplayFrame;
@@ -937,10 +933,6 @@ export function createBrightvaleScene(
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         renderer.setSize(width, height, false);
         if (lastFrame !== null) renderFrame(lastFrame);
-        else if (lastState !== null) {
-          render(lastState, lastTransportTime);
-          renderer.render(scene, camera);
-        }
       } catch {
         failScene();
       }
@@ -1416,24 +1408,9 @@ export function createBrightvaleScene(
     if (cleaned) return null;
 
     return {
-      update(state, transportTime) {
-        if (cleaned) return;
-        lastState = state;
-        lastTransportTime = transportTime;
-        try {
-          render(state, transportTime);
-          renderer.setScissorTest(false);
-          renderer.clear(true, true, true);
-          renderer.render(scene, camera);
-        } catch {
-          failScene();
-        }
-      },
       updateFrame(frame) {
         if (cleaned) return;
         lastFrame = frame;
-        lastState = frame.city;
-        lastTransportTime = frame.gameplay.transportTime;
         try {
           renderFrame(frame);
         } catch {
