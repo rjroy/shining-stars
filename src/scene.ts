@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { getDifficultyProfile } from './game-balance';
 import {
   isFeedbackWithinVisibleAge,
   LOGICAL_PLAYFIELD_HEIGHT,
+  VISIBLE_NOTE_SECONDS,
   type GameplayFrame,
 } from './gameplay-frame';
 import { RUNWAY_HIT_LINE_TOP_FRACTION } from './note-projection';
@@ -270,9 +272,6 @@ export function createBrightvaleScene(
 
     const ambient = new THREE.HemisphereLight(0xc5e0e1, 0x101626, 1.15);
     scene.add(ambient);
-    const stageLight = new THREE.PointLight(0xffd37b, 54, 17, 1.8);
-    stageLight.position.set(0, 4.2, 5.7);
-    scene.add(stageLight);
     const cityLight = new THREE.PointLight(0x6bd9c0, 22, 23, 2);
     cityLight.position.set(-1, 4.4, -2.4);
     scene.add(cityLight);
@@ -300,39 +299,6 @@ export function createBrightvaleScene(
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, -0.45, 0);
     scene.add(ground);
-
-    const platformMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0x354354,
-        emissive: 0x382916,
-        emissiveIntensity: 0.36,
-        roughness: 0.55,
-        metalness: 0.18,
-      }),
-    );
-    const platform = new THREE.Mesh(
-      ownGeometry(new THREE.BoxGeometry(4.5, 0.28, 2.6)),
-      platformMaterial,
-    );
-    platform.position.set(0, 5.87, 3.7);
-    platform.scale.setScalar(0.14);
-    scene.add(platform);
-
-    const trimMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0xffd475,
-        emissive: 0xffb94f,
-        emissiveIntensity: 1.25,
-        roughness: 0.35,
-      }),
-    );
-    const platformTrim = new THREE.Mesh(
-      ownGeometry(new THREE.BoxGeometry(4.35, 0.035, 2.42)),
-      trimMaterial,
-    );
-    platformTrim.position.set(0, 6.02, 3.7);
-    platformTrim.scale.setScalar(0.14);
-    scene.add(platformTrim);
 
     const buildingMaterial = ownMaterial(
       new THREE.MeshStandardMaterial({
@@ -501,71 +467,6 @@ export function createBrightvaleScene(
       windBeads.push(bead);
     }
 
-    const haloMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffd475,
-        transparent: true,
-        opacity: 0.5,
-        side: THREE.DoubleSide,
-      }),
-    );
-    const performerHalo = new THREE.Mesh(
-      ownGeometry(new THREE.TorusGeometry(0.82, 0.025, 8, 64)),
-      haloMaterial,
-    );
-    performerHalo.position.set(0, 6.37, 3.92);
-    performerHalo.scale.setScalar(0.14);
-    scene.add(performerHalo);
-
-    const performerMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({ color: 0xffd475, toneMapped: false }),
-    );
-    const performerSkin = ownMaterial(
-      new THREE.MeshBasicMaterial({ color: 0xffe6c3, toneMapped: false }),
-    );
-    const performer = new THREE.Group();
-    performer.position.y = 6;
-    performer.scale.setScalar(0.14);
-    const body = new THREE.Mesh(
-      ownGeometry(new THREE.CapsuleGeometry(0.27, 0.7, 4, 8)),
-      performerMaterial,
-    );
-    body.position.set(0, 0.88, 3.7);
-    performer.add(body);
-    const head = new THREE.Mesh(
-      ownGeometry(new THREE.SphereGeometry(0.25, 14, 10)),
-      performerSkin,
-    );
-    head.position.set(0, 1.66, 3.7);
-    performer.add(head);
-    const armGeometry = ownGeometry(
-      new THREE.CapsuleGeometry(0.09, 0.62, 3, 6),
-    );
-    const leftArm = new THREE.Mesh(armGeometry, performerSkin);
-    leftArm.position.set(-0.53, 1.15, 3.72);
-    leftArm.rotation.z = -1.12;
-    performer.add(leftArm);
-    const rightArm = new THREE.Mesh(armGeometry, performerSkin);
-    rightArm.position.set(0.53, 1.15, 3.72);
-    rightArm.rotation.z = 1.12;
-    performer.add(rightArm);
-    const legGeometry = ownGeometry(
-      new THREE.CapsuleGeometry(0.105, 0.48, 3, 6),
-    );
-    for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(legGeometry, performerMaterial);
-      leg.position.set(side * 0.17, 0.18, 3.72);
-      performer.add(leg);
-    }
-    const hair = new THREE.Mesh(
-      ownGeometry(new THREE.SphereGeometry(0.25, 12, 8)),
-      ownMaterial(new THREE.MeshBasicMaterial({ color: 0x26304a })),
-    );
-    hair.scale.set(1.04, 0.57, 1.02);
-    hair.position.set(0, 1.82, 3.68);
-    performer.add(hair);
-    scene.add(performer);
-
     const crowdMaterial = ownMaterial(
       new THREE.MeshStandardMaterial({
         color: 0x172338,
@@ -597,10 +498,15 @@ export function createBrightvaleScene(
     stageCamera.layers.set(1);
     stageCamera.position.set(0, 0, 100);
     stageCamera.lookAt(0, 0, 0);
-    const boardCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 200);
-    boardCamera.layers.set(2);
-    boardCamera.position.set(0, 0, 100);
-    boardCamera.lookAt(0, 0, 0);
+    const boardCamera = new THREE.PerspectiveCamera(60, 2, 0.1, 100);
+    boardCamera.layers.set(3);
+    boardCamera.position.set(0, 8.5, 13.5);
+    boardCamera.lookAt(0, 0, -2.2);
+    const runwayCamera = boardCamera;
+    const overlayBoardCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 200);
+    overlayBoardCamera.layers.set(2);
+    overlayBoardCamera.position.set(0, 0, 100);
+    overlayBoardCamera.lookAt(0, 0, 0);
     const stageLayer = new THREE.Group();
     stageLayer.layers.set(1);
     stageLayer.name = 'gameplay-stage';
@@ -608,6 +514,107 @@ export function createBrightvaleScene(
     boardLayer.layers.set(2);
     boardLayer.name = 'gameplay-board';
     scene.add(stageLayer, boardLayer);
+
+    // The runway is a real ground plane. Normalized progress is represented
+    // by distance along this single world-space path; overlays remain in their
+    // existing screen-space pass so labels and controls are not foreshortened.
+    const runwayFar = new THREE.Vector3(0, 0.012, -13);
+    const runwayHit = new THREE.Vector3(0, 0.012, 4.5);
+    const runwayPoint = (progress: number): THREE.Vector3 =>
+      runwayFar.clone().lerp(runwayHit, progress);
+    const worldRunway = new THREE.Group();
+    worldRunway.layers.set(3);
+    worldRunway.name = 'perspective-runway';
+    scene.add(worldRunway);
+    const worldPlaneGeometry = ownGeometry(new THREE.PlaneGeometry(1, 1));
+    const runwaySurfaceMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0x101a2b, transparent: true, opacity: 0.94, side: THREE.DoubleSide,
+      depthWrite: false, fog: false,
+    }));
+    const runwayLaneMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0x9ab9c5, transparent: true, opacity: 0.16,
+      side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }));
+    const runwayDividerMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0xd9e8ea, transparent: true, opacity: 0.36,
+      side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }));
+    const runwayGoodMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0xffd475, transparent: true, opacity: 0.055,
+      side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }));
+    const runwayPerfectMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0x9de7d0, transparent: true, opacity: 0.09,
+      side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }));
+    const runwayGoodEdgeMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0xffd475, transparent: true, opacity: 0.72,
+      side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }));
+    const runwayPerfectEdgeMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0xc5f5e7, transparent: true, opacity: 0.92,
+      side: THREE.DoubleSide, depthWrite: false, fog: false,
+    }));
+    const runwayHitMaterial = ownMaterial(new THREE.MeshBasicMaterial({
+      color: 0xffd475, transparent: true, opacity: 1, side: THREE.DoubleSide,
+      depthWrite: false, fog: false,
+    }));
+    const worldLanes: THREE.Mesh[] = [];
+    const worldGoodTargets: THREE.Mesh[] = [];
+    const worldPerfectTargets: THREE.Mesh[] = [];
+    const worldGoodTargetEdges: Array<[THREE.Mesh, THREE.Mesh]> = [];
+    const worldPerfectTargetEdges: Array<[THREE.Mesh, THREE.Mesh]> = [];
+    const worldHitAccents: THREE.Mesh[] = [];
+    const RUNWAY_LANE_SPACING = 4;
+    function worldStrip(
+      role: string, material: THREE.Material, lane: number,
+      from: number, to: number, width: number,
+    ): THREE.Mesh {
+      const mesh = new THREE.Mesh(worldPlaneGeometry, material);
+      mesh.layers.set(3);
+      mesh.userData.gameplayRole = role;
+      mesh.rotation.x = -Math.PI / 2;
+      const a = runwayPoint(from);
+      const b = runwayPoint(to);
+      mesh.position.set((lane - 1.5) * RUNWAY_LANE_SPACING, 0.025, (a.z + b.z) / 2);
+      mesh.scale.set(width, Math.abs(b.z - a.z), 1);
+      mesh.renderOrder =
+        role === 'runway-surface' ? 1
+          : role === 'lane' || role === 'lane-divider' ? 2
+            : role === 'hit-line' ? 4
+              : role === 'note-halo' ? 5
+                : role === 'note-bar' ? 6
+                  : 3;
+      worldRunway.add(mesh);
+      return mesh;
+    }
+    function setWorldStrip(mesh: THREE.Mesh, lane: number, from: number, to: number, width: number): void {
+      const a = runwayPoint(from);
+      const b = runwayPoint(to);
+      mesh.position.set((lane - 1.5) * RUNWAY_LANE_SPACING, 0.025, (a.z + b.z) / 2);
+      mesh.scale.set(width, Math.max(0.0001, Math.abs(b.z - a.z)), 1);
+      mesh.visible = true;
+    }
+    worldStrip('runway-surface', runwaySurfaceMaterial, 1.5, -0.24, 1.24, 16.3);
+    // Four stable lane centers; the perspective camera supplies depth rather
+    // than a hand-skewed lane layout.
+    for (let lane = 0; lane < 4; lane += 1) {
+      worldLanes.push(worldStrip('lane', runwayLaneMaterial, lane, -0.24, 1.24, 3.9));
+      worldGoodTargets.push(worldStrip('good-band', runwayGoodMaterial, lane, 0.8, 1.2, 3.7));
+      worldPerfectTargets.push(worldStrip('perfect-band', runwayPerfectMaterial, lane, 0.9, 1.1, 3.2));
+      worldGoodTargetEdges.push([
+        worldStrip('good-band-edge', runwayGoodEdgeMaterial, lane, 0.798, 0.802, 3.45),
+        worldStrip('good-band-edge', runwayGoodEdgeMaterial, lane, 1.198, 1.202, 3.45),
+      ]);
+      worldPerfectTargetEdges.push([
+        worldStrip('perfect-band-edge', runwayPerfectEdgeMaterial, lane, 0.898, 0.902, 2.95),
+        worldStrip('perfect-band-edge', runwayPerfectEdgeMaterial, lane, 1.098, 1.102, 2.95),
+      ]);
+      worldHitAccents.push(worldStrip('hit-line', runwayHitMaterial, lane, 0.996, 1.004, 3.75));
+    }
+    for (let divider = 0; divider < 3; divider += 1) {
+      worldStrip('lane-divider', runwayDividerMaterial, divider + 0.5, -0.24, 1.24, 0.04);
+    }
 
     const planeGeometry = ownGeometry(new THREE.PlaneGeometry(1, 1));
     function makeTextLayer(
@@ -817,7 +824,7 @@ export function createBrightvaleScene(
     const laneKeyLabels: CanvasTextLayer[] = [];
     for (let lane = 0; lane < 4; lane += 1) {
       laneMeshes.push(
-        createPlane(boardLayer, planeGeometry, laneMaterial, 'lane'),
+        createPlane(boardLayer, planeGeometry, laneMaterial, 'overlay-lane'),
       );
       laneDividers.push(
         createPlane(
@@ -828,14 +835,14 @@ export function createBrightvaleScene(
         ),
       );
       goodBands.push(
-        createPlane(boardLayer, planeGeometry, goodMaterial, 'good-band'),
+        createPlane(boardLayer, planeGeometry, goodMaterial, 'overlay-good-band'),
       );
       goodEdges.push(
         createPlane(boardLayer, planeGeometry, goodEdgeMaterial, 'good-edge'),
         createPlane(boardLayer, planeGeometry, goodEdgeMaterial, 'good-edge'),
       );
       perfectBands.push(
-        createPlane(boardLayer, planeGeometry, perfectMaterial, 'perfect-band'),
+        createPlane(boardLayer, planeGeometry, perfectMaterial, 'overlay-perfect-band'),
       );
       perfectEdges.push(
         createPlane(
@@ -862,14 +869,14 @@ export function createBrightvaleScene(
       boardLayer,
       planeGeometry,
       hitMaterial,
-      'hit-line',
+      'overlay-hit-line',
     );
     const hitLabel = makeTextLayer(
       boardLayer,
       'hit-label',
       '#ffd475',
       10,
-      'right',
+      'center',
     );
     const feedbackBacker = createPlane(
       stageLayer,
@@ -909,6 +916,24 @@ export function createBrightvaleScene(
       readonly good: THREE.Mesh;
       readonly perfect: THREE.Mesh;
     }> = [];
+    const laneNoteMaterials = [0x65d8ff, 0xe98bc8, 0xffd475, 0x91e6b0].map((color) =>
+      ownMaterial(new THREE.MeshBasicMaterial({
+        color, toneMapped: false, side: THREE.DoubleSide,
+        transparent: true, opacity: 1, depthWrite: false, fog: false,
+      })),
+    );
+    const laneNoteHaloMaterials = [0x65d8ff, 0xe98bc8, 0xffd475, 0x91e6b0].map((color) =>
+      ownMaterial(new THREE.MeshBasicMaterial({
+        color, toneMapped: false, side: THREE.DoubleSide,
+        transparent: true, opacity: 0.2, depthWrite: false, fog: false,
+      })),
+    );
+    const worldNotePool: Array<{
+      readonly good: THREE.Mesh;
+      readonly perfect: THREE.Mesh;
+      readonly halo: THREE.Mesh;
+      readonly bar: THREE.Mesh;
+    }> = [];
 
     observer =
       typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
@@ -926,11 +951,13 @@ export function createBrightvaleScene(
         stageCamera.top = height;
         stageCamera.bottom = 0;
         stageCamera.updateProjectionMatrix();
-        boardCamera.left = 0;
-        boardCamera.right = width;
-        boardCamera.top = height;
-        boardCamera.bottom = 0;
-        boardCamera.updateProjectionMatrix();
+        runwayCamera.aspect = width / height;
+        runwayCamera.updateProjectionMatrix();
+        overlayBoardCamera.left = 0;
+        overlayBoardCamera.right = width;
+        overlayBoardCamera.top = height;
+        overlayBoardCamera.bottom = 0;
+        overlayBoardCamera.updateProjectionMatrix();
         cityscape.scale.x = Math.max(0.38, Math.min(1, camera.aspect / 1.25));
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         renderer.setSize(width, height, false);
@@ -942,34 +969,35 @@ export function createBrightvaleScene(
 
     function render(state: SceneStateProjection, transportTime: number): void {
       const intensity = state.cityIntensity;
+      const audience = state.phase !== 'twilight';
       const beat = state.motion.powerLinePulse
         ? 0.5 + 0.5 * Math.sin(transportTime * 2.4)
         : 0.5;
       wireMaterial.color.setHex(
-        state.phase === 'twilight' ? 0x9de7d0 : 0xd2c99d,
+        audience ? 0xffd68a : 0xc6a8ff,
       );
       wireMaterial.emissive.setHex(
-        state.phase === 'twilight' ? 0x58c7ad : 0xffd475,
+        audience ? 0xffad4d : 0x8a63ed,
       );
       wireMaterial.emissiveIntensity =
         0.14 + state.cityBrightness * 0.35 + intensity * beat * 0.38;
       buildingMaterial.emissiveIntensity =
         0.08 + state.cityBrightness * 0.27 + intensity * beat * 0.2;
+      buildingMaterial.color.setHex(audience ? 0x35404a : 0x302942);
+      buildingMaterial.emissive.setHex(audience ? 0x704725 : 0x523575);
+      windowMaterial.color.setHex(audience ? 0xffd28a : 0xc5a3ff);
+      windowMaterial.emissive.setHex(audience ? 0xffa83d : 0x9a63ff);
+      crowdMaterial.color.setHex(audience ? 0x302b32 : 0x28233d);
+      crowdMaterial.emissive.setHex(audience ? 0x302018 : 0x291d46);
       windowMaterial.emissiveIntensity =
         0.3 + state.cityBrightness * 0.7 + intensity * beat * 0.65;
-      windMaterial.color.setHex(
-        state.phase === 'twilight' ? 0x70e2c7 : 0x77cfc0,
-      );
+      windMaterial.color.setHex(audience ? 0xe6b96f : 0x9a78ee);
       windMaterial.opacity = 0.1 + state.cityBrightness * 0.22;
       beadMaterial.opacity = 0.2 + intensity * 0.8;
       pressureVeil.visible = state.phase === 'twilight';
       pressureMaterial.opacity = 0.14 + (1 - intensity) * 0.17;
-      haloMaterial.color.setHex(
-        state.phase === 'twilight' ? 0xa6f0d7 : 0xffd475,
-      );
-      haloMaterial.opacity = 0.3 + state.cityBrightness * 0.4;
+      cityLight.color.setHex(audience ? 0xffbd69 : 0x8b63e8);
       cityLight.intensity = 10 + state.cityBrightness * 24;
-      stageLight.intensity = 52;
 
       for (let index = 0; index < BUILDINGS.length; index += 1) {
         const building = BUILDINGS[index];
@@ -1005,12 +1033,7 @@ export function createBrightvaleScene(
         bead.scale.setScalar(0.55 + intensity * 0.75);
       }
 
-      const push = state.motion.cameraPush * 0.34;
-      camera.position.set(
-        0,
-        baseCameraPosition.y - push * 0.12,
-        baseCameraPosition.z - push,
-      );
+      camera.position.copy(baseCameraPosition);
       camera.lookAt(cameraLookAt);
     }
 
@@ -1052,21 +1075,38 @@ export function createBrightvaleScene(
       );
     }
 
+    function projectRunwayToBoard(
+      worldPosition: THREE.Vector3,
+      board: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
+    ): { readonly x: number; readonly y: number } {
+      runwayCamera.updateMatrixWorld(true);
+      const projected = worldPosition.clone().project(runwayCamera);
+      return {
+        x: board.x + ((projected.x + 1) * board.width) / 2,
+        y: board.y + ((1 - projected.y) * board.height) / 2,
+      };
+    }
+
     function ensureNoteWindowPool(capacity: number): void {
       while (noteWindowPool.length < capacity) {
         const good = createPlane(
           boardLayer,
           planeGeometry,
           goodMaterial,
-          'note-good-envelope',
+          'overlay-note-good-envelope',
         );
         const perfect = createPlane(
           boardLayer,
           planeGeometry,
           perfectMaterial,
-          'note-perfect-envelope',
+          'overlay-note-perfect-envelope',
         );
         noteWindowPool.push({ good, perfect });
+        const worldGood = worldStrip('note-good-envelope', runwayGoodMaterial, 0, 0, 0, 0.7);
+        const worldPerfect = worldStrip('note-perfect-envelope', runwayPerfectMaterial, 0, 0, 0, 0.62);
+        const halo = worldStrip('note-halo', laneNoteHaloMaterials[0]!, 0, 0, 0, 2.8);
+        const bar = worldStrip('note-bar', laneNoteMaterials[0]!, 0, 0, 0, 2.35);
+        worldNotePool.push({ good: worldGood, perfect: worldPerfect, halo, bar });
       }
     }
 
@@ -1085,6 +1125,8 @@ export function createBrightvaleScene(
       const height = layout.height;
       const stage = layout.stage;
       const board = layout.board;
+      runwayCamera.aspect = board.width / Math.max(1, board.height);
+      runwayCamera.updateProjectionMatrix();
       const boardScale = board.height / LOGICAL_PLAYFIELD_HEIGHT;
       const hitY = board.y + board.height * RUNWAY_HIT_LINE_TOP_FRACTION;
 
@@ -1282,12 +1324,16 @@ export function createBrightvaleScene(
           height,
         );
         const keyText = ['D', 'F', 'J', 'K'][index] ?? '';
+        const runwayTarget = projectRunwayToBoard(
+          runwayPoint(1).setX((index - 1.5) * RUNWAY_LANE_SPACING),
+          board,
+        );
         placeText(
           laneKeyLabels[index]!,
           {
-            x: lane.x + lane.width * 0.3,
-            y: board.y + 8 * boardScale,
-            width: lane.width * 0.4,
+            x: runwayTarget.x - lane.width * 0.4,
+            y: runwayTarget.y - 11 * boardScale,
+            width: lane.width * 0.8,
             height: 22 * boardScale,
           },
           keyText,
@@ -1304,18 +1350,57 @@ export function createBrightvaleScene(
         8,
         height,
       );
+      const rightmostTarget = projectRunwayToBoard(
+        runwayPoint(1).setX((3 - 1.5) * RUNWAY_LANE_SPACING),
+        board,
+      );
+      const hitLabelRect = {
+        x: rightmostTarget.x - 22 * boardScale,
+        y: rightmostTarget.y - 7 * boardScale,
+        width: 44 * boardScale,
+        height: 14 * boardScale,
+      };
+      placeText(hitLabel, hitLabelRect, 'HIT', 9, height);
+      const rightmostKey = laneKeyLabels[3]!.mesh;
+      const keyCenterY = height - rightmostKey.position.y;
+      const labelGap = 4;
+      const hitCenterY =
+        keyCenterY - (rightmostKey.scale.y + hitLabel.mesh.scale.y) / 2 - labelGap;
       placeText(
         hitLabel,
-        {
-          x: board.x + board.width - 45 * boardScale,
-          y: hitY - 19 * boardScale,
-          width: 38 * boardScale,
-          height: 14 * boardScale,
-        },
+        { ...hitLabelRect, y: hitCenterY - hitLabelRect.height / 2 },
         'HIT',
         9,
         height,
       );
+
+      const activeTiming = getDifficultyProfile(frame.difficulty).timing;
+      const goodHalf = activeTiming.goodWindowSeconds / VISIBLE_NOTE_SECONDS;
+      const perfectHalf = activeTiming.perfectWindowSeconds / VISIBLE_NOTE_SECONDS;
+    for (let lane = 0; lane < 4; lane += 1) {
+      setWorldStrip(worldLanes[lane]!, lane, -0.24, 1.24, 3.9);
+      setWorldStrip(worldGoodTargets[lane]!, lane, 1 - goodHalf, 1 + goodHalf, 3.7);
+      setWorldStrip(worldPerfectTargets[lane]!, lane, 1 - perfectHalf, 1 + perfectHalf, 3.2);
+      setWorldStrip(worldGoodTargetEdges[lane]![0], lane, 1 - goodHalf - 0.002, 1 - goodHalf + 0.002, 3.45);
+      setWorldStrip(worldGoodTargetEdges[lane]![1], lane, 1 + goodHalf - 0.002, 1 + goodHalf + 0.002, 3.45);
+      setWorldStrip(worldPerfectTargetEdges[lane]![0], lane, 1 - perfectHalf - 0.002, 1 - perfectHalf + 0.002, 2.95);
+      setWorldStrip(worldPerfectTargetEdges[lane]![1], lane, 1 + perfectHalf - 0.002, 1 + perfectHalf + 0.002, 2.95);
+      setWorldStrip(worldHitAccents[lane]!, lane, 0.996, 1.004, 3.75);
+        // The original flat screen-space playfield is superseded by the world
+        // runway; keep its labels, but do not draw a second competing set of
+        // lane panels and timing bands over the perspective geometry.
+        laneMeshes[lane]!.visible = false;
+        goodBands[lane]!.visible = false;
+        perfectBands[lane]!.visible = false;
+        hitPads[lane]!.visible = false;
+        goodEdges[lane * 2]!.visible = false;
+        goodEdges[lane * 2 + 1]!.visible = false;
+        perfectEdges[lane * 2]!.visible = false;
+        perfectEdges[lane * 2 + 1]!.visible = false;
+      }
+      for (const divider of laneDividers) divider.visible = false;
+      hitLine.visible = false;
+      boardBackdrop.visible = false;
 
       ensureNoteWindowPool(frame.noteCapacity);
       for (let index = 0; index < noteWindowPool.length; index += 1) {
@@ -1326,35 +1411,31 @@ export function createBrightvaleScene(
             pool.good.visible = false;
             pool.perfect.visible = false;
           }
+          const worldPool = worldNotePool[index];
+          if (worldPool !== undefined) {
+            worldPool.good.visible = false;
+            worldPool.perfect.visible = false;
+            worldPool.halo.visible = false;
+            worldPool.bar.visible = false;
+          }
           continue;
         }
-        const lane = frame.lanes[projected.lane];
-        if (lane === undefined) continue;
-        const centerX = lane.x + lane.width / 2;
-        const centerY =
-          board.y + board.height * (1 - projected.bottomPercent / 100);
-        const windows = frame.timingWindows;
-        const envelopeWidth = Math.min(lane.width * 0.78, 80 * boardScale);
-        placePlane(
-          pool.good,
-          centerX - envelopeWidth / 2,
-          centerY - windows.goodHalfHeightPx,
-          envelopeWidth,
-          windows.goodEnvelopeHeightPx,
-          9,
-          height,
-        );
-        placePlane(
-          pool.perfect,
-          centerX - envelopeWidth / 2,
-          centerY - windows.perfectHalfHeightPx,
-          envelopeWidth,
-          windows.perfectEnvelopeHeightPx,
-          10,
-          height,
-        );
-        pool.good.visible = frame.playing;
-        pool.perfect.visible = frame.playing;
+        pool.good.visible = false;
+        pool.perfect.visible = false;
+        const worldPool = worldNotePool[index];
+        if (worldPool !== undefined) {
+          const p = projected.progress;
+          setWorldStrip(worldPool.good, projected.lane, p - goodHalf, p + goodHalf, 3.0);
+          setWorldStrip(worldPool.perfect, projected.lane, p - perfectHalf, p + perfectHalf, 2.5);
+          setWorldStrip(worldPool.halo, projected.lane, p - 0.03, p + 0.03, 2.8);
+          setWorldStrip(worldPool.bar, projected.lane, p - 0.015, p + 0.015, 2.35);
+          worldPool.halo.material = laneNoteHaloMaterials[projected.lane] ?? laneNoteHaloMaterials[0]!;
+          worldPool.bar.material = laneNoteMaterials[projected.lane] ?? laneNoteMaterials[0]!;
+          worldPool.good.visible = frame.playing;
+          worldPool.perfect.visible = frame.playing;
+          worldPool.halo.visible = frame.playing;
+          worldPool.bar.visible = frame.playing;
+        }
       }
 
       if (countdownVisible) {
@@ -1378,7 +1459,12 @@ export function createBrightvaleScene(
       renderer.clearDepth();
       renderer.render(scene, stageCamera);
 
-      renderer.setViewport(0, 0, width, height);
+      renderer.setViewport(
+        board.x,
+        height - board.y - board.height,
+        board.width,
+        board.height,
+      );
       renderer.setScissor(
         board.x,
         height - board.y - board.height,
@@ -1386,7 +1472,10 @@ export function createBrightvaleScene(
         board.height,
       );
       renderer.clearDepth();
-      renderer.render(scene, boardCamera);
+      renderer.render(scene, runwayCamera);
+      renderer.setViewport(0, 0, width, height);
+      renderer.clearDepth();
+      renderer.render(scene, overlayBoardCamera);
 
       renderer.setScissorTest(false);
       renderer.setViewport(0, 0, width, height);

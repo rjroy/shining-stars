@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
+import { getDifficultyProfile } from './game-balance';
 import {
   projectGameplayFrame,
   VISIBLE_NOTE_SECONDS,
@@ -14,6 +15,71 @@ import type { SceneStateProjection } from './scene-state';
 // The existing scene fixture is 480 × 240. Keep that tested desktop board
 // proportion as the logical reference instead of introducing a new layout.
 const LOGICAL_BOARD = { width: 480, height: 240 };
+
+interface RenderViewport {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+function gameplayPassFor(
+  cameras: readonly THREE.Camera[],
+  viewports: readonly RenderViewport[],
+  mesh: THREE.Mesh,
+): { readonly camera: THREE.Camera; readonly viewport: RenderViewport } {
+  for (let index = cameras.length - 1; index >= 0; index -= 1) {
+    const camera = cameras[index];
+    const viewport = viewports[index];
+    if (
+      camera !== undefined &&
+      viewport !== undefined &&
+      camera.layers.test(mesh.layers)
+    )
+      return { camera, viewport };
+  }
+  throw new Error(`no gameplay pass renders ${String(mesh.userData.gameplayRole)}`);
+}
+
+function projectedYBounds(
+  mesh: THREE.Mesh,
+  camera: THREE.Camera,
+  viewport: RenderViewport,
+  hostHeight: number,
+): readonly [number, number] {
+  mesh.updateWorldMatrix(true, false);
+  camera.updateMatrixWorld(true);
+  const positions = mesh.geometry.getAttribute('position');
+  const screenY: number[] = [];
+  for (let index = 0; index < positions.count; index += 1) {
+    const point = new THREE.Vector3(
+      positions.getX(index),
+      positions.getY(index),
+      positions.getZ(index),
+    )
+      .applyMatrix4(mesh.matrixWorld)
+      .project(camera);
+    screenY.push(
+      hostHeight - viewport.y - ((point.y + 1) * viewport.height) / 2,
+    );
+  }
+  return [Math.min(...screenY), Math.max(...screenY)];
+}
+
+function projectedScreenCenter(
+  mesh: THREE.Mesh,
+  camera: THREE.Camera,
+  viewport: RenderViewport,
+  hostHeight: number,
+): THREE.Vector2 {
+  mesh.updateWorldMatrix(true, false);
+  camera.updateMatrixWorld(true);
+  const center = mesh.getWorldPosition(new THREE.Vector3()).project(camera);
+  return new THREE.Vector2(
+    viewport.x + ((center.x + 1) * viewport.width) / 2,
+    hostHeight - viewport.y - ((center.y + 1) * viewport.height) / 2,
+  );
+}
 
 const city: SceneStateProjection = {
   phase: 'audience',
@@ -184,6 +250,14 @@ describe('responsive logical playfield projection', () => {
         removeEventListener: vi.fn(),
       });
       const renderedScenes: THREE.Scene[] = [];
+      const renderedCameras: THREE.Camera[] = [];
+      const renderedViewports: Array<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }> = [];
+      let viewport = { x: 0, y: 0, width: 640, height: 480 };
       const canvas = Object.assign(new EventTarget(), {
         className: '',
         setAttribute: vi.fn(),
@@ -198,12 +272,22 @@ describe('responsive logical playfield projection', () => {
         setClearColor: vi.fn(),
         setPixelRatio: vi.fn(),
         setSize: vi.fn(),
-        setViewport: vi.fn(),
+        setViewport: vi.fn(
+          (x: number, y: number, width: number, height: number) => {
+            viewport = { x, y, width, height };
+          },
+        ),
         setScissor: vi.fn(),
         setScissorTest: vi.fn(),
         clear: vi.fn(),
         clearDepth: vi.fn(),
-        render: vi.fn((rendered: THREE.Scene) => renderedScenes.push(rendered)),
+        render: vi.fn((rendered: THREE.Scene, camera: THREE.Camera) => {
+          rendered.updateMatrixWorld(true);
+          camera.updateMatrixWorld(true);
+          renderedScenes.push(rendered);
+          renderedCameras.push(camera);
+          renderedViewports.push(viewport);
+        }),
         dispose: vi.fn(),
       } as unknown as SceneRenderer;
       const host = {
@@ -235,6 +319,7 @@ describe('responsive logical playfield projection', () => {
       ];
 
       try {
+        const projectedCenters: number[] = [];
         for (const sample of samples) {
           const frame = projectGameplayFrame(
             {
@@ -262,26 +347,47 @@ describe('responsive logical playfield projection', () => {
             if (result === undefined) throw new Error(`missing ${role} mesh`);
             return result;
           };
-          const board = frame.layout.board;
-          const noteCenterY =
-            frame.layout.height - byRole('note-good-envelope').position.y;
-          const hitLineCenterY =
-            frame.layout.height - byRole('hit-line').position.y;
-          const expectedFraction =
+          const note = byRole('note-good-envelope');
+          let gameplayPass = -1;
+          for (let index = renderedCameras.length - 1; index >= 0; index -= 1) {
+            const camera = renderedCameras[index];
+            if (camera !== undefined && camera.layers.test(note.layers)) {
+              gameplayPass = index;
+              break;
+            }
+          }
+          const camera = renderedCameras[gameplayPass];
+          const viewport = renderedViewports[gameplayPass];
+          if (camera === undefined || viewport === undefined)
+            throw new Error('the rendered note must have a gameplay camera pass');
+          const progress = frame.notes[0]?.progress;
+          expect(progress, sample.label).toBe(
             sample.label === 'approach endpoint'
-              ? 0.18
+              ? 0
               : sample.label === 'halfway approach'
                 ? 0.5
-                : 0.82;
-
-          expect(noteCenterY, sample.label).toBeCloseTo(
-            board.y + board.height * expectedFraction,
-            8,
+                : 1,
           );
-          if (sample.label === 'onset' || sample.label === 'overdue') {
-            expect(noteCenterY, sample.label).toBeCloseTo(hitLineCenterY, 8);
-          }
+          const projectedY = note
+            .getWorldPosition(new THREE.Vector3())
+            .project(camera).y;
+          projectedCenters.push(
+            frame.layout.height -
+              viewport.y -
+              ((projectedY + 1) * viewport.height) / 2,
+          );
         }
+        const [startY, middleY, onsetY, overdueY] = projectedCenters;
+        if (
+          startY === undefined ||
+          middleY === undefined ||
+          onsetY === undefined ||
+          overdueY === undefined
+        )
+          throw new Error('all runway samples must render');
+        expect(startY).toBeLessThan(middleY);
+        expect(middleY).toBeLessThan(onsetY);
+        expect(onsetY).toBeCloseTo(overdueY, 8);
       } finally {
         scene.destroy();
       }
@@ -362,7 +468,7 @@ describe('responsive logical playfield projection', () => {
     { difficulty: 'hard' as const, boardWidth: 480, boardHeight: 240 },
     { difficulty: 'hard' as const, boardWidth: 320, boardHeight: 160 },
   ])(
-    'renders matching score-window heights for $difficulty on a $boardWidth×$boardHeight board without note bodies',
+    'renders nested timing windows on the actual $difficulty perspective runway for a $boardWidth×$boardHeight board',
     ({ difficulty, boardWidth, boardHeight }) => {
       vi.stubGlobal('window', {
         devicePixelRatio: 1,
@@ -370,6 +476,9 @@ describe('responsive logical playfield projection', () => {
         removeEventListener: vi.fn(),
       });
       const renderedScenes: THREE.Scene[] = [];
+      const renderedCameras: THREE.Camera[] = [];
+      const renderedViewports: RenderViewport[] = [];
+      let viewport: RenderViewport = { x: 0, y: 0, width: 640, height: 480 };
       const canvas = Object.assign(new EventTarget(), {
         className: '',
         setAttribute: vi.fn(),
@@ -384,12 +493,20 @@ describe('responsive logical playfield projection', () => {
         setClearColor: vi.fn(),
         setPixelRatio: vi.fn(),
         setSize: vi.fn(),
-        setViewport: vi.fn(),
+        setViewport: vi.fn((x: number, y: number, width: number, height: number) => {
+          viewport = { x, y, width, height };
+        }),
         setScissor: vi.fn(),
         setScissorTest: vi.fn(),
         clear: vi.fn(),
         clearDepth: vi.fn(),
-        render: vi.fn((rendered: THREE.Scene) => renderedScenes.push(rendered)),
+        render: vi.fn((rendered: THREE.Scene, camera: THREE.Camera) => {
+          rendered.updateMatrixWorld(true);
+          camera.updateMatrixWorld(true);
+          renderedScenes.push(rendered);
+          renderedCameras.push(camera);
+          renderedViewports.push(viewport);
+        }),
         dispose: vi.fn(),
       } as unknown as SceneRenderer;
       const host = {
@@ -408,17 +525,63 @@ describe('responsive logical playfield projection', () => {
         width: boardWidth,
         height: boardHeight,
       };
+      const layout = layoutFor(640, 480, board);
+      const onsetTime = VISIBLE_NOTE_SECONDS;
+      const timingChart = {
+        ...chart,
+        notes: chart.notes.map((note) => ({ ...note, time: onsetTime })),
+      };
+      const approachFrame = projectGameplayFrame(
+        {
+          ...snapshot,
+          game: {
+            ...snapshot.game,
+            difficulty,
+            transportTime: 0,
+          },
+        },
+        timingChart,
+        layout,
+        false,
+      );
       const frame = projectGameplayFrame(
         {
           ...snapshot,
-          game: { ...snapshot.game, difficulty },
+          game: {
+            ...snapshot.game,
+            difficulty,
+            transportTime: onsetTime,
+          },
         },
-        chart,
-        layoutFor(640, 480, board),
+        timingChart,
+        layout,
         false,
       );
 
       try {
+        expect(approachFrame.notes[0]?.progress).toBe(0);
+        scene.updateFrame({ city, gameplay: approachFrame });
+        const approachScene = renderedScenes.at(-1);
+        if (approachScene === undefined)
+          throw new Error('approach frame must render');
+        const findRole = (rendered: THREE.Scene, role: string): THREE.Mesh => {
+          let result: THREE.Mesh | undefined;
+          rendered.traverse((object) => {
+            if (
+              result === undefined &&
+              object instanceof THREE.Mesh &&
+              object.userData.gameplayRole === role
+            )
+              result = object;
+          });
+          if (result === undefined) throw new Error(`missing ${role} mesh`);
+          return result;
+        };
+        const startMesh = findRole(approachScene, 'note-good-envelope');
+        expect(startMesh.visible).toBe(true);
+        const start = startMesh.getWorldPosition(new THREE.Vector3());
+
+        expect(frame.notes[0]?.progress).toBe(1);
         scene.updateFrame({ city, gameplay: frame });
         const renderedScene = renderedScenes.at(-1);
         if (renderedScene === undefined)
@@ -432,30 +595,85 @@ describe('responsive logical playfield projection', () => {
           roleMeshes.push(object);
           meshes.set(role, roleMeshes);
         });
-        const one = (role: string): THREE.Mesh => {
-          const mesh = meshes.get(role)?.[0];
-          if (mesh === undefined) throw new Error(`missing ${role} mesh`);
-          return mesh;
-        };
-        const noteGood = one('note-good-envelope');
-        const notePerfect = one('note-perfect-envelope');
-        const targetGood = one('good-band');
-        const targetPerfect = one('perfect-band');
+        const noteGood = findRole(renderedScene, 'note-good-envelope');
+        expect(noteGood.visible).toBe(true);
+        const notePerfect = findRole(renderedScene, 'note-perfect-envelope');
+        const targetGood = findRole(renderedScene, 'good-band');
+        const targetPerfect = findRole(renderedScene, 'perfect-band');
+        const { camera, viewport: passViewport } = gameplayPassFor(
+          renderedCameras,
+          renderedViewports,
+          noteGood,
+        );
+        expect(camera).toBeInstanceOf(THREE.PerspectiveCamera);
+        const hit = noteGood.getWorldPosition(new THREE.Vector3());
+        const profile = projectTimingWindowGeometry(
+          difficulty,
+          frame.layout.board.height * 0.64,
+          VISIBLE_NOTE_SECONDS,
+        );
+        expect(frame.timingWindows).toEqual(profile);
 
-        expect(noteGood.scale.y).toBeCloseTo(targetGood.scale.y, 8);
-        expect(notePerfect.scale.y).toBeCloseTo(targetPerfect.scale.y, 8);
-        expect(noteGood.scale.x).not.toBe(targetGood.scale.x);
-        expect(notePerfect.scale.x).not.toBe(targetPerfect.scale.x);
+        const goodBounds = projectedYBounds(
+          noteGood,
+          camera,
+          passViewport,
+          frame.layout.height,
+        );
+        const targetGoodBounds = projectedYBounds(
+          targetGood,
+          camera,
+          passViewport,
+          frame.layout.height,
+        );
+        const perfectBounds = projectedYBounds(
+          notePerfect,
+          camera,
+          passViewport,
+          frame.layout.height,
+        );
+        const targetPerfectBounds = projectedYBounds(
+          targetPerfect,
+          camera,
+          passViewport,
+          frame.layout.height,
+        );
+        expect(goodBounds[0]).toBeCloseTo(targetGoodBounds[0], 8);
+        expect(goodBounds[1]).toBeCloseTo(targetGoodBounds[1], 8);
+        expect(perfectBounds[0]).toBeCloseTo(targetPerfectBounds[0], 8);
+        expect(perfectBounds[1]).toBeCloseTo(targetPerfectBounds[1], 8);
+        expect(targetGoodBounds[0]).toBeLessThan(targetPerfectBounds[0]);
+        expect(targetGoodBounds[1]).toBeGreaterThan(targetPerfectBounds[1]);
+        expect(targetGoodBounds[0]).toBeGreaterThanOrEqual(0);
+        expect(targetGoodBounds[1]).toBeLessThanOrEqual(frame.layout.height);
+        const progressAt = (progress: number): number => {
+          const point = start.clone().lerp(hit, progress).project(camera);
+          return (
+            frame.layout.height -
+            passViewport.y -
+            ((point.y + 1) * passViewport.height) / 2
+          );
+        };
+        const sortedEdges = (halfProgress: number): [number, number] =>
+          [progressAt(1 - halfProgress), progressAt(1 + halfProgress)].sort(
+            (first, second) => first - second,
+          ) as [number, number];
+        const goodHalfProgress =
+          getDifficultyProfile(difficulty).timing.goodWindowSeconds /
+          VISIBLE_NOTE_SECONDS;
+        const perfectHalfProgress =
+          getDifficultyProfile(difficulty).timing.perfectWindowSeconds /
+          VISIBLE_NOTE_SECONDS;
+        const expectedGood = sortedEdges(goodHalfProgress);
+        const expectedPerfect = sortedEdges(perfectHalfProgress);
+        expect(targetGoodBounds[0]).toBeCloseTo(expectedGood[0], 8);
+        expect(targetGoodBounds[1]).toBeCloseTo(expectedGood[1], 8);
+        expect(targetPerfectBounds[0]).toBeCloseTo(expectedPerfect[0], 8);
+        expect(targetPerfectBounds[1]).toBeCloseTo(expectedPerfect[1], 8);
         expect(meshes.has('note')).toBe(false);
         expect(meshes.has('note-outline')).toBe(false);
-        expect(frame.timingWindows.goodEnvelopeHeightPx).toBeCloseTo(
-          targetGood.scale.y,
-          8,
-        );
-        expect(frame.timingWindows.perfectEnvelopeHeightPx).toBeCloseTo(
-          targetPerfect.scale.y,
-          8,
-        );
+        expect(hit.toArray().every(Number.isFinite)).toBe(true);
+        expect(start.toArray().every(Number.isFinite)).toBe(true);
       } finally {
         scene.destroy();
       }
@@ -474,6 +692,9 @@ describe('responsive logical playfield projection', () => {
         removeEventListener: vi.fn(),
       });
       const cameras: THREE.Camera[] = [];
+      const renderedScenes: THREE.Scene[] = [];
+      const renderedViewports: RenderViewport[] = [];
+      let currentViewport: RenderViewport = { x: 0, y: 0, width, height };
       const canvas = Object.assign(new EventTarget(), {
         className: '',
         setAttribute: vi.fn(),
@@ -488,14 +709,32 @@ describe('responsive logical playfield projection', () => {
         setClearColor: vi.fn(),
         setPixelRatio: vi.fn(),
         setSize: vi.fn(),
-        setViewport: vi.fn(),
+        setViewport: vi.fn(
+          (
+            x: number,
+            y: number,
+            viewportWidth: number,
+            viewportHeight: number,
+          ) => {
+            currentViewport = {
+              x,
+              y,
+              width: viewportWidth,
+              height: viewportHeight,
+            };
+          },
+        ),
         setScissor: vi.fn(),
         setScissorTest: vi.fn(),
         clear: vi.fn(),
         clearDepth: vi.fn(),
-        render: vi.fn((_rendered: THREE.Scene, camera: THREE.Camera) =>
-          cameras.push(camera),
-        ),
+        render: vi.fn((rendered: THREE.Scene, camera: THREE.Camera) => {
+          rendered.updateMatrixWorld(true);
+          camera.updateMatrixWorld(true);
+          renderedScenes.push(rendered);
+          cameras.push(camera);
+          renderedViewports.push(currentViewport);
+        }),
         dispose: vi.fn(),
       } as unknown as SceneRenderer;
       const host = {
@@ -518,17 +757,42 @@ describe('responsive logical playfield projection', () => {
         const layout = layoutFor(width, height, available);
         const frame = projectGameplayFrame(snapshot, chart, layout, false);
         scene.updateFrame({ city, gameplay: frame });
-        const boardCamera = cameras.at(-1);
-        if (!(boardCamera instanceof THREE.OrthographicCamera))
-          throw new Error('the gameplay pass must use its orthographic camera');
-        boardCamera.updateMatrixWorld(true);
-
-        const origin = new THREE.Vector3(0, 0, 0).project(boardCamera);
-        const unitX = new THREE.Vector3(1, 0, 0).project(boardCamera);
-        const unitY = new THREE.Vector3(0, 1, 0).project(boardCamera);
-        const projectedX = (Math.abs(unitX.x - origin.x) * width) / 2;
-        const projectedY = (Math.abs(unitY.y - origin.y) * height) / 2;
-        expect(projectedX).toBeCloseTo(projectedY, 8);
+        const rendered = renderedScenes.at(-1);
+        if (rendered === undefined)
+          throw new Error('the gameplay scene must be rendered');
+        const lane = (() => {
+          let match: THREE.Mesh | undefined;
+          rendered.traverse((object) => {
+            if (
+              match === undefined &&
+              object instanceof THREE.Mesh &&
+              object.userData.gameplayRole === 'lane'
+            )
+              match = object;
+          });
+          if (match === undefined) throw new Error('perspective lane is missing');
+          return match;
+        })();
+        const pass = gameplayPassFor(cameras, renderedViewports, lane);
+        expect(pass.camera).toBeInstanceOf(THREE.PerspectiveCamera);
+        const center = lane
+          .getWorldPosition(new THREE.Vector3())
+          .project(pass.camera);
+        const screenX =
+          pass.viewport.x + ((center.x + 1) * pass.viewport.width) / 2;
+        const screenY =
+          height -
+          pass.viewport.y -
+          ((center.y + 1) * pass.viewport.height) / 2;
+        expect(Number.isFinite(screenX) && Number.isFinite(screenY)).toBe(true);
+        expect(screenX).toBeGreaterThanOrEqual(pass.viewport.x);
+        expect(screenX).toBeLessThanOrEqual(
+          pass.viewport.x + pass.viewport.width,
+        );
+        expect(screenY).toBeGreaterThanOrEqual(
+          height - pass.viewport.y - pass.viewport.height,
+        );
+        expect(screenY).toBeLessThanOrEqual(height - pass.viewport.y);
       } finally {
         scene.destroy();
       }
@@ -579,6 +843,9 @@ describe('responsive logical playfield projection', () => {
       removeEventListener: vi.fn(),
     });
     const rendererScenes: THREE.Scene[] = [];
+    const rendererCameras: THREE.Camera[] = [];
+    const rendererViewports: RenderViewport[] = [];
+    let viewport: RenderViewport = { x: 0, y: 0, width: 640, height: 480 };
     const canvas = Object.assign(new EventTarget(), {
       className: '',
       setAttribute: vi.fn(),
@@ -593,12 +860,22 @@ describe('responsive logical playfield projection', () => {
       setClearColor: vi.fn(),
       setPixelRatio: vi.fn(),
       setSize: vi.fn(),
-      setViewport: vi.fn(),
+      setViewport: vi.fn(
+        (x: number, y: number, width: number, height: number) => {
+          viewport = { x, y, width, height };
+        },
+      ),
       setScissor: vi.fn(),
       setScissorTest: vi.fn(),
       clear: vi.fn(),
       clearDepth: vi.fn(),
-      render: vi.fn((rendered: THREE.Scene) => rendererScenes.push(rendered)),
+      render: vi.fn((rendered: THREE.Scene, camera: THREE.Camera) => {
+        rendered.updateMatrixWorld(true);
+        camera.updateMatrixWorld(true);
+        rendererScenes.push(rendered);
+        rendererCameras.push(camera);
+        rendererViewports.push(viewport);
+      }),
       dispose: vi.fn(),
     } as unknown as SceneRenderer;
     const host = {
@@ -669,6 +946,19 @@ describe('responsive logical playfield projection', () => {
         if (result === undefined) throw new Error(`missing ${role} mesh`);
         return result;
       };
+      const meshByRole = (role: string, index = 0): THREE.Mesh => {
+        const matches: THREE.Mesh[] = [];
+        renderedScene.traverse((object) => {
+          if (
+            object instanceof THREE.Mesh &&
+            object.userData.gameplayRole === role
+          )
+            matches.push(object);
+        });
+        const result = matches[index];
+        if (result === undefined) throw new Error(`missing ${role} mesh ${index}`);
+        return result;
+      };
       const expectedPaints = [
         {
           value: 'Onset-derived chart · play-test timing',
@@ -715,8 +1005,8 @@ describe('responsive logical playfield projection', () => {
           role: 'hit-label',
           fontSize: 10,
           color: '#ffd475',
-          align: 'right',
-          paintX: 88,
+          align: 'center',
+          paintX: 48,
         },
       ];
       for (const expected of expectedPaints) {
@@ -748,12 +1038,15 @@ describe('responsive logical playfield projection', () => {
         'time-label': [445.6, 560],
         'timing-legend': [80, 560],
         feedback: [80, 560],
-        'lane-key': [116, 164],
-        'hit-label': [515, 553],
       };
       for (const expected of expectedPaints) {
+        if (expected.role === 'lane-key' || expected.role === 'hit-label')
+          continue;
         const mesh = textMesh(expected.role);
-        const [left, right] = horizontalEdges[expected.role]!;
+        const edges = horizontalEdges[expected.role];
+        if (edges === undefined)
+          throw new Error(`missing screen-space bounds for ${expected.role}`);
+        const [left, right] = edges;
         if (expected.align === 'left') {
           expect(mesh.position.x - mesh.scale.x / 2, expected.role).toBeCloseTo(
             left,
@@ -771,6 +1064,72 @@ describe('responsive logical playfield projection', () => {
           );
         }
       }
+
+      const laneKeyMeshes = textMeshes.filter(
+        (mesh) => mesh.userData.gameplayRole === 'lane-key',
+      );
+      expect(laneKeyMeshes).toHaveLength(4);
+      const overlayPass = gameplayPassFor(
+        rendererCameras,
+        rendererViewports,
+        textMesh('lane-key'),
+      );
+      for (let lane = 0; lane < 4; lane += 1) {
+        const key = laneKeyMeshes[lane];
+        if (key === undefined) throw new Error(`missing lane-key ${lane}`);
+        const target = meshByRole('good-band', lane);
+        const runwayPass = gameplayPassFor(
+          rendererCameras,
+          rendererViewports,
+          target,
+        );
+        const keyCenter = projectedScreenCenter(
+          key,
+          overlayPass.camera,
+          overlayPass.viewport,
+          frame.layout.height,
+        );
+        const targetCenter = projectedScreenCenter(
+          target,
+          runwayPass.camera,
+          runwayPass.viewport,
+          frame.layout.height,
+        );
+        expect(
+          Math.abs(keyCenter.x - targetCenter.x),
+          `lane ${lane} key must track its projected lane`,
+        ).toBeLessThanOrEqual(Math.max(18, frame.layout.board.width * 0.08));
+        expect(
+          Math.abs(keyCenter.y - targetCenter.y),
+          `lane ${lane} key must remain near its projected onset anchor`,
+        ).toBeLessThanOrEqual(Math.max(20, frame.layout.board.height * 0.15));
+      }
+
+      const hitLabel = textMesh('hit-label');
+      const rightTarget = meshByRole('good-band', 3);
+      const rightTargetPass = gameplayPassFor(
+        rendererCameras,
+        rendererViewports,
+        rightTarget,
+      );
+      const hitCenter = projectedScreenCenter(
+        hitLabel,
+        overlayPass.camera,
+        overlayPass.viewport,
+        frame.layout.height,
+      );
+      const onsetCenter = projectedScreenCenter(
+        rightTarget,
+        rightTargetPass.camera,
+        rightTargetPass.viewport,
+        frame.layout.height,
+      );
+      expect(Math.abs(hitCenter.x - onsetCenter.x)).toBeLessThanOrEqual(
+        Math.max(20, frame.layout.board.width * 0.12),
+      );
+      expect(Math.abs(hitCenter.y - onsetCenter.y)).toBeLessThanOrEqual(
+        Math.max(24, frame.layout.board.height * 0.18),
+      );
 
       const paintCount = paints.length;
       const measureCount = textContext.measureText.mock.calls.length;
