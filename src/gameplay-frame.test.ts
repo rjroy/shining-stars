@@ -89,7 +89,7 @@ describe('shared gameplay timing geometry', () => {
       progress: 1,
       bottomPercent: 18,
     });
-    expect(projected.notes[0]?.timingWindows).toEqual(hardTarget);
+    expect(projected.timingWindows).toEqual(hardTarget);
     expect(projected.lanes.map((lane) => lane.x)).toEqual([80, 200, 320, 440]);
   });
 
