@@ -114,7 +114,6 @@ export function projectGameplayFrame(
         chart.notes,
         game.transportTime,
         VISIBLE_NOTE_SECONDS,
-        { difficulty: game.difficulty, runwayTravelPx },
       )
     : [];
   const event = snapshot.feedback;

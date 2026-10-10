@@ -31,7 +31,7 @@ const chart: ChartConfig = {
   duration: 20,
   twilightAt: 10,
   twilightStrength: 100,
-  allowedDifficulties: ['normal'],
+  allowedDifficulties: ['normal', 'hard'],
   notes: [{ id: 'approaching-note', lane: 2, time: 12 }],
 };
 
@@ -152,7 +152,6 @@ describe('responsive logical playfield projection', () => {
         2.4,
       );
       expect(frame.timingWindows).toEqual(expectedWindows);
-      expect(frame.notes[0]?.timingWindows).toEqual(expectedWindows);
       expect(
         frame.timingWindows.goodEnvelopeHeightPx / board.height,
       ).toBeCloseTo(
@@ -236,6 +235,112 @@ describe('responsive logical playfield projection', () => {
       scene.destroy();
     }
   });
+
+  it.each([
+    { difficulty: 'normal' as const, boardWidth: 480, boardHeight: 240 },
+    { difficulty: 'normal' as const, boardWidth: 320, boardHeight: 160 },
+    { difficulty: 'hard' as const, boardWidth: 480, boardHeight: 240 },
+    { difficulty: 'hard' as const, boardWidth: 320, boardHeight: 160 },
+  ])(
+    'renders matching score-window heights for $difficulty on a $boardWidth×$boardHeight board without note bodies',
+    ({ difficulty, boardWidth, boardHeight }) => {
+      vi.stubGlobal('window', {
+        devicePixelRatio: 1,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+      const renderedScenes: THREE.Scene[] = [];
+      const canvas = Object.assign(new EventTarget(), {
+        className: '',
+        setAttribute: vi.fn(),
+        remove: vi.fn(),
+      });
+      const renderer = {
+        domElement: canvas,
+        outputColorSpace: THREE.SRGBColorSpace,
+        autoClear: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1,
+        setClearColor: vi.fn(),
+        setPixelRatio: vi.fn(),
+        setSize: vi.fn(),
+        setViewport: vi.fn(),
+        setScissor: vi.fn(),
+        setScissorTest: vi.fn(),
+        clear: vi.fn(),
+        clearDepth: vi.fn(),
+        render: vi.fn((rendered: THREE.Scene) => renderedScenes.push(rendered)),
+        dispose: vi.fn(),
+      } as unknown as SceneRenderer;
+      const host = {
+        clientWidth: 640,
+        clientHeight: 480,
+        firstChild: null,
+        insertBefore: vi.fn(),
+      } as unknown as HTMLElement;
+      const scene = createBrightvaleScene(host, vi.fn(), () => renderer);
+      if (scene === null)
+        throw new Error('scene renderer failed to initialize');
+
+      const board = {
+        x: 80,
+        y: 80,
+        width: boardWidth,
+        height: boardHeight,
+      };
+      const frame = projectGameplayFrame(
+        {
+          ...snapshot,
+          game: { ...snapshot.game, difficulty },
+        },
+        chart,
+        layoutFor(640, 480, board),
+        false,
+      );
+
+      try {
+        scene.updateFrame({ city, gameplay: frame });
+        const renderedScene = renderedScenes.at(-1);
+        if (renderedScene === undefined)
+          throw new Error('scene must render the compound gameplay frame');
+        const meshes = new Map<string, THREE.Mesh[]>();
+        renderedScene.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return;
+          const role = object.userData.gameplayRole;
+          if (typeof role !== 'string') return;
+          const roleMeshes = meshes.get(role) ?? [];
+          roleMeshes.push(object);
+          meshes.set(role, roleMeshes);
+        });
+        const one = (role: string): THREE.Mesh => {
+          const mesh = meshes.get(role)?.[0];
+          if (mesh === undefined) throw new Error(`missing ${role} mesh`);
+          return mesh;
+        };
+        const noteGood = one('note-good-envelope');
+        const notePerfect = one('note-perfect-envelope');
+        const targetGood = one('good-band');
+        const targetPerfect = one('perfect-band');
+
+        expect(noteGood.scale.y).toBeCloseTo(targetGood.scale.y, 8);
+        expect(notePerfect.scale.y).toBeCloseTo(targetPerfect.scale.y, 8);
+        expect(noteGood.scale.x).not.toBe(targetGood.scale.x);
+        expect(notePerfect.scale.x).not.toBe(targetPerfect.scale.x);
+        expect(meshes.has('note')).toBe(false);
+        expect(meshes.has('note-outline')).toBe(false);
+        expect(frame.timingWindows.goodEnvelopeHeightPx).toBeCloseTo(
+          targetGood.scale.y,
+          8,
+        );
+        expect(frame.timingWindows.perfectEnvelopeHeightPx).toBeCloseTo(
+          targetPerfect.scale.y,
+          8,
+        );
+      } finally {
+        scene.destroy();
+      }
+    },
+  );
 
   it.each([
     { name: 'wide', width: 1440, height: 900 },

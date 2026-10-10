@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import { getDifficultyProfile, type Difficulty } from './game-balance';
-import { projectNotes, projectTimingWindowGeometry } from './note-projection';
+import { projectTimingWindowGeometry } from './note-projection';
 import { projectGameplayFrame, type GameplayLayout } from './gameplay-frame';
 
 const chartNotes = [{ id: 'target', lane: 0, time: 2 }] as const;
@@ -56,23 +56,16 @@ function makeSnapshot(): ControllerSnapshot {
   };
 }
 
-function projectWithWindowGeometry(
-  difficulty: Difficulty,
-  runwayTravelPx: number,
-) {
-  return projectNotes(states, chartNotes, 1, 2.4, {
-    difficulty,
-    runwayTravelPx,
-  });
+function geometryFor(difficulty: Difficulty, runwayTravelPx: number) {
+  return projectTimingWindowGeometry(difficulty, runwayTravelPx, 2.4);
 }
 
 describe('difficulty timing-window projection', () => {
   it.each(['easy', 'normal', 'hard'] as const)(
-    'projects matching Perfect and Good geometry for the %s run',
+    'calculates matching Perfect and Good geometry for the %s profile',
     (difficulty) => {
       const profile = getDifficultyProfile(difficulty);
       const runwayTravelPx = 240;
-      const note = projectWithWindowGeometry(difficulty, runwayTravelPx)[0];
       const expectedGeometry = {
         goodHalfHeightPx:
           profile.timing.goodWindowSeconds * (runwayTravelPx / 2.4),
@@ -84,17 +77,14 @@ describe('difficulty timing-window projection', () => {
           2 * profile.timing.perfectWindowSeconds * (runwayTravelPx / 2.4),
       };
 
-      expect(note?.timingWindows).toEqual(expectedGeometry);
-      expect(
-        projectTimingWindowGeometry(difficulty, runwayTravelPx, 2.4),
-      ).toEqual(expectedGeometry);
+      expect(geometryFor(difficulty, runwayTravelPx)).toEqual(expectedGeometry);
     },
   );
 
   it('keeps Perfect nested inside Good and preserves Easy/Normal/Hard ratios', () => {
-    const easy = projectWithWindowGeometry('easy', 240)[0]?.timingWindows;
-    const normal = projectWithWindowGeometry('normal', 240)[0]?.timingWindows;
-    const hard = projectWithWindowGeometry('hard', 240)[0]?.timingWindows;
+    const easy = geometryFor('easy', 240);
+    const normal = geometryFor('normal', 240);
+    const hard = geometryFor('hard', 240);
 
     expect(easy?.perfectHalfHeightPx).toBeLessThan(easy?.goodHalfHeightPx ?? 0);
     expect(easy?.goodHalfHeightPx).toBe((hard?.goodHalfHeightPx ?? 0) * 5);
@@ -107,9 +97,9 @@ describe('difficulty timing-window projection', () => {
     );
   });
 
-  it('scales both target bands and note envelopes with responsive runway travel distance', () => {
-    const narrow = projectWithWindowGeometry('normal', 180)[0]?.timingWindows;
-    const wide = projectWithWindowGeometry('normal', 300)[0]?.timingWindows;
+  it('scales timing-window geometry with responsive runway travel distance', () => {
+    const narrow = geometryFor('normal', 180);
+    const wide = geometryFor('normal', 300);
 
     for (const dimension of [
       'goodHalfHeightPx',
@@ -117,7 +107,7 @@ describe('difficulty timing-window projection', () => {
       'perfectHalfHeightPx',
       'perfectEnvelopeHeightPx',
     ] as const) {
-      expect(wide?.[dimension]).toBe((narrow?.[dimension] ?? 0) * (5 / 3));
+      expect(wide[dimension]).toBe(narrow[dimension] * (5 / 3));
     }
   });
 
@@ -130,7 +120,6 @@ describe('difficulty timing-window projection', () => {
     );
 
     expect(frame.difficulty).toBe('hard');
-    expect(frame.notes[0]?.timingWindows).toEqual(activeGeometry);
     expect(frame.timingWindows).toEqual(activeGeometry);
   });
 });

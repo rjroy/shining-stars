@@ -1328,7 +1328,7 @@ export function createBrightvaleScene(
         const centerX = lane.x + lane.width / 2;
         const centerY =
           board.y + board.height * (1 - projected.bottomPercent / 100);
-        const windows = projected.timingWindows ?? frame.timingWindows;
+        const windows = frame.timingWindows;
         const envelopeWidth = Math.min(lane.width * 0.78, 80 * boardScale);
         placePlane(
           pool.good,
