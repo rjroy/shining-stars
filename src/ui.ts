@@ -69,10 +69,6 @@ export function createGameUI(
   const initialDifficulty = defaultDifficulty(chart.allowedDifficulties);
   root.innerHTML = `
     <main class="experience" aria-label="Brightvale rhythm performance">
-      <header class="masthead">
-        <span class="wordmark">BRIGHTVALE</span>
-        <span class="masthead-note">A song for the city</span>
-      </header>
       <section class="play-surface" aria-label="Rhythm performance">
         <div class="scene-light" aria-hidden="true"></div>
         <div class="scene-linework" aria-hidden="true">
@@ -123,11 +119,13 @@ export function createGameUI(
             <span data-track-state>Onset-derived chart · play-test timing</span>
             <span class="stage-time" data-time>00:00</span>
           </div>
-          <div class="lane-board" aria-hidden="true">
-            <div class="lane" data-lane="0"></div>
-            <div class="lane" data-lane="1"></div>
-            <div class="lane" data-lane="2"></div>
-            <div class="lane" data-lane="3"></div>
+          <div class="board-fit" aria-hidden="true">
+            <div class="lane-board">
+              <div class="lane" data-lane="0"></div>
+              <div class="lane" data-lane="1"></div>
+              <div class="lane" data-lane="2"></div>
+              <div class="lane" data-lane="3"></div>
+            </div>
           </div>
           <p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>
           <div class="feedback-row" aria-hidden="true">
@@ -173,7 +171,6 @@ export function createGameUI(
         </section>
       </section>
       <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
-      <footer class="experience-footer"><span>One lead performer. A city that joins in.</span><span>Original mixed recording · visual accompaniment only</span></footer>
     </main>`;
 
   const playSurface = root.querySelector<HTMLElement>('.play-surface');

@@ -36,19 +36,6 @@ export type SceneRendererFactory = (
   parameters: THREE.WebGLRendererParameters,
 ) => SceneRenderer;
 
-function createNoteShape(): THREE.Shape {
-  const shape = new THREE.Shape();
-  shape.moveTo(-0.5, -0.5);
-  shape.lineTo(0.25, -0.5);
-  shape.quadraticCurveTo(0.5, -0.5, 0.5, -0.25);
-  shape.lineTo(0.5, 0.25);
-  shape.quadraticCurveTo(0.5, 0.5, 0.25, 0.5);
-  shape.lineTo(-0.25, 0.5);
-  shape.quadraticCurveTo(-0.5, 0.5, -0.5, 0.25);
-  shape.lineTo(-0.5, -0.5);
-  return shape;
-}
-
 function createPlane(
   parent: THREE.Group,
   geometry: THREE.BufferGeometry,
@@ -798,37 +785,6 @@ export function createBrightvaleScene(
         toneMapped: false,
       }),
     );
-    const noteGoldMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffd475,
-        transparent: true,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    noteGoldMaterial.fog = false;
-    const noteMintMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0x9de7d0,
-        transparent: true,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    noteMintMaterial.fog = false;
-    const noteOutlineMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.76,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    noteOutlineMaterial.fog = false;
-    const noteGeometry = ownGeometry(
-      new THREE.ShapeGeometry(createNoteShape()),
-    );
     const stageBackdrop = createPlane(
       stageLayer,
       planeGeometry,
@@ -951,9 +907,7 @@ export function createBrightvaleScene(
       14,
       true,
     );
-    const notePool: Array<{
-      readonly note: THREE.Mesh;
-      readonly outline: THREE.Mesh;
+    const noteWindowPool: Array<{
       readonly good: THREE.Mesh;
       readonly perfect: THREE.Mesh;
     }> = [];
@@ -1103,24 +1057,8 @@ export function createBrightvaleScene(
       );
     }
 
-    function ensureNotePool(capacity: number): void {
-      while (notePool.length < capacity) {
-        const note = new THREE.Mesh(noteGeometry, noteGoldMaterial);
-        note.layers.mask = boardLayer.layers.mask;
-        note.material.transparent = true;
-        note.material.depthWrite = false;
-        note.userData.gameplayRole = 'note';
-        note.userData.pooled = true;
-        note.visible = false;
-        boardLayer.add(note);
-        const outline = new THREE.Mesh(noteGeometry, noteOutlineMaterial);
-        outline.layers.mask = boardLayer.layers.mask;
-        outline.material.depthTest = false;
-        outline.material.depthWrite = false;
-        outline.userData.gameplayRole = 'note-outline';
-        outline.userData.pooled = true;
-        outline.visible = false;
-        boardLayer.add(outline);
+    function ensureNoteWindowPool(capacity: number): void {
+      while (noteWindowPool.length < capacity) {
         const good = createPlane(
           boardLayer,
           planeGeometry,
@@ -1133,7 +1071,7 @@ export function createBrightvaleScene(
           perfectMaterial,
           'note-perfect-envelope',
         );
-        notePool.push({ note, outline, good, perfect });
+        noteWindowPool.push({ good, perfect });
       }
     }
 
@@ -1382,14 +1320,12 @@ export function createBrightvaleScene(
         height,
       );
 
-      ensureNotePool(frame.noteCapacity);
-      for (let index = 0; index < notePool.length; index += 1) {
-        const pool = notePool[index];
+      ensureNoteWindowPool(frame.noteCapacity);
+      for (let index = 0; index < noteWindowPool.length; index += 1) {
+        const pool = noteWindowPool[index];
         const projected = frame.notes[index];
         if (pool === undefined || projected === undefined) {
           if (pool !== undefined) {
-            pool.note.visible = false;
-            pool.outline.visible = false;
             pool.good.visible = false;
             pool.perfect.visible = false;
           }
@@ -1400,25 +1336,6 @@ export function createBrightvaleScene(
         const centerX = lane.x + lane.width / 2;
         const centerY =
           board.y + board.height * (1 - projected.bottomPercent / 100);
-        const noteWidth = Math.min(lane.width * 0.52, 52 * boardScale);
-        const noteHeight = noteWidth / 1.2;
-        pool.note.material =
-          projected.lane % 2 === 0 ? noteGoldMaterial : noteMintMaterial;
-        pool.note.userData.noteId = projected.id;
-        pool.note.scale.set(noteWidth, noteHeight, 1);
-        pool.note.position.set(centerX, height - centerY, 12);
-        pool.note.rotation.z = projected.lane % 2 === 0 ? -0.04 : 0.04;
-        pool.note.visible = frame.playing;
-        pool.outline.scale.set(
-          noteWidth + 2 * boardScale,
-          noteHeight + 2 * boardScale,
-          1,
-        );
-        pool.outline.position.set(centerX, height - centerY, 11);
-        pool.outline.rotation.z = pool.note.rotation.z;
-        pool.outline.renderOrder = 11;
-        pool.outline.visible = frame.playing;
-        pool.note.renderOrder = 12;
         const windows = projected.timingWindows ?? frame.timingWindows;
         const envelopeWidth = Math.min(lane.width * 0.78, 80 * boardScale);
         placePlane(

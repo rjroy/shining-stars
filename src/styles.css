@@ -20,10 +20,13 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   min-width: 320px;
-  min-height: 100vh;
+  width: 100%;
+  height: 100dvh;
   margin: 0;
+  overflow: hidden;
   background:
     radial-gradient(
       ellipse at 54% 14%,
@@ -31,6 +34,12 @@ body {
       transparent 40rem
     ),
     linear-gradient(145deg, #0b1020, #121a2a 58%, #101728);
+}
+#app {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 button,
@@ -57,43 +66,22 @@ kbd {
 }
 
 .experience {
-  width: min(100% - 40px, 1120px);
-  margin: 0 auto;
-  padding: 22px 0 20px;
-}
-.masthead,
-.experience-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.masthead {
-  min-height: 38px;
-  margin-bottom: 22px;
-}
-.wordmark {
-  color: var(--cream);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.19em;
-  text-decoration: none;
-}
-.masthead-note,
-.experience-footer {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-.masthead-note {
-  letter-spacing: 0.04em;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .play-surface {
   position: relative;
   isolation: isolate;
-  min-height: min(810px, calc(100vh - 115px));
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
-  padding: clamp(22px, 4vw, 48px) clamp(18px, 5vw, 64px) 30px;
+  padding: clamp(12px, 2.6vh, 32px) clamp(14px, 4vw, 52px);
   border: 1px solid rgb(202 224 238 / 16%);
   border-radius: 4px;
   background: linear-gradient(
@@ -174,7 +162,8 @@ kbd {
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 31px;
+  flex: 0 0 auto;
+  margin-bottom: clamp(8px, 1.4vh, 22px);
 }
 .mode-label,
 .dialog-overline {
@@ -237,6 +226,7 @@ h1 {
   font-size: 1rem;
 }
 .difficulty-control {
+  position: relative;
   display: grid;
   align-content: end;
   justify-items: start;
@@ -273,7 +263,11 @@ h1 {
 .difficulty-details p {
   position: absolute;
   z-index: 4;
-  width: min(360px, calc(100vw - 48px));
+  top: 100%;
+  right: 0;
+  width: min(360px, calc(100vw - 64px));
+  max-height: min(50dvh, 360px);
+  overflow: auto;
   margin: 7px 0 0;
   padding: 11px 13px;
   border: 1px solid var(--line);
@@ -287,7 +281,12 @@ h1 {
 .stage-frame {
   position: relative;
   z-index: 1;
-  padding: 12px 20px 14px;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 12px 10px;
   border: 0;
   background: transparent;
 }
@@ -314,15 +313,25 @@ h1 {
 .stage-time {
   font-variant-numeric: tabular-nums;
 }
+.board-fit {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  container-type: size;
+}
 .lane-board {
   position: relative;
   display: grid;
-  width: min(100%, 820px);
+  flex: 0 0 auto;
+  width: min(100cqw, 200cqh, 820px);
+  height: min(50cqw, 100cqh, 410px);
   grid-template-columns: repeat(4, minmax(0, 1fr));
   aspect-ratio: 2 / 1;
-  height: auto;
-  max-height: 410px;
-  margin: 14px auto 7px;
+  margin: 0;
   overflow: hidden;
   background: transparent;
   border: 0;
@@ -427,6 +436,9 @@ kbd {
 .text-button kbd {
   margin-left: 6px;
   color: var(--muted);
+}
+.pause-button[hidden] {
+  display: none;
 }
 button {
   cursor: pointer;
@@ -586,11 +598,6 @@ button:disabled {
 .result-total {
   grid-column: 1 / -1;
 }
-.experience-footer {
-  padding: 13px 2px 0;
-  font-size: 0.67rem;
-}
-
 @keyframes settle {
   from {
     opacity: 0;
@@ -603,23 +610,13 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
-  .experience {
-    width: min(100% - 20px, 1120px);
-    padding-top: 11px;
-  }
-  .masthead {
-    margin-bottom: 11px;
-  }
-  .masthead-note {
-    font-size: 0.68rem;
-  }
   .play-surface {
-    min-height: calc(100vh - 85px);
-    padding: 24px 13px 19px;
+    padding: 10px 10px 8px;
   }
   .play-heading {
     flex-wrap: wrap;
-    margin-bottom: 22px;
+    gap: 8px 12px;
+    margin-bottom: 6px;
   }
   .resource-readout {
     min-width: 82px;
@@ -638,7 +635,7 @@ button:disabled {
     max-width: none;
   }
   .stage-frame {
-    padding: 10px 10px 12px;
+    padding: 5px 4px 6px;
   }
   .stage-topline {
     font-size: 0.56rem;
@@ -671,10 +668,8 @@ button:disabled {
     min-height: 76px;
     padding: 9px;
   }
-  .experience-footer {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
+  .performance-controls {
+    flex: 0 0 auto;
   }
 }
 
