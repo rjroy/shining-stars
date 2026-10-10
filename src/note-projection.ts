@@ -9,6 +9,15 @@ export interface TimingWindowGeometry {
   readonly perfectEnvelopeHeightPx: number;
 }
 
+/** Runway coordinates are measured downward from the top of the board. */
+export const RUNWAY_APPROACH_START_TOP_PERCENT = 18;
+export const RUNWAY_HIT_LINE_TOP_PERCENT = 82;
+export const RUNWAY_HIT_LINE_BOTTOM_PERCENT = 100 - RUNWAY_HIT_LINE_TOP_PERCENT;
+export const RUNWAY_TRAVEL_PERCENT =
+  RUNWAY_HIT_LINE_TOP_PERCENT - RUNWAY_APPROACH_START_TOP_PERCENT;
+export const RUNWAY_TRAVEL_FRACTION = RUNWAY_TRAVEL_PERCENT / 100;
+export const RUNWAY_HIT_LINE_TOP_FRACTION = RUNWAY_HIT_LINE_TOP_PERCENT / 100;
+
 export interface ProjectedNote {
   readonly id: string;
   readonly lane: number;
@@ -63,7 +72,9 @@ export function projectNotes(
         id: note.id,
         lane: note.lane,
         progress,
-        bottomPercent: 18 + (1 - progress) * 64,
+        bottomPercent:
+          RUNWAY_HIT_LINE_BOTTOM_PERCENT +
+          (1 - progress) * RUNWAY_TRAVEL_PERCENT,
       },
     ];
   });

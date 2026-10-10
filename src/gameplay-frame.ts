@@ -4,6 +4,7 @@ import { getDifficultyProfile, type Difficulty } from './game-balance';
 import {
   projectNotes,
   projectTimingWindowGeometry,
+  RUNWAY_TRAVEL_FRACTION,
   type ProjectedNote,
   type TimingWindowGeometry,
 } from './note-projection';
@@ -99,7 +100,7 @@ export function projectGameplayFrame(
   const profile = getDifficultyProfile(game.difficulty);
   const board = containPlayfield(layout.board);
   const fittedLayout = { ...layout, board };
-  const runwayTravelPx = board.height * 0.64;
+  const runwayTravelPx = board.height * RUNWAY_TRAVEL_FRACTION;
   const timingWindows = projectTimingWindowGeometry(
     game.difficulty,
     runwayTravelPx,

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { LOGICAL_PLAYFIELD_HEIGHT, type GameplayFrame } from './gameplay-frame';
+import { RUNWAY_HIT_LINE_TOP_FRACTION } from './note-projection';
 import type { SceneStateProjection } from './scene-state';
 
 export interface BrightvaleScene {
@@ -1079,7 +1080,7 @@ export function createBrightvaleScene(
       const stage = layout.stage;
       const board = layout.board;
       const boardScale = board.height / LOGICAL_PLAYFIELD_HEIGHT;
-      const hitY = board.y + board.height * 0.82;
+      const hitY = board.y + board.height * RUNWAY_HIT_LINE_TOP_FRACTION;
 
       placePlane(
         stageBackdrop,

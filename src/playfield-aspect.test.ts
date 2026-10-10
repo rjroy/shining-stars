@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
-import { projectGameplayFrame, type GameplayLayout } from './gameplay-frame';
+import {
+  projectGameplayFrame,
+  VISIBLE_NOTE_SECONDS,
+  type GameplayLayout,
+} from './gameplay-frame';
 import { projectTimingWindowGeometry } from './note-projection';
 import { createBrightvaleScene, type SceneRenderer } from './scene';
 import type { SceneStateProjection } from './scene-state';
@@ -165,6 +169,122 @@ describe('responsive logical playfield projection', () => {
         projectTimingWindowGeometry('normal', 153.6, 2.4).goodEnvelopeHeightPx,
         8,
       );
+    },
+  );
+
+  it.each([
+    { boardWidth: 480, boardHeight: 240 },
+    { boardWidth: 320, boardHeight: 160 },
+  ])(
+    'keeps projected note centers aligned with the hit line across a $boardWidth×$boardHeight board',
+    ({ boardWidth, boardHeight }) => {
+      vi.stubGlobal('window', {
+        devicePixelRatio: 1,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+      const renderedScenes: THREE.Scene[] = [];
+      const canvas = Object.assign(new EventTarget(), {
+        className: '',
+        setAttribute: vi.fn(),
+        remove: vi.fn(),
+      });
+      const renderer = {
+        domElement: canvas,
+        outputColorSpace: THREE.SRGBColorSpace,
+        autoClear: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1,
+        setClearColor: vi.fn(),
+        setPixelRatio: vi.fn(),
+        setSize: vi.fn(),
+        setViewport: vi.fn(),
+        setScissor: vi.fn(),
+        setScissorTest: vi.fn(),
+        clear: vi.fn(),
+        clearDepth: vi.fn(),
+        render: vi.fn((rendered: THREE.Scene) => renderedScenes.push(rendered)),
+        dispose: vi.fn(),
+      } as unknown as SceneRenderer;
+      const host = {
+        clientWidth: 640,
+        clientHeight: 480,
+        firstChild: null,
+        insertBefore: vi.fn(),
+      } as unknown as HTMLElement;
+      const scene = createBrightvaleScene(host, vi.fn(), () => renderer);
+      if (scene === null)
+        throw new Error('scene renderer failed to initialize');
+
+      const layout = layoutFor(640, 480, {
+        x: 80,
+        y: 80,
+        width: boardWidth,
+        height: boardHeight,
+      });
+      const noteTime = VISIBLE_NOTE_SECONDS;
+      const scenarioChart = {
+        ...chart,
+        notes: chart.notes.map((note) => ({ ...note, time: noteTime })),
+      };
+      const samples = [
+        { label: 'approach endpoint', time: 0 },
+        { label: 'halfway approach', time: VISIBLE_NOTE_SECONDS / 2 },
+        { label: 'onset', time: noteTime },
+        { label: 'overdue', time: noteTime + 1 },
+      ];
+
+      try {
+        for (const sample of samples) {
+          const frame = projectGameplayFrame(
+            {
+              ...snapshot,
+              game: { ...snapshot.game, transportTime: sample.time },
+            },
+            scenarioChart,
+            layout,
+            false,
+          );
+          scene.updateFrame({ city, gameplay: frame });
+          const renderedScene = renderedScenes.at(-1);
+          if (renderedScene === undefined)
+            throw new Error('gameplay scene must be submitted to the renderer');
+          const byRole = (role: string): THREE.Mesh => {
+            let result: THREE.Mesh | undefined;
+            renderedScene.traverse((object) => {
+              if (
+                result === undefined &&
+                object instanceof THREE.Mesh &&
+                object.userData.gameplayRole === role
+              )
+                result = object;
+            });
+            if (result === undefined) throw new Error(`missing ${role} mesh`);
+            return result;
+          };
+          const board = frame.layout.board;
+          const noteCenterY =
+            frame.layout.height - byRole('note-good-envelope').position.y;
+          const hitLineCenterY =
+            frame.layout.height - byRole('hit-line').position.y;
+          const expectedFraction =
+            sample.label === 'approach endpoint'
+              ? 0.18
+              : sample.label === 'halfway approach'
+                ? 0.5
+                : 0.82;
+
+          expect(noteCenterY, sample.label).toBeCloseTo(
+            board.y + board.height * expectedFraction,
+            8,
+          );
+          if (sample.label === 'onset' || sample.label === 'overdue') {
+            expect(noteCenterY, sample.label).toBeCloseTo(hitLineCenterY, 8);
+          }
+        }
+      } finally {
+        scene.destroy();
+      }
     },
   );
 
