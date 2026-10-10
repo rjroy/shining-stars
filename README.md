@@ -16,6 +16,16 @@ The browser entry is `index.html`; `src/main.ts` owns the application lifecycle 
 
 Per-song authoring settings, including initial Twilight Strength, live in `data/charts/song-authoring.json`; see the [chart workflow](docs/beat-chart-workflow.md) for the schema and validation rules.
 
+## Song output volume
+
+Set the Vite environment variable `VITE_SONG_VOLUME` to a number from `0` (silent output) through `1` (full output). The unset value preserves full volume. Blank, malformed, non-finite, or out-of-range values safely fall back to full volume. This controls only the audio output gain; song timing and gameplay continue normally. For silent AI/browser testing, start the development server with the variable set so the gain is initialized before any playback:
+
+```sh
+VITE_SONG_VOLUME=0 npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Keep that environment on the server while running automated song-playback checks such as `python3 tests/browser-flow.py http://127.0.0.1:5173/`.
+
 ## Music chart authoring dependencies
 
 - **aubio** provides `aubioonset` for offline onset-timestamp extraction. The user installed Arch's `aubio 0.4.9-25`; the executable is `/usr/bin/aubioonset`.
