@@ -1,0 +1,5 @@
+# Track the approved source and concept; generated review/build files stay local.
+/generated/
+__pycache__/
+*.py[cod]
+*.blend[0-9]*

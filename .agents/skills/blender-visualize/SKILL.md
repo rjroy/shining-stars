@@ -9,14 +9,14 @@ Read [the shared asset workflow](../asset-workflow/SKILL.md) first. It owns the 
 
 ## Gate and inputs
 
-- Render only when the asset workflow authorizes visualization and identifies the saved `.blend`, approved brief/concept, intended game view, required diagnostic angles, output directory, and review purpose.
+- Render only when the asset workflow authorizes visualization and identifies the saved `.blend`, approved brief/concept, comparison composition/camera, required diagnostic angles, output directory, and review purpose.
 - Use an absolute path to the exact saved `.blend`; record its modification time or checksum before rendering. Read-only source handling is mandatory. Do not save, pack, relink, alter materials/geometry/cameras, or resave the source as a side effect.
 - Ask the workflow owner to resolve missing camera, lens, scale, or composition requirements. References are evidence with ambiguity, not imaginary ground truth. Keep project art direction separate from reusable visualization practice.
 - Brightvale perspective-highway context, when applicable: low fixed dramatic view, highway dominant, city and crowd subordinate; no stage, performer, or replacement focal structure. Preserve the perpetual-twilight warm Audience / violet-dark Twilight distinction. Earlier stage/performer directions are superseded; do not add them to a render setup.
 
-## Render set: game view plus diagnostics
+## Render set: model comparison plus diagnostics
 
-Produce the requested game-view render using the approved camera/composition and the saved scene's intended game lighting. Do not “beautify” by changing the asset or concealing failures. Record renderer, engine, resolution, frame, color management, camera, and lighting. If no intended game camera or lighting exists, report that blocker or ask before creating a temporary render setup; never save such setup into the source blend.
+For model-stage review, use the approved comparison composition/camera and neutral or restrained lighting. Produce reproducible previews that show the actual model for geometry comparison—not final product renders or runtime-fidelity proof. Inspect and present the actual images. Assess silhouette, proportion, construction, detail, topology, and visible geometry defects. Lighting, emission, bloom, exposure, tone mapping, reflections, and final material presentation alone must not trigger geometry revisions or block model approval. Preserve meaningful material separation and report appearance caveats; evaluate final appearance separately during integration. Do not beautify the asset or hide geometry failures. Record render settings. If the authorized comparison camera/composition is missing, report the blocker or ask; never save temporary setup changes into the source blend.
 
 When authorized, render diagnostic views as separate images, clearly labeled and not presented as gameplay truth:
 
@@ -24,7 +24,7 @@ When authorized, render diagnostic views as separate images, clearly labeled and
 2. Neutral material/shape view with simple, even lighting to expose silhouette, intersections, normals, and roughness without dramatic light hiding defects.
 3. Wireframe/topology or orthographic views only where needed to diagnose a specific issue.
 
-Use a temporary copy or a separate script-generated scene state for diagnostics, leaving the source untouched. Do not overwrite the game-view image with a diagnostic render. Game and diagnostic lighting answer different questions; label them distinctly. Blender viewport/rendered lighting and Cycles/Eevee output do not promise the same appearance as the Three.js runtime renderer.
+Use a temporary copy or separate script-generated scene state for diagnostics, leaving the source untouched. Do not overwrite the comparison image with a diagnostic render. Comparison and neutral diagnostic views answer different geometry questions; label them distinctly. Both remain model-review evidence. Blender viewport/rendered lighting and Cycles/Eevee output do not promise the same appearance as the Three.js runtime renderer.
 
 Camera and render checks:
 
@@ -41,9 +41,9 @@ Camera and render checks:
 
 ## Critique and handoff
 
-The agent owns inspection and critique; the user is the visual director, not expected to perform artist labor. Compare against the approved brief/concept and distinguish observed evidence from uncertain inference. Report concrete issues by view, such as silhouette read, proportion, overlap, topology/shading artifact, material hierarchy, visibility, or framing. Propose the smallest revision within approved scope; ask before expanding scope or making a direction-changing judgment. A render is evidence for review, not approval.
+The agent owns inspection and critique; the user is the visual director, not expected to perform artist labor. Compare against the approved brief/concept and distinguish observed geometry evidence from presentation differences and uncertain inference. Report concrete issues by view, such as silhouette read, proportion, overlap, topology/geometry artifact, visibility, or framing; identify lighting/material effects separately. Propose the smallest geometry revision within approved scope; do not iterate geometry for render-presentation differences alone. Ask before expanding scope or making a direction-changing judgment. A render is required evidence for review, not the final product or approval.
 
-Return absolute paths to source blend, scripts used (if any), game-view and diagnostic images, logs, and brief/concept. Record Blender version, command, renderer/engine, camera, lighting, resolution, exit code, decode/view verification, source before/after check, and any limitations. Never claim source-model approval or runtime acceptance; the workflow requires explicit approval before runtime integration.
+Return stable paths to the source, current scripts, approved concept, and selected comparison/diagnostic images used for geometry review. Keep useful approval evidence in the maintained package; place per-iteration previews and logs in task scratch/archive, removing them only after needed evidence is preserved. Record tool/version, renderer, camera, lighting, resolution, source-integrity and image-verification results, and limitations in the concise handoff. Keep these previews distinct from later runtime evidence. Never claim model approval or runtime acceptance without its separate approval.
 
 ### Dry walkthrough before execution
 
