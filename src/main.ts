@@ -150,7 +150,10 @@ function renderSnapshot(
   }
   if (rendererStatusNeedsRender) {
     rendererStatusNeedsRender = false;
-    ui.render(snapshot, audioContext?.currentTime ?? 0);
+    ui.render(
+      controller?.snapshot() ?? snapshot,
+      audioContext?.currentTime ?? 0,
+    );
   }
   if (
     generation === rendererGeneration &&
