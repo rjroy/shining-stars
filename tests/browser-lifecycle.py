@@ -74,6 +74,43 @@ def click(base, session_id, selector):
     request(base, "POST", f"/session/{session_id}/element/{element}/click", {})
 
 
+def app03_recovery_ready_script():
+    return (
+        "(()=>{"
+        "const a=window.__brightvaleLifecycle;"
+        "const pending=document.querySelector('[data-pending-status]');"
+        "const buttons=[...document.querySelectorAll('[data-action]')];"
+        "for(const b of buttons)b.removeAttribute('data-app03-recovery-target');"
+        "const action=buttons.find(b=>['start','resume'].includes(b.dataset.action)&&"
+        "!b.disabled&&!b.closest('[hidden]')&&"
+        "getComputedStyle(b).display!=='none'&&"
+        "getComputedStyle(b).visibility!=='hidden'&&b.getClientRects().length>0);"
+        "if(action)action.setAttribute('data-app03-recovery-target','true');"
+        "return a.fetches.length>0&&a.fetchDone.length>=a.fetches.length&&"
+        "pending&&pending.hidden&&"
+        "document.querySelector('.play-surface')?.getAttribute('aria-busy')!=='true'&&"
+        "Boolean(action)"
+        "})()"
+    )
+
+
+def stop_owned_driver(process, port):
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        with socket.socket() as sock:
+            sock.settimeout(0.1)
+            if sock.connect_ex(("127.0.0.1", port)) != 0:
+                return
+        time.sleep(0.05)
+    raise RuntimeError(f"Owned chromedriver listener on port {port} remained open")
+
+
 def create_session(base, page_url, suppress_raf=True):
     caps = {
         "capabilities": {
@@ -321,31 +358,39 @@ def browser_checks(url, suppress_raf=True):
         wait_for(
             driver,
             leave_session,
-            "document.querySelector('[data-busy]').hidden",
+            app03_recovery_ready_script(),
             timeout=90,
         )
         leave_state = execute(
             driver,
             leave_session,
-            "return ({audit:window.__brightvaleLifecycle,visibleActions:"
-            "[...document.querySelectorAll('[data-action]')].filter(b=>"
-            "!b.disabled&&!b.closest('[hidden]')&&"
-            "['start','resume'].includes(b.dataset.action)).map(b=>b.dataset.action),"
+            "const action=document.querySelector('[data-app03-recovery-target=true]');"
+            "return ({audit:window.__brightvaleLifecycle,recoveryAction:action?{"
+            "name:action.dataset.action,enabled:!action.disabled,visible:"
+            "!action.closest('[hidden]')&&getComputedStyle(action).display!=='none'&&"
+            "getComputedStyle(action).visibility!=='hidden'&&"
+            "action.getClientRects().length>0}:null,"
             "panels:[...document.querySelectorAll('[data-panel]')].filter(p=>"
             "!p.hidden).map(p=>p.dataset.panel)})",
         )
         no_source_on_leave = len(leave_state["audit"]["starts"]) == 0
         results["APP03_no_source_after_blur_during_load"] = no_source_on_leave
-        results["APP03_visible_recovery_actions"] = leave_state["visibleActions"]
+        recovery_action = leave_state["recoveryAction"]
+        results["APP03_visible_recovery_action"] = recovery_action
         if not no_source_on_leave:
             failures.append("APP03 scheduled audio after blur during the pending fetch")
-        if not leave_state["visibleActions"]:
+        action_is_eligible = bool(
+            recovery_action
+            and recovery_action["enabled"]
+            and recovery_action["visible"]
+            and recovery_action["name"] in ("start", "resume")
+        )
+        if not action_is_eligible:
             failures.append("APP03 had no visible explicit start/resume recovery action")
 
-        # Exercise whichever explicit visible recovery control the UI exposes.
-        if leave_state["visibleActions"]:
-            action = leave_state["visibleActions"][0]
-            click(driver, leave_session, f'[data-action="{action}"]')
+        # Click the exact recovery node that satisfied the wait predicate.
+        if action_is_eligible:
+            click(driver, leave_session, '[data-app03-recovery-target="true"]')
             wait_for(
                 driver,
                 leave_session,
@@ -364,12 +409,7 @@ def browser_checks(url, suppress_raf=True):
                 request(driver, "DELETE", f"/session/{session_id}", {}, timeout=10)
             except Exception:
                 pass
-        driver_process.terminate()
-        try:
-            driver_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            driver_process.kill()
-            driver_process.wait(timeout=5)
+        stop_owned_driver(driver_process, port)
 
 
 def main():
