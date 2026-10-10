@@ -133,6 +133,7 @@ interface RendererControls {
   rendererDisposeCount: number;
   readonly calls: Array<readonly [string, ...number[]]>;
   readonly renderedCameras: THREE.Camera[];
+  readonly renderedViewports: THREE.Vector4[];
 }
 
 function makeRenderer(): RendererControls {
@@ -146,8 +147,10 @@ function makeRenderer(): RendererControls {
     rendererDisposeCount: 0,
     calls: [],
     renderedCameras: [],
+    renderedViewports: [],
     renderer: null as unknown as SceneRenderer,
   };
+  let viewport = new THREE.Vector4(0, 0, 640, 480);
   controls.renderer = {
     domElement: canvas as unknown as HTMLCanvasElement,
     outputColorSpace: THREE.SRGBColorSpace,
@@ -159,9 +162,10 @@ function makeRenderer(): RendererControls {
     setSize: vi.fn(() => {
       if (controls.failInitialSize) throw new Error('size failed');
     }),
-    setViewport: vi.fn((x: number, y: number, width: number, height: number) =>
-      controls.calls.push(['viewport', x, y, width, height]),
-    ),
+    setViewport: vi.fn((x: number, y: number, width: number, height: number) => {
+      controls.calls.push(['viewport', x, y, width, height]);
+      viewport = new THREE.Vector4(x, y, width, height);
+    }),
     setScissor: vi.fn((x: number, y: number, width: number, height: number) =>
       controls.calls.push(['scissor', x, y, width, height]),
     ),
@@ -178,9 +182,12 @@ function makeRenderer(): RendererControls {
       ]),
     ),
     render: vi.fn((scene: THREE.Scene, camera: THREE.Camera) => {
+      scene.updateMatrixWorld(true);
+      camera.updateMatrixWorld(true);
       controls.calls.push(['render']);
       controls.renderedScene = scene;
       controls.renderedCameras.push(camera);
+      controls.renderedViewports.push(viewport.clone());
       if (controls.failRender) throw new Error('render failed');
     }),
     dispose() {
@@ -241,7 +248,7 @@ describe('Brightvale scene resource lifecycle', () => {
     updateFrame.call(scene, frame);
 
     expect(controls.renderedScene).not.toBeNull();
-    expect(controls.renderer.render).toHaveBeenCalledTimes(3);
+    expect(controls.renderer.render).toHaveBeenCalledTimes(4);
     const gameplayRoles: string[] = [];
     controls.renderedScene?.traverse((object) => {
       const role = object.userData.gameplayRole;
@@ -282,19 +289,23 @@ describe('Brightvale scene resource lifecycle', () => {
       }),
     });
     const firstFrameRenderCount = controls.renderedCameras.length;
-    expect(firstFrameRenderCount).toBe(3);
+    expect(firstFrameRenderCount).toBe(4);
 
     TestResizeObserver.instances[0]?.trigger();
 
-    expect(controls.renderedCameras).toHaveLength(firstFrameRenderCount + 3);
-    expect(controls.renderedCameras.slice(-3)[0]).toBeInstanceOf(
+    expect(controls.renderedCameras).toHaveLength(firstFrameRenderCount + 4);
+    expect(controls.renderedCameras.slice(-4)[0]).toBeInstanceOf(
       THREE.PerspectiveCamera,
     );
-    expect(
-      controls.renderedCameras
-        .slice(-2)
-        .every((camera) => camera instanceof THREE.OrthographicCamera),
-    ).toBe(true);
+    expect(controls.renderedCameras.slice(-4)[1]).toBeInstanceOf(
+      THREE.OrthographicCamera,
+    );
+    expect(controls.renderedCameras.slice(-4)[2]).toBeInstanceOf(
+      THREE.PerspectiveCamera,
+    );
+    expect(controls.renderedCameras.at(-1)).toBeInstanceOf(
+      THREE.OrthographicCamera,
+    );
     const gameplayRoles: string[] = [];
     controls.renderedScene?.traverse((object) => {
       if (typeof object.userData.gameplayRole === 'string')
@@ -306,7 +317,7 @@ describe('Brightvale scene resource lifecycle', () => {
     scene.destroy();
   });
 
-  it('keeps orthographic gameplay faces visible and GPU text upright', () => {
+  it('keeps perspective runway geometry visible and GPU text upright', () => {
     installSceneGlobals();
     const controls = makeRenderer();
     const scene = createBrightvaleScene(
@@ -337,18 +348,9 @@ describe('Brightvale scene resource lifecycle', () => {
     });
 
     const renderedScene = controls.renderedScene;
-    const stageCamera = controls.renderedCameras[1];
-    const boardCamera = controls.renderedCameras[2];
-    if (
-      renderedScene === null ||
-      stageCamera === undefined ||
-      boardCamera === undefined
-    ) {
-      throw new Error('city and orthographic gameplay passes must render');
-    }
+    if (renderedScene === null)
+      throw new Error('city and gameplay passes must render');
     renderedScene.updateMatrixWorld(true);
-    stageCamera.updateMatrixWorld(true);
-    boardCamera.updateMatrixWorld(true);
 
     const gameplayMeshes: THREE.Mesh[] = [];
     const roleObjects = new Map<string, THREE.Mesh[]>();
@@ -388,17 +390,68 @@ describe('Brightvale scene resource lifecycle', () => {
         cityMaterials.some((material) => materialUsesFog(material) === true),
       )
       .toBe(true);
+    expect(
+      roleObjects.get('good-edge')?.every((mesh) => !mesh.visible),
+      'legacy orthographic Good edges must not be visible over the perspective runway',
+    ).toBe(true);
+    expect(
+      roleObjects.get('perfect-edge')?.every((mesh) => !mesh.visible),
+      'legacy orthographic Perfect edges must not be visible over the perspective runway',
+    ).toBe(true);
 
-    const lane = roleObjects.get('lane')?.[0];
+    const lane = roleObjects
+      .get('lane')
+      ?.find((mesh) => mesh.visible);
     if (lane === undefined) throw new Error('gameplay lane mesh is missing');
+    const perspectiveTimingMeshes = [
+      lane,
+      roleObjects.get('good-band')?.find((mesh) => mesh.visible),
+      roleObjects.get('perfect-band')?.find((mesh) => mesh.visible),
+      roleObjects.get('note-good-envelope')?.find((mesh) => mesh.visible),
+      roleObjects.get('note-perfect-envelope')?.find((mesh) => mesh.visible),
+      roleObjects.get('note-bar')?.find((mesh) => mesh.visible),
+    ].filter((mesh): mesh is THREE.Mesh => mesh !== undefined);
+    expect
+      .soft(
+        perspectiveTimingMeshes
+          .flatMap((mesh) =>
+            Array.isArray(mesh.material) ? mesh.material : [mesh.material],
+          )
+          .every((material) => materialUsesFog(material) === false),
+        'visible perspective runway and note materials must not inherit city fog',
+      )
+      .toBe(true);
+    const gameplayPassIndex = controls.renderedCameras.findIndex((camera) =>
+      camera.layers.test(lane.layers),
+    );
+    const gameplayCamera = controls.renderedCameras[gameplayPassIndex];
+    const gameplayViewport = controls.renderedViewports[gameplayPassIndex];
+    if (gameplayCamera === undefined || gameplayViewport === undefined)
+      throw new Error('the perspective lane camera pass must be captured');
+    expect(gameplayCamera).toBeInstanceOf(THREE.PerspectiveCamera);
+    gameplayCamera.updateMatrixWorld(true);
     const laneScreenCenter = lane
       .getWorldPosition(new THREE.Vector3())
-      .project(boardCamera);
-    expect((laneScreenCenter.x + 1) * gameplayLayout.width * 0.5).toBeCloseTo(
-      gameplayLayout.board.x + gameplayLayout.board.width / 8,
+      .project(gameplayCamera);
+    const laneScreenX =
+      gameplayViewport.x +
+      ((laneScreenCenter.x + 1) * gameplayViewport.z) / 2;
+    const laneScreenY =
+      gameplayLayout.height -
+      gameplayViewport.y -
+      ((laneScreenCenter.y + 1) * gameplayViewport.w) / 2;
+    expect(Number.isFinite(laneScreenX) && Number.isFinite(laneScreenY)).toBe(
+      true,
     );
-    expect((1 - laneScreenCenter.y) * gameplayLayout.height * 0.5).toBeCloseTo(
-      gameplayLayout.board.y + gameplayLayout.board.height / 2,
+    expect(laneScreenX).toBeGreaterThanOrEqual(gameplayViewport.x);
+    expect(laneScreenX).toBeLessThanOrEqual(
+      gameplayViewport.x + gameplayViewport.z,
+    );
+    expect(laneScreenY).toBeGreaterThanOrEqual(
+      gameplayLayout.height - gameplayViewport.y - gameplayViewport.w,
+    );
+    expect(laneScreenY).toBeLessThanOrEqual(
+      gameplayLayout.height - gameplayViewport.y,
     );
     const positions = lane.geometry.getAttribute('position');
     const indices = lane.geometry.getIndex();
@@ -411,7 +464,7 @@ describe('Brightvale scene resource lifecycle', () => {
           positions.getZ(index),
         )
           .applyMatrix4(lane.matrixWorld)
-          .project(boardCamera),
+          .project(gameplayCamera),
     );
     const [a, b, c] = triangle;
     if (a === undefined || b === undefined || c === undefined)
@@ -426,6 +479,13 @@ describe('Brightvale scene resource lifecycle', () => {
 
     const label = roleObjects.get('stage-label')?.[0];
     if (label === undefined) throw new Error('stage text mesh is missing');
+    const stagePassIndex = controls.renderedCameras.findIndex((camera) =>
+      camera.layers.test(label.layers),
+    );
+    const stageCamera = controls.renderedCameras[stagePassIndex];
+    if (stageCamera === undefined)
+      throw new Error('the stage text camera pass must be captured');
+    stageCamera.updateMatrixWorld(true);
     const textPositions = label.geometry.getAttribute('position');
     const textUvs = label.geometry.getAttribute('uv');
     const highV = new THREE.Vector3();
@@ -709,7 +769,7 @@ describe('Brightvale scene resource lifecycle', () => {
     });
 
     const order = controls.calls.map(([name]) => name);
-    expect(order.filter((name) => name === 'render')).toHaveLength(3);
+    expect(order.filter((name) => name === 'render')).toHaveLength(4);
     expect(controls.renderer.autoClear).toBe(false);
     expect(order).toEqual([
       'viewport',
@@ -726,6 +786,9 @@ describe('Brightvale scene resource lifecycle', () => {
       'scissor',
       'clear-depth',
       'render',
+      'viewport',
+      'clear-depth',
+      'render',
       'scissor-test',
       'viewport',
       'scissor',
@@ -739,6 +802,7 @@ describe('Brightvale scene resource lifecycle', () => {
     expect(controls.calls.filter(([name]) => name === 'viewport')).toEqual([
       ['viewport', 0, 0, 640, 480],
       ['viewport', 0, 0, 640, 480],
+      ['viewport', 80, 160, 480, 240],
       ['viewport', 0, 0, 640, 480],
       ['viewport', 0, 0, 640, 480],
     ]);
@@ -753,12 +817,18 @@ describe('Brightvale scene resource lifecycle', () => {
     expect(
       controls.calls.filter(([name]) => name === 'viewport').at(-1),
     ).toEqual(['viewport', 0, 0, 640, 480]);
-    expect(controls.renderedCameras[0]).toBeInstanceOf(THREE.PerspectiveCamera);
-    expect(
-      controls.renderedCameras
-        .slice(1)
-        .every((camera) => camera instanceof THREE.OrthographicCamera),
-    ).toBe(true);
+    expect(controls.renderedCameras[0]).toBeInstanceOf(
+      THREE.PerspectiveCamera,
+    );
+    expect(controls.renderedCameras[1]).toBeInstanceOf(
+      THREE.OrthographicCamera,
+    );
+    expect(controls.renderedCameras[2]).toBeInstanceOf(
+      THREE.PerspectiveCamera,
+    );
+    expect(controls.renderedCameras[3]).toBeInstanceOf(
+      THREE.OrthographicCamera,
+    );
     scene?.destroy();
   });
 
