@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
-import { projectGameplayFrame, type GameplayLayout } from './gameplay-frame';
+import {
+  projectGameplayFrame,
+  VISIBLE_NOTE_SECONDS,
+  type GameplayLayout,
+} from './gameplay-frame';
 import { projectTimingWindowGeometry } from './note-projection';
 import { createBrightvaleScene, type SceneRenderer } from './scene';
 import type { SceneStateProjection } from './scene-state';
@@ -31,7 +35,7 @@ const chart: ChartConfig = {
   duration: 20,
   twilightAt: 10,
   twilightStrength: 100,
-  allowedDifficulties: ['normal'],
+  allowedDifficulties: ['normal', 'hard'],
   notes: [{ id: 'approaching-note', lane: 2, time: 12 }],
 };
 
@@ -152,7 +156,6 @@ describe('responsive logical playfield projection', () => {
         2.4,
       );
       expect(frame.timingWindows).toEqual(expectedWindows);
-      expect(frame.notes[0]?.timingWindows).toEqual(expectedWindows);
       expect(
         frame.timingWindows.goodEnvelopeHeightPx / board.height,
       ).toBeCloseTo(
@@ -166,6 +169,122 @@ describe('responsive logical playfield projection', () => {
         projectTimingWindowGeometry('normal', 153.6, 2.4).goodEnvelopeHeightPx,
         8,
       );
+    },
+  );
+
+  it.each([
+    { boardWidth: 480, boardHeight: 240 },
+    { boardWidth: 320, boardHeight: 160 },
+  ])(
+    'keeps projected note centers aligned with the hit line across a $boardWidth×$boardHeight board',
+    ({ boardWidth, boardHeight }) => {
+      vi.stubGlobal('window', {
+        devicePixelRatio: 1,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+      const renderedScenes: THREE.Scene[] = [];
+      const canvas = Object.assign(new EventTarget(), {
+        className: '',
+        setAttribute: vi.fn(),
+        remove: vi.fn(),
+      });
+      const renderer = {
+        domElement: canvas,
+        outputColorSpace: THREE.SRGBColorSpace,
+        autoClear: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1,
+        setClearColor: vi.fn(),
+        setPixelRatio: vi.fn(),
+        setSize: vi.fn(),
+        setViewport: vi.fn(),
+        setScissor: vi.fn(),
+        setScissorTest: vi.fn(),
+        clear: vi.fn(),
+        clearDepth: vi.fn(),
+        render: vi.fn((rendered: THREE.Scene) => renderedScenes.push(rendered)),
+        dispose: vi.fn(),
+      } as unknown as SceneRenderer;
+      const host = {
+        clientWidth: 640,
+        clientHeight: 480,
+        firstChild: null,
+        insertBefore: vi.fn(),
+      } as unknown as HTMLElement;
+      const scene = createBrightvaleScene(host, vi.fn(), () => renderer);
+      if (scene === null)
+        throw new Error('scene renderer failed to initialize');
+
+      const layout = layoutFor(640, 480, {
+        x: 80,
+        y: 80,
+        width: boardWidth,
+        height: boardHeight,
+      });
+      const noteTime = VISIBLE_NOTE_SECONDS;
+      const scenarioChart = {
+        ...chart,
+        notes: chart.notes.map((note) => ({ ...note, time: noteTime })),
+      };
+      const samples = [
+        { label: 'approach endpoint', time: 0 },
+        { label: 'halfway approach', time: VISIBLE_NOTE_SECONDS / 2 },
+        { label: 'onset', time: noteTime },
+        { label: 'overdue', time: noteTime + 1 },
+      ];
+
+      try {
+        for (const sample of samples) {
+          const frame = projectGameplayFrame(
+            {
+              ...snapshot,
+              game: { ...snapshot.game, transportTime: sample.time },
+            },
+            scenarioChart,
+            layout,
+            false,
+          );
+          scene.updateFrame({ city, gameplay: frame });
+          const renderedScene = renderedScenes.at(-1);
+          if (renderedScene === undefined)
+            throw new Error('gameplay scene must be submitted to the renderer');
+          const byRole = (role: string): THREE.Mesh => {
+            let result: THREE.Mesh | undefined;
+            renderedScene.traverse((object) => {
+              if (
+                result === undefined &&
+                object instanceof THREE.Mesh &&
+                object.userData.gameplayRole === role
+              )
+                result = object;
+            });
+            if (result === undefined) throw new Error(`missing ${role} mesh`);
+            return result;
+          };
+          const board = frame.layout.board;
+          const noteCenterY =
+            frame.layout.height - byRole('note-good-envelope').position.y;
+          const hitLineCenterY =
+            frame.layout.height - byRole('hit-line').position.y;
+          const expectedFraction =
+            sample.label === 'approach endpoint'
+              ? 0.18
+              : sample.label === 'halfway approach'
+                ? 0.5
+                : 0.82;
+
+          expect(noteCenterY, sample.label).toBeCloseTo(
+            board.y + board.height * expectedFraction,
+            8,
+          );
+          if (sample.label === 'onset' || sample.label === 'overdue') {
+            expect(noteCenterY, sample.label).toBeCloseTo(hitLineCenterY, 8);
+          }
+        }
+      } finally {
+        scene.destroy();
+      }
     },
   );
 
@@ -236,6 +355,112 @@ describe('responsive logical playfield projection', () => {
       scene.destroy();
     }
   });
+
+  it.each([
+    { difficulty: 'normal' as const, boardWidth: 480, boardHeight: 240 },
+    { difficulty: 'normal' as const, boardWidth: 320, boardHeight: 160 },
+    { difficulty: 'hard' as const, boardWidth: 480, boardHeight: 240 },
+    { difficulty: 'hard' as const, boardWidth: 320, boardHeight: 160 },
+  ])(
+    'renders matching score-window heights for $difficulty on a $boardWidth×$boardHeight board without note bodies',
+    ({ difficulty, boardWidth, boardHeight }) => {
+      vi.stubGlobal('window', {
+        devicePixelRatio: 1,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+      const renderedScenes: THREE.Scene[] = [];
+      const canvas = Object.assign(new EventTarget(), {
+        className: '',
+        setAttribute: vi.fn(),
+        remove: vi.fn(),
+      });
+      const renderer = {
+        domElement: canvas,
+        outputColorSpace: THREE.SRGBColorSpace,
+        autoClear: true,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1,
+        setClearColor: vi.fn(),
+        setPixelRatio: vi.fn(),
+        setSize: vi.fn(),
+        setViewport: vi.fn(),
+        setScissor: vi.fn(),
+        setScissorTest: vi.fn(),
+        clear: vi.fn(),
+        clearDepth: vi.fn(),
+        render: vi.fn((rendered: THREE.Scene) => renderedScenes.push(rendered)),
+        dispose: vi.fn(),
+      } as unknown as SceneRenderer;
+      const host = {
+        clientWidth: 640,
+        clientHeight: 480,
+        firstChild: null,
+        insertBefore: vi.fn(),
+      } as unknown as HTMLElement;
+      const scene = createBrightvaleScene(host, vi.fn(), () => renderer);
+      if (scene === null)
+        throw new Error('scene renderer failed to initialize');
+
+      const board = {
+        x: 80,
+        y: 80,
+        width: boardWidth,
+        height: boardHeight,
+      };
+      const frame = projectGameplayFrame(
+        {
+          ...snapshot,
+          game: { ...snapshot.game, difficulty },
+        },
+        chart,
+        layoutFor(640, 480, board),
+        false,
+      );
+
+      try {
+        scene.updateFrame({ city, gameplay: frame });
+        const renderedScene = renderedScenes.at(-1);
+        if (renderedScene === undefined)
+          throw new Error('scene must render the compound gameplay frame');
+        const meshes = new Map<string, THREE.Mesh[]>();
+        renderedScene.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return;
+          const role = object.userData.gameplayRole;
+          if (typeof role !== 'string') return;
+          const roleMeshes = meshes.get(role) ?? [];
+          roleMeshes.push(object);
+          meshes.set(role, roleMeshes);
+        });
+        const one = (role: string): THREE.Mesh => {
+          const mesh = meshes.get(role)?.[0];
+          if (mesh === undefined) throw new Error(`missing ${role} mesh`);
+          return mesh;
+        };
+        const noteGood = one('note-good-envelope');
+        const notePerfect = one('note-perfect-envelope');
+        const targetGood = one('good-band');
+        const targetPerfect = one('perfect-band');
+
+        expect(noteGood.scale.y).toBeCloseTo(targetGood.scale.y, 8);
+        expect(notePerfect.scale.y).toBeCloseTo(targetPerfect.scale.y, 8);
+        expect(noteGood.scale.x).not.toBe(targetGood.scale.x);
+        expect(notePerfect.scale.x).not.toBe(targetPerfect.scale.x);
+        expect(meshes.has('note')).toBe(false);
+        expect(meshes.has('note-outline')).toBe(false);
+        expect(frame.timingWindows.goodEnvelopeHeightPx).toBeCloseTo(
+          targetGood.scale.y,
+          8,
+        );
+        expect(frame.timingWindows.perfectEnvelopeHeightPx).toBeCloseTo(
+          targetPerfect.scale.y,
+          8,
+        );
+      } finally {
+        scene.destroy();
+      }
+    },
+  );
 
   it.each([
     { name: 'wide', width: 1440, height: 900 },
@@ -311,9 +536,30 @@ describe('responsive logical playfield projection', () => {
   );
 
   it('preserves intrinsic canvas aspect on every projected GPU text plane', () => {
+    const paints: Array<{
+      value: string;
+      font: string;
+      fillStyle: string;
+      textAlign: string;
+      x: number;
+      y: number;
+      maxWidth: number;
+    }> = [];
     const textContext = {
       clearRect: vi.fn(),
-      fillText: vi.fn(),
+      fillText: vi.fn(
+        (value: string, x: number, y: number, maxWidth: number) => {
+          paints.push({
+            value,
+            font: textContext.font,
+            fillStyle: textContext.fillStyle,
+            textAlign: textContext.textAlign,
+            x,
+            y,
+            maxWidth,
+          });
+        },
+      ),
       measureText: vi.fn(() => ({ width: 80 })),
       fillStyle: '',
       font: '',
@@ -388,6 +634,7 @@ describe('responsive logical playfield projection', () => {
             'stage-label',
             'time-label',
             'timing-legend',
+            'feedback',
             'lane-key',
             'hit-label',
           ].includes(String(object.userData.gameplayRole))
@@ -409,6 +656,129 @@ describe('responsive logical playfield projection', () => {
           `${String(mesh.userData.gameplayRole)} must preserve canvas glyph proportions`,
         ).toBeCloseTo(texture.image.width / texture.image.height, 4);
       }
+
+      const paint = (value: string) => {
+        const result = paints.find((entry) => entry.value === value);
+        if (result === undefined) throw new Error(`missing paint for ${value}`);
+        return result;
+      };
+      const textMesh = (role: string): THREE.Mesh => {
+        const result = textMeshes.find(
+          (mesh) => mesh.userData.gameplayRole === role,
+        );
+        if (result === undefined) throw new Error(`missing ${role} mesh`);
+        return result;
+      };
+      const expectedPaints = [
+        {
+          value: 'Onset-derived chart · play-test timing',
+          role: 'stage-label',
+          fontSize: 12,
+          color: '#bbc6d3',
+          align: 'left',
+          paintX: 8,
+        },
+        {
+          value: frame.timeLabel,
+          role: 'time-label',
+          fontSize: 14,
+          color: '#f4f0df',
+          align: 'right',
+          paintX: 88,
+        },
+        {
+          value: frame.legendLabel,
+          role: 'timing-legend',
+          fontSize: 13,
+          color: '#d7e7df',
+          align: 'left',
+          paintX: 8,
+        },
+        {
+          value: 'Notes meet the line here',
+          role: 'feedback',
+          fontSize: 14,
+          color: '#bbc6d3',
+          align: 'right',
+          paintX: 88,
+        },
+        {
+          value: 'D',
+          role: 'lane-key',
+          fontSize: 12,
+          color: '#e5e5d9',
+          align: 'center',
+          paintX: 48,
+        },
+        {
+          value: 'HIT',
+          role: 'hit-label',
+          fontSize: 10,
+          color: '#ffd475',
+          align: 'right',
+          paintX: 88,
+        },
+      ];
+      for (const expected of expectedPaints) {
+        const actual = paint(expected.value);
+        expect(actual.fillStyle, expected.role).toBe(expected.color);
+        expect(actual.textAlign, expected.role).toBe(expected.align);
+        expect(actual.font, expected.role).toMatch(
+          /^500 [\d.]+px Manrope, sans-serif$/,
+        );
+        expect(Number.parseFloat(actual.font.split(' ')[1] ?? '')).toBeCloseTo(
+          (expected.fontSize * 128) /
+            ({
+              'stage-label': 24,
+              'time-label': 24,
+              'timing-legend': 30,
+              feedback: 25,
+              'lane-key': 22,
+              'hit-label': 14,
+            }[expected.role] ?? 1),
+          5,
+        );
+        expect(actual.x, expected.role).toBe(expected.paintX);
+        expect(actual.y, expected.role).toBe(64);
+        expect(actual.maxWidth, expected.role).toBe(80);
+      }
+
+      const horizontalEdges: Record<string, [number, number]> = {
+        'stage-label': [40, 435.2],
+        'time-label': [445.6, 560],
+        'timing-legend': [80, 560],
+        feedback: [80, 560],
+        'lane-key': [116, 164],
+        'hit-label': [515, 553],
+      };
+      for (const expected of expectedPaints) {
+        const mesh = textMesh(expected.role);
+        const [left, right] = horizontalEdges[expected.role]!;
+        if (expected.align === 'left') {
+          expect(mesh.position.x - mesh.scale.x / 2, expected.role).toBeCloseTo(
+            left,
+            5,
+          );
+        } else if (expected.align === 'right') {
+          expect(mesh.position.x + mesh.scale.x / 2, expected.role).toBeCloseTo(
+            right,
+            5,
+          );
+        } else {
+          expect(mesh.position.x, expected.role).toBeCloseTo(
+            (left + right) / 2,
+            5,
+          );
+        }
+      }
+
+      const paintCount = paints.length;
+      const measureCount = textContext.measureText.mock.calls.length;
+      const clearCount = textContext.clearRect.mock.calls.length;
+      scene.updateFrame({ city, gameplay: frame });
+      expect(paints).toHaveLength(paintCount);
+      expect(textContext.measureText).toHaveBeenCalledTimes(measureCount);
+      expect(textContext.clearRect).toHaveBeenCalledTimes(clearCount);
     } finally {
       scene.destroy();
     }

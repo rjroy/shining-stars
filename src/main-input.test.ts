@@ -47,10 +47,8 @@ vi.mock('./ui', () => ({
     const ui = {
       render: vi.fn(),
       setBusy: vi.fn(),
-      setSceneFallback: vi.fn(),
       setRendererStatus: vi.fn(),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
-      resetPlaybackAttempt: vi.fn(),
       showFatal: vi.fn(),
       destroy: vi.fn(),
     };

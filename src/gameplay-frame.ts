@@ -4,6 +4,7 @@ import { getDifficultyProfile, type Difficulty } from './game-balance';
 import {
   projectNotes,
   projectTimingWindowGeometry,
+  RUNWAY_TRAVEL_FRACTION,
   type ProjectedNote,
   type TimingWindowGeometry,
 } from './note-projection';
@@ -61,6 +62,17 @@ export const FEEDBACK_VISIBLE_SECONDS = 0.65;
 export const LOGICAL_PLAYFIELD_WIDTH = 480;
 export const LOGICAL_PLAYFIELD_HEIGHT = 240;
 
+/** Whether a transport-clock feedback event is inside its visible age window. */
+export function isFeedbackWithinVisibleAge(
+  transportTime: number,
+  onsetTransportTime: number,
+): boolean {
+  return (
+    transportTime >= onsetTransportTime &&
+    transportTime - onsetTransportTime < FEEDBACK_VISIBLE_SECONDS
+  );
+}
+
 /** Fit the logical 2:1 board inside its measured CSS slot without stretching. */
 export function containPlayfield(available: ScreenRect): ScreenRect {
   const scale = Math.max(
@@ -99,7 +111,7 @@ export function projectGameplayFrame(
   const profile = getDifficultyProfile(game.difficulty);
   const board = containPlayfield(layout.board);
   const fittedLayout = { ...layout, board };
-  const runwayTravelPx = board.height * 0.64;
+  const runwayTravelPx = board.height * RUNWAY_TRAVEL_FRACTION;
   const timingWindows = projectTimingWindowGeometry(
     game.difficulty,
     runwayTravelPx,
@@ -114,7 +126,6 @@ export function projectGameplayFrame(
         chart.notes,
         game.transportTime,
         VISIBLE_NOTE_SECONDS,
-        { difficulty: game.difficulty, runwayTravelPx },
       )
     : [];
   const event = snapshot.feedback;
@@ -122,8 +133,7 @@ export function projectGameplayFrame(
     playing &&
     event !== null &&
     event.runId > 0 &&
-    game.transportTime >= event.onsetTransportTime &&
-    game.transportTime - event.onsetTransportTime < FEEDBACK_VISIBLE_SECONDS
+    isFeedbackWithinVisibleAge(game.transportTime, event.onsetTransportTime)
       ? {
           eventId: event.eventId,
           runId: event.runId,

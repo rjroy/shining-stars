@@ -1,7 +1,7 @@
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
-import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
+import { isFeedbackWithinVisibleAge } from './gameplay-frame';
 import {
   defaultDifficulty,
   getDifficultyProfile,
@@ -20,9 +20,6 @@ export interface UIActions {
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
-  /** Clear only the UI's attempted-start marker after a canceled, unstarted load. */
-  resetPlaybackAttempt(): void;
-  setSceneFallback(message: string | null): void;
   setRendererStatus(available: boolean, message?: string): void;
   getGameplayLayout(): import('./gameplay-frame').GameplayLayout;
   showFatal(message: string): void;
@@ -107,7 +104,6 @@ export function createGameUI(
             </details>
           </div>
         </div>
-        <p class="scene-fallback" data-scene-fallback role="status" hidden></p>
         <div class="renderer-status" data-renderer-status role="status">
           <span data-renderer-message>3D playfield is not ready for this test build. Playback is locked.</span>
           <button class="text-button" type="button" data-action="renderer-retry" disabled>Retry 3D view</button>
@@ -329,9 +325,10 @@ export function createGameUI(
     const isJudgmentVisible =
       judgment !== null &&
       isPlaying &&
-      game.transportTime >= judgment.onsetTransportTime &&
-      game.transportTime - judgment.onsetTransportTime <
-        FEEDBACK_VISIBLE_SECONDS;
+      isFeedbackWithinVisibleAge(
+        game.transportTime,
+        judgment.onsetTransportTime,
+      );
     const difficultySelect = root.querySelector<HTMLSelectElement>(
       '[data-difficulty-select]',
     );
@@ -510,15 +507,6 @@ export function createGameUI(
     render,
     setBusy(message) {
       busyMessage = message;
-    },
-    resetPlaybackAttempt() {
-      // Lifecycle panels and controls are derived from the next controller snapshot.
-    },
-    setSceneFallback(message) {
-      const status = root.querySelector<HTMLElement>('[data-scene-fallback]');
-      if (status === null) return;
-      status.textContent = message ?? '';
-      status.hidden = message === null;
     },
     setRendererStatus(available, message) {
       rendererAvailable = available;

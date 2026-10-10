@@ -9,11 +9,14 @@ export interface TimingWindowGeometry {
   readonly perfectEnvelopeHeightPx: number;
 }
 
-export interface NoteProjectionOptions {
-  readonly difficulty: Difficulty;
-  /** Distance the note travels between the runway's start and hit line. */
-  readonly runwayTravelPx: number;
-}
+/** Runway coordinates are measured downward from the top of the board. */
+export const RUNWAY_APPROACH_START_TOP_PERCENT = 18;
+export const RUNWAY_HIT_LINE_TOP_PERCENT = 82;
+export const RUNWAY_HIT_LINE_BOTTOM_PERCENT = 100 - RUNWAY_HIT_LINE_TOP_PERCENT;
+export const RUNWAY_TRAVEL_PERCENT =
+  RUNWAY_HIT_LINE_TOP_PERCENT - RUNWAY_APPROACH_START_TOP_PERCENT;
+export const RUNWAY_TRAVEL_FRACTION = RUNWAY_TRAVEL_PERCENT / 100;
+export const RUNWAY_HIT_LINE_TOP_FRACTION = RUNWAY_HIT_LINE_TOP_PERCENT / 100;
 
 export interface ProjectedNote {
   readonly id: string;
@@ -22,7 +25,6 @@ export interface ProjectedNote {
   readonly progress: number;
   /** CSS offset that places progress 1 on the fixed hit line. */
   readonly bottomPercent: number;
-  readonly timingWindows?: TimingWindowGeometry;
 }
 
 /** Convert the active profile's symmetric timing windows into measured pixels. */
@@ -50,16 +52,7 @@ export function projectNotes(
   chartNotes: readonly ChartNote[],
   transportTime: number,
   visibleSeconds: number,
-  options?: NoteProjectionOptions,
 ): ProjectedNote[] {
-  const timingWindows =
-    options === undefined
-      ? undefined
-      : projectTimingWindowGeometry(
-          options.difficulty,
-          options.runwayTravelPx,
-          visibleSeconds,
-        );
   const stateById = new Map(states.map((state) => [state.id, state]));
 
   return chartNotes.flatMap((note) => {
@@ -79,8 +72,9 @@ export function projectNotes(
         id: note.id,
         lane: note.lane,
         progress,
-        bottomPercent: 18 + (1 - progress) * 64,
-        ...(timingWindows === undefined ? {} : { timingWindows }),
+        bottomPercent:
+          RUNWAY_HIT_LINE_BOTTOM_PERCENT +
+          (1 - progress) * RUNWAY_TRAVEL_PERCENT,
       },
     ];
   });

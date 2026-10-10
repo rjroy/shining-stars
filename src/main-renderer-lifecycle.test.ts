@@ -124,12 +124,10 @@ vi.mock('./ui', () => ({
         if (harness.inSceneUpdate) harness.uiRenderedDuringSceneUpdate = true;
       }),
       setBusy: vi.fn(),
-      setSceneFallback: vi.fn(),
       setRendererStatus: vi.fn((available: boolean) => {
         harness.events.push(`renderer-status:${available}`);
       }),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
-      resetPlaybackAttempt: vi.fn(),
       showFatal: vi.fn(),
       destroy: vi.fn(),
     };
@@ -418,6 +416,37 @@ describe('main renderer availability lifecycle', () => {
     await callAction('onRendererRetry');
     expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(true);
     expect(harness.controller?.start).not.toHaveBeenCalled();
+  });
+
+  it('publishes the canceled controller snapshot after a playing-frame failure', async () => {
+    await mountMain(['success']);
+    const playingSnapshot: AppSnapshot = {
+      ...makeSnapshot('playing', 'playing'),
+      feedback: {
+        eventId: 7,
+        runId: 2,
+        onsetTransportTime: 4.2,
+      },
+    };
+    harness.snapshot = playingSnapshot;
+    harness.ui?.render.mockClear();
+    harness.uiRenderedDuringSceneUpdate = false;
+    harness.failNextFrame = true;
+
+    harness.renderSnapshot?.(playingSnapshot);
+
+    const lastUiSnapshot = harness.ui?.render.mock.calls.at(-1)?.[0] as
+      AppSnapshot | undefined;
+    expect(lastUiSnapshot).toMatchObject({
+      audio: { status: 'paused' },
+      game: { status: 'playing' },
+      feedback: null,
+    });
+    expect(harness.ui?.render).toHaveBeenCalledTimes(2);
+    expect(harness.uiRenderedDuringSceneUpdate).toBe(false);
+    expect(harness.controller?.pauseWithoutPublishing).toHaveBeenCalledTimes(1);
+    expect(harness.controller?.pause).not.toHaveBeenCalled();
+    expect(harness.requestFrameCalls).toHaveLength(1);
   });
 
   it.each([
