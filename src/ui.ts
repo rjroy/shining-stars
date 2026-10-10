@@ -1,7 +1,7 @@
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import type { GameSnapshot } from './game';
-import { projectNotes, projectTimingWindowGeometry } from './note-projection';
+import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
 import {
   defaultDifficulty,
   getDifficultyProfile,
@@ -14,12 +14,17 @@ export interface UIActions {
   readonly resume: () => void;
   readonly restart: () => void;
   readonly selectDifficulty: (difficulty: Difficulty) => void;
+  readonly onRendererRetry?: () => void;
 }
 
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
+  /** Clear only the UI's attempted-start marker after a canceled, unstarted load. */
+  resetPlaybackAttempt(): void;
   setSceneFallback(message: string | null): void;
+  setRendererStatus(available: boolean, message?: string): void;
+  getGameplayLayout(): import('./gameplay-frame').GameplayLayout;
   showFatal(message: string): void;
   destroy(): void;
 }
@@ -35,8 +40,6 @@ function difficultyLabel(difficulty: Difficulty): string {
   return `${difficulty[0]?.toUpperCase()}${difficulty.slice(1)}`;
 }
 
-const VISIBLE_NOTE_SECONDS = 2.4;
-
 function accuracyLabel(accuracy: number | null): string {
   return accuracy === null ? 'No notes' : `${Math.round(accuracy)}%`;
 }
@@ -51,7 +54,11 @@ function phaseStatsLabel(stats: {
 
 function setText(root: ParentNode, selector: string, value: string): void {
   const element = root.querySelector<HTMLElement>(selector);
-  if (element !== null) element.textContent = value;
+  if (element !== null) setElementText(element, value);
+}
+
+function setElementText(element: HTMLElement, value: string): void {
+  if (element.textContent !== value) element.textContent = value;
 }
 
 export function createGameUI(
@@ -105,32 +112,32 @@ export function createGameUI(
           </div>
         </div>
         <p class="scene-fallback" data-scene-fallback role="status" hidden></p>
+        <div class="renderer-status" data-renderer-status role="status">
+          <span data-renderer-message>3D playfield is not ready for this test build. Playback is locked.</span>
+          <button class="text-button" type="button" data-action="renderer-retry" disabled>Retry 3D view</button>
+        </div>
+        <p class="renderer-status pending-playback-status" data-pending-status role="status" aria-live="polite" hidden>Finishing audio load…</p>
 
         <div class="stage-frame">
-          <div class="stage-topline">
+          <div class="stage-topline" aria-hidden="true">
             <span data-track-state>Onset-derived chart · play-test timing</span>
             <span class="stage-time" data-time>00:00</span>
           </div>
-          <div class="lane-board" aria-label="Four rhythm lanes">
-            <div class="lane" data-lane="0" aria-label="D lane"><span class="lane-key">D</span><div class="note-track"></div><span class="hit-pad"></span></div>
-            <div class="lane" data-lane="1" aria-label="F lane"><span class="lane-key">F</span><div class="note-track"></div><span class="hit-pad"></span></div>
-            <div class="lane" data-lane="2" aria-label="J lane"><span class="lane-key">J</span><div class="note-track"></div><span class="hit-pad"></span></div>
-            <div class="lane" data-lane="3" aria-label="K lane"><span class="lane-key">K</span><div class="note-track"></div><span class="hit-pad"></span></div>
-            <div class="hit-line" aria-hidden="true"><span>HIT</span></div>
+          <div class="lane-board" aria-hidden="true">
+            <div class="lane" data-lane="0"></div>
+            <div class="lane" data-lane="1"></div>
+            <div class="lane" data-lane="2"></div>
+            <div class="lane" data-lane="3"></div>
           </div>
-          <p class="timing-window-legend" data-timing-legend hidden></p>
-          <div class="feedback-row" aria-live="polite">
-            <span data-feedback>Notes meet the line here</span>
+          <p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>
+          <div class="feedback-row" aria-hidden="true">
+            <span data-feedback></span>
             <span data-countdown aria-hidden="true"></span>
           </div>
           <div class="performance-controls">
             <p>Press <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> as notes reach the line</p>
             <button class="text-button pause-button" type="button" data-action="pause" hidden>Pause <kbd>Esc</kbd></button>
           </div>
-        </div>
-
-        <div class="cityline" aria-hidden="true">
-          <span class="city-wire"></span><span class="city-buildings"></span><span class="city-wind"></span>
         </div>
 
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
@@ -165,29 +172,79 @@ export function createGameUI(
           <button class="primary-button" type="button" data-action="start">Retry loading <span aria-hidden="true">↗</span></button>
         </section>
       </section>
+      <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
       <footer class="experience-footer"><span>One lead performer. A city that joins in.</span><span>Original mixed recording · visual accompaniment only</span></footer>
     </main>`;
 
-  const laneTracks = [...root.querySelectorAll<HTMLElement>('.note-track')];
+  const playSurface = root.querySelector<HTMLElement>('.play-surface');
+  const stageFrame = root.querySelector<HTMLElement>('.stage-frame');
   const laneBoard = root.querySelector<HTMLElement>('.lane-board');
+  const stageHeader = root.querySelector<HTMLElement>('.stage-topline');
+  const timingLegend = root.querySelector<HTMLElement>('[data-timing-legend]');
+  const feedbackRow = root.querySelector<HTMLElement>('.feedback-row');
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
+  const actionButtons = [
+    ...root.querySelectorAll<HTMLButtonElement>('[data-action]'),
+  ];
   let busyMessage: string | null = null;
   let fatalMessage: string | null = null;
-  let hasAttemptedStart = false;
-  let lastFeedbackId = '';
-  let feedbackTime: number | null = null;
-  let runwayTravelPx = (laneBoard?.clientHeight ?? 0) * 0.64;
-  const measureRunway = () => {
-    runwayTravelPx = (laneBoard?.clientHeight ?? 0) * 0.64;
+  let rendererAvailable = false;
+  let rendererMessage =
+    '3D playfield is not ready for this test build. Playback is locked.';
+  let pendingPlaybackRequests = false;
+  let resultsRendered = false;
+  let gameplayLayout: import('./gameplay-frame').GameplayLayout = {
+    width: Math.max(1, playSurface?.clientWidth ?? 1),
+    height: Math.max(1, playSurface?.clientHeight ?? 1),
+    stage: { x: 0, y: 0, width: 1, height: 1 },
+    board: { x: 0, y: 0, width: 1, height: 1 },
+    header: { x: 0, y: 0, width: 1, height: 1 },
+    legend: { x: 0, y: 0, width: 1, height: 1 },
+    feedback: { x: 0, y: 0, width: 1, height: 1 },
   };
-  const runwayResizeObserver =
-    laneBoard !== null && typeof ResizeObserver === 'function'
-      ? new ResizeObserver(measureRunway)
+  const measureGameplayLayout = () => {
+    if (playSurface === null) return;
+    const hostRect = playSurface.getBoundingClientRect();
+    const contentLeft = hostRect.left + playSurface.clientLeft;
+    const contentTop = hostRect.top + playSurface.clientTop;
+    const readRect = (element: HTMLElement | null) => {
+      if (element === null) return { x: 0, y: 0, width: 0, height: 0 };
+      const rect = element.getBoundingClientRect();
+      return {
+        x: rect.left - contentLeft,
+        y: rect.top - contentTop,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    gameplayLayout = {
+      width: Math.max(1, playSurface.clientWidth),
+      height: Math.max(1, playSurface.clientHeight),
+      stage: readRect(stageFrame),
+      board: readRect(laneBoard),
+      header: readRect(stageHeader),
+      legend: readRect(timingLegend),
+      feedback: readRect(feedbackRow),
+    };
+  };
+  const layoutResizeObserver =
+    typeof ResizeObserver === 'function'
+      ? new ResizeObserver(measureGameplayLayout)
       : null;
-  if (laneBoard !== null) {
-    if (runwayResizeObserver !== null) runwayResizeObserver.observe(laneBoard);
-    else window.addEventListener('resize', measureRunway);
-  }
+  const layoutElements = [
+    playSurface,
+    stageFrame,
+    laneBoard,
+    stageHeader,
+    timingLegend,
+    feedbackRow,
+  ];
+  layoutElements.forEach((element) => {
+    if (element !== null) layoutResizeObserver?.observe(element);
+  });
+  measureGameplayLayout();
+  if (layoutResizeObserver === null && typeof window !== 'undefined')
+    window.addEventListener('resize', measureGameplayLayout);
 
   function onClick(event: Event): void {
     const target = event.target;
@@ -195,10 +252,16 @@ export function createGameUI(
     const button = target.closest<HTMLButtonElement>('[data-action]');
     if (button === null || button.disabled) return;
     const action = button.dataset.action;
+    if (
+      pendingPlaybackRequests &&
+      ['start', 'resume', 'restart'].includes(action ?? '')
+    )
+      return;
     if (action === 'start') actions.start();
     else if (action === 'pause') actions.pause();
     else if (action === 'resume') actions.resume();
     else if (action === 'restart') actions.restart();
+    else if (action === 'renderer-retry') actions.onRendererRetry?.();
   }
 
   function onChange(event: Event): void {
@@ -208,7 +271,7 @@ export function createGameUI(
       !target.matches('[data-difficulty-select]')
     )
       return;
-    if (target.disabled) return;
+    if (target.disabled || pendingPlaybackRequests) return;
     actions.selectDifficulty(target.value as Difficulty);
   }
 
@@ -217,7 +280,8 @@ export function createGameUI(
 
   function showPanel(name: string | null): void {
     for (const panel of panels) {
-      panel.hidden = panel.dataset.panel !== name;
+      const hidden = panel.dataset.panel !== name;
+      if (panel.hidden !== hidden) panel.hidden = hidden;
     }
   }
 
@@ -250,14 +314,27 @@ export function createGameUI(
 
   function render(snapshot: ControllerSnapshot, audioNow: number): void {
     const { audio, game } = snapshot;
+    pendingPlaybackRequests = snapshot.pendingPlaybackRequests;
     const isError = audio.status === 'error' || fatalMessage !== null;
     const isResults = game.status === 'results';
     const isPaused =
-      audio.status === 'paused' && hasAttemptedStart && !isError && !isResults;
-    const isReady =
-      (!hasAttemptedStart || busyMessage !== null) && !isError && !isResults;
+      audio.status === 'paused' &&
+      audio.loaded &&
+      !pendingPlaybackRequests &&
+      !isError &&
+      !isResults;
     const isStarting = audio.status === 'starting';
     const isPlaying = audio.status === 'playing' && game.status === 'playing';
+    const isReady =
+      !isPaused && !isPlaying && !isStarting && !isError && !isResults;
+    playSurface?.setAttribute('aria-busy', String(pendingPlaybackRequests));
+    const judgment = snapshot.feedback;
+    const isJudgmentVisible =
+      judgment !== null &&
+      isPlaying &&
+      game.transportTime >= judgment.onsetTransportTime &&
+      game.transportTime - judgment.onsetTransportTime <
+        FEEDBACK_VISIBLE_SECONDS;
     const difficultySelect = root.querySelector<HTMLSelectElement>(
       '[data-difficulty-select]',
     );
@@ -265,14 +342,17 @@ export function createGameUI(
     const activeDifficulty =
       isPlaying || isStarting || isResults ? game.difficulty : nextDifficulty;
     if (difficultySelect !== null) {
-      difficultySelect.value = nextDifficulty;
-      difficultySelect.disabled =
+      if (difficultySelect.value !== nextDifficulty)
+        difficultySelect.value = nextDifficulty;
+      const disabled =
+        pendingPlaybackRequests ||
         busyMessage !== null ||
         isStarting ||
         isPlaying ||
         isPaused ||
-        (audio.status === 'loading' && hasAttemptedStart) ||
         audio.status === 'error';
+      if (difficultySelect.disabled !== disabled)
+        difficultySelect.disabled = disabled;
     }
     setText(
       root,
@@ -291,33 +371,53 @@ export function createGameUI(
               ? 'ready'
               : null,
     );
-    for (const actionButton of root.querySelectorAll<HTMLButtonElement>(
-      '[data-action]',
-    )) {
-      actionButton.disabled = busyMessage !== null;
+    for (const actionButton of actionButtons) {
+      const action = actionButton.dataset.action;
+      const disabled =
+        action === 'pause'
+          ? false
+          : action === 'renderer-retry'
+            ? rendererAvailable || actions.onRendererRetry === undefined
+            : pendingPlaybackRequests ||
+              !rendererAvailable ||
+              busyMessage !== null;
+      if (actionButton.disabled !== disabled) actionButton.disabled = disabled;
     }
+    const rendererStatus = root.querySelector<HTMLElement>(
+      '[data-renderer-status]',
+    );
+    if (rendererStatus !== null && rendererStatus.hidden !== rendererAvailable)
+      rendererStatus.hidden = rendererAvailable;
+    const pendingStatus = root.querySelector<HTMLElement>(
+      '[data-pending-status]',
+    );
+    if (pendingStatus !== null) {
+      const hidden = !pendingPlaybackRequests;
+      if (pendingStatus.hidden !== hidden) pendingStatus.hidden = hidden;
+    }
+    setText(root, '[data-renderer-message]', rendererMessage);
     const busy = root.querySelector<HTMLElement>('[data-busy]');
     if (busy !== null) {
-      busy.hidden = busyMessage === null;
-      busy.textContent = busyMessage ?? '';
+      const hidden = busyMessage === null || pendingPlaybackRequests;
+      if (busy.hidden !== hidden) busy.hidden = hidden;
+      setElementText(busy, busyMessage ?? '');
     }
     const error = root.querySelector<HTMLElement>('[data-error]');
     if (error !== null) {
-      error.hidden = fatalMessage === null;
-      error.textContent = fatalMessage ?? '';
+      if (error.hidden !== (fatalMessage === null))
+        error.hidden = fatalMessage === null;
+      setElementText(error, fatalMessage ?? '');
     }
     setText(
       root,
       '[data-audio-error]',
-      busyMessage ??
-        fatalMessage ??
+      fatalMessage ??
         audio.error ??
+        busyMessage ??
         'Check the selected track and try again.',
     );
 
-    root
-      .querySelector('.play-surface')
-      ?.classList.toggle('is-twilight', game.phase === 'twilight');
+    playSurface?.classList.toggle('is-twilight', game.phase === 'twilight');
     setText(
       root,
       '[data-mode-label]',
@@ -341,8 +441,11 @@ export function createGameUI(
     const twilightResources = root.querySelector<HTMLElement>(
       '[data-twilight-resources]',
     );
-    if (twilightResources !== null)
-      twilightResources.hidden = game.phase !== 'twilight';
+    if (twilightResources !== null) {
+      const hidden = game.phase !== 'twilight';
+      if (twilightResources.hidden !== hidden)
+        twilightResources.hidden = hidden;
+    }
     setText(root, '[data-personal-strength]', String(game.personalStrength));
     setText(root, '[data-twilight-strength]', String(game.twilightStrength));
     setText(
@@ -355,101 +458,81 @@ export function createGameUI(
         .padStart(2, '0')}`,
     );
 
-    const feedback = root.querySelector<HTMLElement>('[data-feedback]');
-    if (feedback !== null) {
-      if (
-        snapshot.feedback !== null &&
-        snapshot.feedback.noteId !== lastFeedbackId
-      ) {
-        lastFeedbackId = snapshot.feedback.noteId;
-        feedbackTime = game.transportTime;
-        feedback.textContent =
-          snapshot.feedback.quality === 'perfect' ? 'Perfect' : 'Good';
-        feedback.dataset.quality = snapshot.feedback.quality;
-      } else if (
-        (snapshot.feedback === null ||
-          (feedbackTime !== null &&
-            game.transportTime > feedbackTime + 0.65)) &&
-        isPlaying
-      ) {
-        feedback.textContent = 'Notes meet the line here';
-        delete feedback.dataset.quality;
-      }
-    }
-
     const countdown = root.querySelector<HTMLElement>('[data-countdown]');
     if (countdown !== null) {
       const remaining =
         audio.scheduledWhen === null ? 2 : audio.scheduledWhen - audioNow;
-      countdown.textContent = isStarting
-        ? `Starting in ${Math.max(1, Math.ceil(remaining))}`
-        : '';
-      countdown.setAttribute('aria-hidden', String(!isStarting));
+      setElementText(
+        countdown,
+        isStarting ? `Starting in ${Math.max(1, Math.ceil(remaining))}` : '',
+      );
+      const ariaHidden = String(!isStarting);
+      if (countdown.getAttribute('aria-hidden') !== ariaHidden)
+        countdown.setAttribute('aria-hidden', ariaHidden);
     }
     const pauseButton = root.querySelector<HTMLElement>(
       '[data-action="pause"]',
     );
-    if (pauseButton !== null) pauseButton.hidden = !isPlaying && !isStarting;
+    if (pauseButton !== null) {
+      const hidden =
+        !pendingPlaybackRequests &&
+        !isPlaying &&
+        !isStarting &&
+        audio.status !== 'loading';
+      if (pauseButton.hidden !== hidden) pauseButton.hidden = hidden;
+    }
 
-    const showTimingWindows = isPlaying || isStarting;
     const timingLegend = root.querySelector<HTMLElement>(
       '[data-timing-legend]',
     );
     if (timingLegend !== null) {
-      timingLegend.hidden = !showTimingWindows;
       const profile = getDifficultyProfile(game.difficulty);
       const toMilliseconds = (seconds: number) => Math.round(seconds * 1000);
-      timingLegend.textContent =
+      setElementText(
+        timingLegend,
         `Good ±${toMilliseconds(profile.timing.goodWindowSeconds)} ms · ` +
-        `Perfect ±${toMilliseconds(profile.timing.perfectWindowSeconds)} ms` +
-        ' — centered on the hit line; notes stop there.';
+          `Perfect ±${toMilliseconds(profile.timing.perfectWindowSeconds)} ms` +
+          ' — centered on the hit line; notes stop there.',
+      );
     }
-    const timingWindows = projectTimingWindowGeometry(
-      game.difficulty,
-      runwayTravelPx,
-      VISIBLE_NOTE_SECONDS,
+    setText(
+      root,
+      '[data-gameplay-status]',
+      `${difficultyLabel(game.difficulty)} difficulty. ${timingLegend?.textContent ?? ''} ${!isJudgmentVisible || judgment === null ? '' : judgment.quality === 'perfect' ? 'Perfect.' : 'Good.'}`,
     );
-    const projected = showTimingWindows
-      ? projectNotes(
-          game.notes,
-          chart.notes,
-          game.transportTime,
-          VISIBLE_NOTE_SECONDS,
-          { difficulty: game.difficulty, runwayTravelPx },
-        )
-      : [];
-    const byLane = [0, 1, 2, 3].map((lane) =>
-      projected.filter((note) => note.lane === lane),
-    );
-    laneTracks.forEach((track, lane) => {
-      track.innerHTML = `${
-        showTimingWindows
-          ? `<span class="timing-target" aria-hidden="true"><span class="timing-target-good" data-timing-target style="--good-half-height:${timingWindows.goodHalfHeightPx.toFixed(2)}px;--good-band-height:${timingWindows.goodEnvelopeHeightPx.toFixed(2)}px"><span class="timing-target-perfect" style="--perfect-half-height:${timingWindows.perfectHalfHeightPx.toFixed(2)}px;--perfect-band-height:${timingWindows.perfectEnvelopeHeightPx.toFixed(2)}px"></span></span></span>`
-          : ''
-      }${
-        byLane[lane]
-          ?.map(
-            (note) =>
-              `<span class="note-envelope" data-timing-envelope data-note-id="${note.id}" style="--note-bottom:${note.bottomPercent.toFixed(2)}%;--good-envelope-height:${note.timingWindows?.goodEnvelopeHeightPx.toFixed(2) ?? '0'}px;--perfect-envelope-height:${note.timingWindows?.perfectEnvelopeHeightPx.toFixed(2) ?? '0'}px"><span class="note-envelope-perfect"></span></span><span class="note" data-note-id="${note.id}" style="--note-bottom:${note.bottomPercent.toFixed(2)}%"></span>`,
-          )
-          .join('') ?? ''
-      }`;
-    });
 
-    if (isResults) renderResults(game);
+    if (isResults) {
+      if (!resultsRendered) renderResults(game);
+      resultsRendered = true;
+    } else {
+      resultsRendered = false;
+    }
   }
 
   return {
     render,
     setBusy(message) {
-      hasAttemptedStart = message !== null || hasAttemptedStart;
       busyMessage = message;
+    },
+    resetPlaybackAttempt() {
+      // Lifecycle panels and controls are derived from the next controller snapshot.
     },
     setSceneFallback(message) {
       const status = root.querySelector<HTMLElement>('[data-scene-fallback]');
       if (status === null) return;
       status.textContent = message ?? '';
       status.hidden = message === null;
+    },
+    setRendererStatus(available, message) {
+      rendererAvailable = available;
+      rendererMessage =
+        message ??
+        (available
+          ? ''
+          : '3D playfield is not ready for this test build. Playback is locked.');
+    },
+    getGameplayLayout() {
+      return gameplayLayout;
     },
     showFatal(message) {
       fatalMessage = message;
@@ -459,9 +542,9 @@ export function createGameUI(
     destroy() {
       root.removeEventListener('click', onClick);
       root.removeEventListener('change', onChange);
-      runwayResizeObserver?.disconnect();
-      if (runwayResizeObserver === null)
-        window.removeEventListener('resize', measureRunway);
+      layoutResizeObserver?.disconnect();
+      if (layoutResizeObserver === null && typeof window !== 'undefined')
+        window.removeEventListener('resize', measureGameplayLayout);
       root.replaceChildren();
     },
   };

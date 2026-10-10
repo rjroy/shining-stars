@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brightvale Three.js scene probe</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #101827;
+        color: #f4f0df;
+        font: 14px sans-serif;
+      }
+      body {
+        padding: 20px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      #probe {
+        position: relative;
+        width: min(640px, calc(100vw - 40px));
+        height: min(480px, calc(100vh - 140px));
+        min-height: 360px;
+        overflow: hidden;
+        background: #152237;
+      }
+      .stage-frame {
+        position: absolute;
+        inset: 4%;
+      }
+      .stage-topline {
+        position: absolute;
+        left: 6%;
+        top: 6%;
+        width: 88%;
+        height: 24px;
+      }
+      .lane-board {
+        position: absolute;
+        left: 6%;
+        top: 17%;
+        width: 88%;
+        height: 62%;
+      }
+      .timing-window-legend {
+        position: absolute;
+        left: 6%;
+        top: 81%;
+        width: 88%;
+        height: 24px;
+      }
+      .feedback-row {
+        position: absolute;
+        left: 6%;
+        top: 89%;
+        width: 88%;
+        height: 25px;
+      }
+      #probe-status {
+        margin-top: 10px;
+        color: #b9cbd4;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Controlled gameplay scene probe (no audio)</h1>
+    <div id="probe" aria-hidden="true">
+      <div class="stage-frame"></div>
+      <div class="stage-topline"></div>
+      <div class="lane-board"></div>
+      <div class="timing-window-legend"></div>
+      <div class="feedback-row"></div>
+    </div>
+    <p id="probe-status" data-result="running">
+      Creating a WebGL scene with a fixed test frame…
+    </p>
+    <script type="module">
+      import * as THREE from 'three';
+      import { createBrightvaleScene } from '/src/scene.ts';
+      import { projectTimingWindowGeometry } from '/src/note-projection.ts';
+
+      const host = document.querySelector('#probe');
+      const box = (selector) => {
+        const rect = document.querySelector(selector).getBoundingClientRect();
+        const hostRect = host.getBoundingClientRect();
+        return {
+          x: rect.left - hostRect.left,
+          y: rect.top - hostRect.top,
+          width: rect.width,
+          height: rect.height,
+        };
+      };
+      const width = host.clientWidth;
+      const height = host.clientHeight;
+      const stage = box('.stage-frame');
+      const board = box('.lane-board');
+      const header = box('.stage-topline');
+      const legend = box('.timing-window-legend');
+      const feedbackRow = box('.feedback-row');
+      const difficulty =
+        new URLSearchParams(location.search).get('difficulty') === 'hard'
+          ? 'hard'
+          : 'normal';
+      const goodWindows = projectTimingWindowGeometry(
+        difficulty,
+        board.height * 0.64,
+        2.4,
+      );
+      const lanes = [0, 1, 2, 3].map((index) => ({
+        index,
+        x: board.x + (index * board.width) / 4,
+        width: board.width / 4,
+      }));
+      const sceneState = {
+        phase: 'audience',
+        cityIntensity: 0.5,
+        cityBrightness: 0.61,
+        transitionProgress: 0,
+        motion: {
+          powerLinePulse: false,
+          buildingPulse: false,
+          windTravel: false,
+          cameraPush: 0,
+        },
+        playerDefiant: true,
+        twilightConsumed: false,
+      };
+      const gameplay = {
+        layout: {
+          width,
+          height,
+          stage,
+          board,
+          header,
+          legend,
+          feedback: feedbackRow,
+        },
+        transportTime: 12.2,
+        difficulty,
+        playing: true,
+        reducedMotion: false,
+        lanes,
+        notes: [
+          {
+            id: 'probe-0',
+            lane: 0,
+            progress: 0.18,
+            bottomPercent: 70.48,
+            timingWindows: goodWindows,
+          },
+          {
+            id: 'probe-1',
+            lane: 1,
+            progress: 0.43,
+            bottomPercent: 54.48,
+            timingWindows: goodWindows,
+          },
+          {
+            id: 'probe-2',
+            lane: 2,
+            progress: 0.69,
+            bottomPercent: 37.84,
+            timingWindows: goodWindows,
+          },
+          {
+            id: 'probe-3',
+            lane: 3,
+            progress: 0.92,
+            bottomPercent: 23.12,
+            timingWindows: goodWindows,
+          },
+        ],
+        noteCapacity: 4,
+        timingWindows: goodWindows,
+        feedback: {
+          eventId: 1,
+          runId: 1,
+          noteId: 'probe-2',
+          quality: 'perfect',
+          onsetTransportTime: 12,
+        },
+        timeLabel: '00:12',
+        legendLabel: `Good ±${difficulty === 'hard' ? 100 : 150} ms · Perfect ±${difficulty === 'hard' ? 50 : 75} ms`,
+        feedbackLabel: 'Perfect',
+        countdownLabel: '',
+      };
+      let renderer;
+      let renderedScene = null;
+      const rendererFactory = (parameters) => {
+        renderer = new THREE.WebGLRenderer(parameters);
+        const render = renderer.render.bind(renderer);
+        renderer.render = (sceneToRender, camera) => {
+          renderedScene = sceneToRender;
+          return render(sceneToRender, camera);
+        };
+        return renderer;
+      };
+      const scene = createBrightvaleScene(
+        host,
+        () => {
+          document.querySelector('#probe-status').textContent =
+            'WebGL scene initialization failed.';
+        },
+        rendererFactory,
+      );
+      if (scene === null) throw new Error('WebGL scene initialization failed');
+      scene.updateFrame({ city: sceneState, gameplay });
+      window.__brightvaleSceneProbe = { scene, gameplay, renderer };
+
+      const status = document.querySelector('#probe-status');
+      const mode = new URLSearchParams(location.search).get('mode');
+      if (mode !== 'text-texture-lifecycle') {
+        status.dataset.result = 'pass';
+        status.textContent =
+          'Rendered controlled frame: four lanes, notes, targets, and Perfect feedback. No audio/controller is initialized.';
+      } else {
+        const fail = [];
+        const disposeCounts = new WeakMap();
+        const observedTextures = new Set();
+        const failIf = (condition, message) => {
+          if (condition) fail.push(message);
+        };
+        const findText = (role) => {
+          let found = null;
+          renderedScene.traverse((object) => {
+            if (object.userData.gameplayRole === role) found = object;
+          });
+          if (!(found instanceof THREE.Mesh))
+            throw new Error(`Missing actual gameplay text mesh: ${role}`);
+          const material = Array.isArray(found.material)
+            ? found.material[0]
+            : found.material;
+          const texture = material?.map;
+          if (!(texture instanceof THREE.CanvasTexture))
+            throw new Error(`${role} is not using an actual CanvasTexture`);
+          if (!observedTextures.has(texture)) {
+            observedTextures.add(texture);
+            disposeCounts.set(texture, 0);
+            texture.addEventListener('dispose', () => {
+              disposeCounts.set(texture, (disposeCounts.get(texture) ?? 0) + 1);
+            });
+          }
+          return { mesh: found, texture, material };
+        };
+        const glErrors = [];
+        const checkGl = (label) => {
+          renderer.getContext().finish();
+          let code = renderer.getContext().getError();
+          while (code !== renderer.getContext().NO_ERROR) {
+            glErrors.push({ label, code });
+            code = renderer.getContext().getError();
+          }
+        };
+        const applyFeedback = (feedbackLabel, countdownLabel = '') => {
+          scene.updateFrame({
+            city: sceneState,
+            gameplay: { ...gameplay, feedbackLabel, countdownLabel },
+          });
+          checkGl(feedbackLabel || countdownLabel);
+        };
+        const sameDimensionsText = (height, widthLimit) => {
+          const probeCanvas = document.createElement('canvas');
+          const context = probeCanvas.getContext('2d');
+          context.font = `500 ${(14 * 128) / Math.max(1, height)}px Manrope, sans-serif`;
+          const widths = new Map();
+          for (const candidate of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+            const label = `Ready ${candidate}`;
+            const width = Math.max(
+              24,
+              Math.ceil(context.measureText(label).width + 16),
+            );
+            if (width > widthLimit) continue;
+            const previous = widths.get(width);
+            if (previous !== undefined) return [previous, label];
+            widths.set(width, label);
+          }
+          throw new Error('Could not find distinct same-size text labels');
+        };
+
+        try {
+          await document.fonts.ready;
+          checkGl('initial upload');
+          let previous = findText('feedback');
+          let previousDimensions = [
+            previous.texture.image.width,
+            previous.texture.image.height,
+          ];
+          const transitions = [];
+          const updateAndCheckTexture = (
+            feedbackLabel,
+            countdownLabel = '',
+          ) => {
+            applyFeedback(feedbackLabel, countdownLabel);
+            const next = findText('feedback');
+            const dimensions = [
+              next.texture.image.width,
+              next.texture.image.height,
+            ];
+            const changedDimensions =
+              dimensions[0] !== previousDimensions[0] ||
+              dimensions[1] !== previousDimensions[1];
+            transitions.push({
+              label: countdownLabel || feedbackLabel,
+              previousDimensions,
+              dimensions,
+              changedDimensions,
+              sameTexture: next.texture === previous.texture,
+              oldTextureDisposals: disposeCounts.get(previous.texture) ?? 0,
+              nextTextureVersion: next.texture.version,
+              planeAspect: next.mesh.scale.x / next.mesh.scale.y,
+              textureAspect:
+                next.texture.image.width / next.texture.image.height,
+            });
+            if (changedDimensions) {
+              failIf(
+                next.texture === previous.texture,
+                'CanvasTexture identity was reused after its source dimensions changed',
+              );
+              failIf(
+                (disposeCounts.get(previous.texture) ?? 0) !== 1,
+                'The replaced CanvasTexture was not disposed exactly once',
+              );
+            } else {
+              failIf(
+                next.texture !== previous.texture,
+                'Same-size text allocated a replacement CanvasTexture',
+              );
+            }
+            failIf(
+              Math.abs(
+                transitions.at(-1).planeAspect -
+                  transitions.at(-1).textureAspect,
+              ) > 0.0001,
+              'Text plane aspect does not match its uploaded texture',
+            );
+            previous = next;
+            previousDimensions = dimensions;
+          };
+
+          const longFeedback =
+            'A longer status message forces a larger text canvas after its first upload.';
+          updateAndCheckTexture(longFeedback);
+          updateAndCheckTexture('Notes meet the line here', 'Starting in 2');
+          updateAndCheckTexture(
+            'Notes meet the line here',
+            'Starting in 2 seconds, the next note is approaching',
+          );
+          updateAndCheckTexture('Notes meet the line here', 'Starting in 1');
+
+          const [sameSizeA, sameSizeB] = sameDimensionsText(
+            gameplay.layout.feedback.height,
+            (gameplay.layout.feedback.width * 128) /
+              gameplay.layout.feedback.height -
+              16,
+          );
+          updateAndCheckTexture('Notes meet the line here', sameSizeA);
+          const unchangedMap = previous.texture;
+          const versionBeforeEdit = previous.texture.version;
+          updateAndCheckTexture('Notes meet the line here', sameSizeB);
+          failIf(
+            previous.texture !== unchangedMap,
+            'Distinct same-size text replaced the existing CanvasTexture',
+          );
+          failIf(
+            previous.texture.version <= versionBeforeEdit,
+            'Same-size changed content did not update its existing CanvasTexture',
+          );
+          const unchangedVersion = previous.texture.version;
+          updateAndCheckTexture('Notes meet the line here', sameSizeB);
+          failIf(
+            previous.texture.version !== unchangedVersion,
+            'Unchanged text unnecessarily re-uploaded its CanvasTexture',
+          );
+
+          const errors = glErrors.map(
+            ({ label, code }) => `${label}: GL error ${code}`,
+          );
+          fail.push(...errors);
+          const activeTexture = previous.texture;
+          scene.destroy();
+          failIf(
+            (disposeCounts.get(activeTexture) ?? 0) !== 1,
+            'The active CanvasTexture was not disposed exactly once at scene teardown',
+          );
+          for (const texture of observedTextures) {
+            failIf(
+              (disposeCounts.get(texture) ?? 0) > 1,
+              'A CanvasTexture was disposed more than once',
+            );
+          }
+
+          window.__brightvaleTextTextureProbe = { transitions, glErrors, fail };
+          status.dataset.result = fail.length === 0 ? 'pass' : 'fail';
+          status.textContent =
+            fail.length === 0
+              ? 'PASS: CanvasTexture replacements, text updates, and teardown have no WebGL errors.'
+              : `FAIL: ${fail.join(' | ')}`;
+        } catch (error) {
+          scene.destroy();
+          window.__brightvaleTextTextureProbe = {
+            fail: [error instanceof Error ? error.message : String(error)],
+            glErrors,
+          };
+          status.dataset.result = 'fail';
+          status.textContent = `FAIL: ${window.__brightvaleTextTextureProbe.fail.join(' | ')}`;
+        }
+      }
+    </script>
+  </body>
+</html>

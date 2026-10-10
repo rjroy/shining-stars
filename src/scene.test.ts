@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createBrightvaleScene, type SceneRenderer } from './scene';
+import { type GameplayFrame, type GameplayLayout } from './gameplay-frame';
+import { projectTimingWindowGeometry } from './note-projection';
 import type { SceneStateProjection } from './scene-state';
 
 const state: SceneStateProjection = {
@@ -17,6 +19,42 @@ const state: SceneStateProjection = {
   playerDefiant: true,
   twilightConsumed: false,
 };
+
+const gameplayLayout: GameplayLayout = {
+  width: 640,
+  height: 480,
+  stage: { x: 20, y: 30, width: 600, height: 400 },
+  board: { x: 80, y: 80, width: 480, height: 240 },
+  header: { x: 40, y: 40, width: 520, height: 24 },
+  legend: { x: 80, y: 340, width: 480, height: 30 },
+  feedback: { x: 80, y: 380, width: 480, height: 25 },
+};
+
+function makeGameplayFrame(
+  overrides: Partial<GameplayFrame> = {},
+): GameplayFrame {
+  return {
+    layout: gameplayLayout,
+    transportTime: 4.25,
+    difficulty: 'normal',
+    playing: true,
+    reducedMotion: false,
+    lanes: [0, 1, 2, 3].map((index) => ({
+      index: index as 0 | 1 | 2 | 3,
+      x: 80 + index * 120,
+      width: 120,
+    })),
+    notes: [],
+    noteCapacity: 0,
+    timingWindows: projectTimingWindowGeometry('normal', 153.6, 2.4),
+    feedback: null,
+    timeLabel: '00:04',
+    legendLabel: 'Good ±150 ms · Perfect ±75 ms',
+    feedbackLabel: 'Notes meet the line here',
+    countdownLabel: '',
+    ...overrides,
+  };
+}
 
 class TestCanvas extends EventTarget {
   className = '';
@@ -36,9 +74,26 @@ class TestCanvas extends EventTarget {
 let parentCanvas: TestCanvas | null = null;
 
 function makeHost(): HTMLElement {
+  const rect = (left: number, top: number, width: number, height: number) => ({
+    left,
+    top,
+    right: left + width,
+    bottom: top + height,
+    width,
+    height,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  });
+  const layout = {
+    '.stage-frame': { getBoundingClientRect: () => rect(20, 30, 600, 400) },
+    '.lane-board': { getBoundingClientRect: () => rect(80, 80, 480, 240) },
+  };
   return {
     clientWidth: 640,
     clientHeight: 480,
+    querySelector: (selector: string) =>
+      layout[selector as keyof typeof layout] ?? null,
     get firstChild() {
       return parentCanvas;
     },
@@ -76,6 +131,8 @@ interface RendererControls {
   renderedScene: THREE.Scene | null;
   readonly disposalOrder: string[];
   rendererDisposeCount: number;
+  readonly calls: Array<readonly [string, ...number[]]>;
+  readonly renderedCameras: THREE.Camera[];
 }
 
 function makeRenderer(): RendererControls {
@@ -87,11 +144,14 @@ function makeRenderer(): RendererControls {
     renderedScene: null,
     disposalOrder: [],
     rendererDisposeCount: 0,
+    calls: [],
+    renderedCameras: [],
     renderer: null as unknown as SceneRenderer,
   };
   controls.renderer = {
     domElement: canvas as unknown as HTMLCanvasElement,
     outputColorSpace: THREE.SRGBColorSpace,
+    autoClear: true,
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1,
     setClearColor: vi.fn(),
@@ -99,10 +159,30 @@ function makeRenderer(): RendererControls {
     setSize: vi.fn(() => {
       if (controls.failInitialSize) throw new Error('size failed');
     }),
-    render(scene: THREE.Scene) {
+    setViewport: vi.fn((x: number, y: number, width: number, height: number) =>
+      controls.calls.push(['viewport', x, y, width, height]),
+    ),
+    setScissor: vi.fn((x: number, y: number, width: number, height: number) =>
+      controls.calls.push(['scissor', x, y, width, height]),
+    ),
+    setScissorTest: vi.fn((enabled: boolean) =>
+      controls.calls.push(['scissor-test', Number(enabled)]),
+    ),
+    clearDepth: vi.fn(() => controls.calls.push(['clear-depth'])),
+    clear: vi.fn((color = true, depth = true, stencil = true) =>
+      controls.calls.push([
+        'clear',
+        Number(color),
+        Number(depth),
+        Number(stencil),
+      ]),
+    ),
+    render: vi.fn((scene: THREE.Scene, camera: THREE.Camera) => {
+      controls.calls.push(['render']);
       controls.renderedScene = scene;
+      controls.renderedCameras.push(camera);
       if (controls.failRender) throw new Error('render failed');
-    },
+    }),
     dispose() {
       controls.rendererDisposeCount += 1;
       controls.disposalOrder.push('renderer');
@@ -127,6 +207,443 @@ afterEach(() => {
 });
 
 describe('Brightvale scene resource lifecycle', () => {
+  it('accepts a single compound city and gameplay frame on the shared scene', () => {
+    installSceneGlobals();
+    const controls = makeRenderer();
+    const scene = createBrightvaleScene(
+      makeHost(),
+      vi.fn(),
+      () => controls.renderer,
+    );
+    if (scene === null) throw new Error('scene renderer failed to initialize');
+    const updateFrame = Reflect.get(scene, 'updateFrame');
+
+    expect(
+      updateFrame,
+      'scene must expose the compound-frame entry point',
+    ).toEqual(expect.any(Function));
+    if (typeof updateFrame !== 'function') return;
+
+    const frame = {
+      city: state,
+      gameplay: makeGameplayFrame({
+        noteCapacity: 1,
+        notes: [
+          {
+            id: 'sample',
+            lane: 1,
+            progress: 0.5,
+            bottomPercent: 50,
+          },
+        ],
+      }),
+    };
+    updateFrame.call(scene, frame);
+
+    expect(controls.renderedScene).not.toBeNull();
+    expect(controls.renderer.render).toHaveBeenCalledTimes(3);
+    const gameplayRoles: string[] = [];
+    controls.renderedScene?.traverse((object) => {
+      const role = object.userData.gameplayRole;
+      if (typeof role === 'string') gameplayRoles.push(role);
+    });
+    expect(gameplayRoles).toEqual(
+      expect.arrayContaining([
+        'lane',
+        'note',
+        'hit-line',
+        'good-band',
+        'perfect-band',
+      ]),
+    );
+    scene?.destroy();
+  });
+
+  it('keeps orthographic gameplay faces visible and GPU text upright', () => {
+    installSceneGlobals();
+    const controls = makeRenderer();
+    const scene = createBrightvaleScene(
+      makeHost(),
+      vi.fn(),
+      () => controls.renderer,
+    );
+    if (scene === null) throw new Error('scene renderer failed to initialize');
+    const updateFrame = Reflect.get(scene, 'updateFrame');
+    expect(updateFrame, 'scene must accept projected gameplay frames').toEqual(
+      expect.any(Function),
+    );
+    if (typeof updateFrame !== 'function') return;
+
+    updateFrame.call(scene, {
+      city: state,
+      gameplay: makeGameplayFrame({
+        noteCapacity: 1,
+        notes: [
+          {
+            id: 'orientation-probe',
+            lane: 1,
+            progress: 0.5,
+            bottomPercent: 50,
+          },
+        ],
+      }),
+    });
+
+    const renderedScene = controls.renderedScene;
+    const stageCamera = controls.renderedCameras[1];
+    const boardCamera = controls.renderedCameras[2];
+    if (
+      renderedScene === null ||
+      stageCamera === undefined ||
+      boardCamera === undefined
+    ) {
+      throw new Error('city and orthographic gameplay passes must render');
+    }
+    renderedScene.updateMatrixWorld(true);
+    stageCamera.updateMatrixWorld(true);
+    boardCamera.updateMatrixWorld(true);
+
+    const gameplayMeshes: THREE.Mesh[] = [];
+    const roleObjects = new Map<string, THREE.Mesh[]>();
+    const cityMaterials: THREE.Material[] = [];
+    renderedScene.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const role = object.userData.gameplayRole;
+      if (typeof role === 'string') {
+        gameplayMeshes.push(object);
+        const roleList = roleObjects.get(role) ?? [];
+        roleList.push(object);
+        roleObjects.set(role, roleList);
+      } else {
+        cityMaterials.push(
+          ...(Array.isArray(object.material)
+            ? object.material
+            : [object.material]),
+        );
+      }
+    });
+
+    expect(gameplayMeshes.length).toBeGreaterThan(0);
+    const materialUsesFog = (material: THREE.Material) =>
+      (material as THREE.Material & { fog?: boolean }).fog;
+    expect
+      .soft(
+        gameplayMeshes
+          .flatMap((mesh) =>
+            Array.isArray(mesh.material) ? mesh.material : [mesh.material],
+          )
+          .every((material) => materialUsesFog(material) === false),
+        'playfield materials must not inherit city fog',
+      )
+      .toBe(true);
+    expect
+      .soft(
+        cityMaterials.some((material) => materialUsesFog(material) === true),
+      )
+      .toBe(true);
+
+    const lane = roleObjects.get('lane')?.[0];
+    if (lane === undefined) throw new Error('gameplay lane mesh is missing');
+    const laneScreenCenter = lane
+      .getWorldPosition(new THREE.Vector3())
+      .project(boardCamera);
+    expect((laneScreenCenter.x + 1) * gameplayLayout.width * 0.5).toBeCloseTo(
+      gameplayLayout.board.x + gameplayLayout.board.width / 8,
+    );
+    expect((1 - laneScreenCenter.y) * gameplayLayout.height * 0.5).toBeCloseTo(
+      gameplayLayout.board.y + gameplayLayout.board.height / 2,
+    );
+    const positions = lane.geometry.getAttribute('position');
+    const indices = lane.geometry.getIndex();
+    if (indices === null) throw new Error('lane mesh must have indexed faces');
+    const triangle = [indices.getX(0), indices.getX(1), indices.getX(2)].map(
+      (index) =>
+        new THREE.Vector3(
+          positions.getX(index),
+          positions.getY(index),
+          positions.getZ(index),
+        )
+          .applyMatrix4(lane.matrixWorld)
+          .project(boardCamera),
+    );
+    const [a, b, c] = triangle;
+    if (a === undefined || b === undefined || c === undefined)
+      throw new Error('lane triangle projection failed');
+    const signedArea = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    expect
+      .soft(
+        signedArea,
+        'front-facing lane triangles must remain counter-clockwise after projection',
+      )
+      .toBeGreaterThan(0);
+
+    const label = roleObjects.get('stage-label')?.[0];
+    if (label === undefined) throw new Error('stage text mesh is missing');
+    const textPositions = label.geometry.getAttribute('position');
+    const textUvs = label.geometry.getAttribute('uv');
+    const highV = new THREE.Vector3();
+    const lowV = new THREE.Vector3();
+    for (let index = 0; index < textUvs.count; index += 1) {
+      const v = textUvs.getY(index);
+      const point = new THREE.Vector3(
+        textPositions.getX(index),
+        textPositions.getY(index),
+        textPositions.getZ(index),
+      )
+        .applyMatrix4(label.matrixWorld)
+        .project(stageCamera);
+      if (v > 0.5) highV.copy(point);
+      else lowV.copy(point);
+    }
+    const screenY = (point: THREE.Vector3) => (1 - point.y) / 2;
+    expect
+      .soft(
+        screenY(highV),
+        'the top of each glyph texture must project above its bottom',
+      )
+      .toBeLessThan(screenY(lowV));
+    scene.destroy();
+  });
+
+  it('pools dense notes and expires judgment feedback on the transport clock', () => {
+    installSceneGlobals();
+    const controls = makeRenderer();
+    const scene = createBrightvaleScene(
+      makeHost(),
+      vi.fn(),
+      () => controls.renderer,
+    );
+    if (scene === null) throw new Error('scene renderer failed to initialize');
+    const updateFrame = Reflect.get(scene, 'updateFrame');
+    expect(updateFrame, 'scene must accept projected gameplay frames').toEqual(
+      expect.any(Function),
+    );
+    if (typeof updateFrame !== 'function') return;
+
+    const notes = Array.from({ length: 120 }, (_, index) => ({
+      id: `dense-${index}`,
+      lane: index % 4,
+      progress: index / 120,
+      bottomPercent: 82 - (index / 120) * 64,
+    }));
+    const frame = {
+      city: state,
+      gameplay: makeGameplayFrame({
+        transportTime: 10,
+        difficulty: 'normal',
+        notes,
+        noteCapacity: notes.length,
+        feedback: {
+          eventId: 1,
+          runId: 2,
+          noteId: 'dense-119',
+          quality: 'perfect',
+          onsetTransportTime: 10,
+        },
+      }),
+    };
+    updateFrame.call(scene, frame);
+    const noteObjects: THREE.Object3D[] = [];
+    const feedbackObjects: THREE.Object3D[] = [];
+    controls.renderedScene?.traverse((object) => {
+      if (object.userData.gameplayRole === 'note') noteObjects.push(object);
+      if (object.userData.gameplayRole === 'feedback')
+        feedbackObjects.push(object);
+    });
+    expect(noteObjects.length).toBeGreaterThanOrEqual(notes.length);
+    expect(feedbackObjects.length).toBeGreaterThan(0);
+    expect(feedbackObjects.some((object) => object.visible)).toBe(true);
+    const identities = new Set(noteObjects);
+
+    updateFrame.call(scene, {
+      ...frame,
+      gameplay: { ...frame.gameplay, transportTime: 10.64 },
+    });
+    const notesAfterUpdate: THREE.Object3D[] = [];
+    controls.renderedScene?.traverse((object) => {
+      if (object.userData.gameplayRole === 'note')
+        notesAfterUpdate.push(object);
+    });
+    expect(new Set(notesAfterUpdate)).toEqual(identities);
+    controls.renderedScene?.traverse((object) => {
+      if (object.userData.gameplayRole === 'feedback') {
+        expect(object.visible).toBe(true);
+      }
+    });
+
+    updateFrame.call(scene, {
+      ...frame,
+      gameplay: { ...frame.gameplay, transportTime: 10.66 },
+    });
+    const feedbackAfterExpiry: THREE.Object3D[] = [];
+    controls.renderedScene?.traverse((object) => {
+      if (object.userData.gameplayRole === 'feedback')
+        feedbackAfterExpiry.push(object);
+    });
+    expect(
+      feedbackAfterExpiry.every(
+        (object) => object.userData.activeJudgement === false,
+      ),
+    ).toBe(true);
+    scene?.destroy();
+  });
+
+  it('disposes shared gameplay meshes, geometry, and materials once', () => {
+    installSceneGlobals();
+    const controls = makeRenderer();
+    const scene = createBrightvaleScene(
+      makeHost(),
+      vi.fn(),
+      () => controls.renderer,
+    );
+    if (scene === null) throw new Error('scene renderer failed to initialize');
+    const updateFrame = Reflect.get(scene, 'updateFrame');
+    expect(updateFrame, 'scene must build GPU gameplay resources').toEqual(
+      expect.any(Function),
+    );
+    if (typeof updateFrame !== 'function') return;
+    updateFrame.call(scene, {
+      city: state,
+      gameplay: makeGameplayFrame({
+        noteCapacity: 2,
+        notes: [
+          { id: 'one', lane: 0, progress: 0.4, bottomPercent: 56 },
+          { id: 'two', lane: 3, progress: 0.8, bottomPercent: 31 },
+        ],
+      }),
+    });
+
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    controls.renderedScene?.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        geometries.add(object.geometry);
+        for (const material of Array.isArray(object.material)
+          ? object.material
+          : [object.material]) {
+          materials.add(material);
+        }
+      }
+    });
+    const geometryDisposals = new Map<THREE.BufferGeometry, number>();
+    const materialDisposals = new Map<THREE.Material, number>();
+    geometries.forEach((geometry) =>
+      geometry.addEventListener('dispose', () =>
+        geometryDisposals.set(
+          geometry,
+          (geometryDisposals.get(geometry) ?? 0) + 1,
+        ),
+      ),
+    );
+    materials.forEach((material) =>
+      material.addEventListener('dispose', () =>
+        materialDisposals.set(
+          material,
+          (materialDisposals.get(material) ?? 0) + 1,
+        ),
+      ),
+    );
+
+    scene.destroy();
+    scene.destroy();
+    expect([...geometryDisposals.values()]).toHaveLength(geometries.size);
+    expect([...geometryDisposals.values()].every((count) => count === 1)).toBe(
+      true,
+    );
+    expect([...materialDisposals.values()]).toHaveLength(materials.size);
+    expect([...materialDisposals.values()].every((count) => count === 1)).toBe(
+      true,
+    );
+    expect(controls.rendererDisposeCount).toBe(1);
+  });
+
+  it('renders city, stage, and nested gameplay in ordered scissor passes and restores state', () => {
+    installSceneGlobals();
+    const controls = makeRenderer();
+    vi.stubGlobal('window', {
+      devicePixelRatio: 1.5,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    const scene = createBrightvaleScene(
+      makeHost(),
+      vi.fn(),
+      () => controls.renderer,
+    );
+    if (scene === null) throw new Error('scene renderer failed to initialize');
+    const updateFrame = Reflect.get(scene, 'updateFrame');
+    expect(updateFrame, 'compound frame rendering is required').toEqual(
+      expect.any(Function),
+    );
+    if (typeof updateFrame !== 'function') return;
+    expect(controls.renderer.setPixelRatio).toHaveBeenCalledWith(1.5);
+    controls.calls.length = 0;
+
+    updateFrame.call(scene, {
+      city: state,
+      gameplay: makeGameplayFrame({
+        transportTime: 4.25,
+        difficulty: 'normal',
+        notes: [],
+        noteCapacity: 0,
+        feedback: null,
+      }),
+    });
+
+    const order = controls.calls.map(([name]) => name);
+    expect(order.filter((name) => name === 'render')).toHaveLength(3);
+    expect(controls.renderer.autoClear).toBe(false);
+    expect(order).toEqual([
+      'viewport',
+      'scissor',
+      'scissor-test',
+      'clear',
+      'render',
+      'viewport',
+      'scissor',
+      'scissor-test',
+      'clear-depth',
+      'render',
+      'viewport',
+      'scissor',
+      'clear-depth',
+      'render',
+      'scissor-test',
+      'viewport',
+      'scissor',
+    ]);
+    expect(controls.calls.filter(([name]) => name === 'scissor')).toEqual([
+      ['scissor', 0, 0, 640, 480],
+      ['scissor', 20, 50, 600, 400],
+      ['scissor', 80, 160, 480, 240],
+      ['scissor', 0, 0, 640, 480],
+    ]);
+    expect(controls.calls.filter(([name]) => name === 'viewport')).toEqual([
+      ['viewport', 0, 0, 640, 480],
+      ['viewport', 0, 0, 640, 480],
+      ['viewport', 0, 0, 640, 480],
+      ['viewport', 0, 0, 640, 480],
+    ]);
+    expect(controls.calls.filter(([name]) => name === 'clear')).toEqual([
+      ['clear', 1, 1, 1],
+    ]);
+    expect(controls.calls.filter(([name]) => name === 'scissor-test')).toEqual([
+      ['scissor-test', 0],
+      ['scissor-test', 1],
+      ['scissor-test', 0],
+    ]);
+    expect(
+      controls.calls.filter(([name]) => name === 'viewport').at(-1),
+    ).toEqual(['viewport', 0, 0, 640, 480]);
+    expect(controls.renderedCameras[0]).toBeInstanceOf(THREE.PerspectiveCamera);
+    expect(
+      controls.renderedCameras
+        .slice(1)
+        .every((camera) => camera instanceof THREE.OrthographicCamera),
+    ).toBe(true);
+    scene?.destroy();
+  });
+
   it.each(['destroy', 'context-loss'] as const)(
     'disposes both instanced meshes once before renderer release on %s',
     (cleanupMode) => {

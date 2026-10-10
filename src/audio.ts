@@ -38,6 +38,8 @@ export interface AudioTransportSnapshot {
   readonly duration: number;
   readonly scheduledWhen: number | null;
   readonly hasActiveSource: boolean;
+  /** True once the source buffer has decoded successfully and remains reusable. */
+  readonly loaded: boolean;
   readonly disposed: boolean;
   readonly error: string | null;
 }
@@ -187,6 +189,7 @@ export function createAudioTransport<
       duration: config.duration,
       scheduledWhen,
       hasActiveSource: activeSource !== null,
+      loaded: decodedBuffer !== null,
       disposed,
       error,
     };

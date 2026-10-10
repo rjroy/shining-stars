@@ -1,21 +1,33 @@
 import * as THREE from 'three';
+import { LOGICAL_PLAYFIELD_HEIGHT, type GameplayFrame } from './gameplay-frame';
 import type { SceneStateProjection } from './scene-state';
 
 export interface BrightvaleScene {
   /** Render from the authoritative game clock; this scene owns no animation loop. */
   update(state: SceneStateProjection, transportTime: number): void;
+  /** Render city and the complete gameplay surface in the shared context. */
+  updateFrame(frame: {
+    readonly city: SceneStateProjection;
+    readonly gameplay: GameplayFrame;
+  }): void;
   destroy(): void;
 }
 
 /** Small renderer surface so scene lifecycle can be tested without WebGL. */
 export interface SceneRenderer {
   readonly domElement: HTMLCanvasElement;
+  autoClear: boolean;
   outputColorSpace: THREE.WebGLRenderer['outputColorSpace'];
   toneMapping: THREE.ToneMapping;
   toneMappingExposure: number;
   setClearColor(color: THREE.ColorRepresentation, alpha?: number): void;
   setPixelRatio(value: number): void;
   setSize(width: number, height: number, updateStyle?: boolean): void;
+  setViewport(x: number, y: number, width: number, height: number): void;
+  setScissor(x: number, y: number, width: number, height: number): void;
+  setScissorTest(enabled: boolean): void;
+  clear(color?: boolean, depth?: boolean, stencil?: boolean): void;
+  clearDepth(): void;
   render(scene: THREE.Scene, camera: THREE.Camera): void;
   dispose(): void;
 }
@@ -24,6 +36,123 @@ export type SceneRendererFactory = (
   parameters: THREE.WebGLRendererParameters,
 ) => SceneRenderer;
 
+function createNoteShape(): THREE.Shape {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.5, -0.5);
+  shape.lineTo(0.25, -0.5);
+  shape.quadraticCurveTo(0.5, -0.5, 0.5, -0.25);
+  shape.lineTo(0.5, 0.25);
+  shape.quadraticCurveTo(0.5, 0.5, 0.25, 0.5);
+  shape.lineTo(-0.25, 0.5);
+  shape.quadraticCurveTo(-0.5, 0.5, -0.5, 0.25);
+  shape.lineTo(-0.5, -0.5);
+  return shape;
+}
+
+function createPlane(
+  parent: THREE.Group,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  role: string,
+): THREE.Mesh {
+  material.depthTest = false;
+  if (material instanceof THREE.MeshBasicMaterial) material.fog = false;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.layers.mask = parent.layers.mask;
+  mesh.userData.gameplayRole = role;
+  mesh.userData.pooled = true;
+  mesh.visible = false;
+  parent.add(mesh);
+  return mesh;
+}
+
+function placePlane(
+  mesh: THREE.Mesh,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  z: number,
+  screenHeight: number,
+): void {
+  mesh.position.set(x + width / 2, screenHeight - y - height / 2, z);
+  mesh.scale.set(width, height, 1);
+  mesh.renderOrder = z;
+  mesh.visible = width > 0 && height > 0;
+}
+
+function paintText(
+  layer: CanvasTextLayer,
+  value: string,
+  availableWidth: number,
+  displayedHeight: number,
+  resizeCanvas: (layer: CanvasTextLayer, width: number, height: number) => void,
+): number {
+  if (
+    layer.value === value &&
+    layer.renderedHeight === displayedHeight &&
+    layer.renderedWidth === availableWidth
+  )
+    return layer.renderedAspect;
+  const context = layer.context;
+  if (context === null) return layer.canvas.width / layer.canvas.height;
+  const height = layer.canvas.height;
+  let textureFontSize =
+    (Number(layer.mesh.userData.fontSize) * height) /
+    Math.max(1, displayedHeight);
+  context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
+  const sourceWidthLimit = Math.max(
+    1,
+    (availableWidth * height) / Math.max(1, displayedHeight) - 16,
+  );
+  let measuredWidth = context.measureText(value).width;
+  if (measuredWidth > sourceWidthLimit) {
+    textureFontSize *= sourceWidthLimit / measuredWidth;
+    context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
+    measuredWidth = context.measureText(value).width;
+  }
+  const width = Math.max(24, Math.ceil(measuredWidth + 16));
+  if (layer.canvas.width !== width || layer.canvas.height !== height) {
+    resizeCanvas(layer, width, height);
+  } else {
+    context.clearRect(0, 0, width, height);
+  }
+  const paintContext = layer.context;
+  if (paintContext === null) return layer.renderedAspect;
+  paintContext.font = `500 ${textureFontSize}px Manrope, sans-serif`;
+  paintContext.fillStyle = String(layer.mesh.userData.textColor);
+  paintContext.textAlign = layer.mesh.userData.rightAligned
+    ? 'right'
+    : layer.mesh.userData.centerAligned
+      ? 'center'
+      : 'left';
+  paintContext.textBaseline = 'middle';
+  paintContext.fillText(
+    value,
+    layer.mesh.userData.rightAligned
+      ? layer.canvas.width - 8
+      : layer.mesh.userData.centerAligned
+        ? layer.canvas.width / 2
+        : 8,
+    height / 2,
+    width - 16,
+  );
+  if (layer.texture !== null) layer.texture.needsUpdate = true;
+  layer.value = value;
+  layer.renderedHeight = displayedHeight;
+  layer.renderedWidth = availableWidth;
+  layer.renderedAspect = width / height;
+  return layer.renderedAspect;
+}
+
+function createTextTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
 interface BuildingInstance {
   readonly x: number;
   readonly z: number;
@@ -31,6 +160,18 @@ interface BuildingInstance {
   readonly height: number;
   readonly depth: number;
   readonly phase: number;
+}
+
+interface CanvasTextLayer {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D | null;
+  texture: THREE.CanvasTexture | null;
+  readonly material: THREE.MeshBasicMaterial;
+  readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  value: string;
+  renderedHeight: number;
+  renderedWidth: number;
+  renderedAspect: number;
 }
 
 const BUILDINGS: readonly BuildingInstance[] = [
@@ -55,6 +196,7 @@ export function createBrightvaleScene(
 ): BrightvaleScene | null {
   const geometries = new Set<THREE.BufferGeometry>();
   const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
   const instancedMeshes = new Set<THREE.InstancedMesh>();
   let renderer: SceneRenderer;
   let canvas: HTMLCanvasElement;
@@ -79,6 +221,10 @@ export function createBrightvaleScene(
   let resizeListener: (() => void) | null = null;
   let lastState: SceneStateProjection | null = null;
   let lastTransportTime = 0;
+  let lastFrame: {
+    readonly city: SceneStateProjection;
+    readonly gameplay: GameplayFrame;
+  } | null = null;
 
   function cleanup(): void {
     if (cleaned) return;
@@ -98,6 +244,8 @@ export function createBrightvaleScene(
     geometries.clear();
     for (const material of materials) material.dispose();
     materials.clear();
+    for (const texture of textures) texture.dispose();
+    textures.clear();
     scene.clear();
     renderer.dispose();
   }
@@ -118,6 +266,7 @@ export function createBrightvaleScene(
     canvas.setAttribute('aria-hidden', 'true');
     host.insertBefore(canvas, host.firstChild);
     renderer.setClearColor(0x000000, 0);
+    renderer.autoClear = false;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -127,6 +276,7 @@ export function createBrightvaleScene(
     const cityscape = new THREE.Group();
     scene.add(cityscape);
     const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 80);
+    camera.layers.set(0);
     const baseCameraPosition = new THREE.Vector3(0, 6.7, 19);
     const cameraLookAt = new THREE.Vector3(0, 1.5, 0);
     camera.position.copy(baseCameraPosition);
@@ -457,6 +607,357 @@ export function createBrightvaleScene(
       scene.add(crowdHead);
     }
 
+    const stageCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 200);
+    stageCamera.layers.set(1);
+    stageCamera.position.set(0, 0, 100);
+    stageCamera.lookAt(0, 0, 0);
+    const boardCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 200);
+    boardCamera.layers.set(2);
+    boardCamera.position.set(0, 0, 100);
+    boardCamera.lookAt(0, 0, 0);
+    const stageLayer = new THREE.Group();
+    stageLayer.layers.set(1);
+    stageLayer.name = 'gameplay-stage';
+    const boardLayer = new THREE.Group();
+    boardLayer.layers.set(2);
+    boardLayer.name = 'gameplay-board';
+    scene.add(stageLayer, boardLayer);
+
+    const planeGeometry = ownGeometry(new THREE.PlaneGeometry(1, 1));
+    function makeTextLayer(
+      parent: THREE.Group,
+      role: string,
+      color: string,
+      fontSize: number,
+      rightAligned: boolean,
+    ): CanvasTextLayer {
+      const canvas =
+        typeof document === 'undefined'
+          ? ({ width: 512, height: 64 } as HTMLCanvasElement)
+          : document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 128;
+      const context =
+        typeof document === 'undefined' ? null : canvas.getContext('2d');
+      let texture: THREE.CanvasTexture | null = null;
+      if (context !== null) {
+        texture = createTextTexture(canvas);
+        textures.add(texture);
+      }
+      const material = ownMaterial(
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          map: texture,
+          transparent: true,
+          opacity: texture === null ? 0 : 1,
+          depthTest: false,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      );
+      material.fog = false;
+      const mesh = new THREE.Mesh(planeGeometry, material);
+      mesh.layers.mask = parent.layers.mask;
+      mesh.userData.gameplayRole = role;
+      mesh.userData.textColor = color;
+      mesh.userData.fontSize = fontSize;
+      mesh.userData.rightAligned = rightAligned;
+      mesh.userData.centerAligned = role === 'lane-key';
+      parent.add(mesh);
+      return {
+        canvas,
+        context,
+        texture,
+        material,
+        mesh,
+        value: '',
+        renderedHeight: 0,
+        renderedWidth: 0,
+        renderedAspect: canvas.width / canvas.height,
+      };
+    }
+    function resizeTextCanvas(
+      layer: CanvasTextLayer,
+      width: number,
+      height: number,
+    ): void {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('Unable to create text canvas');
+
+      const texture = createTextTexture(canvas);
+      const oldTexture = layer.texture;
+      layer.canvas = canvas;
+      layer.context = context;
+      layer.texture = texture;
+      layer.material.map = texture;
+      layer.material.opacity = 1;
+      textures.add(texture);
+      if (oldTexture !== null) {
+        textures.delete(oldTexture);
+        oldTexture.dispose();
+      }
+    }
+    const stageBackdropMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0x09101d,
+        transparent: true,
+        opacity: 0.64,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const boardBackdropMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0x080e1a,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const laneMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0x9ab9c5,
+        transparent: true,
+        opacity: 0.055,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const laneAltMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.025,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    laneAltMaterial.fog = false;
+    const separatorMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xd9e8ea,
+        transparent: true,
+        opacity: 0.14,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const goodMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffd475,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const goodEdgeMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffd475,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const perfectMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0x9de7d0,
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const perfectEdgeMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xc5f5e7,
+        transparent: true,
+        opacity: 0.98,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const hitMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffd475,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const padMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xf4f0df,
+        transparent: true,
+        opacity: 0.14,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const noteGoldMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffd475,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    noteGoldMaterial.fog = false;
+    const noteMintMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0x9de7d0,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    noteMintMaterial.fog = false;
+    const noteOutlineMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.76,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    noteOutlineMaterial.fog = false;
+    const noteGeometry = ownGeometry(
+      new THREE.ShapeGeometry(createNoteShape()),
+    );
+    const stageBackdrop = createPlane(
+      stageLayer,
+      planeGeometry,
+      stageBackdropMaterial,
+      'stage-backdrop',
+    );
+    const stageBorderMaterial = ownMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xccdee3,
+        transparent: true,
+        opacity: 0.2,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    const stageEdges = Array.from({ length: 4 }, () =>
+      createPlane(stageLayer, planeGeometry, stageBorderMaterial, 'stage-edge'),
+    );
+    const boardBackdrop = createPlane(
+      boardLayer,
+      planeGeometry,
+      boardBackdropMaterial,
+      'board-backdrop',
+    );
+    const laneMeshes: THREE.Mesh[] = [];
+    const laneDividers: THREE.Mesh[] = [];
+    const goodBands: THREE.Mesh[] = [];
+    const goodEdges: THREE.Mesh[] = [];
+    const perfectBands: THREE.Mesh[] = [];
+    const perfectEdges: THREE.Mesh[] = [];
+    const hitPads: THREE.Mesh[] = [];
+    const laneKeyLabels: CanvasTextLayer[] = [];
+    for (let lane = 0; lane < 4; lane += 1) {
+      laneMeshes.push(
+        createPlane(boardLayer, planeGeometry, laneMaterial, 'lane'),
+      );
+      laneDividers.push(
+        createPlane(
+          boardLayer,
+          planeGeometry,
+          separatorMaterial,
+          'lane-divider',
+        ),
+      );
+      goodBands.push(
+        createPlane(boardLayer, planeGeometry, goodMaterial, 'good-band'),
+      );
+      goodEdges.push(
+        createPlane(boardLayer, planeGeometry, goodEdgeMaterial, 'good-edge'),
+        createPlane(boardLayer, planeGeometry, goodEdgeMaterial, 'good-edge'),
+      );
+      perfectBands.push(
+        createPlane(boardLayer, planeGeometry, perfectMaterial, 'perfect-band'),
+      );
+      perfectEdges.push(
+        createPlane(
+          boardLayer,
+          planeGeometry,
+          perfectEdgeMaterial,
+          'perfect-edge',
+        ),
+        createPlane(
+          boardLayer,
+          planeGeometry,
+          perfectEdgeMaterial,
+          'perfect-edge',
+        ),
+      );
+      hitPads.push(
+        createPlane(boardLayer, planeGeometry, padMaterial, 'hit-pad'),
+      );
+      laneKeyLabels.push(
+        makeTextLayer(boardLayer, 'lane-key', '#e5e5d9', 12, false),
+      );
+    }
+    const hitLine = createPlane(
+      boardLayer,
+      planeGeometry,
+      hitMaterial,
+      'hit-line',
+    );
+    const hitLabel = makeTextLayer(
+      boardLayer,
+      'hit-label',
+      '#ffd475',
+      10,
+      true,
+    );
+    const feedbackBacker = createPlane(
+      stageLayer,
+      planeGeometry,
+      boardBackdropMaterial,
+      'feedback-backdrop',
+    );
+    const headerChartText = makeTextLayer(
+      stageLayer,
+      'stage-label',
+      '#bbc6d3',
+      12,
+      false,
+    );
+    const headerTimeText = makeTextLayer(
+      stageLayer,
+      'time-label',
+      '#f4f0df',
+      14,
+      true,
+    );
+    const legendText = makeTextLayer(
+      stageLayer,
+      'timing-legend',
+      '#d7e7df',
+      13,
+      false,
+    );
+    const feedbackText = makeTextLayer(
+      stageLayer,
+      'feedback',
+      '#bbc6d3',
+      14,
+      true,
+    );
+    const notePool: Array<{
+      readonly note: THREE.Mesh;
+      readonly outline: THREE.Mesh;
+      readonly good: THREE.Mesh;
+      readonly perfect: THREE.Mesh;
+    }> = [];
+
     observer =
       typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
     resizeListener = resize;
@@ -468,10 +969,24 @@ export function createBrightvaleScene(
         const height = Math.max(1, host.clientHeight);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        stageCamera.left = 0;
+        stageCamera.right = width;
+        stageCamera.top = height;
+        stageCamera.bottom = 0;
+        stageCamera.updateProjectionMatrix();
+        boardCamera.left = 0;
+        boardCamera.right = width;
+        boardCamera.top = height;
+        boardCamera.bottom = 0;
+        boardCamera.updateProjectionMatrix();
         cityscape.scale.x = Math.max(0.38, Math.min(1, camera.aspect / 1.25));
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         renderer.setSize(width, height, false);
-        if (lastState !== null) render(lastState, lastTransportTime);
+        if (lastFrame !== null) renderFrame(lastFrame);
+        else if (lastState !== null) {
+          render(lastState, lastTransportTime);
+          renderer.render(scene, camera);
+        }
       } catch {
         failScene();
       }
@@ -549,7 +1064,427 @@ export function createBrightvaleScene(
         baseCameraPosition.z - push,
       );
       camera.lookAt(cameraLookAt);
+    }
+
+    function placeText(
+      layer: CanvasTextLayer,
+      rect: {
+        readonly x: number;
+        readonly y: number;
+        readonly width: number;
+        readonly height: number;
+      },
+      value: string,
+      z: number,
+      screenHeight: number,
+    ): void {
+      const aspect = paintText(
+        layer,
+        value,
+        rect.width,
+        rect.height,
+        resizeTextCanvas,
+      );
+      const width = Math.min(rect.width, rect.height * aspect);
+      const textHeight = width / aspect;
+      const x = layer.mesh.userData.rightAligned
+        ? rect.x + rect.width - width
+        : layer.mesh.userData.centerAligned
+          ? rect.x + (rect.width - width) / 2
+          : rect.x;
+      placePlane(
+        layer.mesh,
+        x,
+        rect.y + (rect.height - textHeight) / 2,
+        width,
+        textHeight,
+        z,
+        screenHeight,
+      );
+    }
+
+    function ensureNotePool(capacity: number): void {
+      while (notePool.length < capacity) {
+        const note = new THREE.Mesh(noteGeometry, noteGoldMaterial);
+        note.layers.mask = boardLayer.layers.mask;
+        note.material.transparent = true;
+        note.material.depthWrite = false;
+        note.userData.gameplayRole = 'note';
+        note.userData.pooled = true;
+        note.visible = false;
+        boardLayer.add(note);
+        const outline = new THREE.Mesh(noteGeometry, noteOutlineMaterial);
+        outline.layers.mask = boardLayer.layers.mask;
+        outline.material.depthTest = false;
+        outline.material.depthWrite = false;
+        outline.userData.gameplayRole = 'note-outline';
+        outline.userData.pooled = true;
+        outline.visible = false;
+        boardLayer.add(outline);
+        const good = createPlane(
+          boardLayer,
+          planeGeometry,
+          goodMaterial,
+          'note-good-envelope',
+        );
+        const perfect = createPlane(
+          boardLayer,
+          planeGeometry,
+          perfectMaterial,
+          'note-perfect-envelope',
+        );
+        notePool.push({ note, outline, good, perfect });
+      }
+    }
+
+    function renderGameplay(frame: GameplayFrame): void {
+      const { layout } = frame;
+      const activeFeedback =
+        frame.feedback !== null &&
+        frame.playing &&
+        frame.transportTime >= frame.feedback.onsetTransportTime &&
+        frame.transportTime - frame.feedback.onsetTransportTime < 0.65
+          ? frame.feedback
+          : null;
+      const width = layout.width;
+      const height = layout.height;
+      const stage = layout.stage;
+      const board = layout.board;
+      const boardScale = board.height / LOGICAL_PLAYFIELD_HEIGHT;
+      const hitY = board.y + board.height * 0.82;
+
+      placePlane(
+        stageBackdrop,
+        stage.x,
+        stage.y,
+        stage.width,
+        stage.height,
+        0,
+        height,
+      );
+      placePlane(stageEdges[0]!, stage.x, stage.y, stage.width, 1, 1, height);
+      placePlane(
+        stageEdges[1]!,
+        stage.x,
+        stage.y + stage.height - 1,
+        stage.width,
+        1,
+        1,
+        height,
+      );
+      placePlane(stageEdges[2]!, stage.x, stage.y, 1, stage.height, 1, height);
+      placePlane(
+        stageEdges[3]!,
+        stage.x + stage.width - 1,
+        stage.y,
+        1,
+        stage.height,
+        1,
+        height,
+      );
+      placePlane(
+        boardBackdrop,
+        board.x,
+        board.y,
+        board.width,
+        board.height,
+        0,
+        height,
+      );
+      placePlane(
+        feedbackBacker,
+        layout.feedback.x,
+        layout.feedback.y,
+        layout.feedback.width,
+        layout.feedback.height,
+        1,
+        height,
+      );
+      feedbackBacker.visible = activeFeedback !== null;
+
+      placeText(
+        headerChartText,
+        {
+          x: layout.header.x,
+          y: layout.header.y,
+          width: layout.header.width * 0.76,
+          height: layout.header.height,
+        },
+        'Onset-derived chart · play-test timing',
+        3,
+        height,
+      );
+      placeText(
+        headerTimeText,
+        {
+          x: layout.header.x + layout.header.width * 0.78,
+          y: layout.header.y,
+          width: layout.header.width * 0.22,
+          height: layout.header.height,
+        },
+        frame.timeLabel,
+        3,
+        height,
+      );
+      placeText(legendText, layout.legend, frame.legendLabel, 3, height);
+      legendText.mesh.visible = frame.playing;
+      const countdownVisible = frame.countdownLabel.length > 0;
+      placeText(
+        feedbackText,
+        layout.feedback,
+        countdownVisible ? frame.countdownLabel : frame.feedbackLabel,
+        3,
+        height,
+      );
+      feedbackText.mesh.material.color.set(
+        activeFeedback?.quality === 'perfect'
+          ? 0xffd475
+          : activeFeedback?.quality === 'good'
+            ? 0x9de7d0
+            : 0xbbc6d3,
+      );
+      feedbackText.mesh.userData.activeJudgement = activeFeedback !== null;
+      feedbackText.mesh.userData.eventId = activeFeedback?.eventId ?? null;
+      feedbackText.mesh.userData.runId = activeFeedback?.runId ?? null;
+
+      for (let index = 0; index < 4; index += 1) {
+        const lane = frame.lanes[index];
+        if (lane === undefined) continue;
+        placePlane(
+          laneMeshes[index]!,
+          lane.x,
+          board.y,
+          lane.width,
+          board.height,
+          1,
+          height,
+        );
+        laneMeshes[index]!.material =
+          index % 2 === 0 ? laneMaterial : laneAltMaterial;
+        laneMeshes[index]!.renderOrder = 1;
+        if (index < 3) {
+          placePlane(
+            laneDividers[index]!,
+            lane.x + lane.width - 0.5 * boardScale,
+            board.y,
+            boardScale,
+            board.height,
+            2,
+            height,
+          );
+        } else {
+          laneDividers[index]!.visible = false;
+        }
+        const goodHeight = frame.timingWindows.goodEnvelopeHeightPx;
+        const goodY = hitY - frame.timingWindows.goodHalfHeightPx;
+        const goodX = lane.x + lane.width * 0.08;
+        const goodWidth = lane.width * 0.84;
+        placePlane(
+          goodBands[index]!,
+          goodX,
+          goodY,
+          goodWidth,
+          goodHeight,
+          3,
+          height,
+        );
+        placePlane(
+          goodEdges[index * 2]!,
+          goodX,
+          goodY,
+          goodWidth,
+          boardScale,
+          4,
+          height,
+        );
+        placePlane(
+          goodEdges[index * 2 + 1]!,
+          goodX,
+          goodY + goodHeight - boardScale,
+          goodWidth,
+          boardScale,
+          4,
+          height,
+        );
+        const perfectHeight = frame.timingWindows.perfectEnvelopeHeightPx;
+        const perfectY = hitY - frame.timingWindows.perfectHalfHeightPx;
+        const perfectX = lane.x + lane.width * 0.16;
+        const perfectWidth = lane.width * 0.68;
+        placePlane(
+          perfectBands[index]!,
+          perfectX,
+          perfectY,
+          perfectWidth,
+          perfectHeight,
+          5,
+          height,
+        );
+        placePlane(
+          perfectEdges[index * 2]!,
+          perfectX,
+          perfectY,
+          perfectWidth,
+          boardScale,
+          6,
+          height,
+        );
+        placePlane(
+          perfectEdges[index * 2 + 1]!,
+          perfectX,
+          perfectY + perfectHeight - boardScale,
+          perfectWidth,
+          boardScale,
+          6,
+          height,
+        );
+        placePlane(
+          hitPads[index]!,
+          lane.x + lane.width * 0.13,
+          hitY - 9 * boardScale,
+          lane.width * 0.74,
+          18 * boardScale,
+          7,
+          height,
+        );
+        const keyText = ['D', 'F', 'J', 'K'][index] ?? '';
+        placeText(
+          laneKeyLabels[index]!,
+          {
+            x: lane.x + lane.width * 0.3,
+            y: board.y + 8 * boardScale,
+            width: lane.width * 0.4,
+            height: 22 * boardScale,
+          },
+          keyText,
+          8,
+          height,
+        );
+      }
+      placePlane(
+        hitLine,
+        board.x,
+        hitY - boardScale,
+        board.width,
+        2 * boardScale,
+        8,
+        height,
+      );
+      placeText(
+        hitLabel,
+        {
+          x: board.x + board.width - 45 * boardScale,
+          y: hitY - 19 * boardScale,
+          width: 38 * boardScale,
+          height: 14 * boardScale,
+        },
+        'HIT',
+        9,
+        height,
+      );
+
+      ensureNotePool(frame.noteCapacity);
+      for (let index = 0; index < notePool.length; index += 1) {
+        const pool = notePool[index];
+        const projected = frame.notes[index];
+        if (pool === undefined || projected === undefined) {
+          if (pool !== undefined) {
+            pool.note.visible = false;
+            pool.outline.visible = false;
+            pool.good.visible = false;
+            pool.perfect.visible = false;
+          }
+          continue;
+        }
+        const lane = frame.lanes[projected.lane];
+        if (lane === undefined) continue;
+        const centerX = lane.x + lane.width / 2;
+        const centerY =
+          board.y + board.height * (1 - projected.bottomPercent / 100);
+        const noteWidth = Math.min(lane.width * 0.52, 52 * boardScale);
+        const noteHeight = noteWidth / 1.2;
+        pool.note.material =
+          projected.lane % 2 === 0 ? noteGoldMaterial : noteMintMaterial;
+        pool.note.userData.noteId = projected.id;
+        pool.note.scale.set(noteWidth, noteHeight, 1);
+        pool.note.position.set(centerX, height - centerY, 12);
+        pool.note.rotation.z = projected.lane % 2 === 0 ? -0.04 : 0.04;
+        pool.note.visible = frame.playing;
+        pool.outline.scale.set(
+          noteWidth + 2 * boardScale,
+          noteHeight + 2 * boardScale,
+          1,
+        );
+        pool.outline.position.set(centerX, height - centerY, 11);
+        pool.outline.rotation.z = pool.note.rotation.z;
+        pool.outline.renderOrder = 11;
+        pool.outline.visible = frame.playing;
+        pool.note.renderOrder = 12;
+        const windows = projected.timingWindows ?? frame.timingWindows;
+        const envelopeWidth = Math.min(lane.width * 0.78, 80 * boardScale);
+        placePlane(
+          pool.good,
+          centerX - envelopeWidth / 2,
+          centerY - windows.goodHalfHeightPx,
+          envelopeWidth,
+          windows.goodEnvelopeHeightPx,
+          9,
+          height,
+        );
+        placePlane(
+          pool.perfect,
+          centerX - envelopeWidth / 2,
+          centerY - windows.perfectHalfHeightPx,
+          envelopeWidth,
+          windows.perfectEnvelopeHeightPx,
+          10,
+          height,
+        );
+        pool.good.visible = frame.playing;
+        pool.perfect.visible = frame.playing;
+      }
+
+      if (countdownVisible) {
+        feedbackBacker.visible = true;
+      }
+
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissor(0, 0, width, height);
+      renderer.setScissorTest(false);
+      renderer.clear(true, true, true);
       renderer.render(scene, camera);
+
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissor(
+        stage.x,
+        height - stage.y - stage.height,
+        stage.width,
+        stage.height,
+      );
+      renderer.setScissorTest(true);
+      renderer.clearDepth();
+      renderer.render(scene, stageCamera);
+
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissor(
+        board.x,
+        height - board.y - board.height,
+        board.width,
+        board.height,
+      );
+      renderer.clearDepth();
+      renderer.render(scene, boardCamera);
+
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissor(0, 0, width, height);
+    }
+
+    function renderFrame(frame: {
+      readonly city: SceneStateProjection;
+      readonly gameplay: GameplayFrame;
+    }): void {
+      render(frame.city, frame.gameplay.transportTime);
+      renderGameplay(frame.gameplay);
     }
 
     onContextLost = (event: Event): void => {
@@ -570,6 +1505,20 @@ export function createBrightvaleScene(
         lastTransportTime = transportTime;
         try {
           render(state, transportTime);
+          renderer.setScissorTest(false);
+          renderer.clear(true, true, true);
+          renderer.render(scene, camera);
+        } catch {
+          failScene();
+        }
+      },
+      updateFrame(frame) {
+        if (cleaned) return;
+        lastFrame = frame;
+        lastState = frame.city;
+        lastTransportTime = frame.gameplay.transportTime;
+        try {
+          renderFrame(frame);
         } catch {
           failScene();
         }
