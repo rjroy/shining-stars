@@ -20,7 +20,6 @@ export interface UIActions {
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
-  setSceneFallback(message: string | null): void;
   setRendererStatus(available: boolean, message?: string): void;
   getGameplayLayout(): import('./gameplay-frame').GameplayLayout;
   showFatal(message: string): void;
@@ -105,7 +104,6 @@ export function createGameUI(
             </details>
           </div>
         </div>
-        <p class="scene-fallback" data-scene-fallback role="status" hidden></p>
         <div class="renderer-status" data-renderer-status role="status">
           <span data-renderer-message>3D playfield is not ready for this test build. Playback is locked.</span>
           <button class="text-button" type="button" data-action="renderer-retry" disabled>Retry 3D view</button>
@@ -509,12 +507,6 @@ export function createGameUI(
     render,
     setBusy(message) {
       busyMessage = message;
-    },
-    setSceneFallback(message) {
-      const status = root.querySelector<HTMLElement>('[data-scene-fallback]');
-      if (status === null) return;
-      status.textContent = message ?? '';
-      status.hidden = message === null;
     },
     setRendererStatus(available, message) {
       rendererAvailable = available;

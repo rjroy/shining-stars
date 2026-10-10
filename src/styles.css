@@ -448,17 +448,6 @@ button:disabled {
   opacity: 0.55;
 }
 
-.scene-fallback {
-  position: relative;
-  z-index: 2;
-  margin: -17px 0 12px;
-  padding: 8px 11px;
-  border: 1px solid rgb(255 212 117 / 35%);
-  background: #101b2d;
-  color: #f4f0df;
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
 .dialog-panel {
   position: absolute;
   z-index: 5;

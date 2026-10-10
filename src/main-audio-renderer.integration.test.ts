@@ -103,7 +103,6 @@ vi.mock('./ui', () => ({
       setBusy: vi.fn((message: string | null) => {
         harness.uiEvents.push(`busy:${message === null ? 'clear' : 'set'}`);
       }),
-      setSceneFallback: vi.fn(),
       setRendererStatus: vi.fn((available: boolean) => {
         harness.uiRendererAvailable = available;
         harness.uiEvents.push(`renderer:${available}`);

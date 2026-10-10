@@ -124,7 +124,6 @@ vi.mock('./ui', () => ({
         if (harness.inSceneUpdate) harness.uiRenderedDuringSceneUpdate = true;
       }),
       setBusy: vi.fn(),
-      setSceneFallback: vi.fn(),
       setRendererStatus: vi.fn((available: boolean) => {
         harness.events.push(`renderer-status:${available}`);
       }),
