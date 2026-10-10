@@ -166,7 +166,7 @@ def create_session(driver, url):
                         "--headless=new",
                         "--no-sandbox",
                         "--disable-dev-shm-usage",
-                        "--window-size=1440,1000",
+                        "--window-size=1024,600",
                     ],
                 },
             }
@@ -265,7 +265,7 @@ def browser_state(driver, session):
          "document.querySelector('[data-resource-value]').textContent,personalStrength:"
          "document.querySelector('[data-personal-strength]').textContent,twilightStrength:"
          "document.querySelector('[data-twilight-strength]').textContent,rulesText:"
-         "document.querySelector('[data-panel=ready]').textContent,resultTitle:"
+         "document.querySelector('[data-difficulty-rules]').textContent,resultTitle:"
          "document.querySelector('[data-result-title]').textContent,time:"
         "document.querySelector('[data-time]').textContent,panels:"
         "[...document.querySelectorAll('[data-panel]')].filter(p=>!p.hidden)"
@@ -317,14 +317,26 @@ def latest_start(driver, session):
     return state["audit"]["starts"][-1]
 
 
+def resume_offset_at_keydown(source_start, keydown_time):
+    source_position = max(0, keydown_time - source_start["values"][0])
+    return source_start["values"][1] + source_position
+
+
+def escape_keydown_event(events):
+    event = next((event for event in events if event["code"] == "Escape"), None)
+    if event is None:
+        raise AssertionError("Escape pause did not produce an audited native keydown")
+    return event
+
+
 def press_at_note(driver, session, start, note_time, key, repeat=False):
     when, offset = start["values"][0], start["values"][1]
     position_at_start = offset - SOURCE_START
     target = when + (note_time - position_at_start)
     if target <= audio_clock(driver, session):
         raise AssertionError(f"Key target {note_time}s already passed at {target:.3f}")
-    wait_for_clock(driver, session, target - 0.06)
     before = len(browser_state(driver, session)["audit"]["keys"])
+    wait_for_clock(driver, session, target - 0.06)
     send_key(driver, session, key, repeat=repeat)
     state = browser_state(driver, session)
     events = state["audit"]["keys"][before:]
@@ -353,18 +365,22 @@ def press_at_note(driver, session, start, note_time, key, repeat=False):
 
 def balance_from_ui(state):
     audience = re.search(
-        r"perfect hits earn (\d+) Renown, good hits earn (\d+), and misses earn (\d+)",
+        r"Audience Renown:\s*Perfect\s+(\d+),\s*Good\s+(\d+),\s*Miss\s+(\d+)",
         state["rulesText"],
         re.IGNORECASE,
     )
     twilight = re.search(
-        r"Misses cost (\d+) Personal Strength; good hits cost (\d+) and deal "
-        r"(\d+) damage; perfect hits cost (\d+) and deal (\d+) damage",
+        r"Twilight:\s*Miss costs (\d+);\s*Good costs (\d+) and deals "
+        r"(\d+)(?:\s+damage)?;\s*Perfect costs (\d+) and deals "
+        r"(\d+)(?:\s+damage)?",
         state["rulesText"],
         re.IGNORECASE,
     )
     if audience is None or twilight is None:
-        raise AssertionError(f"Could not read scoring rules from ready panel: {state['rulesText']}")
+        raise AssertionError(
+            "Could not read current Audience Renown/Twilight rules: "
+            f"{state['rulesText']}"
+        )
     miss_cost, good_cost, good_damage, perfect_cost, perfect_damage = map(
         int, twilight.groups()
     )
@@ -581,21 +597,21 @@ def strategic_run(driver, url):
             "document.activeElement?.blur();document.body.tabIndex=-1;document.body.focus()",
         )
 
+        keys_before_escape = len(browser_state(driver, session)["audit"]["keys"])
+        pre_pause_source = latest_start(driver, session)
         send_key(driver, session, "\ue00c")
+        escape_state = browser_state(driver, session)
+        escape_events = escape_state["audit"]["keys"][keys_before_escape:]
+        escape_keydown = escape_keydown_event(escape_events)
         wait_for(
             driver,
             session,
             "!document.querySelector('[data-panel=pause]').hidden",
             timeout=5,
         )
-        paused_at = execute(
-            driver,
-            session,
-            "return window.__brightvaleFlow.context.currentTime",
+        expected_resume_offset = resume_offset_at_keydown(
+            pre_pause_source, escape_keydown["time"]
         )
-        pre_pause_source = latest_start(driver, session)
-        source_position = max(0, paused_at - pre_pause_source["values"][0])
-        expected_resume_offset = pre_pause_source["values"][1] + source_position
         before_resume_starts = len(browser_state(driver, session)["audit"]["starts"])
         click(driver, session, '[data-panel="pause"] [data-action="resume"]')
         wait_for(
@@ -909,6 +925,7 @@ def strategic_run(driver, url):
             "escapeResumeOffset": {
                 "expected": expected_resume_offset,
                 "actual": resumed_after_escape["values"][1],
+                "escapeKeydownAudioTime": escape_keydown["time"],
             },
             "hiddenTabResumeOffset": {
                 "expected": expected_hidden_resume_offset,
@@ -976,12 +993,24 @@ def run(url, scenario="both"):
         results["input"] = "WebDriver keyboard actions; synthetic clock/audio not used"
         return results
     finally:
-        chromedriver.terminate()
-        try:
-            chromedriver.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            chromedriver.kill()
-            chromedriver.wait(timeout=5)
+        stop_owned_driver(chromedriver, port)
+
+
+def stop_owned_driver(process, port):
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        with socket.socket() as sock:
+            sock.settimeout(0.1)
+            if sock.connect_ex(("127.0.0.1", port)) != 0:
+                return
+        time.sleep(0.05)
+    raise RuntimeError(f"Owned chromedriver listener on port {port} remained open")
 
 
 def main():
