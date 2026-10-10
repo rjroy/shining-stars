@@ -83,8 +83,7 @@ function paintText(
   if (context === null) return layer.canvas.width / layer.canvas.height;
   const height = layer.canvas.height;
   let textureFontSize =
-    (Number(layer.mesh.userData.fontSize) * height) /
-    Math.max(1, displayedHeight);
+    (layer.fontSize * height) / Math.max(1, displayedHeight);
   context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
   const sourceWidthLimit = Math.max(
     1,
@@ -105,18 +104,14 @@ function paintText(
   const paintContext = layer.context;
   if (paintContext === null) return layer.renderedAspect;
   paintContext.font = `500 ${textureFontSize}px Manrope, sans-serif`;
-  paintContext.fillStyle = String(layer.mesh.userData.textColor);
-  paintContext.textAlign = layer.mesh.userData.rightAligned
-    ? 'right'
-    : layer.mesh.userData.centerAligned
-      ? 'center'
-      : 'left';
+  paintContext.fillStyle = layer.color;
+  paintContext.textAlign = layer.alignment;
   paintContext.textBaseline = 'middle';
   paintContext.fillText(
     value,
-    layer.mesh.userData.rightAligned
+    layer.alignment === 'right'
       ? layer.canvas.width - 8
-      : layer.mesh.userData.centerAligned
+      : layer.alignment === 'center'
         ? layer.canvas.width / 2
         : 8,
     height / 2,
@@ -153,6 +148,9 @@ interface CanvasTextLayer {
   texture: THREE.CanvasTexture | null;
   readonly material: THREE.MeshBasicMaterial;
   readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  readonly fontSize: number;
+  readonly color: string;
+  readonly alignment: 'left' | 'center' | 'right';
   value: string;
   renderedHeight: number;
   renderedWidth: number;
@@ -612,7 +610,7 @@ export function createBrightvaleScene(
       role: string,
       color: string,
       fontSize: number,
-      rightAligned: boolean,
+      alignment: CanvasTextLayer['alignment'],
     ): CanvasTextLayer {
       const canvas =
         typeof document === 'undefined'
@@ -642,10 +640,6 @@ export function createBrightvaleScene(
       const mesh = new THREE.Mesh(planeGeometry, material);
       mesh.layers.mask = parent.layers.mask;
       mesh.userData.gameplayRole = role;
-      mesh.userData.textColor = color;
-      mesh.userData.fontSize = fontSize;
-      mesh.userData.rightAligned = rightAligned;
-      mesh.userData.centerAligned = role === 'lane-key';
       parent.add(mesh);
       return {
         canvas,
@@ -653,6 +647,9 @@ export function createBrightvaleScene(
         texture,
         material,
         mesh,
+        fontSize,
+        color,
+        alignment,
         value: '',
         renderedHeight: 0,
         renderedWidth: 0,
@@ -853,7 +850,7 @@ export function createBrightvaleScene(
         createPlane(boardLayer, planeGeometry, padMaterial, 'hit-pad'),
       );
       laneKeyLabels.push(
-        makeTextLayer(boardLayer, 'lane-key', '#e5e5d9', 12, false),
+        makeTextLayer(boardLayer, 'lane-key', '#e5e5d9', 12, 'center'),
       );
     }
     const hitLine = createPlane(
@@ -867,7 +864,7 @@ export function createBrightvaleScene(
       'hit-label',
       '#ffd475',
       10,
-      true,
+      'right',
     );
     const feedbackBacker = createPlane(
       stageLayer,
@@ -880,28 +877,28 @@ export function createBrightvaleScene(
       'stage-label',
       '#bbc6d3',
       12,
-      false,
+      'left',
     );
     const headerTimeText = makeTextLayer(
       stageLayer,
       'time-label',
       '#f4f0df',
       14,
-      true,
+      'right',
     );
     const legendText = makeTextLayer(
       stageLayer,
       'timing-legend',
       '#d7e7df',
       13,
-      false,
+      'left',
     );
     const feedbackText = makeTextLayer(
       stageLayer,
       'feedback',
       '#bbc6d3',
       14,
-      true,
+      'right',
     );
     const noteWindowPool: Array<{
       readonly good: THREE.Mesh;
@@ -1033,11 +1030,12 @@ export function createBrightvaleScene(
       );
       const width = Math.min(rect.width, rect.height * aspect);
       const textHeight = width / aspect;
-      const x = layer.mesh.userData.rightAligned
-        ? rect.x + rect.width - width
-        : layer.mesh.userData.centerAligned
-          ? rect.x + (rect.width - width) / 2
-          : rect.x;
+      const x =
+        layer.alignment === 'right'
+          ? rect.x + rect.width - width
+          : layer.alignment === 'center'
+            ? rect.x + (rect.width - width) / 2
+            : rect.x;
       placePlane(
         layer.mesh,
         x,

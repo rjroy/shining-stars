@@ -416,9 +416,30 @@ describe('responsive logical playfield projection', () => {
   );
 
   it('preserves intrinsic canvas aspect on every projected GPU text plane', () => {
+    const paints: Array<{
+      value: string;
+      font: string;
+      fillStyle: string;
+      textAlign: string;
+      x: number;
+      y: number;
+      maxWidth: number;
+    }> = [];
     const textContext = {
       clearRect: vi.fn(),
-      fillText: vi.fn(),
+      fillText: vi.fn(
+        (value: string, x: number, y: number, maxWidth: number) => {
+          paints.push({
+            value,
+            font: textContext.font,
+            fillStyle: textContext.fillStyle,
+            textAlign: textContext.textAlign,
+            x,
+            y,
+            maxWidth,
+          });
+        },
+      ),
       measureText: vi.fn(() => ({ width: 80 })),
       fillStyle: '',
       font: '',
@@ -493,6 +514,7 @@ describe('responsive logical playfield projection', () => {
             'stage-label',
             'time-label',
             'timing-legend',
+            'feedback',
             'lane-key',
             'hit-label',
           ].includes(String(object.userData.gameplayRole))
@@ -514,6 +536,129 @@ describe('responsive logical playfield projection', () => {
           `${String(mesh.userData.gameplayRole)} must preserve canvas glyph proportions`,
         ).toBeCloseTo(texture.image.width / texture.image.height, 4);
       }
+
+      const paint = (value: string) => {
+        const result = paints.find((entry) => entry.value === value);
+        if (result === undefined) throw new Error(`missing paint for ${value}`);
+        return result;
+      };
+      const textMesh = (role: string): THREE.Mesh => {
+        const result = textMeshes.find(
+          (mesh) => mesh.userData.gameplayRole === role,
+        );
+        if (result === undefined) throw new Error(`missing ${role} mesh`);
+        return result;
+      };
+      const expectedPaints = [
+        {
+          value: 'Onset-derived chart · play-test timing',
+          role: 'stage-label',
+          fontSize: 12,
+          color: '#bbc6d3',
+          align: 'left',
+          paintX: 8,
+        },
+        {
+          value: frame.timeLabel,
+          role: 'time-label',
+          fontSize: 14,
+          color: '#f4f0df',
+          align: 'right',
+          paintX: 88,
+        },
+        {
+          value: frame.legendLabel,
+          role: 'timing-legend',
+          fontSize: 13,
+          color: '#d7e7df',
+          align: 'left',
+          paintX: 8,
+        },
+        {
+          value: 'Notes meet the line here',
+          role: 'feedback',
+          fontSize: 14,
+          color: '#bbc6d3',
+          align: 'right',
+          paintX: 88,
+        },
+        {
+          value: 'D',
+          role: 'lane-key',
+          fontSize: 12,
+          color: '#e5e5d9',
+          align: 'center',
+          paintX: 48,
+        },
+        {
+          value: 'HIT',
+          role: 'hit-label',
+          fontSize: 10,
+          color: '#ffd475',
+          align: 'right',
+          paintX: 88,
+        },
+      ];
+      for (const expected of expectedPaints) {
+        const actual = paint(expected.value);
+        expect(actual.fillStyle, expected.role).toBe(expected.color);
+        expect(actual.textAlign, expected.role).toBe(expected.align);
+        expect(actual.font, expected.role).toMatch(
+          /^500 [\d.]+px Manrope, sans-serif$/,
+        );
+        expect(Number.parseFloat(actual.font.split(' ')[1] ?? '')).toBeCloseTo(
+          (expected.fontSize * 128) /
+            ({
+              'stage-label': 24,
+              'time-label': 24,
+              'timing-legend': 30,
+              feedback: 25,
+              'lane-key': 22,
+              'hit-label': 14,
+            }[expected.role] ?? 1),
+          5,
+        );
+        expect(actual.x, expected.role).toBe(expected.paintX);
+        expect(actual.y, expected.role).toBe(64);
+        expect(actual.maxWidth, expected.role).toBe(80);
+      }
+
+      const horizontalEdges: Record<string, [number, number]> = {
+        'stage-label': [40, 435.2],
+        'time-label': [445.6, 560],
+        'timing-legend': [80, 560],
+        feedback: [80, 560],
+        'lane-key': [116, 164],
+        'hit-label': [515, 553],
+      };
+      for (const expected of expectedPaints) {
+        const mesh = textMesh(expected.role);
+        const [left, right] = horizontalEdges[expected.role]!;
+        if (expected.align === 'left') {
+          expect(mesh.position.x - mesh.scale.x / 2, expected.role).toBeCloseTo(
+            left,
+            5,
+          );
+        } else if (expected.align === 'right') {
+          expect(mesh.position.x + mesh.scale.x / 2, expected.role).toBeCloseTo(
+            right,
+            5,
+          );
+        } else {
+          expect(mesh.position.x, expected.role).toBeCloseTo(
+            (left + right) / 2,
+            5,
+          );
+        }
+      }
+
+      const paintCount = paints.length;
+      const measureCount = textContext.measureText.mock.calls.length;
+      const clearCount = textContext.clearRect.mock.calls.length;
+      scene.updateFrame({ city, gameplay: frame });
+      expect(paints).toHaveLength(paintCount);
+      expect(textContext.measureText).toHaveBeenCalledTimes(measureCount);
+      expect(textContext.clearRect).toHaveBeenCalledTimes(clearCount);
     } finally {
       scene.destroy();
     }
