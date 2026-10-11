@@ -7,6 +7,10 @@ description: Build or revise an editable Blender asset and reproducible Blender 
 
 Read [the shared asset workflow](../asset-workflow/SKILL.md) first. It owns the brief, approvals, iteration loop, provenance, export, and runtime acceptance. This skill owns construction and revision of the native Blender model. Skill-writing permission is not permission to generate concepts, models, renders, or runtime assets.
 
+## Modeling-agent execution
+
+When routed this work, `@modeler-sol` handles ordinary or moderately complex structured/environment models (including highways, endcaps, and framing); `@modeler-astra` handles significantly complex anatomy, characters, intricate hero architecture, and crowd/background-castle work, or takes over when Sol cannot meet the approved form quality. These are dedicated visual modeling agents, not generic code-fix agents: build and critique actual Blender geometry against the approved description/concept, use `blender-visualize` to render and inspect evidence, and report geometry issues honestly. The designer retains concept/art direction. Agent availability and skill access do not grant modeling or runtime permission; follow all approval gates and source/output boundaries. If the assigned agent/model is unavailable, report it and do not silently substitute Fixer or Luna.
+
 ## Gate and inputs
 
 - Start only when the shared workflow records explicit modeling authorization and names the approved brief/concept, output location, and scope. A mood image or broad project direction is not authorization.
