@@ -402,6 +402,11 @@ def arm_hand(side):
                 yy=(1 if back else -1)*d*math.sqrt(1-(.92*t)**2)
                 zz=z
                 if j==4:zz += (.001 if i%2 else -.006) - .011*max(0,t)
+                # The outer little-finger root must follow, not reverse over,
+                # the preceding .066 m palm station. Move only its shared
+                # front/back corner and derived edge midpoint: .060 -> .067.
+                # All other palm, finger, wrist and arm coordinates stay fixed.
+                if j==4 and i==8:zz=.067
                 panel[back,j,i]=world(t*w,yy,zz)
         for j in range(4):
             for i in range(8):m.face([panel[back,j,i],panel[back,j,i+1],panel[back,j+1,i+1],panel[back,j+1,i]],'Skin')

@@ -22,6 +22,35 @@ SOURCE_HASHES={
 def coordinates(obj):return [obj.matrix_world@v.co for v in obj.data.vertices]
 
 
+def triangle_crossings(coords, triangles):
+    """No defect-pair whitelist: raw disjoint triangles plus all face interiors.
+
+    Contract triangles 0.01% toward their centroids for the second query to
+    remove shared-edge/vertex contact, not to ignore adjacent overlapping faces.
+    The uncontracted query separately checks every nonadjacent triangle pair.
+    """
+    tree=BVHTree.FromPolygons(coords,triangles,all_triangles=True)
+    disjoint=[(a,b) for a,b in tree.overlap(tree) if a<b and not set(triangles[a])&set(triangles[b])]
+    interior=[]
+    for tri in triangles:
+        center=sum((coords[i] for i in tri),Vector())/3
+        interior.extend(center+(coords[i]-center)*.9999 for i in tri)
+    tree=BVHTree.FromPolygons(interior,[tuple(range(i,i+3)) for i in range(0,len(interior),3)],all_triangles=True)
+    overlap=[(a,b) for a,b in tree.overlap(tree) if a<b]
+    return {'nonadjacent':len(disjoint),'face_interiors':len(overlap)}
+
+
+def arm_intersections():
+    result={}
+    for side in (-1,1):
+        obj=bpy.data.objects['ArmHand.'+str(side)]
+        obj.data.calc_loop_triangles()
+        counts=triangle_crossings(coordinates(obj),[tuple(t.vertices) for t in obj.data.loop_triangles])
+        assert not any(counts.values()),('Arm/hand self-intersection',obj.name,counts)
+        result[obj.name]=counts
+    return result
+
+
 def bounds(objects):
     vv=[v for obj in objects for v in coordinates(obj)]
     return [[round(fn(v[a] for v in vv),7) for a in range(3)] for fn in (min,max)]
@@ -177,6 +206,7 @@ def inspect():
         payload['materials'].append([mat.name,list(mat.diffuse_color),list(node.inputs['Base Color'].default_value),node.inputs['Roughness'].default_value])
     continuity=shoulder_continuity()
     return {'blender':bpy.app.version_string,'parts':report,'bounds':bb,'height':height,'shoulder_continuity':continuity,
+            'arm_self_intersections':arm_intersections(),
             'vertices':sum(p['vertices'] for p in report.values()),'triangles':sum(p['triangles'] for p in report.values()),
             'mesh_objects':len(meshes),'used_materials':sorted({m for p in report.values() for m in p['materials']}),
             'fingerprint':hashlib.sha256(json.dumps(payload,separators=(',',':')).encode()).hexdigest()}
@@ -233,6 +263,23 @@ if __name__=='__main__':
             result['negative_second_deltoid']='PASS'
         else:raise AssertionError('Second deltoid accepted')
         damaged=arm.data;arm.data=original_mesh;bpy.data.meshes.remove(damaged);bpy.context.view_layer.update()
+        originals={}
+        for side in (-1,1):
+            obj=bpy.data.objects['ArmHand.'+str(side)]
+            originals[obj.name]=obj.data;obj.data=obj.data.copy()
+            selected=[v for v in obj.data.vertices if abs(abs(v.co.x)-.754)<1e-6 and abs(v.co.z-1.373)<1e-6]
+            assert len(selected)==3,'Palm repair landmarks'
+            for v in selected:v.co.x-=side*.007
+            obj.data.update()
+        bpy.context.view_layer.update()
+        try:arm_intersections()
+        except AssertionError as error:
+            assert 'Arm/hand self-intersection' in str(error),str(error)
+            result['negative_palm_reverse_fold']='PASS'
+        else:raise AssertionError('Original palm crossing accepted')
+        for name,original_mesh in originals.items():
+            obj=bpy.data.objects[name];damaged=obj.data;obj.data=original_mesh;bpy.data.meshes.remove(damaged)
+        bpy.context.view_layer.update()
         assert inspect()['fingerprint']==result['fingerprint'],'Negative-test restore'
     if args.check_references:
         for relative,expected in SOURCE_HASHES.items():
