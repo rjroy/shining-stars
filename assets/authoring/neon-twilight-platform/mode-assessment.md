@@ -4,9 +4,10 @@
 
 ## Evidence
 
-- Audience: [`mode-audience-preview.png`](mode-audience-preview.png)
-- Twilight: [`mode-twilight-preview.png`](mode-twilight-preview.png)
-- Both PNGs decoded at 1200 × 800 and were visually inspected. SHA-256: Audience `6e18148287d2cafde949aded257f63027096d52dca284fe89651b945598152e9`; Twilight `f7faab6cdaa9b84f599cd6960fbdf7a1ccc32453668c6658ac88a5fdcc4d3f25`.
+- Audience: [`mode-audience-preview.webp`](mode-audience-preview.webp)
+- Twilight: [`mode-twilight-preview.webp`](mode-twilight-preview.webp)
+- Both current WebP derivatives decoded at 1200 × 800 and were visually inspected. Their hashes are Audience `f46501aa486eb00e8d133223dc0308f1da284c3d2062f249f3f161a269812d59`; Twilight `381a0cd4231a9bd0b2525d85b2be2681ff710c39e3c78d9498a8bee02074db80`. The user converted and accepted these derivatives for this purpose; these hashes do not identify byte-identical PNGs.
+- Historical source PNG hashes: Audience `6e18148287d2cafde949aded257f63027096d52dca284fe89651b945598152e9`; Twilight `f7faab6cdaa9b84f599cd6960fbdf7a1ccc32453668c6658ac88a5fdcc4d3f25`. These identify the original PNG previews, not the maintained WebP derivatives.
 - Reusable read-only renderer: [`mode-preview.py`](mode-preview.py)
 - Source: `platform.blend`, SHA-256 before and after rendering: `ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af` (unchanged; matches the approved source recorded in `README.md`).
 - Blender 5.2.1 LTS, Cycles, 32 samples, 1200×800 PNG, AgX, exposure 0, unchanged compositor. Both views use the saved `Camera | concept v4 comparison`: perspective, 50 mm, location `(0, -16, 12.5)`. This is the existing asset-comparison camera, not a validated gameplay camera.
@@ -25,7 +26,7 @@ Geometry, camera, model material nodes/slots, color management, and compositor w
 
 ## Assessment for user acceptance
 
-**User decision (2026-10-10): “Accept shared platform”.** The current model is accepted for both Audience and Twilight based on the paired previews above. Tune final mode lighting during runtime integration; this is not runtime appearance approval or approval of the missing end caps.
+**User decision (2026-10-10): “Accept shared platform”.** The unchanged current model is accepted for both Audience and Twilight based on the paired previews above. Tune final mode lighting during runtime integration; this is not runtime appearance approval or approval of the end-cap fit.
 
 **Audience suitability: plausible without rebuilding the model.** Under warmer lighting the metallic gold rails and warm lane read become more welcoming while the four distinct cyan, magenta, amber, and green lanes remain legible. The amber lane and gold framing are visually strong and may feel more ceremonial than soft/welcoming, but this is a presentation preference, not a geometry defect. The platform's current geometry and material separation provide useful control for a future mode treatment.
 

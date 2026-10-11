@@ -1,8 +1,8 @@
 # Brightvale crowd — approved description
 
-**Description approved:** the user explicitly selected “Approve and generate” for this amended brief. Concept-art generation is authorized. The concept remains a candidate pending separate user approval; modeling and runtime integration are not authorized.
+**Description and concept approved.** The clean cel-shaded anime concept with contemporary clothing and player-facing poses was approved by the user on 2026-10-10. Modeling and runtime integration are not authorized.
 
-**Selected character direction:** clean cel-shaded anime. Use clear, manageable hair/clothing forms, crisp shape boundaries, and a small number of simple shadow bands. This is the approved direction for the revised concept, not approval of a particular image or a promise that outline effects will transfer through model export. Keep useful color/material regions legible if a later renderer needs to recreate the look; runtime shading feasibility remains unvalidated.
+**Approved character treatment:** clean cel-shaded anime with contemporary clothing and player-facing poses, as shown in the user-approved concept. Keep useful color/material regions legible if a later renderer needs to recreate the look; outline effects are not guaranteed to transfer through model export, and runtime shading feasibility remains unvalidated.
 
 ## Purpose and composition
 
@@ -27,7 +27,7 @@ Alongside the game-distance composition, show a close view of a small representa
 ## References
 
 - `.lore/work/mockups/Golden City Rhythm Concert.webp` and `.lore/work/mockups/Neon Twilight Rhythm City.webp` — opened and inspected; source for side placement, dense perspective grouping, human-like silhouettes, occasional glow sticks, and the two twilight palettes. Their crowd orientation is superseded by the later user amendment: face the player at camera-side foreground. Their stage/performer and HUD/decorative elements are not requirements.
-- `assets/authoring/brightvale-distant-city/concept-candidate.png` — opened and inspected; approved city concept. Its audience is explicitly a rough placeholder, not an approved crowd design.
-- `assets/authoring/neon-twilight-platform/concept.png` — opened and inspected; approved standalone platform reference, not a crowd reference.
+- `assets/authoring/brightvale-distant-city/concept-candidate.webp` — approved city concept. Its audience is explicitly a rough placeholder, not an approved crowd design.
+- `assets/authoring/neon-twilight-platform/concept.webp` — approved standalone platform reference, not a crowd reference.
 - `.lore/work/design/brightvale-perspective-highway.md` — approved low camera and gameplay-first framing; later amendment removes stage and performer and forbids a replacement focal structure.
 - `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — current project asset context.

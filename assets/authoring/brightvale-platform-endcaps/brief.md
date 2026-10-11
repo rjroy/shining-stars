@@ -1,13 +1,11 @@
-# Brightvale platform end cap — approximate corner placement
+# Brightvale platform end cap
 
-**Status: isolated shape approved; placement concept authorized and pending review.** Show the approved sculpted midnight-blue/gold end-cap shape as a mirrored left/right pair beside the accepted platform, supporting its lower outer corners and partly cropped by the frame as in the mockup. Keep the platform central and visually dominant; the caps should not read as tall, freestanding hero pieces.
+**Status: isolated shape approved; desired placement recorded from the user's reference.** Preserve the sculpted midnight-blue/gold form shown in [`endcap-only-candidate.webp`](endcap-only-candidate.webp). The user-supplied [`endcap-placement-reference.webp`](endcap-placement-reference.webp) controls placement: paired end caps sit directly alongside the platform's outer sides, spanning its depth, tall at the rear and sloping toward the front. They are not detached foreground pieces.
 
-Use one simple view on a plain background: the accepted platform and the pair only. Preserve the approved end-cap shape and recognizable platform identity; leave four lanes, hit bars, and crest clear. No city, crowd, highway, other scene, modes, panels, or text.
-
-This is a visual placement/scale proposal, not a measured fit. Exact size, orientation, attachment, clearance, and transforms remain unknown for later modeling. Do not alter the approved shape or platform and do not imply runtime validation.
+This records a visual layout, not measured geometry. Exact size, orientation, attachment, clearance, and transforms require 3D fit validation. No modeling or runtime integration is authorized.
 
 ## References
 
-- `endcap-only-candidate.png` — exact user-approved isolated end-cap shape.
-- `assets/authoring/neon-twilight-platform/mode-audience-preview.png` — accepted actual platform appearance; unchanged platform reference.
-- `.lore/work/mockups/Golden City Rhythm Concert.webp` lower-left corner crop — placement/orientation cue only; incidental scene details are not to be reproduced. Crop source, coordinates, and checksum are recorded in `README.md`.
+- `endcap-only-candidate.webp` — approved isolated shape; see `README.md` for the current WebP hash and historical native PNG provenance.
+- `endcap-placement-reference.webp` — user-supplied controlling placement reference and recorded desired layout; not generated or newly reapproved.
+- `../neon-twilight-platform/mode-audience-preview.webp` — accepted platform appearance used as context; it does not validate 3D end-cap fit.

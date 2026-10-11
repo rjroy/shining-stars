@@ -1,6 +1,6 @@
 # Brightvale distant city — approved description
 
-**Description approved: “Approve with spire.”** The distinctive tall distant spire is part of the skyline, not a stage, replacement foreground focal structure, or separate destination. This brief authorizes concept-art generation only. Modeling and runtime integration remain unauthorized and require separate gates.
+**Description and concept approved.** The distinctive tall distant spire is part of the skyline, not a stage, replacement foreground focal structure, or separate destination. The user approved the concept on 2026-10-10 (“concept is done and works for me”). Modeling and runtime integration remain unauthorized and require separate gates.
 
 ## Purpose and composition
 
@@ -30,6 +30,6 @@ Concept evidence should include: (a) the city by itself in the same camera/proje
 - `.lore/work/mockups/Neon Twilight Rhythm City.webp` — opened and visually inspected. Shows the related darker violet/purple twilight treatment over a similar city/highway composition; includes a dramatic purple sky feature and floating silhouettes. These specifics are reference imagery, not confirmed Brightvale landmarks or required geometry.
 - `.lore/work/design/brightvale-perspective-highway.md` — approved highway direction and later amendment: city and crowd remain; no stage, performer, or substitute focal structure. Its low dramatic camera and gameplay-priority framing govern the composite.
 - `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — project context and reference precedence.
-- `assets/authoring/neon-twilight-platform/README.md` and `assets/authoring/neon-twilight-platform/concept.png` — the platform is an approved separate asset and its concept was opened. No existing generated platform preview was found in its package, so no preview was inspected or used as visual evidence.
+- `assets/authoring/neon-twilight-platform/README.md` and `assets/authoring/neon-twilight-platform/concept.webp` — the platform is an approved separate asset and its concept was opened. The current WebP derivative is the maintained reference.
 
 The spire selection is a visual direction, not a claim that the mockup's exact design or any additional lore is canon. Concepts should ground its shape in the visible references and label any interpretation.

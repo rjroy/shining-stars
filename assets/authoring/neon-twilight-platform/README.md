@@ -2,7 +2,7 @@
 
 Editable authoring asset: **model v8.3**, with approved **concept v4**. Brief v1,
 concept v4 and model v8.3 were explicitly approved on **2026-10-10**. The user
-selected source-binary inclusion: `platform.blend` and `concept.png` are intended
+selected source-binary inclusion: `platform.blend` and `concept.webp` are intended
 for Git alongside these scripts. Generated previews, logs and rebuilds are not.
 No gameplay integration or runtime export is authorized or present.
 
@@ -14,8 +14,8 @@ and small star inlays; no highway, notes, scenery, crowd, HUD or judgment effect
 
 - `platform.blend`: exact approved v8.3 native file, **183,112 bytes**.
   SHA-256: `ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af`.
-- `concept.png`: exact approved v4 image, 1536×1024, **1,763,477 bytes**.
-  SHA-256: `dd83404120add014aad9560a999149bcdf883c3574d250a1ec95aa221d16fa06`.
+- `concept.webp`: current user-converted lossy WebP derivative of the approved v4 image, 1536×1024; SHA-256 `00f78d18cbd223d79b91c9c5aaba5fbe56f231d0bff2bb89f3bdc87078c48b75`. Accepted by the user for this purpose; this hash identifies the derivative, not byte-identical PNG bytes.
+- Original approved v4 PNG: 1536×1024, **1,763,477 bytes**; historical SHA-256 `dd83404120add014aad9560a999149bcdf883c3574d250a1ec95aa221d16fa06` (not the current WebP hash).
 - Concept generated through the user-authorized built-in image route using v3 as
   reference; native generation ID
   `01a126e0-6e0f-7ed3-b3f8-6658c98e41e1/exec-c745b67f-c9c2-4c34-84fa-1bf5e3dfc83e`.

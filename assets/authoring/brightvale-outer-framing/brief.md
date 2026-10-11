@@ -1,6 +1,6 @@
 # Brightvale outer framing — approved description
 
-**Description approved:** the user explicitly selected “Approve and generate”. Concept-art generation is authorized. Concept approval remains pending; modeling and runtime integration are not authorized.
+**Description and concept approved.** The user approved the framing concept on 2026-10-10. Approval is specifically for stone-and-light sections with gaps, as shown in the isolated top view, not a continuous wall implied by parts of the composites. Modeling and runtime integration are not authorized.
 
 ## Purpose and layer boundary
 
@@ -27,8 +27,8 @@ Keep central lanes, notes, target area, and existing HUD/control regions readabl
 - `.lore/work/mockups/Golden City Rhythm Concert.webp` and `.lore/work/mockups/Neon Twilight Rhythm City.webp` — opened and inspected for edge rails, bridge-like architecture, composition, and the two twilight treatments. Decorative mockup content is not automatically required.
 - `.lore/work/design/brightvale-perspective-highway.md` — approved low camera and gameplay-first framing; later amendment excludes stage/performer and replacement focal structures.
 - `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — current Brightvale asset guidance.
-- `assets/authoring/brightvale-distant-city/concept-candidate.png` and `assets/authoring/brightvale-distant-city/README.md` — approved distant city; composite context is not approval of the other layers.
-- `assets/authoring/brightvale-crowd/concept-cel-shaded-candidate.png`, `assets/authoring/brightvale-crowd/brief.md`, and `assets/authoring/brightvale-crowd/README.md` — approved cel-shaded anime crowd direction and contemporary clothing; crowd remains a separate layer.
-- `assets/authoring/neon-twilight-platform/concept.png` and `assets/authoring/neon-twilight-platform/README.md` — approved platform is a separate layer; do not duplicate its framing.
+- `assets/authoring/brightvale-distant-city/concept-candidate.webp` and `assets/authoring/brightvale-distant-city/README.md` — approved distant city; composite context is not approval of the other layers.
+- `assets/authoring/brightvale-crowd/concept-cel-shaded-candidate.webp`, `assets/authoring/brightvale-crowd/brief.md`, and `assets/authoring/brightvale-crowd/README.md` — approved cel-shaded anime crowd direction and contemporary clothing; crowd remains a separate layer.
+- `assets/authoring/neon-twilight-platform/concept.webp` and `assets/authoring/neon-twilight-platform/README.md` — approved platform is a separate layer; do not duplicate its framing.
 
-The proposed parapet/post treatment, exact edge placement, and material details remain candidate interpretations for description review. Approximate composites must not be represented as runtime validation.
+Exact edge placement, material implementation, and game-camera fit remain unvalidated. Approximate composites must not be represented as runtime validation.

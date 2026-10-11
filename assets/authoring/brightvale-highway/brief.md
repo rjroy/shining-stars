@@ -1,6 +1,6 @@
 # Brightvale modeled highway — approved description
 
-**Description status: approved by the user; concept generation authorized.** The generated concept remains pending review. This approval does not authorize modeling or runtime changes.
+**Description and concept approved.** The user approved the highway concept; exact camera, platform junction, scale, and lane correspondence remain approximate and must be resolved before modeling. This approval does not authorize modeling or runtime changes.
 
 ## Purpose and layer boundary
 
@@ -37,9 +37,9 @@ Show the highway model by itself from a low oblique perspective, plus one close 
 - `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — current project asset precedence and responsive priorities.
 - `src/scene.ts` — current procedural world runway: layer 3, four lane centers spaced 4 world units apart, from `z=-13` to the hit line at `z=4.5`, with translucent `MeshBasicMaterial` surface/lanes/dividers/target bands. Current perspective camera is 60° FOV at `(0, 8.5, 13.5)` looking toward `(0, 0, -2.2)`. This is implementation context, not an asset scale contract.
 - `src/scene-perspective.test.ts` and `src/timing-window-projection.test.ts` — preserve four-lane order, camera projection, onset alignment, nested difficulty bands, unclipped envelopes, and responsive travel-distance behavior; the modeled surface must not alter these existing gameplay contracts.
-- `assets/authoring/neon-twilight-platform/README.md`, `concept.png`, `mode-audience-preview.png`, `mode-twilight-preview.png`, and `mode-assessment.md` — approved unchanged platform and accepted two-mode suitability evidence. Platform bounds are 12 × 5.5 × 1.145 authoring units; Blender is Z-up, front is negative Y, origin at chassis center. This does not define its Three.js transform, runway attachment, or runtime scale.
-- `assets/authoring/brightvale-distant-city/concept-candidate.png` and `README.md` — approved distant skyline; composite highway context is not a highway approval.
-- `assets/authoring/brightvale-crowd/concept-cel-shaded-candidate.png`, `brief.md`, and `README.md` — approved clean cel-shaded anime with contemporary clothing and player-facing crowd poses; preserve as a distinct layer.
-- `assets/authoring/brightvale-outer-framing/concept-candidate.png` and `README.md` — approved sparse edge framing; do not duplicate or absorb it into highway shoulders.
+- `assets/authoring/neon-twilight-platform/README.md`, `concept.webp`, `mode-audience-preview.webp`, `mode-twilight-preview.webp`, and `mode-assessment.md` — approved unchanged platform and accepted two-mode suitability evidence. Platform bounds are 12 × 5.5 × 1.145 authoring units; Blender is Z-up, front is negative Y, origin at chassis center. This does not define its Three.js transform, runway attachment, or runtime scale.
+- `assets/authoring/brightvale-distant-city/concept-candidate.webp` and `README.md` — approved distant skyline; composite highway context is not a highway approval.
+- `assets/authoring/brightvale-crowd/concept-cel-shaded-candidate.webp`, `brief.md`, and `README.md` — approved clean cel-shaded anime with contemporary clothing and player-facing crowd poses; preserve as a distinct layer.
+- `assets/authoring/brightvale-outer-framing/concept-candidate.webp` and `README.md` — approved sparse edge framing, with separated sections and open gaps; do not duplicate or absorb it into highway shoulders.
 
 Exact highway-to-platform placement, transform/scale, lane-center correspondence, world/runtime material response, and responsive camera fit remain unknown. Resolve placement, scale, and lane correspondence from measured interfaces before modeling; do not silently fix them by eye in a concept. Material response and responsive camera fit remain later integration questions.

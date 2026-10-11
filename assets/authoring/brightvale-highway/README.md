@@ -1,14 +1,14 @@
 # Brightvale highway concept
 
-Description and concept approved. The user accepted the displayed sheet with “oh right ... yes looks great”. Approval applies to `concept-candidate.png` at the SHA-256 below. No modeling or runtime integration is authorized by this decision. Camera, platform junction, scale and lane correspondence are approximate and unmeasured; resolve the platform connection before modeling. End caps remain a separate design task.
+Description and concept approved. The user accepted the displayed sheet with “oh right ... yes looks great”. Approval applies to the generated PNG original identified below; the current WebP is a user-converted derivative accepted for this purpose, not a byte-identical original. No modeling or runtime integration is authorized by this decision. Camera, platform junction, scale and lane correspondence are approximate and unmeasured; resolve the platform connection before modeling. End caps remain a separate design task.
 
 ## Image provenance
 
 - Date: 2026-10-10.
 - Tool: built-in `image_gen.imagegen` (model/version not exposed). The prescribed `codex exec --skip-git-repo-check` launcher failed before generation with mise DNS/cache write errors; no software was installed.
 - Native final image: `/home/rjroy/.codex/generated_images/01a12869-4780-7901-910c-04a787dea3fd/exec-68feabfe-b8b6-4d05-8c9e-09a89675d293.png`.
-- Durable candidate: `concept-candidate.png`, PNG, 1536 × 1024, RGB.
-- SHA-256, identical for native and durable copies: `73f5783b550e21c452da3c4e329838b7a43c94cbc5eaa47aa1933a3173d5fb0d`.
+- Current candidate: [`concept-candidate.webp`](concept-candidate.webp), 1536 × 1024 RGB; SHA-256 `267fefe51fca1546dc173b4615c17c1b898db097fb8e844d90ecedc47c4a5759`. User-converted lossy WebP derivative accepted by the user for this purpose; this hash identifies the derivative only.
+- Original generated/durable PNG: 1536 × 1024 RGB; SHA-256 `73f5783b550e21c452da3c4e329838b7a43c94cbc5eaa47aa1933a3173d5fb0d` (historical original hash, not the WebP hash). The durable PNG was removed; the native source path remains recorded above.
 - Verified image display, PNG chunk checksums, pixel-data decompression and source/copy checksum equality.
 
 ## Direction and review
