@@ -1,0 +1,36 @@
+{
+  "previous_files_checked": 140,
+  "authorized_modified_files": [
+    "assets/authoring/brightvale-scene-review/candidate/README.md",
+    "assets/authoring/brightvale-scene-review/candidate/build.py",
+    "assets/authoring/brightvale-scene-review/composition-brief.md"
+  ],
+  "unchanged_previous_files": 137,
+  "source_package_files_checked": 116,
+  "unexpected_changes": [],
+  "protected_baseline_fingerprint_before_equals_after": "136cad352da34c34ce34da9a0b1344b0bb1a7a342e0aa9ba806ff2738ba5ed5e",
+  "initial_files_sha256_before_equals_after": {
+    "assets/authoring/brightvale-scene-review/candidate/initial/highway.blend": "752abd57e22b4209f6491b55c7ed433b391b34e42be5aa6aec223de37b5270db",
+    "assets/authoring/brightvale-scene-review/candidate/initial/scene-review.blend": "a41201169324b57ae9fd511035d320d7f6a5af9c24f0dd71663cf283f9f29250",
+    "assets/authoring/brightvale-scene-review/candidate/initial/preview-neutral.webp": "97a91a9e6af455a8f7bd2963d65f7b58031cc4f791c0758029799e44a049d606",
+    "assets/authoring/brightvale-scene-review/candidate/initial/preview-audience.webp": "f8c960c2ad700092399f9456c871de47a2fa1aaabaa65fbe457ba41b1f198817",
+    "assets/authoring/brightvale-scene-review/candidate/initial/preview-twilight.webp": "9302116cc0e3ec9fe11132d42ea4fb0b4eed4396ef2a5a649b2ef81fd8a52067",
+    "assets/authoring/brightvale-scene-review/candidate/initial/validation.json": "112aa4e24939b152d75d34ce29bb6d00a9a9c9eda0b2e779eae7ca4ff534b550",
+    "assets/authoring/brightvale-scene-review/candidate/initial/highway-validation.json": "97bb8878e75222e17c924a8adc7059c69a8055168833010d60cddca632c97a35"
+  },
+  "maintained_scene_review_files_sha256_before_equals_after": {
+    "assets/authoring/brightvale-scene-review/assemble.py": "388c8072d447054ee71ea5f49cf9353415c98ee2835b68501c60a6be5fa27f8c",
+    "assets/authoring/brightvale-scene-review/preview.py": "eec289ea85cf9fd53ce6d878397bf919ff5df3457fec06db46713db4d5818205",
+    "assets/authoring/brightvale-scene-review/validate.py": "a435f46293db2f3cca02be7ba502a77532df37878a75d06fb17eabda38668b60",
+    "assets/authoring/brightvale-scene-review/scene-review.blend": "473beef0d6e72db25242edf3ba914d1508e70183493383d207f227785aa5b85f",
+    "assets/authoring/brightvale-scene-review/preview-neutral.webp": "cd6adfb3bd83c5d10f045122568abd52f335a042aad597fb01ae421b2261d0f9",
+    "assets/authoring/brightvale-scene-review/preview-audience.webp": "52bf7d2e510f9741c6176843160d6665d7c5b0f9b1371a1a9c0e0873491fde21",
+    "assets/authoring/brightvale-scene-review/preview-audience-narrow.webp": "bde754e338ba4833fd84f326cc8812ff53352aa210128ba29ddd328a4973b19b",
+    "assets/authoring/brightvale-scene-review/preview-twilight.webp": "8dd14229812f332a64355d645905c6d7e9e20cbccb3bc11d64d2507bc980acce",
+    "assets/authoring/brightvale-scene-review/preview-twilight-narrow.webp": "42b1d26f8cfb91233cceb401a9af8c3f024532e172f74758a39abea249c35d35",
+    "assets/authoring/brightvale-scene-review/README.md": "ef4dfc3ddd172aa2d13b58eec3d456880f3060febdd2cd0305d0a6f2aface34d",
+    "assets/authoring/brightvale-scene-review/diagnostic-layout-trials.webp": "70f29fae2608a96dd06ba8b1c25b9db4910060123f81b15e132990bf1a32b482"
+  },
+  "candidate_sha256_after_renders_and_validation": "59af1409cedd26a792007df8c857feb08aed3c3f4fc3f6c0838ed10699b92849",
+  "nonframing_semantic_fingerprint_matches_initial": "accefe643ff280747ebebf1298d7ab7015ceb6dac8b48962b90ba1568ed1b5bf"
+}
