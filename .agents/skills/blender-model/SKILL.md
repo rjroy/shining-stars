@@ -43,6 +43,7 @@ Plan from the asset's read at game distance: dominant silhouette, proportion lan
 - glTF uses a different coordinate convention from Blender; verify orientation, scale, origin, and normals after export in the intended consumer. Check supported material features, textures, transparency, and emissive behavior. An attractive Blender render does not prove equivalent Three.js appearance; Cycles is not Three.js.
 - Report stable paths to the current source, generator, approved concept, and any requested export; summarize measured bounds/scale, useful object counts, tool/version, assumptions, technical caveats, and approval status. Keep logs and intermediate evidence outside the maintained package unless needed to explain a failure or substantiate approval.
 - Model approval is an explicit workflow gate. No runtime integration or claim of accepted asset until the user/workflow records that approval.
+- Post-acceptance production derivatives are covered by [asset-production](../asset-production/SKILL.md); modeling permission or model approval does not authorize production/export.
 
 ## Safe execution and recovery
 
