@@ -8,7 +8,7 @@ import subprocess
 sys.dont_write_bytecode = True
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Vector, Matrix
 from bpy_extras.object_utils import world_to_camera_view
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import produce as P
@@ -16,6 +16,30 @@ import produce as P
 STUDY = dict(position=[0,-15,13.899999618530273], rotation=[1.4559197425842285,0,0],
              lens_mm=28, sensor_width_mm=36, resolution=[1600,900],
              city_scale=.3499999940395355, city_translation=[0,55,3.8999998569488525])
+STUDY_SOURCE = P.ROOT.parents[1] / 'authoring/brightvale-scene-review/scene-review.blend'
+STUDY_SHA = 'fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b'
+
+
+def verify_study(path, source_path):
+    """Read the saved authority; check every city placement against one common transform."""
+    P.load_source(source_path)
+    source={o.name:o.matrix_world.copy() for o in bpy.data.objects}
+    assert P.sha(path)==STUDY_SHA, 'Study authority changed; recheck composition contract'
+    bpy.ops.wm.open_mainfile(filepath=str(path)); bpy.context.view_layer.update()
+    city=[o for o in bpy.data.objects if o.get('review_asset')=='city']
+    root=bpy.data.objects['city::CITY.ProvisionalLayout']; transform=root.matrix_world
+    assert {o['source_object'] for o in city}==set(source)
+    desired=Matrix.Translation(Vector(STUDY['city_translation']))@Matrix.Diagonal((STUDY['city_scale'],)*3+(1,))
+    assert np.allclose(transform,desired,atol=1e-7,rtol=0)
+    error=max(float(np.max(np.abs(np.array(o.matrix_world)-np.array(transform@source[o['source_object']])))) for o in city)
+    assert error<1e-5,'City cannot use one common transform'
+    s=bpy.context.scene;c=s.camera
+    assert np.allclose(c.location,STUDY['position'],atol=1e-7,rtol=0)
+    assert np.allclose(c.rotation_euler,STUDY['rotation'],atol=1e-7,rtol=0)
+    assert c.data.type=='PERSP' and c.data.lens==28 and c.data.sensor_width==36
+    assert c.data.sensor_fit=='AUTO' and c.data.shift_x==c.data.shift_y==0
+    assert [s.render.resolution_x,s.render.resolution_y]==STUDY['resolution'] and s.render.resolution_percentage==100
+    return dict(sha256=STUDY_SHA,city_objects_checked=len(city),common_transform_max_error=error)
 
 
 def aim(o, target):
@@ -33,9 +57,9 @@ def setup(view):
         cdata.lens = 28; cdata.sensor_width = 36
         s.render.resolution_x, s.render.resolution_y = STUDY['resolution']
     else:
-        c.location = (-69,-39,49); aim(c,(-28,65,22))
-        cdata.type = 'ORTHO'; cdata.ortho_scale = 52
-        s.render.resolution_x = 1000; s.render.resolution_y = 1100
+        c.location = (10.5,-39.5,49.4); aim(c,(0,69,18.95))
+        cdata.type = 'ORTHO'; cdata.ortho_scale = 100.45
+        s.render.resolution_x = 1600; s.render.resolution_y = 900
     s.render.resolution_percentage = 100
     s.render.engine = 'CYCLES'; s.cycles.samples = 24; s.cycles.use_denoising = True; s.cycles.seed = 422
     s.render.film_transparent = True
@@ -46,7 +70,7 @@ def setup(view):
     bg.inputs['Strength'].default_value = .7
     for name,position,energy,size in [('Key',(-50,25,75),38000,65),('Fill',(12,40,45),22000,55)]:
         d = bpy.data.lights.new(name,'AREA'); d.energy = energy; d.shape = 'DISK'; d.size = size
-        o = bpy.data.objects.new(name,d); s.collection.objects.link(o); o.location = position; aim(o,(-26,64,20))
+        o = bpy.data.objects.new(name,d); s.collection.objects.link(o); o.location = position; aim(o,(0,68,20))
     # Identical restrained geometry review: keep role colors; no bloom/emissive glare.
     for mat in bpy.data.materials:
         mat.node_tree.nodes.get('Principled BSDF').inputs['Emission Strength'].default_value = 0
@@ -70,10 +94,8 @@ def extrusion_pixels(s,c):
     for o in bpy.data.objects:
         if o.type!='MESH': continue
         for vertices,faces in P.components(o.data):
+            if P.detail_cap(o.data,vertices,faces) is None: continue
             n=len(vertices)//2
-            if n not in (4,7) or len(vertices)!=n*2 or len(faces)!=n+2: continue
-            delta=o.data.vertices[vertices[n]].co-o.data.vertices[vertices[0]].co
-            if abs(delta.length-(.07 if n==7 else .09))>1e-5: continue
             for a,b in zip(vertices[:n],vertices[n:]):
                 va=world_to_camera_view(s,c,o.matrix_world@o.data.vertices[a].co)
                 vb=world_to_camera_view(s,c,o.matrix_world@o.data.vertices[b].co)
@@ -98,14 +120,13 @@ def silhouette_metrics(out):
 
 
 def comparison_sheet(out,destination):
-    """Image operations only: equal matte, labels, unscaled crop; no retouching."""
+    """Equal matte and labels only; all full 1600x900 renders retained without crop."""
     print('CITY COMPARISON ASSEMBLY ATTEMPT',destination,flush=True)
     def run(*args):subprocess.run(args,check=True,timeout=60)
     for row,view in [('top','study'),('bottom','detail')]:
         for kind in ('source','derived'):
-            label=kind.upper()+' | '+('study crop, 1:1 pixels' if kind=='source' else 'same camera and city transform') if view=='study' else kind.upper()+' | '+('full silhouette diagnostic' if kind=='source' else '56% fewer placed triangles')
-            crop=['-crop','1000x600+0+0','+repage'] if view=='study' else []
-            run('magick',str(out/(kind+'-'+view+'.png')),*crop,
+            label=kind.upper()+' | '+('saved study view, full city' if view=='study' else 'complete silhouette diagnostic')
+            run('magick',str(out/(kind+'-'+view+'.png')),
                 '-background','#24262b','-alpha','remove','-alpha','off','-gravity','north',
                 '-background','#24262b','-splice','0x54','-fill','white','-font','Adwaita-Mono',
                 '-pointsize','20','-annotate','+0+16',label,str(out/(row+'-'+kind+'.png')))
@@ -117,16 +138,18 @@ def comparison_sheet(out,destination):
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument('--source',type=Path,default=P.SOURCE)
+    p.add_argument('--study',type=Path,default=STUDY_SOURCE)
     p.add_argument('--derived',type=Path,required=True); p.add_argument('--output-dir',type=Path,required=True)
     p.add_argument('--comparison',type=Path,help='Optional new labeled WebP; requires installed magick/cwebp')
     a=p.parse_args(sys.argv[sys.argv.index('--')+1:]); out=a.output_dir.resolve()
     assert out.is_relative_to('/tmp/opencode') and out.is_dir(), 'Raw previews belong in authorized scratch'
     comparison=P.output(a.comparison,'.webp') if a.comparison else None
-    hashes={str(f):P.sha(f) for f in (a.source,a.derived)}; report={'study_camera':STUDY}
+    hashes={str(f):P.sha(f) for f in (a.source,a.derived,a.study)}; report={'study_camera':STUDY}
     try:
+        report['verified_study']=verify_study(a.study,a.source)
         for kind,path in [('source',a.source),('derived',a.derived)]:
             for view in ('study','detail'):
-                if kind=='source': P.load_source(path); P.select_slice()
+                if kind=='source': P.load_source(path)
                 else: bpy.ops.wm.open_mainfile(filepath=str(path))
                 s,c=setup(view)
                 if view=='study':

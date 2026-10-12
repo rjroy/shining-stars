@@ -1,0 +1,288 @@
+{
+  "pass": true,
+  "source_sha256": "cd17e3162c434ce4054f6c32d86d4b6a885e9dbad44c1841b563513fffd75542",
+  "blender": "5.2.1 LTS",
+  "exporter": "5.2.40",
+  "modules": {
+    "long": {
+      "sha256": "8cb0f33f672b366a7725158f21524a42bc55afe2d21153575030a991a9b4d012",
+      "bytes": 144180,
+      "nodes": 1,
+      "triangles": 2668,
+      "primitives": 4,
+      "bounds_gltf": {
+        "min": [
+          -1.4600000381469727,
+          0.0,
+          -0.3400000035762787
+        ],
+        "max": [
+          1.4600000381469727,
+          1.149999976158142,
+          0.3400000035762787
+        ],
+        "dimensions": [
+          2.9200000762939453,
+          1.149999976158142,
+          0.6800000071525574
+        ]
+      },
+      "components": [
+        "Framing | long masonry section"
+      ],
+      "max_position_error": 0.0,
+      "max_normal_error": 6.473064422607422e-05,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true
+      }
+    },
+    "short": {
+      "sha256": "80ac9da813ae7503c2c9bf2db6d571e8526236958307295c140733bab8019539",
+      "bytes": 80080,
+      "nodes": 1,
+      "triangles": 1448,
+      "primitives": 4,
+      "bounds_gltf": {
+        "min": [
+          -0.9599999785423279,
+          0.0,
+          -0.3400000035762787
+        ],
+        "max": [
+          0.9599999785423279,
+          1.149999976158142,
+          0.3400000035762787
+        ],
+        "dimensions": [
+          1.9199999570846558,
+          1.149999976158142,
+          0.6800000071525574
+        ]
+      },
+      "components": [
+        "Framing | short masonry section"
+      ],
+      "max_position_error": 0.0,
+      "max_normal_error": 5.4776668548583984e-05,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true
+      }
+    },
+    "post": {
+      "sha256": "54b718163e06fb27b357bd3ac3255319b345a747e84159c5b618a233fec1a6fb",
+      "bytes": 55784,
+      "nodes": 3,
+      "triangles": 968,
+      "primitives": 6,
+      "bounds_gltf": {
+        "min": [
+          -0.4699999988079071,
+          0.0,
+          -0.41999998688697815
+        ],
+        "max": [
+          0.4699999988079071,
+          1.350000023841858,
+          0.41999998688697815
+        ],
+        "dimensions": [
+          0.9399999976158142,
+          1.350000023841858,
+          0.8399999737739563
+        ]
+      },
+      "components": [
+        "Framing | post inset amber lens",
+        "Framing | post stone pier",
+        "Framing | post warm metal bezel"
+      ],
+      "max_position_error": 0.0,
+      "max_normal_error": 5.911290645599365e-05,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true
+      }
+    }
+  },
+  "material_roles": {
+    "Framing | alternate stone": {
+      "base": [
+        0.03099999949336052,
+        0.0560000017285347,
+        0.10999999940395355,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.800000011920929,
+      "emission": [
+        0.03099999949336052,
+        0.0560000017285347,
+        0.10999999940395355
+      ],
+      "strength": 0.0,
+      "procedural_fallback": false,
+      "role_color": [
+        0.03099999949336052,
+        0.0560000017285347,
+        0.10999999940395355,
+        1.0
+      ],
+      "double_sided": true
+    },
+    "Framing | blue gray capstone": {
+      "base": [
+        0.13500000536441803,
+        0.15000000596046448,
+        0.18000000715255737,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.7200000286102295,
+      "emission": [
+        0.13500000536441803,
+        0.15000000596046448,
+        0.18000000715255737
+      ],
+      "strength": 0.0,
+      "procedural_fallback": false,
+      "role_color": [
+        0.13500000536441803,
+        0.15000000596046448,
+        0.18000000715255737,
+        1.0
+      ],
+      "double_sided": true
+    },
+    "Framing | midnight stone": {
+      "base": [
+        0.02500000037252903,
+        0.04699999839067459,
+        0.09799999743700027,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.800000011920929,
+      "emission": [
+        0.02500000037252903,
+        0.04699999839067459,
+        0.09799999743700027
+      ],
+      "strength": 0.0,
+      "procedural_fallback": false,
+      "role_color": [
+        0.02500000037252903,
+        0.04699999839067459,
+        0.09799999743700027,
+        1.0
+      ],
+      "double_sided": true
+    },
+    "Framing | recessed mortar": {
+      "base": [
+        0.009999999776482582,
+        0.01600000075995922,
+        0.02800000086426735,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.800000011920929,
+      "emission": [
+        0.009999999776482582,
+        0.01600000075995922,
+        0.02800000086426735
+      ],
+      "strength": 0.0,
+      "procedural_fallback": false,
+      "role_color": [
+        0.009999999776482582,
+        0.01600000075995922,
+        0.02800000086426735,
+        1.0
+      ],
+      "double_sided": true
+    },
+    "Framing | amber lens": {
+      "base": [
+        1.0,
+        0.4399999976158142,
+        0.07000000029802322,
+        1.0
+      ],
+      "metallic": 0.0,
+      "roughness": 0.3199999928474426,
+      "emission": [
+        1.0,
+        0.4399999976158142,
+        0.07000000029802322
+      ],
+      "strength": 1.5,
+      "procedural_fallback": false,
+      "role_color": [
+        1.0,
+        0.4399999976158142,
+        0.07000000029802322,
+        1.0
+      ],
+      "double_sided": true
+    },
+    "Framing | warm metal": {
+      "base": [
+        0.47999998927116394,
+        0.2549999952316284,
+        0.05999999865889549,
+        1.0
+      ],
+      "metallic": 0.7200000286102295,
+      "roughness": 0.3199999928474426,
+      "emission": [
+        0.47999998927116394,
+        0.2549999952316284,
+        0.05999999865889549
+      ],
+      "strength": 0.0,
+      "procedural_fallback": false,
+      "role_color": [
+        0.47999998927116394,
+        0.2549999952316284,
+        0.05999999865889549,
+        1.0
+      ],
+      "double_sided": true
+    }
+  },
+  "geometry_simplified": false,
+  "assembly_and_relocated_proof": "../brightvale-platform/verification.json",
+  "browser_runtime_approval": "PENDING; parent/designer combined review"
+}

@@ -1,4 +1,4 @@
-"""Bounded, source-preserving city derivative. Run in Blender; new outputs only."""
+"""Full-city source-preserving derivative. Never executes the authoring generator."""
 import argparse
 import collections
 import hashlib
@@ -13,7 +13,9 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT.parents[1] / 'authoring/brightvale-distant-city/city.blend'
 SOURCE_SHA = '4beb993e9b580bb0b6dd47e5523a0ad9aecc8c26804a4b4cbdc42cc5488caa2c'
-DISTRICTS = ('District.01.front', 'District.08.middle', 'District.09.landmark')
+GENERATOR_SHA = 'c44934cbf1c4064a320a3dd5caaa3c880ddbd9f211bfb5c8846d6b0b29c0a29d'
+SOURCE_COUNTS = dict(objects=221, mesh_objects=196, unique_meshes=64,
+                     unique_vertices=87554, unique_triangles=149012, placed_triangles=500928)
 ROLES = {'Limestone':'body', 'Recess':'recess', 'Slate':'roof',
          'Cornice':'stone_trim', 'Gilt':'gold', 'Window':'emissive_window'}
 SETTINGS = dict(export_format='GLB', use_selection=True, use_active_scene=True,
@@ -63,6 +65,8 @@ def inventory(objects):
 
 def load_source(path=SOURCE):
     assert sha(path) == SOURCE_SHA, 'Approved source checksum mismatch'
+    generator=Path(path).parent/'build.py'
+    if generator.exists(): assert sha(generator)==GENERATOR_SHA, 'Authoring generator changed'
     print('CITY SOURCE READ ATTEMPT', path, flush=True)
     bpy.ops.wm.open_mainfile(filepath=str(path))
     assert set(bpy.data.collections.keys()) == {'CITY_ASSET'}
@@ -70,24 +74,9 @@ def load_source(path=SOURCE):
     assert set(bpy.data.materials.keys()) == set(ROLES)
     bpy.context.view_layer.update()
     whole = inventory(list(bpy.context.scene.objects))
-    assert whole['placed_triangles'] == 500928
+    assert all(whole[k] == v for k,v in SOURCE_COUNTS.items()), 'Full source scope changed'
     print('CITY SOURCE READ SUCCESS', whole['placed_triangles'], 'placed triangles', flush=True)
     return whole
-
-
-def select_slice():
-    keep = {bpy.data.objects['CITY.ProvisionalLayout']}
-    for name in DISTRICTS:
-        root = bpy.data.objects[name]
-        keep.update([root, *root.children_recursive])
-    for obj in list(bpy.data.objects):
-        if obj not in keep:
-            bpy.data.objects.remove(obj, do_unlink=True)
-    # Purge only unreferenced source data in this disposable scene.
-    for mesh in list(bpy.data.meshes):
-        if not mesh.users: bpy.data.meshes.remove(mesh)
-    bpy.context.view_layer.update()
-    return inventory(list(bpy.context.scene.objects))
 
 
 def components(mesh):
@@ -109,6 +98,57 @@ def components(mesh):
     return groups
 
 
+def detail_cap(mesh, vertices, faces):
+    """Recognize the actual two-ring window recipe, not merely similar dimensions.
+
+    Shape, material names, ordered cap/side connectivity and extrusion must all
+    agree. Affine vertical shear admits the source's taper-aligned tower lancets.
+    Unknown shapes conservatively remain closed and unchanged.
+    """
+    n = len(vertices)//2
+    if n not in (4,7) or len(vertices) != 2*n or len(faces) != n+2: return None
+    materials = {mesh.materials[mesh.polygons[f].material_index].name for f in faces}
+    if len(materials) != 1: return None
+    if n == 7 and not materials <= {'Recess','Cornice','Window'}: return None
+    if n == 4 and materials != {'Cornice'}: return None
+    first, second = vertices[:n], vertices[n:]
+    co = [mesh.vertices[i].co for i in first]
+    delta = mesh.vertices[second[0]].co-co[0]
+    depth = .07 if n == 7 else .09
+    if abs(delta.length-depth)>1e-5 or abs(delta.z)>1e-5: return None
+    if any((mesh.vertices[b].co-mesh.vertices[a].co-delta).length>1e-5
+           for a,b in zip(first,second)): return None
+    required = {frozenset(first),frozenset(second)} | {
+        frozenset((first[i],first[(i+1)%n],second[(i+1)%n],second[i])) for i in range(n)}
+    if {frozenset(mesh.polygons[f].vertices) for f in faces} != required: return None
+    caps = [f for f in faces if set(mesh.polygons[f].vertices) == set(first)]
+    if len(caps)!=1 or mesh.polygons[caps[0]].normal.dot(delta)>-depth*.95: return None
+    width = co[1]-co[0]; base=(co[0]+co[1])*.5
+    if abs(width.z)>1e-5 or abs(width.normalized().dot(delta.normalized()))>1e-4: return None
+    if n==7:
+        shape=((-0.5,0),(.5,0),(.5,.69),(.34,.83),(0,1),(-.34,.83),(-.5,.69))
+        rise=co[4]-base
+        if not (.1<width.length<4 and .5<rise.z<13): return None
+    else:
+        shape=((-0.5,0),(.5,0),(.5,1),(-.5,1))
+        rise=co[3]-co[0]
+        if not (.01<width.length<.5 and .5<rise.z<10): return None
+    if abs(rise.dot(width.normalized()))>2e-5: return None
+    if any((p-(base+width*u+rise*z)).length>2e-5 for p,(u,z) in zip(co,shape)): return None
+    return caps[0], 'lancet' if n==7 else 'mullion'
+
+
+def family(mesh):
+    users=[o for o in bpy.data.objects if o.type=='MESH' and o.data==mesh]
+    assert users, 'Unused source data'
+    if all(str(o.get('library_variant','')).startswith('P') for o in users): return 'palazzo'
+    if all(str(o.get('library_variant','')).startswith('T') for o in users): return 'tower'
+    if all(o.name.startswith('Landmark.') for o in users): return 'landmark'
+    assert all(o.name.endswith('.Terrace') or o.name.startswith('Connector.') or
+               o.name=='Infrastructure.MasonryAndStreets' for o in users), 'Unclassified architecture'
+    return 'protected_structure'
+
+
 def flatten_reveals(mesh):
     """Keep exact outward-facing cap of shallow lancets/mullions; no decimation.
 
@@ -116,33 +156,14 @@ def flatten_reveals(mesh):
     two ordered rings; lancet depth .07 or narrow mullion depth .09. Other shells
     (including arch .20 surrounds, .27 ribs and .42 webs) cannot enter this path.
     """
-    remove = set(); kinds = collections.Counter(); widths = []
+    remove = set(); kinds = collections.Counter()
     for vertices, faces in components(mesh):
-        n = len(vertices)//2
-        if n not in (4,7) or len(vertices) != 2*n or len(faces) != n+2: continue
-        materials = {mesh.polygons[f].material_index for f in faces}
-        if len(materials) != 1: continue
-        mat = next(iter(materials))
-        if n == 7 and mat not in (1,3,5): continue
-        if n == 4 and mat != 3: continue
-        first, second = vertices[:n], vertices[n:]
-        delta = mesh.vertices[second[0]].co - mesh.vertices[first[0]].co
-        depth = .07 if n == 7 else .09
-        if abs(delta.length-depth)>1e-5 or abs(delta.z)>1e-5: continue
-        if any((mesh.vertices[b].co-mesh.vertices[a].co-delta).length>1e-5
-               for a,b in zip(first,second)): continue
-        caps = [f for f in faces if set(mesh.polygons[f].vertices) == set(first)]
-        if len(caps) != 1: continue
-        normal = mesh.polygons[caps[0]].normal
-        assert normal.dot(delta) < 0, 'Expected outward first cap'
-        if n == 4:
-            co = [mesh.vertices[i].co for i in first]
-            zrange = max(v.z for v in co)-min(v.z for v in co)
-            xywidth = max((a.xy-b.xy).length for a in co for b in co)
-            if zrange < .5 or xywidth > .5: continue
-        remove.update(f for f in faces if f != caps[0])
-        kinds['lancet' if n == 7 else 'mullion'] += 1
-        widths.append(depth)
+        match=detail_cap(mesh,vertices,faces)
+        if match is None: continue
+        cap,kind=match
+        remove.update(f for f in faces if f != cap)
+        kinds[kind] += 1
+    if not remove: return dict(removed_faces=0)
     # Rebuild only this mesh, once; object links and original origins remain intact.
     kept = [p for p in mesh.polygons if p.index not in remove]
     used = sorted({v for p in kept for v in p.vertices}); remap = {v:i for i,v in enumerate(used)}
@@ -158,7 +179,11 @@ def flatten_reveals(mesh):
 def derive():
     changes = {}
     for mesh in sorted({o.data for o in bpy.data.objects if o.type=='MESH'}, key=lambda m:m.name):
-        changes[mesh.name] = flatten_reveals(mesh)
+        kind=family(mesh)
+        changes[mesh.name] = dict(family=kind, **flatten_reveals(mesh))
+        if kind=='protected_structure':
+            assert changes[mesh.name]['removed_faces']==0, 'Structural shell misclassified'
+        else: assert changes[mesh.name].get('lancet',0)>0, 'Building family unrecognized'
     stamp_metadata()
     bpy.context.view_layer.update()
     return changes
@@ -166,8 +191,8 @@ def derive():
 
 def stamp_metadata():
     master = bpy.data.objects['CITY.ProvisionalLayout']
-    master['status'] = 'bounded production candidate; browser and integration acceptance pending'
-    master['production_slice'] = 'western-spire-and-neighbors'
+    master['status'] = 'full-city production candidate; assembled browser and integration acceptance pending'
+    master['production_scope'] = 'complete existing city; all districts and infrastructure'
     master['source_sha256'] = SOURCE_SHA
     for obj in bpy.data.objects:
         obj['source_object'] = obj.name
@@ -198,15 +223,15 @@ def main():
     a = p.parse_args(sys.argv[sys.argv.index('--')+1:])
     glb = output(a.output,'.glb'); blend = output(a.blend,'.blend'); report = output(a.report,'.json')
     try:
-        whole = load_source(a.source); baseline = select_slice(); changes = derive()
+        whole = load_source(a.source); changes = derive()
         derived = inventory(list(bpy.context.scene.objects))
         print('CITY SAVE DERIVATIVE ATTEMPT', blend, flush=True)
         assert bpy.ops.wm.save_as_mainfile(filepath=str(blend), compress=True) == {'FINISHED'}
         print('CITY SAVE DERIVATIVE SUCCESS', flush=True)
         export_glb(glb)
         report.write_text(json.dumps(dict(source_sha256=SOURCE_SHA, blender=bpy.app.version_string,
-            exporter=io_scene_gltf2.get_version_string(), whole_source=whole, source_slice=baseline,
-            derived_slice=derived, reductions=changes, export_settings=SETTINGS), indent=2)+'\n')
+            exporter=io_scene_gltf2.get_version_string(), source=whole,
+            derived=derived, reductions=changes, export_settings=SETTINGS), indent=2)+'\n')
     finally:
         assert sha(a.source) == SOURCE_SHA, 'Approved source changed'
 
