@@ -1,0 +1,282 @@
+{
+  "pass_geometry_export": true,
+  "source_sha256": "4beb993e9b580bb0b6dd47e5523a0ad9aecc8c26804a4b4cbdc42cc5488caa2c",
+  "blender": "5.2.1 LTS",
+  "exporter": "5.2.40",
+  "whole_source": {
+    "objects": 221,
+    "mesh_objects": 196,
+    "unique_meshes": 64,
+    "linked_additional_placements": 132,
+    "unique_vertices": 87554,
+    "unique_triangles": 149012,
+    "placed_triangles": 500928,
+    "bounds_blender": [
+      [
+        -133.0,
+        -12.0,
+        -13.0
+      ],
+      [
+        133.0,
+        99.0,
+        118.0
+      ]
+    ]
+  },
+  "source_slice": {
+    "objects": 31,
+    "mesh_objects": 27,
+    "unique_meshes": 24,
+    "linked_additional_placements": 3,
+    "unique_vertices": 44310,
+    "unique_triangles": 75108,
+    "placed_triangles": 82924,
+    "bounds_blender": [
+      [
+        -117.44999694824219,
+        -4.015000343322754,
+        -7.0
+      ],
+      [
+        -41.43000030517578,
+        60.36000061035156,
+        118.0
+      ]
+    ],
+    "repeats": {
+      "District.01.Palazzo.0Mesh": [
+        "District.01.Palazzo.0",
+        "District.08.Palazzo.3"
+      ],
+      "District.01.Palazzo.1Mesh": [
+        "District.01.Palazzo.1",
+        "District.08.Palazzo.4"
+      ],
+      "District.01.Palazzo.2Mesh": [
+        "District.01.Palazzo.2",
+        "District.08.Palazzo.5"
+      ]
+    }
+  },
+  "derived_native": {
+    "objects": 31,
+    "mesh_objects": 27,
+    "unique_meshes": 24,
+    "linked_additional_placements": 3,
+    "unique_vertices": 28746,
+    "unique_triangles": 33246,
+    "placed_triangles": 36489,
+    "bounds_blender": [
+      [
+        -117.44999694824219,
+        -4.015000343322754,
+        -7.0
+      ],
+      [
+        -41.43000030517578,
+        60.36000061035156,
+        118.0
+      ]
+    ],
+    "repeats": {
+      "District.01.Palazzo.0Mesh": [
+        "District.01.Palazzo.0",
+        "District.08.Palazzo.3"
+      ],
+      "District.01.Palazzo.1Mesh": [
+        "District.01.Palazzo.1",
+        "District.08.Palazzo.4"
+      ],
+      "District.01.Palazzo.2Mesh": [
+        "District.01.Palazzo.2",
+        "District.08.Palazzo.5"
+      ]
+    },
+    "intentional_open_detail_edges": 15564,
+    "invalid_nonmanifold_edges": 0,
+    "degenerate_faces": 0
+  },
+  "glb": {
+    "nodes": 31,
+    "unique_meshes": 24,
+    "unique_primitives": 132,
+    "placed_primitives": 150,
+    "placed_triangles": 36489,
+    "unique_triangles": 33246,
+    "decoded_unique_primitive_vertices": 57220,
+    "buffer_bytes": 1503168,
+    "bounds_gltf": {
+      "min": [
+        -117.44999694824219,
+        -7.0,
+        -60.36000061035156
+      ],
+      "max": [
+        -41.43000030517578,
+        118.0,
+        4.015000343322754
+      ]
+    },
+    "linked_node_groups": [
+      [
+        "District.01.Palazzo.0",
+        "District.08.Palazzo.3"
+      ],
+      [
+        "District.01.Palazzo.1",
+        "District.08.Palazzo.4"
+      ],
+      [
+        "District.01.Palazzo.2",
+        "District.08.Palazzo.5"
+      ]
+    ],
+    "triangles_by_role": {
+      "Limestone": 5816,
+      "Cornice": 19339,
+      "Recess": 4360,
+      "Slate": 2240,
+      "Gilt": 1844,
+      "Window": 2890
+    },
+    "materials": {
+      "Limestone": {
+        "baseColorFactor": [
+          0.41999998688697815,
+          0.3100000023841858,
+          0.20999999344348907,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "body",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Cornice": {
+        "baseColorFactor": [
+          0.6200000047683716,
+          0.49000000953674316,
+          0.30000001192092896,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "stone_trim",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Recess": {
+        "baseColorFactor": [
+          0.10000000149011612,
+          0.08500000089406967,
+          0.11999999731779099,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "recess",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Slate": {
+        "baseColorFactor": [
+          0.03500000014901161,
+          0.08500000089406967,
+          0.14000000059604645,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "roof",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Gilt": {
+        "baseColorFactor": [
+          0.6499999761581421,
+          0.3799999952316284,
+          0.10499999672174454,
+          1
+        ],
+        "metallicFactor": 0.47999998927116394,
+        "roughnessFactor": 0.38999998569488525,
+        "city_role": "gold",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Window": {
+        "baseColorFactor": [
+          1,
+          0.4699999988079071,
+          0.11999999731779099,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "emissive_window",
+        "emissiveFactor": [
+          1,
+          0.4699999988079071,
+          0.11999999731779099
+        ],
+        "emissiveStrength": 1.7999999523162842
+      }
+    },
+    "maximum_position_error": 7.62939453125e-06,
+    "maximum_normal_component_error": 6.490619853138924e-05,
+    "extensions": [
+      "KHR_materials_emissive_strength"
+    ]
+  },
+  "transfer_bytes": 1584308,
+  "derivative_reopen_and_independent_regeneration": "PASS",
+  "source_unchanged": true,
+  "relocated_reproduction_byte_identical": true,
+  "negative_tests": {
+    "extra_reference_node_rejected": true,
+    "missing_landmark_rejected": true,
+    "role_loss_rejected": true,
+    "transform_drift_rejected": true,
+    "unexpected_compression_rejected": true,
+    "reuse_lost_rejected": true,
+    "flipped_normals_rejected": true,
+    "existing_output_rejected": true,
+    "source_output_rejected": true,
+    "outside_scope_rejected": true,
+    "changed_source_rejected": true
+  },
+  "reimport": {
+    "pass_geometry_material_winding_hierarchy": true,
+    "maximum_position_error": 7.62939453125e-06,
+    "maximum_normal_component_error": 0.0002972407964989543
+  },
+  "limitations": [
+    "Not an official Khronos-validator run; explicit structural and geometry checks.",
+    "Intentional open single-face window details; not a watertight derivative.",
+    "Linked mesh nodes are shared buffers, not automatic GPU instancing.",
+    "Blender reimport normal reconstruction is measured, not assumed exact.",
+    "Browser MeshToon appearance, target-device performance and runtime integration remain separate pending gates."
+  ]
+}

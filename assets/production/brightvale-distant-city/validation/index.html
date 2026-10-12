@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Brightvale city browser validation</title>
+    <style>
+      html, body { margin: 0; background: #111a2b; color: #e8e8ef; font: 14px system-ui, sans-serif; }
+      main { width: min(1600px, 100vw); margin: 0 auto; }
+      canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="view" width="1600" height="900" aria-label="Loaded Brightvale city study-camera evidence view"></canvas>
+      <pre id="report" data-state="loading">Loading city slice…</pre>
+      <pre id="evidence" hidden></pre>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
