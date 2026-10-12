@@ -1,6 +1,7 @@
+import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { createBrightvaleViewportLayout } from './brightvale/viewport';
 
 const uiSource = readFileSync(resolve(process.cwd(), 'src/ui.ts'), 'utf8');
 const stylesSource = readFileSync(
@@ -8,50 +9,109 @@ const stylesSource = readFileSync(
   'utf8',
 );
 
-describe('full-viewport game surface', () => {
-  it('does not render page-level masthead or footer copy outside the game area', () => {
+const labels = {
+  time: { x: 120, y: 80, width: 90, height: 24 },
+  countdown: { x: 240, y: 80, width: 180, height: 36 },
+  legend: { x: 320, y: 660, width: 500, height: 24 },
+  feedback: { x: 500, y: 560, width: 240, height: 34 },
+} as const;
+
+describe('Brightvale viewport measurement contract', () => {
+  it('keeps the game surface viewport-sized without page-level masthead or footer', () => {
     expect(uiSource).not.toMatch(/<header class="masthead"/);
     expect(uiSource).not.toMatch(/<footer class="experience-footer"/);
-  });
-
-  it('sizes the experience to the viewport instead of adding document height', () => {
     expect(stylesSource).toMatch(/html,\s*body\s*\{[^}]*height:\s*100dvh/s);
     expect(stylesSource).toMatch(/\.experience\s*\{[^}]*height:\s*100%/s);
     expect(stylesSource).toMatch(/body\s*\{[^}]*overflow:\s*hidden/s);
   });
 
-  it('retains renderer recovery, pending status, and gameplay layout anchors', () => {
-    expect(uiSource).toMatch(
-      /<div class="renderer-status" data-renderer-status role="status">[\s\S]*?<span data-renderer-message>[\s\S]*?<button[^>]+data-action="renderer-retry" disabled>/,
-    );
-    expect(uiSource).toMatch(
-      /action === 'renderer-retry'\) actions\.onRendererRetry\?\.\(\)/,
-    );
-    expect(uiSource).toMatch(/rendererStatus\.hidden !== rendererAvailable/);
-    expect(uiSource).toMatch(
-      /rendererAvailable \|\| actions\.onRendererRetry === undefined/,
-    );
-    expect(uiSource).toMatch(/setRendererStatus\(available, message\)/);
-    expect(uiSource).toMatch(
-      /data-pending-status role="status" aria-live="polite" hidden/,
-    );
-    expect(uiSource).toMatch(
-      /playSurface\?\.setAttribute\('aria-busy', String\(pendingPlaybackRequests\)\)/,
-    );
-    expect(uiSource).toMatch(/class="stage-frame"/);
-    expect(uiSource).toMatch(/class="lane-board"/);
-    expect(uiSource).toMatch(/class="stage-topline"/);
-    expect(uiSource).toMatch(/class="feedback-row"/);
-    expect(uiSource).toMatch(/getGameplayLayout\(\)/);
+  it('preserves zero-sized raw CSS content dimensions', () => {
+    const layout = createBrightvaleViewportLayout({
+      host: { left: 40, top: 20, width: 0, height: 0 },
+      hud: [],
+      labels,
+    });
+
+    expect(layout.width).toBe(0);
+    expect(layout.height).toBe(0);
   });
 
-  it('removes the unused scene-fallback channel without changing renderer status', () => {
-    expect(uiSource).not.toMatch(
-      /setSceneFallback|data-scene-fallback|scene-fallback/,
+  it('converts content-box screen rectangles to host-relative CSS pixels', () => {
+    const layout = createBrightvaleViewportLayout({
+      host: { left: 100, top: 50, width: 1600, height: 900 },
+      hud: [
+        {
+          kind: 'persistent',
+          rect: { x: 124, y: 82, width: 420, height: 96 },
+        },
+      ],
+      labels,
+    });
+
+    expect(layout).toEqual({
+      width: 1600,
+      height: 900,
+      persistentHudExclusions: [{ x: 24, y: 32, width: 420, height: 96 }],
+      labels: {
+        time: { x: 20, y: 30, width: 90, height: 24 },
+        countdown: { x: 140, y: 30, width: 180, height: 36 },
+        legend: { x: 220, y: 610, width: 500, height: 24 },
+        feedback: { x: 400, y: 510, width: 240, height: 34 },
+      },
+    });
+  });
+
+  it('never treats Ready, Pause, Results, or error panels as HUD exclusions', () => {
+    const persistent = {
+      kind: 'persistent' as const,
+      rect: { x: 12, y: 16, width: 500, height: 80 },
+    };
+    const modals = (['ready', 'pause', 'results', 'error'] as const).map(
+      (kind) => ({
+        kind,
+        rect: { x: 400, y: 200, width: 800, height: 500 },
+      }),
     );
-    expect(stylesSource).not.toMatch(/\.scene-fallback\s*\{/);
-    expect(uiSource).toMatch(/setRendererStatus\(available, message\)/);
-    expect(uiSource).toMatch(/data-renderer-status/);
-    expect(uiSource).toMatch(/data-action="renderer-retry"/);
+    const layout = createBrightvaleViewportLayout({
+      host: { left: 0, top: 0, width: 1600, height: 900 },
+      hud: [persistent, ...modals],
+      labels,
+    });
+
+    expect(layout.persistentHudExclusions).toEqual([persistent.rect]);
+  });
+
+  it('pure helper keeps fixed label slots unchanged when modal measurements move', () => {
+    const base = {
+      host: { left: 75, top: 30, width: 1120, height: 700 },
+      hud: [
+        {
+          kind: 'persistent' as const,
+          rect: { x: 95, y: 52, width: 480, height: 72 },
+        },
+        {
+          kind: 'ready' as const,
+          rect: { x: 250, y: 140, width: 600, height: 400 },
+        },
+      ],
+      labels,
+    };
+    const modalMoved = {
+      ...base,
+      hud: [
+        base.hud[0],
+        {
+          kind: 'pause' as const,
+          rect: { x: 0, y: 60, width: 1120, height: 640 },
+        },
+      ],
+    };
+    const before = createBrightvaleViewportLayout(base);
+    const after = createBrightvaleViewportLayout(modalMoved);
+
+    expect(after.labels).toEqual(before.labels);
+    expect(after.persistentHudExclusions).toEqual(
+      before.persistentHudExclusions,
+    );
   });
 });

@@ -42,6 +42,7 @@ const harness = vi.hoisted(() => ({
   audio: null as null | Record<string, unknown>,
   audioDependencies: null as null | Record<string, unknown>,
   sceneModes: [] as string[],
+  frameStatuses: [] as string[],
   sceneCallbacks: [] as Array<() => void>,
   sceneHosts: [] as unknown[],
   scenes: [] as Array<Record<string, ReturnType<typeof vi.fn>>>,
@@ -94,14 +95,16 @@ vi.mock('./scene', () => ({
         const shouldFail =
           (mode === 'first-frame-fails' && firstFrame) || harness.failNextFrame;
         firstFrame = false;
-        if (!shouldFail) return;
-        harness.failNextFrame = false;
-        harness.inSceneUpdate = true;
-        try {
-          onUnavailable();
-        } finally {
-          harness.inSceneUpdate = false;
+        if (shouldFail) {
+          harness.failNextFrame = false;
+          harness.inSceneUpdate = true;
+          try {
+            onUnavailable();
+          } finally {
+            harness.inSceneUpdate = false;
+          }
         }
+        return harness.frameStatuses.shift() ?? 'rendered';
       }),
       destroy: vi.fn(),
     };
@@ -124,8 +127,8 @@ vi.mock('./ui', () => ({
         if (harness.inSceneUpdate) harness.uiRenderedDuringSceneUpdate = true;
       }),
       setBusy: vi.fn(),
-      setRendererStatus: vi.fn((available: boolean) => {
-        harness.events.push(`renderer-status:${available}`);
+      setRendererStatus: vi.fn((status: string) => {
+        harness.events.push(`renderer-status:${status}`);
       }),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
       showFatal: vi.fn(),
@@ -161,7 +164,10 @@ function makeSnapshot(
   };
 }
 
-async function mountMain(sceneModes: string[]): Promise<void> {
+async function mountMain(
+  sceneModes: string[],
+  frameStatuses: string[] = [],
+): Promise<void> {
   vi.resetModules();
   harness.actions = null;
   harness.controller = null;
@@ -170,6 +176,7 @@ async function mountMain(sceneModes: string[]): Promise<void> {
   harness.ui = null;
   harness.audioDependencies = null;
   harness.sceneModes = [...sceneModes];
+  harness.frameStatuses = [...frameStatuses];
   harness.sceneCallbacks = [];
   harness.sceneHosts = [];
   harness.scenes = [];
@@ -314,10 +321,45 @@ afterEach(async () => {
 });
 
 describe('main renderer availability lifecycle', () => {
+  it('keeps playback and input gated through repeated loading frames until rendered', async () => {
+    await mountMain(
+      ['success'],
+      Array.from({ length: 20 }, () => 'loading'),
+    );
+    expect.soft(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+      'loading',
+      expect.any(String),
+    );
+
+    await callAction('start');
+    await callAction('resume');
+    await callAction('restart');
+    fireKey('Enter');
+    fireKey('KeyD');
+    harness.windowListeners.get('keyup')?.({ code: 'KeyD' });
+    expect.soft(harness.controller?.start).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.resume).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.restart).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.keyDown).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.keyUp).not.toHaveBeenCalled();
+
+    harness.renderSnapshot?.(harness.snapshot!);
+    expect.soft(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+      'loading',
+      expect.any(String),
+    );
+    harness.frameStatuses = ['rendered'];
+    harness.renderSnapshot?.(harness.snapshot!);
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
+    expect(harness.controller?.start).not.toHaveBeenCalled();
+    expect(harness.controller?.resume).not.toHaveBeenCalled();
+    expect(harness.controller?.restart).not.toHaveBeenCalled();
+  });
+
   it('gates every route through create failure and first-frame failure, then retries without starting audio', async () => {
     await mountMain(['create-fails', 'first-frame-fails', 'success']);
     expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
-      false,
+      'unavailable',
       expect.any(String),
     );
     expect(harness.scenes).toHaveLength(0);
@@ -357,7 +399,7 @@ describe('main renderer availability lifecycle', () => {
     if (retry === undefined) return;
     await retry(); // Retry renderer: its first frame fails; audio stays locked.
     expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
-      false,
+      'unavailable',
       expect.any(String),
     );
     expect(harness.controller?.start).not.toHaveBeenCalled();
@@ -371,9 +413,9 @@ describe('main renderer availability lifecycle', () => {
     expect(harness.sceneHosts.every((host) => host === harness.host)).toBe(
       true,
     );
-    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(true);
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
     expect(harness.events.indexOf('scene-frame')).toBeLessThan(
-      harness.events.indexOf('renderer-status:true'),
+      harness.events.indexOf('renderer-status:rendered'),
     );
     expect(harness.requestFrameCalls).toHaveLength(1);
     expect(harness.controller?.start).not.toHaveBeenCalled();
@@ -381,7 +423,7 @@ describe('main renderer availability lifecycle', () => {
     expect(harness.controller?.restart).not.toHaveBeenCalled();
 
     staleFailure?.();
-    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(true);
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
 
     fireKey('KeyD');
     expect(harness.controller?.keyDown).toHaveBeenCalledWith('KeyD', false);
@@ -409,12 +451,12 @@ describe('main renderer availability lifecycle', () => {
     expect(harness.controller?.restart).not.toHaveBeenCalled();
     expect(harness.controller?.pauseWithoutPublishing).toHaveBeenCalledTimes(1);
     expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
-      false,
+      'unavailable',
       expect.any(String),
     );
 
     await callAction('onRendererRetry');
-    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(true);
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
     expect(harness.controller?.start).not.toHaveBeenCalled();
   });
 
@@ -489,7 +531,7 @@ describe('main renderer availability lifecycle', () => {
     'cancels $name on renderer loss without publishing recursively or replaying stale work',
     async ({ status, game, action, method }) => {
       await mountMain(['success', 'success']);
-      expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(true);
+      expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
       harness.snapshot = makeSnapshot(
         status,
         game,
@@ -510,7 +552,7 @@ describe('main renderer availability lifecycle', () => {
       expect(harness.controller?.pause).not.toHaveBeenCalled();
       expect(harness.uiRenderedDuringSceneUpdate).toBe(false);
       expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
-        false,
+        'unavailable',
         expect.any(String),
       );
       const playbackCallsBeforeResolve = {
@@ -523,7 +565,7 @@ describe('main renderer availability lifecycle', () => {
       await pendingAction;
 
       expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
-        false,
+        'unavailable',
         expect.any(String),
       );
       expect(harness.controller?.start).toHaveBeenCalledTimes(
@@ -537,7 +579,7 @@ describe('main renderer availability lifecycle', () => {
       );
 
       await callAction('onRendererRetry');
-      expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(true);
+      expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
       expect(harness.controller?.start).toHaveBeenCalledTimes(
         playbackCallsBeforeResolve.start ?? 0,
       );
@@ -555,4 +597,122 @@ describe('main renderer availability lifecycle', () => {
       }
     },
   );
+
+  it.each([
+    {
+      name: 'start',
+      status: 'loading',
+      game: 'playing',
+      action: 'start',
+      method: 'start',
+    },
+    {
+      name: 'resume',
+      status: 'paused',
+      game: 'playing',
+      action: 'resume',
+      method: 'resume',
+    },
+    {
+      name: 'restart',
+      status: 'results',
+      game: 'results',
+      action: 'restart',
+      method: 'restart',
+    },
+  ] as const)(
+    'suspension during pending $name pauses once, invalidates late work, and requires explicit resume after rendering',
+    async ({ status, game, action, method }) => {
+      await mountMain(['success']);
+      const retainedScene = harness.scene;
+      harness.snapshot = makeSnapshot(status, game);
+      const pending = deferred<AppSnapshot>();
+      harness.controller?.[method].mockImplementation(() => pending.promise);
+
+      const pendingAction = Promise.resolve(harness.actions?.[action]?.());
+      expect(harness.controller?.[method]).toHaveBeenCalledTimes(1);
+      harness.frameStatuses = Array.from({ length: 20 }, () => 'suspended');
+      harness.renderSnapshot?.(harness.snapshot);
+      expect.soft(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+        'suspended',
+        expect.any(String),
+      );
+      expect.soft(harness.controller?.pauseWithoutPublishing).toHaveBeenCalledTimes(
+        1,
+      );
+      expect.soft(harness.ui?.setBusy).toHaveBeenLastCalledWith(null);
+      const busyClearsOnSuspend =
+        harness.ui?.setBusy.mock.calls.filter(([message]) => message === null)
+          .length ?? 0;
+      harness.renderSnapshot?.(harness.snapshot);
+      expect.soft(harness.controller?.pauseWithoutPublishing).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(harness.ui?.setBusy.mock.calls.filter(([message]) => message === null))
+        .toHaveLength(busyClearsOnSuspend);
+      expect(harness.scene).toBe(retainedScene);
+      expect(harness.scene?.destroy).not.toHaveBeenCalled();
+
+      pending.resolve(makeSnapshot('ready', game));
+      await pendingAction;
+      expect.soft(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+        'suspended',
+        expect.any(String),
+      );
+      expect(harness.ui?.setBusy.mock.calls.filter(([message]) => message === null))
+        .toHaveLength(busyClearsOnSuspend);
+      expect(harness.scene).toBe(retainedScene);
+
+      harness.frameStatuses = ['rendered'];
+      harness.snapshot = makeSnapshot('paused', game);
+      harness.renderSnapshot?.(harness.snapshot);
+      expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
+      expect(harness.controller?.start).toHaveBeenCalledTimes(
+        method === 'start' ? 1 : 0,
+      );
+      expect(harness.controller?.resume).toHaveBeenCalledTimes(
+        method === 'resume' ? 1 : 0,
+      );
+      expect(harness.controller?.restart).toHaveBeenCalledTimes(
+        method === 'restart' ? 1 : 0,
+      );
+      await callAction('resume');
+      expect(harness.controller?.resume).toHaveBeenCalledTimes(
+        method === 'resume' ? 2 : 1,
+      );
+      expect(harness.scene).toBe(retainedScene);
+    },
+  );
+
+  it('treats failure during suspension as terminal and retries with a fresh generation', async () => {
+    await mountMain(['success', 'success']);
+    const oldScene = harness.scene;
+    const staleFailure = harness.sceneCallbacks[0];
+    harness.frameStatuses = ['suspended'];
+    harness.renderSnapshot?.(harness.snapshot!);
+    expect.soft(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+        'suspended',
+      expect.any(String),
+    );
+
+    harness.sceneCallbacks[0]?.();
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
+        'unavailable',
+      expect.any(String),
+    );
+    expect(harness.controller?.pauseWithoutPublishing).toHaveBeenCalledTimes(1);
+
+    await callAction('onRendererRetry');
+    const replacement = harness.scene;
+    expect(replacement).not.toBe(oldScene);
+    expect(harness.scenes).toHaveLength(2);
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
+    expect(harness.controller?.start).not.toHaveBeenCalled();
+    expect(harness.controller?.resume).not.toHaveBeenCalled();
+    expect(harness.controller?.restart).not.toHaveBeenCalled();
+
+    staleFailure?.();
+    expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith('rendered');
+    expect(harness.scene).toBe(replacement);
+  });
 });

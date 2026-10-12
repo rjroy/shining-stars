@@ -41,6 +41,7 @@ const harness = vi.hoisted(() => ({
   snapshots: [] as Snapshot[],
   rendererCallbacks: [] as Array<() => void>,
   sceneModes: [] as string[],
+  frameStatuses: [] as string[],
   scenes: [] as Array<{ updateFrame: () => void; destroy: () => void }>,
   listeners: new Map<string, (event: unknown) => void>(),
   documentListeners: new Map<string, (event: unknown) => void>(),
@@ -84,6 +85,7 @@ vi.mock('./scene', () => ({
         ) {
           onUnavailable();
         }
+        return harness.frameStatuses.shift() ?? 'rendered';
       }),
       destroy: vi.fn(),
     };
@@ -108,9 +110,9 @@ vi.mock('./ui', () => ({
       setBusy: vi.fn((message: string | null) => {
         harness.uiEvents.push(`busy:${message === null ? 'clear' : 'set'}`);
       }),
-      setRendererStatus: vi.fn((available: boolean) => {
-        harness.uiRendererAvailable = available;
-        harness.uiEvents.push(`renderer:${available}`);
+      setRendererStatus: vi.fn((status: string) => {
+        harness.uiRendererAvailable = status === 'rendered';
+        harness.uiEvents.push(`renderer:${harness.uiRendererAvailable}`);
       }),
       getGameplayLayout: vi.fn(() => ({ cached: true })),
       showFatal: vi.fn(),
@@ -208,6 +210,7 @@ async function mountMain(sceneModes: string[]): Promise<void> {
   harness.snapshots = [];
   harness.rendererCallbacks = [];
   harness.sceneModes = [...sceneModes];
+  harness.frameStatuses = [];
   harness.scenes = [];
   harness.listeners.clear();
   harness.documentListeners.clear();
@@ -492,6 +495,38 @@ describe('main renderer failures with real audio transport and controller', () =
     await invoke('onRendererRetry');
     expect(context?.sources).toHaveLength(1);
     expect(context?.sources[0]?.startCalls).toBe(1);
+
+    enter();
+    await flushMicrotasks();
+    expect(context?.sources).toHaveLength(2);
+    expect(context?.sources[1]?.startCalls).toBe(1);
+  });
+
+  it('pauses an actually scheduled source once during suspension and waits for explicit playback after restoration', async () => {
+    await mountMain(['success']);
+    await invoke('start');
+    const context = harness.contexts[0];
+    const scene = harness.scenes[0];
+    expect(context?.sources[0]?.startCalls).toBe(1);
+    expect(harness.snapshots.at(-1)?.audio.status).toBe('starting');
+
+    harness.frameStatuses = ['suspended', 'suspended', 'rendered'];
+    harness.frameCallbacks[0]?.();
+    expect(harness.uiRendererAvailable).toBe(false);
+    expect(context?.sources[0]?.stopCalls).toBe(1);
+    expect(harness.snapshots.at(-1)?.audio.status).toBe('paused');
+    expect(scene?.destroy).not.toHaveBeenCalled();
+
+    harness.frameCallbacks.at(-1)?.();
+    expect(harness.uiRendererAvailable).toBe(false);
+    expect(context?.sources[0]?.stopCalls).toBe(1);
+    expect(scene?.destroy).not.toHaveBeenCalled();
+
+    harness.frameCallbacks.at(-1)?.();
+    expect(harness.uiRendererAvailable).toBe(true);
+    expect(context?.sources).toHaveLength(1);
+    expect(context?.sources[0]?.startCalls).toBe(1);
+    expect(harness.snapshots.at(-1)?.audio.status).toBe('paused');
 
     enter();
     await flushMicrotasks();

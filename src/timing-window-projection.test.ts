@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
 import { getDifficultyProfile, type Difficulty } from './game-balance';
-import { projectTimingWindowGeometry } from './note-projection';
-import { projectGameplayFrame, type GameplayLayout } from './gameplay-frame';
+import {
+  projectGameplayFrame,
+  VISIBLE_NOTE_SECONDS,
+} from './gameplay-frame';
+import type { BrightvaleViewportLayout } from './brightvale/viewport';
 
 const chartNotes = [{ id: 'target', lane: 0, time: 2 }] as const;
 const states = [{ id: 'target', phase: 'audience' as const, outcome: null }];
@@ -15,21 +18,26 @@ const chart: ChartConfig = {
   allowedDifficulties: ['normal', 'hard'],
   notes: [...chartNotes],
 };
-const layout: GameplayLayout = {
+const layout: BrightvaleViewportLayout = {
   width: 640,
   height: 480,
-  stage: { x: 0, y: 0, width: 640, height: 480 },
-  board: { x: 0, y: 0, width: 640, height: 300 },
-  header: { x: 0, y: 0, width: 640, height: 20 },
-  legend: { x: 0, y: 340, width: 640, height: 20 },
-  feedback: { x: 0, y: 380, width: 640, height: 20 },
+  persistentHudExclusions: [],
+  labels: {
+    time: { x: 0, y: 0, width: 80, height: 20 },
+    countdown: { x: 80, y: 0, width: 80, height: 20 },
+    legend: { x: 0, y: 340, width: 640, height: 20 },
+    feedback: { x: 0, y: 380, width: 640, height: 20 },
+  },
 };
 
-function makeSnapshot(): ControllerSnapshot {
+function makeSnapshot(
+  difficulty: Difficulty = 'hard',
+  transportTime = 1,
+): ControllerSnapshot {
   return {
     audio: {
       status: 'playing',
-      position: 1,
+      position: transportTime,
       duration: chart.duration,
       scheduledWhen: null,
       hasActiveSource: true,
@@ -38,13 +46,13 @@ function makeSnapshot(): ControllerSnapshot {
       error: null,
     },
     game: {
-      transportTime: 1,
+      transportTime,
       phase: 'audience',
       status: 'playing',
       renown: 0,
       personalStrength: 100,
       twilightStrength: 100,
-      difficulty: 'hard',
+      difficulty,
       notes: states,
       result: null,
     },
@@ -56,70 +64,97 @@ function makeSnapshot(): ControllerSnapshot {
   };
 }
 
-function geometryFor(difficulty: Difficulty, runwayTravelPx: number) {
-  return projectTimingWindowGeometry(difficulty, runwayTravelPx, 2.4);
-}
-
 describe('difficulty timing-window projection', () => {
   it.each(['easy', 'normal', 'hard'] as const)(
     'calculates matching Perfect and Good geometry for the %s profile',
     (difficulty) => {
       const profile = getDifficultyProfile(difficulty);
-      const runwayTravelPx = 240;
-      const expectedGeometry = {
-        goodHalfHeightPx:
-          profile.timing.goodWindowSeconds * (runwayTravelPx / 2.4),
-        goodEnvelopeHeightPx:
-          2 * profile.timing.goodWindowSeconds * (runwayTravelPx / 2.4),
-        perfectHalfHeightPx:
-          profile.timing.perfectWindowSeconds * (runwayTravelPx / 2.4),
-        perfectEnvelopeHeightPx:
-          2 * profile.timing.perfectWindowSeconds * (runwayTravelPx / 2.4),
-      };
-
-      expect(geometryFor(difficulty, runwayTravelPx)).toEqual(expectedGeometry);
+      const frame = projectGameplayFrame(
+        makeSnapshot(difficulty),
+        chart,
+        layout,
+        false,
+      );
+      expect(frame.timingWindows).toEqual({
+        goodHalfProgress:
+          profile.timing.goodWindowSeconds / VISIBLE_NOTE_SECONDS,
+        perfectHalfProgress:
+          profile.timing.perfectWindowSeconds / VISIBLE_NOTE_SECONDS,
+      });
+      expect(frame.timingWindows).not.toHaveProperty('goodHalfHeightPx');
     },
   );
 
   it('keeps Perfect nested inside Good and preserves Easy/Normal/Hard ratios', () => {
-    const easy = geometryFor('easy', 240);
-    const normal = geometryFor('normal', 240);
-    const hard = geometryFor('hard', 240);
+    const halfProgress = (difficulty: Difficulty) =>
+      projectGameplayFrame(
+        makeSnapshot(difficulty),
+        chart,
+        layout,
+        false,
+      ).timingWindows;
+    const easy = halfProgress('easy');
+    const normal = halfProgress('normal');
+    const hard = halfProgress('hard');
 
-    expect(easy?.perfectHalfHeightPx).toBeLessThan(easy?.goodHalfHeightPx ?? 0);
-    expect(easy?.goodHalfHeightPx).toBe((hard?.goodHalfHeightPx ?? 0) * 5);
-    expect(easy?.perfectHalfHeightPx).toBe(
-      (hard?.perfectHalfHeightPx ?? 0) * 5,
+    expect(easy.goodHalfProgress).toBeDefined();
+    expect(normal.goodHalfProgress).toBeDefined();
+    expect(hard.goodHalfProgress).toBeDefined();
+    expect(easy.perfectHalfProgress).toBeLessThan(easy.goodHalfProgress);
+    expect(easy.goodHalfProgress).toBeCloseTo(hard.goodHalfProgress * 5, 14);
+    expect(easy.perfectHalfProgress).toBeCloseTo(
+      hard.perfectHalfProgress * 5,
+      14,
     );
-    expect(normal?.goodHalfHeightPx).toBe((hard?.goodHalfHeightPx ?? 0) * 1.5);
-    expect(normal?.perfectHalfHeightPx).toBe(
-      (hard?.perfectHalfHeightPx ?? 0) * 1.5,
+    expect(normal.goodHalfProgress).toBeCloseTo(
+      hard.goodHalfProgress * 1.5,
+      14,
+    );
+    expect(normal.perfectHalfProgress).toBeCloseTo(
+      hard.perfectHalfProgress * 1.5,
+      14,
     );
   });
 
-  it('scales timing-window geometry with responsive runway travel distance', () => {
-    const narrow = geometryFor('normal', 180);
-    const wide = geometryFor('normal', 300);
+  it('leaves timing-envelope endpoints unclamped outside note progress', () => {
+    const early = projectGameplayFrame(
+      makeSnapshot('hard', -0.4),
+      chart,
+      layout,
+      false,
+    );
+    expect(early.notes[0]?.progress).toBe(0);
+    expect(early.timingWindows.goodHalfProgress).toBeDefined();
+    expect(early.timingWindows.goodHalfProgress).toBeGreaterThan(0);
+    expect(
+      early.notes[0]!.progress - early.timingWindows.goodHalfProgress,
+    ).toBeLessThan(0);
 
-    for (const dimension of [
-      'goodHalfHeightPx',
-      'goodEnvelopeHeightPx',
-      'perfectHalfHeightPx',
-      'perfectEnvelopeHeightPx',
-    ] as const) {
-      expect(wide[dimension]).toBe(narrow[dimension] * (5 / 3));
-    }
+    const late = projectGameplayFrame(
+      makeSnapshot('hard', 2.4),
+      chart,
+      layout,
+      false,
+    );
+    expect(late.notes[0]?.progress).toBe(1);
+    expect(late.timingWindows.goodHalfProgress).toBeDefined();
+    expect(late.timingWindows.goodHalfProgress).toBeGreaterThan(0);
+    expect(
+      late.notes[0]!.progress + late.timingWindows.goodHalfProgress,
+    ).toBeGreaterThan(1);
   });
 
   it('projects GPU notes and target geometry from the active run profile, not the next selection', () => {
     const frame = projectGameplayFrame(makeSnapshot(), chart, layout, false);
-    const activeGeometry = projectTimingWindowGeometry(
-      'hard',
-      layout.board.height * 0.64,
-      2.4,
-    );
+    const activeProfile = getDifficultyProfile('hard');
 
     expect(frame.difficulty).toBe('hard');
-    expect(frame.timingWindows).toEqual(activeGeometry);
+    expect(frame.timingWindows).toEqual({
+      goodHalfProgress:
+        activeProfile.timing.goodWindowSeconds / VISIBLE_NOTE_SECONDS,
+      perfectHalfProgress:
+        activeProfile.timing.perfectWindowSeconds / VISIBLE_NOTE_SECONDS,
+    });
+    expect(frame.layout).toBe(layout);
   });
 });

@@ -32,7 +32,7 @@ describe('projectNotes', () => {
         1,
         2,
       ),
-    ).toEqual([{ id: 'near', lane: 2, progress: 0.5, bottomPercent: 50 }]);
+    ).toEqual([{ id: 'near', lane: 2, progress: 0.5 }]);
   });
 
   it('clamps an imminent note to the hit line', () => {
@@ -43,7 +43,7 @@ describe('projectNotes', () => {
         1,
         2,
       ),
-    ).toEqual([{ id: 'now', lane: 3, progress: 1, bottomPercent: 18 }]);
+    ).toEqual([{ id: 'now', lane: 3, progress: 1 }]);
   });
 
   it('does not project chart notes when there is no active game state', () => {
@@ -63,7 +63,7 @@ describe('projectNotes', () => {
         snapshot.transportTime,
         2.4,
       ),
-    ).toEqual([{ id: 'easy-late', lane: 0, progress: 1, bottomPercent: 18 }]);
+    ).toEqual([{ id: 'easy-late', lane: 0, progress: 1 }]);
   });
 
   it.each([-0.2, 0.2])(
@@ -80,7 +80,7 @@ describe('projectNotes', () => {
       expect(visualClock - easyChart.notes[0]!.time).toBeGreaterThan(0.35);
       expect(
         projectNotes(atDeadline.notes, easyChart.notes, visualClock, 2.4),
-      ).toEqual([{ id: 'easy-late', lane: 0, progress: 1, bottomPercent: 18 }]);
+        ).toEqual([{ id: 'easy-late', lane: 0, progress: 1 }]);
 
       const afterDeadline = game.advanceTo(deadline + 0.001);
       expect(afterDeadline.notes[0]?.outcome).toBe('miss');

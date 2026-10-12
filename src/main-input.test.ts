@@ -8,9 +8,11 @@ const harness = vi.hoisted(() => ({
     audio: { status: string };
     game: { status: string };
   },
-  controller: null as null | Record<string, (...args: unknown[]) => unknown>,
+  controller: null as null | Record<string, ReturnType<typeof vi.fn>>,
+  disposeController: null as null | (() => Promise<void>),
   scene: null as null | Record<string, (...args: unknown[]) => unknown>,
   gameplayFrame: { gameplayProjection: true },
+  frameStatus: 'rendered',
   sceneCreated: false,
   renderSnapshot: null as null | ((snapshot: unknown) => void),
   rendererUnavailable: null as null | (() => void),
@@ -98,6 +100,7 @@ describe('main keyboard routing', () => {
       audio: { status: 'paused' },
       game: { status: 'playing' },
     };
+    const disposeController = vi.fn(async () => undefined);
     harness.controller = {
       snapshot: vi.fn(() => harness.snapshot),
       start: vi.fn(async () => harness.snapshot),
@@ -108,12 +111,13 @@ describe('main keyboard routing', () => {
       keyDown: vi.fn(),
       keyUp: vi.fn(),
       update: vi.fn(),
-      dispose: vi.fn(async () => undefined),
+      dispose: disposeController,
       pauseWithoutPublishing: vi.fn(() => harness.snapshot),
     };
+    harness.disposeController = disposeController;
     harness.scene = {
       update: vi.fn(),
-      updateFrame: vi.fn(),
+      updateFrame: vi.fn(() => harness.frameStatus),
       destroy: vi.fn(),
     };
 
@@ -132,9 +136,46 @@ describe('main keyboard routing', () => {
   it('keeps every playback route closed while renderer availability is false', async () => {
     expect(harness.sceneCreated).toBe(true);
     if (harness.snapshot === null) throw new Error('snapshot not initialized');
+
+    for (const status of ['loading', 'suspended'] as const) {
+      harness.frameStatus = status;
+      harness.renderSnapshot?.(harness.snapshot);
+      const keydown = harness.listeners.get('keydown');
+      const keyup = harness.listeners.get('keyup');
+      harness.actions?.start();
+      harness.actions?.resume();
+      harness.actions?.restart();
+      keydown?.({
+        code: 'Enter',
+        target: new TestHTMLElement(),
+        preventDefault: vi.fn(),
+      });
+      for (const code of ['KeyD', 'KeyF', 'KeyJ', 'KeyK']) {
+        keydown?.({
+          code,
+          target: new TestHTMLElement(),
+          repeat: false,
+          preventDefault: vi.fn(),
+        });
+        keyup?.({ code });
+      }
+    }
+    expect.soft(harness.controller?.start).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.resume).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.restart).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.keyDown).not.toHaveBeenCalled();
+    expect.soft(harness.controller?.keyUp).not.toHaveBeenCalled();
+    harness.controller?.start.mockClear();
+    harness.controller?.resume.mockClear();
+    harness.controller?.restart.mockClear();
+    harness.controller?.keyDown.mockClear();
+    harness.controller?.keyUp.mockClear();
+    harness.frameStatus = 'rendered';
+    harness.renderSnapshot?.(harness.snapshot);
+
     harness.rendererUnavailable?.();
     expect(harness.ui?.setRendererStatus).toHaveBeenLastCalledWith(
-      false,
+      'unavailable',
       expect.any(String),
     );
 
@@ -212,7 +253,7 @@ describe('main keyboard routing', () => {
     cancelAnimationFrame(1);
     harness.scene?.destroy();
     harness.ui?.destroy();
-    await harness.controller?.dispose();
+    await harness.disposeController?.();
     harness.listeners.clear();
     vi.unstubAllGlobals();
     vi.resetModules();

@@ -7,6 +7,12 @@ import {
   getDifficultyProfile,
   type Difficulty,
 } from './game-balance';
+import {
+  createBrightvaleViewportLayout,
+  type BrightvaleRendererStatus,
+  type BrightvaleViewportLayout,
+  type BrightvaleViewportRect,
+} from './brightvale/viewport';
 
 export interface UIActions {
   readonly start: () => void;
@@ -20,8 +26,8 @@ export interface UIActions {
 export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
-  setRendererStatus(available: boolean, message?: string): void;
-  getGameplayLayout(): import('./gameplay-frame').GameplayLayout;
+  setRendererStatus(status: BrightvaleRendererStatus, message?: string): void;
+  getGameplayLayout(): BrightvaleViewportLayout;
   showFatal(message: string): void;
   destroy(): void;
 }
@@ -115,14 +121,6 @@ export function createGameUI(
             <span data-track-state>Onset-derived chart · play-test timing</span>
             <span class="stage-time" data-time>00:00</span>
           </div>
-          <div class="board-fit" aria-hidden="true">
-            <div class="lane-board">
-              <div class="lane" data-lane="0"></div>
-              <div class="lane" data-lane="1"></div>
-              <div class="lane" data-lane="2"></div>
-              <div class="lane" data-lane="3"></div>
-            </div>
-          </div>
           <p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>
           <div class="feedback-row" aria-hidden="true">
             <span data-feedback></span>
@@ -139,7 +137,7 @@ export function createGameUI(
           <h2 id="ready-title">Your voice leads. Brightvale answers.</h2>
           <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
           <p class="chart-notice">Aubio onset chart · density configured per song</p>
-          <button class="primary-button" type="button" data-action="start">Begin performance <span aria-hidden="true">↗</span></button>
+        <button class="primary-button" type="button" data-action="start" disabled>Begin performance <span aria-hidden="true">↗</span></button>
           <p class="loading-message" data-busy hidden></p>
           <p class="error-message" data-error role="alert" hidden></p>
         </section>
@@ -148,7 +146,7 @@ export function createGameUI(
           <p class="dialog-overline">The song is held</p>
           <h2 id="pause-title">Take your time.</h2>
           <p>Your place in the song is saved. The chart will wait through a short count-in.</p>
-          <div class="dialog-actions"><button class="primary-button" type="button" data-action="resume">Resume <span aria-hidden="true">↗</span></button><button class="secondary-button" type="button" data-action="restart">Start over</button></div>
+          <div class="dialog-actions"><button class="primary-button" type="button" data-action="resume" disabled>Resume <span aria-hidden="true">↗</span></button><button class="secondary-button" type="button" data-action="restart" disabled>Start over</button></div>
         </section>
 
         <section class="dialog-panel result-panel" data-panel="results" aria-labelledby="result-title" hidden>
@@ -156,69 +154,131 @@ export function createGameUI(
           <h2 id="result-title" data-result-title>Brightvale heard you.</h2>
           <p class="result-boundary">A missed note is not surrender.</p>
           <div class="result-grid" data-result-grid></div>
-          <button class="primary-button" type="button" data-action="restart">Sing again <span aria-hidden="true">↗</span></button>
+          <button class="primary-button" type="button" data-action="restart" disabled>Sing again <span aria-hidden="true">↗</span></button>
         </section>
 
         <section class="dialog-panel error-panel" data-panel="error" aria-labelledby="error-title" hidden>
           <p class="dialog-overline">Audio could not begin</p>
           <h2 id="error-title">The song is not ready.</h2>
           <p data-audio-error role="alert">Check the selected track and try again.</p>
-          <button class="primary-button" type="button" data-action="start">Retry loading <span aria-hidden="true">↗</span></button>
+          <button class="primary-button" type="button" data-action="start" disabled>Retry loading <span aria-hidden="true">↗</span></button>
         </section>
       </section>
       <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
     </main>`;
 
   const playSurface = root.querySelector<HTMLElement>('.play-surface');
-  const stageFrame = root.querySelector<HTMLElement>('.stage-frame');
-  const laneBoard = root.querySelector<HTMLElement>('.lane-board');
+  const playHeading = root.querySelector<HTMLElement>('.play-heading');
   const stageHeader = root.querySelector<HTMLElement>('.stage-topline');
   const timingLegend = root.querySelector<HTMLElement>('[data-timing-legend]');
   const feedbackRow = root.querySelector<HTMLElement>('.feedback-row');
+  const timeSlot = root.querySelector<HTMLElement>('[data-time]');
+  const countdownSlot = root.querySelector<HTMLElement>('[data-countdown]');
+  const performanceControls = root.querySelector<HTMLElement>(
+    '.performance-controls',
+  );
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
   const actionButtons = [
     ...root.querySelectorAll<HTMLButtonElement>('[data-action]'),
   ];
   let busyMessage: string | null = null;
   let fatalMessage: string | null = null;
-  let rendererAvailable = false;
-  let rendererMessage =
-    '3D playfield is not ready for this test build. Playback is locked.';
+  let rendererStatus: BrightvaleRendererStatus = 'loading';
+  let rendererMessage = 'Loading Brightvale…';
   let pendingPlaybackRequests = false;
   let resultsRendered = false;
-  let gameplayLayout: import('./gameplay-frame').GameplayLayout = {
-    width: Math.max(1, playSurface?.clientWidth ?? 1),
-    height: Math.max(1, playSurface?.clientHeight ?? 1),
-    stage: { x: 0, y: 0, width: 1, height: 1 },
-    board: { x: 0, y: 0, width: 1, height: 1 },
-    header: { x: 0, y: 0, width: 1, height: 1 },
-    legend: { x: 0, y: 0, width: 1, height: 1 },
-    feedback: { x: 0, y: 0, width: 1, height: 1 },
+  const emptyRect: BrightvaleViewportRect = {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  };
+  let gameplayLayout: BrightvaleViewportLayout = {
+    width: 0,
+    height: 0,
+    persistentHudExclusions: [],
+    labels: {
+      time: emptyRect,
+      countdown: emptyRect,
+      legend: emptyRect,
+      feedback: emptyRect,
+    },
   };
   const measureGameplayLayout = () => {
     if (playSurface === null) return;
     const hostRect = playSurface.getBoundingClientRect();
-    const contentLeft = hostRect.left + playSurface.clientLeft;
-    const contentTop = hostRect.top + playSurface.clientTop;
-    const readRect = (element: HTMLElement | null) => {
-      if (element === null) return { x: 0, y: 0, width: 0, height: 0 };
+    const style = getComputedStyle(playSurface);
+    const cssPx = (value: string): number => Number.parseFloat(value) || 0;
+    const borderLeft = cssPx(style.borderLeftWidth);
+    const borderRight = cssPx(style.borderRightWidth);
+    const borderTop = cssPx(style.borderTopWidth);
+    const borderBottom = cssPx(style.borderBottomWidth);
+    const paddingLeft = cssPx(style.paddingLeft);
+    const paddingRight = cssPx(style.paddingRight);
+    const paddingTop = cssPx(style.paddingTop);
+    const paddingBottom = cssPx(style.paddingBottom);
+    const contentLeft = hostRect.left + borderLeft + paddingLeft;
+    const contentTop = hostRect.top + borderTop + paddingTop;
+    const readRect = (element: HTMLElement | null): BrightvaleViewportRect => {
+      if (element === null)
+        return { x: contentLeft, y: contentTop, width: 0, height: 0 };
       const rect = element.getBoundingClientRect();
       return {
-        x: rect.left - contentLeft,
-        y: rect.top - contentTop,
+        x: rect.left,
+        y: rect.top,
         width: rect.width,
         height: rect.height,
       };
     };
-    gameplayLayout = {
-      width: Math.max(1, playSurface.clientWidth),
-      height: Math.max(1, playSurface.clientHeight),
-      stage: readRect(stageFrame),
-      board: readRect(laneBoard),
-      header: readRect(stageHeader),
-      legend: readRect(timingLegend),
-      feedback: readRect(feedbackRow),
-    };
+    const nextLayout = createBrightvaleViewportLayout({
+      host: {
+        left: contentLeft,
+        top: contentTop,
+        width: Math.max(
+          0,
+          hostRect.width -
+            borderLeft -
+            borderRight -
+            paddingLeft -
+            paddingRight,
+        ),
+        height: Math.max(
+          0,
+          hostRect.height -
+            borderTop -
+            borderBottom -
+            paddingTop -
+            paddingBottom,
+        ),
+      },
+      hud: [
+        ...[...(playHeading?.children ?? [])],
+        performanceControls?.querySelector('p') ?? null,
+        performanceControls?.querySelector('[data-action="pause"]') ?? null,
+      ]
+        .filter(
+          (element): element is HTMLElement => element instanceof HTMLElement,
+        )
+        .map((element) => ({
+          kind: 'persistent' as const,
+          rect: readRect(element),
+        }))
+        .filter(({ rect }) => rect.width > 0 && rect.height > 0),
+      labels: {
+        time: readRect(timeSlot),
+        countdown: readRect(countdownSlot),
+        legend: readRect(timingLegend),
+        feedback: readRect(feedbackRow),
+      },
+    });
+    if (JSON.stringify(nextLayout) !== JSON.stringify(gameplayLayout)) {
+      gameplayLayout = nextLayout;
+      playSurface.dispatchEvent(
+        new CustomEvent('brightvale-layout-measured', {
+          detail: gameplayLayout,
+        }),
+      );
+    }
   };
   const layoutResizeObserver =
     typeof ResizeObserver === 'function'
@@ -226,9 +286,13 @@ export function createGameUI(
       : null;
   const layoutElements = [
     playSurface,
-    stageFrame,
-    laneBoard,
+    playHeading,
     stageHeader,
+    ...[...(playHeading?.children ?? [])],
+    performanceControls?.querySelector('p') ?? null,
+    performanceControls?.querySelector('[data-action="pause"]') ?? null,
+    timeSlot,
+    countdownSlot,
     timingLegend,
     feedbackRow,
   ];
@@ -371,17 +435,34 @@ export function createGameUI(
         action === 'pause'
           ? false
           : action === 'renderer-retry'
-            ? rendererAvailable || actions.onRendererRetry === undefined
+            ? rendererStatus !== 'unavailable' ||
+              actions.onRendererRetry === undefined
             : pendingPlaybackRequests ||
-              !rendererAvailable ||
+              rendererStatus !== 'rendered' ||
               busyMessage !== null;
       if (actionButton.disabled !== disabled) actionButton.disabled = disabled;
     }
-    const rendererStatus = root.querySelector<HTMLElement>(
+    const rendererStatusNode = root.querySelector<HTMLElement>(
       '[data-renderer-status]',
     );
-    if (rendererStatus !== null && rendererStatus.hidden !== rendererAvailable)
-      rendererStatus.hidden = rendererAvailable;
+    if (rendererStatusNode !== null) {
+      const activePanel = panels.find((panel) => !panel.hidden);
+      const statusContainer =
+        rendererStatus !== 'rendered' && activePanel !== undefined
+          ? activePanel
+          : playSurface;
+      if (
+        statusContainer != null &&
+        rendererStatusNode.parentElement !== statusContainer
+      )
+        statusContainer.append(rendererStatusNode);
+    }
+    const statusHidden = rendererStatus === 'rendered';
+    if (
+      rendererStatusNode !== null &&
+      rendererStatusNode.hidden !== statusHidden
+    )
+      rendererStatusNode.hidden = statusHidden;
     const pendingStatus = root.querySelector<HTMLElement>(
       '[data-pending-status]',
     );
@@ -501,6 +582,7 @@ export function createGameUI(
     } else {
       resultsRendered = false;
     }
+    measureGameplayLayout();
   }
 
   return {
@@ -508,13 +590,17 @@ export function createGameUI(
     setBusy(message) {
       busyMessage = message;
     },
-    setRendererStatus(available, message) {
-      rendererAvailable = available;
+    setRendererStatus(status, message) {
+      rendererStatus = status;
       rendererMessage =
         message ??
-        (available
-          ? ''
-          : '3D playfield is not ready for this test build. Playback is locked.');
+        {
+          loading: 'Loading Brightvale…',
+          rendered: '',
+          suspended: 'Resize the window to continue playing.',
+          unavailable:
+            'The three-dimensional playfield could not start. Playback is locked.',
+        }[status];
     },
     getGameplayLayout() {
       return gameplayLayout;

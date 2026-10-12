@@ -1,17 +1,28 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import highwayValidation from '../../assets/production/brightvale-highway/technical-validation.json';
 import platformValidation from '../../assets/production/brightvale-platform/technical-validation.json';
 import structureLayout from '../../assets/production/brightvale-structure-layout.json';
-import measuredProof from '../../tools/brightvale-playfield-proof/reference.json';
 import { getDifficultyProfile } from '../game-balance';
+import { createBrightvaleSurfaceProfile } from './projection';
 import { createBrightvalePlayfieldContract } from './playfield';
+import { loadBrightvaleProductionAssets } from './test-assets';
+import type { BrightvaleAssets } from './assets';
 
 const playfield = structureLayout.playfield;
 const highway = highwayValidation.glb;
 const sourceLaneCenters = [-4.5, -1.5, 1.5, 4.5] as const;
 const laneWidth = 2.75;
 const visibleApproachLength = 42;
+let assets: BrightvaleAssets;
+let surfaceProfile: ReturnType<typeof createBrightvaleSurfaceProfile>;
+
+beforeAll(async () => {
+  assets = await loadBrightvaleProductionAssets();
+  surfaceProfile = createBrightvaleSurfaceProfile(assets.roots);
+});
+
+afterAll(() => assets?.dispose());
 
 describe('Brightvale geometry-driven playfield contract', () => {
   it('maps each of four authored lane hit anchors to the measured platform target', () => {
@@ -73,30 +84,8 @@ describe('Brightvale geometry-driven playfield contract', () => {
     expect(highway.bounds_gltf.max[1]).toBeCloseTo(0.505, 3);
   });
 
-  it('keeps the measured visual path continuous through progress 1 while preserving the judged anchor', () => {
-    const measuredTarget = measuredProof.surfaceProfile[0]?.measuredSamples;
-    if (!measuredTarget || measuredTarget.length < 2)
-      throw new Error(
-        'the real-GLB proof must retain adjacent target-surface measurements',
-      );
-    const beforeTarget = measuredTarget.at(-2);
-    const targetTop = measuredTarget.at(-1);
-    if (!beforeTarget || !targetTop)
-      throw new Error('target profile endpoints are required');
-
-    const contract = createBrightvalePlayfieldContract({
-      surfaceHeightAt(_lane, localZ) {
-        if (localZ < beforeTarget.localZ || localZ > targetTop.localZ)
-          return null;
-        const t =
-          (localZ - beforeTarget.localZ) /
-          (targetTop.localZ - beforeTarget.localZ);
-        return (
-          beforeTarget.surfaceLocalY +
-          (targetTop.surfaceLocalY - beforeTarget.surfaceLocalY) * t
-        );
-      },
-    });
+  it('keeps the real-GLB visual path continuous through progress 1 while preserving the judged anchor', () => {
+    const contract = createBrightvalePlayfieldContract(surfaceProfile);
     const justBefore = contract.visualPoint(0, 1 - 1e-4);
     const judgedPoint = contract.visualPoint(0, 1);
 
@@ -109,24 +98,17 @@ describe('Brightvale geometry-driven playfield contract', () => {
     ).toBeGreaterThan(justBefore.z);
   });
 
-  it('reports target-surface separation rather than the unrelated highway seam clearance', () => {
-    const measuredTarget =
-      measuredProof.surfaceProfile[0]?.measuredSamples.at(-1);
+  it('reports actual GLB target-surface separation rather than highway seam clearance', () => {
     const targetMesh =
       platformValidation.glb.meshes['Hit bar 1 | recessed luminous center'];
-    if (!measuredTarget || !targetMesh)
+    const measuredTargetTop = surfaceProfile.surfaceHeightAt(0, -1.45);
+    if (measuredTargetTop === null || !targetMesh)
       throw new Error('measured target mesh fixture is required');
     const actualTargetTopToCenter =
-      measuredTarget.surfaceLocalY - targetMesh.origin_gltf[1];
+      measuredTargetTop - targetMesh.origin_gltf[1];
     expect(actualTargetTopToCenter).toBeGreaterThan(0.04);
 
-    const contract = createBrightvalePlayfieldContract({
-      surfaceHeightAt(_lane, localZ) {
-        return Math.abs(localZ + 1.45) < 0.001
-          ? measuredTarget.surfaceLocalY
-          : null;
-      },
-    });
+    const contract = createBrightvalePlayfieldContract(surfaceProfile);
     const actual = contract.clearanceAt(0, 1);
     expect(
       actual,
@@ -140,26 +122,6 @@ describe('Brightvale geometry-driven playfield contract', () => {
     expect(() => createBrightvalePlayfieldContract().visualPoint(0, 1)).toThrow(
       'requires a measured Brightvale surface profile',
     );
-  });
-
-  it('records raised-nose ray hits at their local-vertical sample Z', () => {
-    const recorded = measuredProof.surfaceProfile[0]?.measuredSamples.find(
-      ({ progress }) => progress > 0.97 && progress < 0.98,
-    ) as
-      | {
-          readonly localZ: number;
-          readonly pathY: number;
-          readonly signedPathToSurface: number;
-          readonly surfaceHitLocalZ?: number;
-        }
-      | undefined;
-    if (!recorded)
-      throw new Error('real-GLB raised-nose measurement is required');
-
-    expect(
-      recorded.surfaceHitLocalZ,
-      'local-vertical rays must preserve their local-Z sample coordinate',
-    ).toBeCloseTo(recorded.localZ, 5);
   });
 
   it.each(['easy', 'normal', 'hard'] as const)(

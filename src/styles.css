@@ -305,44 +305,22 @@ h1 {
   gap: 1rem;
 }
 .stage-topline {
+  flex: 0 0 1.4rem;
+  height: 1.4rem;
   color: var(--muted);
   font:
     400 0.67rem 'DM Mono',
     monospace;
 }
 .stage-time {
+  flex: 0 0 6rem;
+  width: 6rem;
   font-variant-numeric: tabular-nums;
-}
-.board-fit {
-  position: relative;
-  display: flex;
-  flex: 1 1 0;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 0;
-  container-type: size;
-}
-.lane-board {
-  position: relative;
-  display: grid;
-  flex: 0 0 auto;
-  width: min(100cqw, 200cqh, 820px);
-  height: min(50cqw, 100cqh, 410px);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  aspect-ratio: 2 / 1;
-  margin: 0;
-  overflow: hidden;
-  background: transparent;
-  border: 0;
-}
-.lane {
-  position: relative;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
+  text-align: right;
 }
 .timing-window-legend {
+  flex: 0 0 2.5rem;
+  height: 2.5rem;
   margin: 4px 0 10px;
   color: #d7e7df;
   font-size: 0.72rem;
@@ -351,24 +329,44 @@ h1 {
   text-wrap: balance;
 }
 .feedback-row {
-  min-height: 25px;
+  flex: 0 0 1.8rem;
+  height: 1.8rem;
   color: var(--muted);
   font-size: 0.76rem;
 }
 .renderer-status {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 50%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 10px;
+  width: min(42rem, calc(100% - 2rem));
+  margin: 0;
   padding: 9px 12px;
   border: 1px solid rgb(255 212 117 / 36%);
   background: #101b2d;
   color: #f4f0df;
   font-size: 0.76rem;
   line-height: 1.45;
+  transform: translate(-50%, -50%);
+}
+.dialog-panel .renderer-status {
+  position: relative;
+  z-index: auto;
+  top: auto;
+  left: auto;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  width: 100%;
+  margin: 18px 0 0;
+  transform: none;
+}
+.dialog-panel .renderer-status [data-renderer-message] {
+  flex: 1 1 15rem;
+  min-width: 0;
 }
 .renderer-status[hidden] {
   display: none;
@@ -401,7 +399,10 @@ h1 {
   color: var(--mint);
 }
 [data-countdown] {
-  min-width: 112px;
+  flex: 0 0 11rem;
+  width: 11rem;
+  height: 1.4rem;
+  min-width: 11rem;
   color: var(--cream);
   font:
     500 0.8rem 'DM Mono',
@@ -409,6 +410,8 @@ h1 {
   text-align: right;
 }
 .performance-controls {
+  flex: 0 0 auto;
+  min-height: 2.2rem;
   padding-top: 13px;
   color: var(--muted);
   font-size: 0.73rem;
