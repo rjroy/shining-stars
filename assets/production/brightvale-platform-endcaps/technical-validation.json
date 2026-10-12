@@ -1,0 +1,150 @@
+{
+  "pass": true,
+  "blender": "5.2.1 LTS",
+  "gltf_exporter": "5.2.40",
+  "source_sha256": "c49ae80c34350ddb7281c3192c4ed90921852f0386fa047a9196087cc13b4207",
+  "glb_sha256": "76301ee2ab5915a299c4fd54949dceee26a5db4023e767bfa8ceba893390c2b5",
+  "transfer_bytes": 138388,
+  "export_settings": {
+    "export_format": "GLB",
+    "use_selection": true,
+    "use_active_scene": true,
+    "export_apply": true,
+    "export_normals": true,
+    "export_yup": true,
+    "export_materials": "EXPORT",
+    "export_animations": false,
+    "export_cameras": false,
+    "export_lights": false,
+    "export_extras": false,
+    "export_texcoords": false,
+    "export_tangents": false,
+    "export_vertex_color": "NONE",
+    "export_attributes": false,
+    "export_gpu_instances": false,
+    "export_hierarchy_full_collections": false,
+    "export_draco_mesh_compression_enable": false,
+    "export_meshopt_compression_enable": false,
+    "export_image_format": "NONE"
+  },
+  "glb": {
+    "nodes": 2,
+    "meshes": {
+      "Endcap | left | sculpted body and gold edging": {
+        "triangles": 1284,
+        "maximum_position_error": 0.0,
+        "maximum_corner_normal_error": 6.285309791564941e-05,
+        "triangles_with_normal_component_error_ge_0_001": 0,
+        "of_those_near_zero_area": 0,
+        "origin_gltf": [
+          -6.489999771118164,
+          -0.6499999761581421,
+          0.0
+        ],
+        "triangles_by_material": {
+          "Endcap body | midnight-blue enamel": 331,
+          "Endcap edging | warm brushed gold": 953
+        },
+        "inherited_near_zero_area_triangles": 6
+      },
+      "Endcap | right | sculpted body and gold edging": {
+        "triangles": 1284,
+        "maximum_position_error": 0.0,
+        "maximum_corner_normal_error": 5.790591239929199e-05,
+        "triangles_with_normal_component_error_ge_0_001": 0,
+        "of_those_near_zero_area": 0,
+        "origin_gltf": [
+          6.489999771118164,
+          -0.6499999761581421,
+          0.0
+        ],
+        "triangles_by_material": {
+          "Endcap body | midnight-blue enamel": 330,
+          "Endcap edging | warm brushed gold": 954
+        },
+        "inherited_near_zero_area_triangles": 8
+      }
+    },
+    "materials": {
+      "Endcap body | midnight-blue enamel": {
+        "baseColorFactor": [
+          0.014999999664723873,
+          0.02800000086426735,
+          0.06499999761581421,
+          1
+        ],
+        "metallicFactor": 0.44999998807907104,
+        "roughnessFactor": 0.3199999928474426,
+        "doubleSided": true
+      },
+      "Endcap edging | warm brushed gold": {
+        "baseColorFactor": [
+          0.7200000286102295,
+          0.36000001430511475,
+          0.07500000298023224,
+          1
+        ],
+        "metallicFactor": 0.8199999928474426,
+        "roughnessFactor": 0.25,
+        "doubleSided": true
+      }
+    },
+    "primitives": 4,
+    "triangles": 2568,
+    "decoded_primitive_vertices": 4982,
+    "bounds_gltf": {
+      "min": [
+        -6.980000019073486,
+        -0.6499999761581421,
+        -2.700000047683716
+      ],
+      "max": [
+        6.980000019073486,
+        1.149999976158142,
+        2.799999952316284
+      ],
+      "dimensions": [
+        13.960000038146973,
+        1.7999999523162842,
+        5.5
+      ]
+    },
+    "extensions": []
+  },
+  "reimport_vs_source_evaluated": {
+    "Endcap | left | sculpted body and gold edging": {
+      "triangles": 1284,
+      "maximum_position_error": 0.0,
+      "maximum_corner_normal_error": 0.04950377345085144,
+      "triangles_with_normal_component_error_ge_0_001": 2,
+      "of_those_near_zero_area": 1
+    },
+    "Endcap | right | sculpted body and gold edging": {
+      "triangles": 1284,
+      "maximum_position_error": 0.0,
+      "maximum_corner_normal_error": 0.01377781480550766,
+      "triangles_with_normal_component_error_ge_0_001": 1,
+      "of_those_near_zero_area": 0
+    }
+  },
+  "limitations": [
+    "Fourteen near-zero-area triangles already exist in evaluated source triangulation; preserved without geometry cleanup.",
+    "Blender reimport custom-normal reconstruction is not exact; separate per-mesh normal errors are reported. Direct GLB corner normals are checked against source.",
+    "No official Khronos validator was installed/run; these are explicit structural/geometric checks.",
+    "Blender AgX, Principled BRDF and source studio presentation are not portable pixel appearance."
+  ],
+  "browser_runtime_approval": "PENDING; separate validation lane, not integration",
+  "independent_reproduction_byte_identical": true,
+  "negative_tests": {
+    "extra_reference_object_rejected": true,
+    "material_role_loss_rejected": true,
+    "origin_drift_rejected": true,
+    "compression_added_rejected": true,
+    "flipped_normals_rejected": true,
+    "existing_output_rejected": true,
+    "browser_directory_output_rejected": true,
+    "outside_output_rejected": true,
+    "source_package_output_rejected": true,
+    "changed_source_rejected": true
+  }
+}
