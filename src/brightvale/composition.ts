@@ -1,0 +1,307 @@
+import * as THREE from 'three';
+import type { BrightvaleAssets } from './assets';
+import { createBrightvaleAppearance } from './appearance';
+import type { BrightvaleShellComposition } from './scene-shell';
+import type { SceneStateProjection } from '../scene-state';
+import type { BrightvaleRuntimeLayout } from './layout';
+
+export interface BrightvaleComposition extends BrightvaleShellComposition {
+  /** Applies visual state without rebuilding the assembled scene. */
+  updateAppearance(state: SceneStateProjection): void;
+}
+
+interface BatchSource {
+  readonly mesh: THREE.Mesh;
+  readonly material: THREE.Material;
+  readonly materialIndex: number;
+  readonly placement?: THREE.Matrix4;
+}
+
+function matrix(values: readonly number[]): THREE.Matrix4 {
+  return new THREE.Matrix4().fromArray([...values]);
+}
+
+function relativeMatrix(
+  root: THREE.Object3D,
+  object: THREE.Object3D,
+): THREE.Matrix4 {
+  return new THREE.Matrix4()
+    .copy(root.matrixWorld)
+    .invert()
+    .multiply(object.matrixWorld);
+}
+
+function meshes(root: THREE.Object3D): THREE.Mesh[] {
+  const result: THREE.Mesh[] = [];
+  root.traverse((object) => {
+    if ((object as THREE.Mesh).isMesh) result.push(object as THREE.Mesh);
+  });
+  return result;
+}
+
+function sourceParts(mesh: THREE.Mesh): BatchSource[] {
+  const materials = Array.isArray(mesh.material)
+    ? mesh.material
+    : [mesh.material];
+  if (materials.length === 1)
+    return [{ mesh, material: materials[0]!, materialIndex: 0 }];
+  const groups = mesh.geometry.groups;
+  return materials.flatMap((material, materialIndex) =>
+    groups.some((group) => group.materialIndex === materialIndex)
+      ? [{ mesh, material, materialIndex }]
+      : [],
+  );
+}
+
+function batchGeometry(source: BatchSource): THREE.BufferGeometry {
+  const materials = Array.isArray(source.mesh.material)
+    ? source.mesh.material
+    : [source.mesh.material];
+  if (materials.length === 1) return source.mesh.geometry;
+  const geometry = source.mesh.geometry.clone();
+  const groups = geometry.groups.filter(
+    (group) => group.materialIndex === source.materialIndex,
+  );
+  geometry.clearGroups();
+  for (const group of groups) geometry.addGroup(group.start, group.count, 0);
+  return geometry;
+}
+
+function copyAppearanceMaterials(
+  sourceRoot: THREE.Object3D,
+  cloneRoot: THREE.Object3D,
+  materialFor: (material: THREE.Material) => THREE.MeshToonMaterial,
+): void {
+  const originals = meshes(sourceRoot);
+  const copies = meshes(cloneRoot);
+  originals.forEach((source, index) => {
+    const copy = copies[index];
+    if (!copy) return;
+    copy.material = Array.isArray(source.material)
+      ? source.material.map(materialFor)
+      : materialFor(source.material);
+  });
+}
+
+/** Assemble the approved layout while borrowing all imported GLB geometry. */
+export function createBrightvaleComposition(
+  assets: BrightvaleAssets,
+  layout: BrightvaleRuntimeLayout,
+  scene: THREE.Scene,
+): BrightvaleComposition {
+  const root = new THREE.Group();
+  root.name = 'Brightvale.Composition';
+  const playfield = new THREE.Group();
+  playfield.name = 'Brightvale.Playfield';
+  playfield.matrixAutoUpdate = false;
+  playfield.matrix.copy(matrix(layout.playfield.matrixColumnMajor));
+  root.add(playfield);
+
+  const generatedGeometries = new Set<THREE.BufferGeometry>();
+  const ownedSourceMaterials = new Set<THREE.Material>();
+  let appearance: ReturnType<typeof createBrightvaleAppearance> | undefined;
+  let disposed = false;
+  const generatedInstances = new Set<THREE.InstancedMesh>();
+
+  try {
+    const groundSources = new THREE.Group();
+    const sourceGeometry = new THREE.BufferGeometry();
+    generatedGeometries.add(sourceGeometry);
+    for (const surface of layout.groundSurfaces) {
+      const colorValues = surface.material.baseColorLinear;
+      const material = new THREE.MeshStandardMaterial({
+        name: surface.material.name,
+        color: new THREE.Color(
+          colorValues[0] ?? 1,
+          colorValues[1] ?? 1,
+          colorValues[2] ?? 1,
+        ),
+        metalness: surface.material.metallic,
+        roughness: surface.material.roughness,
+        side: surface.material.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
+      });
+      ownedSourceMaterials.add(material);
+      groundSources.add(new THREE.Mesh(sourceGeometry, material));
+    }
+    const sourceRoots = [...Object.values(assets.roots), groundSources];
+    appearance = createBrightvaleAppearance(scene, sourceRoots);
+
+    const addBorrowedAsset = (
+      name: 'highway' | 'platform' | 'endcaps',
+    ): void => {
+      const wrapper = new THREE.Group();
+      wrapper.name = `Brightvale.Asset.${name}`;
+      const source = assets.roots[name];
+      const clone = source.clone(true);
+      copyAppearanceMaterials(source, clone, appearance!.materialFor);
+      wrapper.add(clone);
+      playfield.add(wrapper);
+    };
+    addBorrowedAsset('platform');
+    addBorrowedAsset('highway');
+    addBorrowedAsset('endcaps');
+
+    const cityGroup = new THREE.Group();
+    cityGroup.name = 'Brightvale.City';
+    cityGroup.matrixAutoUpdate = false;
+    cityGroup.matrix.copy(matrix(layout.city.matrixColumnMajor));
+    root.add(cityGroup);
+
+    const framingGroup = new THREE.Group();
+    framingGroup.name = 'Brightvale.Framing';
+    root.add(framingGroup);
+    const crowdGroup = new THREE.Group();
+    crowdGroup.name = 'Brightvale.Crowd';
+    root.add(crowdGroup);
+
+    const groundGroup = new THREE.Group();
+    groundGroup.name = 'Brightvale.Ground';
+    root.add(groundGroup);
+    for (const surface of layout.groundSurfaces) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        'position',
+        new THREE.Float32BufferAttribute(surface.positionsLocalGltf.flat(), 3),
+      );
+      geometry.setIndex(surface.triangleIndices.flat());
+      geometry.computeVertexNormals();
+      generatedGeometries.add(geometry);
+      const sourceMaterial = [...ownedSourceMaterials][
+        layout.groundSurfaces.indexOf(surface)
+      ];
+      if (!sourceMaterial)
+        throw new Error(`Missing ground material for ${surface.name}`);
+      const mesh = new THREE.Mesh(
+        geometry,
+        appearance.materialFor(sourceMaterial),
+      );
+      mesh.name = surface.name;
+      mesh.matrixAutoUpdate = false;
+      mesh.matrix.copy(matrix(surface.matrixColumnMajor));
+      groundGroup.add(mesh);
+    }
+
+    const batchSources = new Map<
+      THREE.Object3D,
+      Map<THREE.BufferGeometry, Map<THREE.MeshToonMaterial, BatchSource[]>>
+    >();
+    const splitGeometryCache = new WeakMap<
+      THREE.Mesh,
+      Map<number, THREE.BufferGeometry>
+    >();
+    const addPlacement = (
+      destination: THREE.Object3D,
+      sourceRoot: THREE.Object3D,
+      placement: THREE.Matrix4,
+      objectFilter?: (mesh: THREE.Mesh) => boolean,
+    ): void => {
+      sourceRoot.updateMatrixWorld(true);
+      for (const mesh of meshes(sourceRoot)) {
+        if (objectFilter && !objectFilter(mesh)) continue;
+        for (const part of sourceParts(mesh)) {
+          const material = appearance!.materialFor(part.material);
+          let byMaterialIndex = splitGeometryCache.get(mesh);
+          if (!byMaterialIndex) {
+            byMaterialIndex = new Map();
+            splitGeometryCache.set(mesh, byMaterialIndex);
+          }
+          let geometry = byMaterialIndex.get(part.materialIndex);
+          if (!geometry) {
+            geometry = batchGeometry(part);
+            byMaterialIndex.set(part.materialIndex, geometry);
+            if (geometry !== mesh.geometry) generatedGeometries.add(geometry);
+          }
+          let byGeometry = batchSources.get(destination);
+          if (!byGeometry)
+            batchSources.set(destination, (byGeometry = new Map()));
+          let byMaterial = byGeometry.get(geometry);
+          if (!byMaterial) byGeometry.set(geometry, (byMaterial = new Map()));
+          let sources = byMaterial.get(material);
+          if (!sources) byMaterial.set(material, (sources = []));
+          // Keep source pose in source-local coordinates for each repeated instance.
+          const matrixForMesh = relativeMatrix(sourceRoot, mesh);
+          sources.push({
+            ...part,
+            placement: placement.clone().multiply(matrixForMesh),
+          });
+        }
+      }
+    };
+
+    addPlacement(cityGroup, assets.roots.city, new THREE.Matrix4());
+    const framingRoots = {
+      long: assets.roots.framingLong,
+      post: assets.roots.framingPost,
+    };
+    for (const placement of layout.framingInstances)
+      addPlacement(
+        framingGroup,
+        framingRoots[placement.module],
+        matrix(placement.matrixColumnMajor),
+      );
+
+    for (const placement of layout.crowdPlacements) {
+      const poseName = `Crowd.${placement.variant}.${placement.pose}`;
+      let poseRoot: THREE.Object3D | undefined;
+      assets.roots.crowd.traverse((object) => {
+        if (
+          (object.name === poseName || object.userData.name === poseName) &&
+          object.userData.variant_id === placement.variant &&
+          object.userData.pose === placement.pose
+        )
+          poseRoot = object;
+      });
+      if (!poseRoot)
+        throw new Error(
+          `Missing crowd pose ${placement.variant}/${placement.pose}`,
+        );
+      addPlacement(crowdGroup, poseRoot, matrix(placement.matrixColumnMajor));
+    }
+
+    for (const [destination, byGeometry] of batchSources) {
+      for (const [geometry, byMaterial] of byGeometry) {
+        for (const [material, sources] of byMaterial) {
+          const batch = new THREE.InstancedMesh(
+            geometry,
+            material,
+            sources.length,
+          );
+          generatedInstances.add(batch);
+          batch.name = `Brightvale.Batch.${material.userData.brightvaleRole ?? material.name}`;
+          sources.forEach((source, index) => {
+            if (!source.placement)
+              throw new Error('Missing instance placement matrix');
+            batch.setMatrixAt(index, source.placement);
+          });
+          batch.instanceMatrix.needsUpdate = true;
+          destination.add(batch);
+        }
+      }
+    }
+
+    let appearanceState: SceneStateProjection | undefined;
+    return {
+      root,
+      updateAppearance(state) {
+        if (disposed)
+          throw new Error('Brightvale composition has been disposed');
+        appearanceState = state;
+        appearance!.update(appearanceState);
+      },
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        for (const batch of generatedInstances) batch.dispose();
+        for (const geometry of generatedGeometries) geometry.dispose();
+        appearance?.dispose();
+        for (const material of ownedSourceMaterials) material.dispose();
+      },
+    };
+  } catch (error) {
+    for (const batch of generatedInstances) batch.dispose();
+    for (const geometry of generatedGeometries) geometry.dispose();
+    appearance?.dispose();
+    for (const material of ownedSourceMaterials) material.dispose();
+    throw error;
+  }
+}
