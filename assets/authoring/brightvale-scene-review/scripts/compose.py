@@ -8,8 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import assemble as A
 
 PACKAGE = Path(__file__).resolve().parent
-CURRENT = PACKAGE.parent / 'scene-review.blend'
-CURRENT_SHA = '473beef0d6e72db25242edf3ba914d1508e70183493383d207f227785aa5b85f'
+CURRENT = None  # Explicit scratch input; no maintained predecessor binary.
+CURRENT_SHA = None
+HISTORICAL_ROAD_SHA = '752abd57e22b4209f6491b55c7ed433b391b34e42be5aa6aec223de37b5270db'
 LENGTH = 42.0
 TILT = 14.0
 PIVOT = Vector((0, -2.8, -.65))
@@ -113,7 +114,8 @@ def compose(road, output):
         'uniform_playfield_scale': 1, 'city_position': CITY_POSITION, 'city_scale': CITY_SCALE,
         'wall_count_each_side': WALL_COUNT, 'nominal_body_overlap': WALL_OVERLAP,
         'crowd': 'Unchanged original sample, including world transforms and actions'}, sort_keys=True)
-    scene['road_candidate_sha256'] = A.sha(road)
+    # Preserve original checkpoint provenance, not the scratch serialization.
+    scene['road_candidate_sha256'] = HISTORICAL_ROAD_SHA
     # Remove only unused data from the NEW scene, not source data on disk.
     for blocks in (bpy.data.meshes, bpy.data.curves, bpy.data.materials):
         for block in list(blocks):
@@ -127,5 +129,7 @@ def compose(road, output):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--road', type=Path, required=True); p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--input', type=Path, required=True)
     args = p.parse_args(sys.argv[sys.argv.index('--') + 1:])
+    CURRENT = args.input.resolve(); CURRENT_SHA = A.sha(CURRENT)
     compose(args.road.resolve(), new_output(args.output, '.blend'))

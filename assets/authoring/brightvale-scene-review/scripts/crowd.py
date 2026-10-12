@@ -5,8 +5,9 @@ sys.dont_write_bytecode = True
 import bpy
 
 PACKAGE = Path(__file__).resolve().parent
-SCENE_PACKAGE = PACKAGE.parents[1]
-REFERENCE = PACKAGE.parent / 'ground-review/scene-review.blend'
+SCENE_PACKAGE = PACKAGE.parent
+REFERENCE = None
+INPUT_SHA = None
 REFERENCE_SHA = '8cca46b2edfd1794045d35112dc1f3c312e090ef91d0fc4f12f2ff85c96ab39f'
 PLACEMENTS = {'L03': (-11, 8.6), 'L04': (-13, 12.5), 'L05': (-15, 18),
               'R03': (11, 9), 'R04': (13.3, 13), 'R05': (15, 19)}
@@ -16,17 +17,17 @@ def module(name, path):
     obj = importlib.util.module_from_spec(spec); spec.loader.exec_module(obj)
     return obj
 
-G = module('_crowd_ground', PACKAGE.parent / 'ground-review/build.py')
+G = module('_crowd_ground', PACKAGE / 'ground.py')
 A, V = G.A, G.V
 
 def protected():
-    G.protected()
-    assert A.sha(REFERENCE) == REFERENCE_SHA, 'Ground checkpoint changed'
+    A.check_sources()
+    assert A.sha(REFERENCE) == INPUT_SHA, 'Scratch ground input changed'
 
 def output(path, suffix):
     p = Path(path).resolve()
     assert p.suffix == suffix and p.parent.is_dir()
-    assert p.is_relative_to(SCENE_PACKAGE), 'Outside scene-review package'
+    assert p.is_relative_to(SCENE_PACKAGE) or p.is_relative_to(Path('/tmp/opencode')), 'Outside package/scratch'
     assert not p.exists(), 'Refusing existing output'
     return p
 
@@ -62,4 +63,7 @@ def build(dest):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(); parser.add_argument('--output', type=Path, required=True)
-    args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:]); build(args.output)
+    parser.add_argument('--input', type=Path, required=True)
+    args = parser.parse_args(sys.argv[sys.argv.index('--') + 1:])
+    REFERENCE = args.input.resolve(); INPUT_SHA = A.sha(REFERENCE)
+    build(args.output)

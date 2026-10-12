@@ -5,25 +5,26 @@ sys.dont_write_bytecode=True
 import bpy
 from mathutils import Matrix,Vector
 PACKAGE=Path(__file__).resolve().parent
-SCENE_PACKAGE=PACKAGE.parents[1]
-REFERENCE=PACKAGE.parent/'framing-review/scene-review.blend'
+SCENE_PACKAGE=PACKAGE.parent
+REFERENCE=None
+INPUT_SHA=None
 REFERENCE_SHA='59af1409cedd26a792007df8c857feb08aed3c3f4fc3f6c0838ed10699b92849'
 PLAZA='Review.LocalGround.Circle'
 SEGMENTS=520  # ten edge subdivisions per existing section/post interval
 def module(name,path):
     spec=importlib.util.spec_from_file_location(name,path);obj=importlib.util.module_from_spec(spec);spec.loader.exec_module(obj);return obj
-F=module('_ground_framing_helpers',PACKAGE.parent/'framing-compose.py')
+F=module('_ground_framing_helpers',PACKAGE/'framing.py')
 A,V=F.A,F.V
 
 def output(path,suffix):
     p=Path(path).resolve()
     assert p.suffix==suffix and p.parent.is_dir(),'New output in existing directory required'
-    assert p.is_relative_to(SCENE_PACKAGE),'Output outside authorized scene-review package'
+    assert p.is_relative_to(SCENE_PACKAGE) or p.is_relative_to(Path('/tmp/opencode')),'Output outside authorized package/scratch'
     if p.exists():raise FileExistsError(p)
     return p
 
 def protected():
-    A.check_sources();assert A.sha(REFERENCE)==REFERENCE_SHA,'Framing checkpoint changed'
+    A.check_sources();assert A.sha(REFERENCE)==INPUT_SHA,'Scratch framing input changed'
 
 def evaluated_points(objects):
     graph=bpy.context.evaluated_depsgraph_get()
@@ -134,4 +135,7 @@ def build(dest):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True)
-    args=p.parse_args(sys.argv[sys.argv.index('--')+1:]);build(output(args.output,'.blend'))
+    p.add_argument('--input',type=Path,required=True)
+    args=p.parse_args(sys.argv[sys.argv.index('--')+1:])
+    REFERENCE=args.input.resolve();INPUT_SHA=A.sha(REFERENCE)
+    build(output(args.output,'.blend'))

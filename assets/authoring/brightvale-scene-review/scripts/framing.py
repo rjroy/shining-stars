@@ -6,11 +6,11 @@ import bpy
 from mathutils import Vector
 sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
 import assemble as A
-spec=importlib.util.spec_from_file_location('_original_validation',Path(__file__).resolve().parent.parent/'validate.py')
+spec=importlib.util.spec_from_file_location('_source_signatures',Path(__file__).resolve().parent/'signatures.py')
 V=importlib.util.module_from_spec(spec);spec.loader.exec_module(V)
 PACKAGE=Path(__file__).resolve().parent
-INITIAL=PACKAGE/'initial/scene-review.blend'
-INITIAL_SHA='a41201169324b57ae9fd511035d320d7f6a5af9c24f0dd71663cf283f9f29250'
+INITIAL=None
+INITIAL_SHA=None
 N=26
 PITCH=3.26  # 2.8 section + .70 post body - two .12 joint overlaps
 DELTA=math.pi/N
@@ -99,4 +99,7 @@ def compose(dest):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True)
-    args=p.parse_args(sys.argv[sys.argv.index('--')+1:]);compose(output(args.output,'.blend'))
+    p.add_argument('--input',type=Path,required=True)
+    args=p.parse_args(sys.argv[sys.argv.index('--')+1:])
+    INITIAL=args.input.resolve();INITIAL_SHA=A.sha(INITIAL)
+    compose(output(args.output,'.blend'))

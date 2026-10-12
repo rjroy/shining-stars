@@ -16,6 +16,8 @@ def state():
 
 
 def render(out,modes):
+    out=out.resolve()
+    assert out.is_relative_to(A.PACKAGE) or out.is_relative_to(Path('/tmp/opencode')),'Output outside package/scratch'
     source=Path(bpy.data.filepath);before=A.sha(source);A.check_sources()
     outputs=[out/(m+'.png') for m in modes]
     if not out.is_dir() or any(p.exists() for p in outputs):raise FileExistsError('Existing directory and new preview files required')

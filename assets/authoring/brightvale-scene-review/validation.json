@@ -1,96 +1,8 @@
 {
   "pass": true,
   "blender": "5.2.1 LTS",
-  "reference_sha256": "8cca46b2edfd1794045d35112dc1f3c312e090ef91d0fc4f12f2ff85c96ab39f",
   "scene_sha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
   "state_fingerprint": "5f2382487b4e6f65b5cc0788e55c4b0accb66e15e04bbf374242ef3d581eb081",
-  "unchanged_noncrowd_objects": 458,
-  "moved_instances": {
-    "L03": {
-      "from": [
-        -7.5,
-        8.600000381469727,
-        8.25
-      ],
-      "to": [
-        -11.0,
-        8.600000381469727,
-        8.25
-      ],
-      "yaw_from": 0.2748205363750458,
-      "yaw_to": 0.43616312742233276
-    },
-    "L04": {
-      "from": [
-        -9.199999809265137,
-        9.399999618530273,
-        8.25
-      ],
-      "to": [
-        -13.0,
-        12.5,
-        8.25
-      ],
-      "yaw_from": 0.3239387273788452,
-      "yaw_to": 0.44159236550331116
-    },
-    "L05": {
-      "from": [
-        -7.800000190734863,
-        16.600000381469727,
-        8.25
-      ],
-      "to": [
-        -15.0,
-        18.0,
-        8.25
-      ],
-      "yaw_from": 0.22172704339027405,
-      "yaw_to": 0.4266274869441986
-    },
-    "R03": {
-      "from": [
-        7.800000190734863,
-        10.399999618530273,
-        8.25
-      ],
-      "to": [
-        11.0,
-        9.0,
-        8.25
-      ],
-      "yaw_from": -0.2680388391017914,
-      "yaw_to": -0.4297622740268707
-    },
-    "R04": {
-      "from": [
-        9.300000190734863,
-        11.699999809265137,
-        8.25
-      ],
-      "to": [
-        13.300000190734863,
-        13.0,
-        8.25
-      ],
-      "yaw_from": -0.30345991253852844,
-      "yaw_to": -0.44344833493232727
-    },
-    "R05": {
-      "from": [
-        7.5,
-        18.0,
-        8.25
-      ],
-      "to": [
-        15.0,
-        19.0,
-        8.25
-      ],
-      "yaw_from": -0.2053953856229782,
-      "yaw_to": -0.41549208760261536
-    }
-  },
   "visible_pixel_grid_step": 2,
   "visibility": {
     "L01": {
@@ -620,5 +532,56 @@
     }
   },
   "unobstructed_lane_rays": 820,
-  "placement_matches_fresh_checkpoint_replay": true
+  "arc": {
+    "sections": 26,
+    "complete_posts": 27,
+    "radius": 26.996365752526287,
+    "center": [
+      0.0,
+      20.0,
+      8.25
+    ],
+    "maximum_radius_residual": 2.411413259295614e-06,
+    "minimum_nominal_body_overlap": 0.11999934527053413,
+    "actual_evaluated_solid_joint_samples": 5200
+  },
+  "ground": {
+    "city_ground_contact_error": -8.940696716308594e-08,
+    "lower_ground_z": -0.6499999761581421,
+    "local_ground_z": 8.25,
+    "two_level_separation": 8.899999976158142,
+    "radius": 26.996365752526287,
+    "footprint_margins": {
+      "platform": 3.356354431240714,
+      "endcaps": 3.080211352238905,
+      "highway": 3.0506253826596534,
+      "crowd": 5.775577217813453
+    },
+    "rear_perimeter_foot_overlap_samples": 261,
+    "circle_to_city_plan_gap": 3.8036343189992863
+  },
+  "source_sha256": {
+    "platform": "ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af",
+    "endcaps": "c49ae80c34350ddb7281c3192c4ed90921852f0386fa047a9196087cc13b4207",
+    "highway": "2f2eca2987cd42b105c579420ca2e2cbc71ad75d73bcbf164aca60afe32652e5",
+    "framing": "cd17e3162c434ce4054f6c32d86d4b6a885e9dbad44c1841b563513fffd75542",
+    "city": "4beb993e9b580bb0b6dd47e5523a0ad9aecc8c26804a4b4cbdc42cc5488caa2c",
+    "crowd": "854a120872c1152c0c7722e5f49f2d78572da69d485afbc646a5a6bcdba1b397"
+  },
+  "comparison": {
+    "sha256": "d1db2e9bd8fd7ee27848a2dd32291c67652d2bb8f48870bc16e33b8c6711c487",
+    "exact_semantic_match": true
+  },
+  "negative_tests": {
+    "lane_intrusion_rejected": true,
+    "floating_feet_rejected": true,
+    "hidden_spectator_rejected": true,
+    "camera_drift_rejected": true,
+    "buried_city_rejected": true,
+    "wrong_plaza_height_rejected": true,
+    "oversized_plaza_rejected": true,
+    "noncircular_post_rejected": true,
+    "hidden_post_lens_rejected": true,
+    "actual_joint_gap_rejected": true
+  }
 }

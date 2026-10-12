@@ -1,42 +1,33 @@
-# Brightvale assembled-scene review — bounded composition handoff
+# Preserved composition intent
 
-**Current handoff to Sol: one user-authorized ground revision from checkpoint `e46e5ee`, `candidate/framing-review/scene-review.blend`.** The user said the interior ground was where wanted but the exterior city ground was wrong, approved shifting assets **and camera together** to create two ground levels, confirmed the **existing outer frame is the perimeter**, and explicitly said **“make the change.”** Derive one common upward translation from the actual city foundation minimum Z and fixed world-ground Z. Translate all assets and the camera by exactly that offset; translate positional lights consistently to retain their relative placement. Leave the existing large world ground fixed. Add one flat circular local-ground plane at the former crowd/frame ground height plus the offset, centered/aligned to the existing semicircular frame, with its rear edge meeting the frame rather than projecting outside it. No additional wall, thickness or support structure. Preserve every source package, `initial`, and `framing-review` blend/previews. New scripts/evidence go under `candidate/ground-review`; user scene acceptance remains pending, with no export, runtime work or commits.
+The highway dominates a low, player-side perspective. Four lane surfaces and
+the fitted platform/endcaps form one coherent playfield: generator-built
+42-unit road, shared 14° tilt, no source mesh stretching or junction redesign.
+Existing city forms sit behind it at uniform .35 scale; skyline cropping is
+allowed. Warm Audience and violet-dark Twilight are both perpetual twilight.
+Mockup-only HUD/effects are not asset requirements. No stage, performer or new
+focal structure.
 
-## Retained composition intent — all asset/camera relative geometry stays fixed
+The existing outer frame is the perimeter: one genuine 180° section/post arc
+opening toward −Y, 26 existing long sections and 27 complete posts, including
+stone pier, warm metal bezel and amber lens. No long/short-only substitute.
+Circle center XY (0,20), radius 26.99636575; sections follow chords and post
+lenses face inward.
 
-The gameplay area must dominate the screen. The four-lane highway is the broad, clear foreground-to-distance spine; the platform and fitted endcaps remain a coherent near-end assembly. It is appropriate to rotate and resize the highway/platform/endcap assembly together, including tilting it upward around its foreground edge, to get the strong low, receding view of the original mockups. The current road reads too short: test a meaningfully longer highway. Its length is generator-supported (`brightvale-highway/build.py --length`, 6–60 authoring units); the maintained assembly is 18 units. If a longer road is needed, build it as a separate candidate from the approved generator, never by stretching or editing the approved highway mesh. The approved lane axes, colors/order, continuous surfaces, measured platform junction, and fitted endcaps remain the source design; preserve a clean joined interface while transforming them as one assembly.
+Accepted ground direction: fixed lower world plane at Z −.65, city foundation
+on that datum; one flat circular local plane at Z 8.25 under crowd/frame and
+playfield. Assets, camera and positional lights share the measured +8.899999946
+Z translation, retaining relative presentation. The rear disk edge meets the
+existing frame foot. No added front wall, thickness or support structure.
 
-The city may be much larger and cropped by the camera. It need not be fully visible, and its foundation need not be exposed. Let the visible skyline sit behind the far road and support depth, without requiring the whole cutaway city to fit in frame. Existing city geometry is a provisional detailed baseline and may be repositioned and uniformly scaled as a scene assembly; do not alter its buildings or foundation mesh in this pass.
+Authorized crowd pass moves only L03/L04/L05 and R03/R04/R05 in XY/yaw, facing
+the unchanged player camera. Other four spectators, all source geometry,
+material assignments, scale, rigs/poses/actions and foot height stay unchanged.
+Ten spectators remain outside lanes and on the plaza. Partial occlusion is
+allowed; complete hiding is forbidden. Density remains unresolved; “80%” is
+not an overall quality rating. No population increase is authorized.
 
-The accepted framing direction remains **one genuine semicircle in plan**, opening toward the player, with continuously alternating existing wall SECTIONs and complete POSTs (stone pier, warm metal bezel and inset amber lens). The former long-short/no-post interpretation was our error and stays superseded. Preserve the current section/post count, joints, XY positions, rotations, scales and relative height; only the common Z translation is authorized in this pass. The new disk may have an exposed foreground edge because the frame is a semicircle: do not invent an enclosing front wall.
-
-The original `Golden City Rhythm Concert` and `Neon Twilight Rhythm City` mockups are composition references: low viewpoint, expansive foreground highway, deep city, and crowd at the sides. Their HUD, score, stars, notes, ornaments, cosmic elements, and other mockup-only details do not become requirements here. Do not add a stage, performer, replacement focal structure, monsters, or new environmental dressing. Crowd geometry, placement, density, poses, and revisions are explicitly deferred; retain the current sample untouched for context only.
-
-## One bounded next Blender pass
-
-Create a ground review under `candidate/ground-review`, starting from the exact saved `candidate/framing-review` scene. Inspect actual evaluated city foundation bounds and world-ground Z before computing the translation. Preserve all existing geometry/materials/poses/actions, rotations/scales, parent hierarchies and relative transforms. Add only the circular plane, reusing the existing ground material. City base must meet the lower world ground; crowd and frame bases must meet the raised local plane. The 42-unit/14-degree playfield remains unchanged apart from the common translation. No camera recomposition, ramp correction, source redesign or further layout search.
-
-Render matched neutral/Audience/Twilight landscape views from the commonly translated camera, plus an informative ground-level diagnostic if needed, explicitly not a replacement gameplay view. Report the measured offset, circle center/radius/elevation, city and local-ground contact, common asset/camera/light translation checks, plane/frame fit, lane clearance, absent city intersection/z-fighting, preserved source/prior evidence hashes, saved reopen/regeneration, negative checks and visible limitations. Parent independently reviews; the user separately accepts the revised scene. No narrow-crop, population, runtime-fit or city-visibility optimization.
-
-## What may change, and what needs a decision
-
-- **Current scene-level scope:** one measured common Z translation of assets/camera/positional lights, keeping relative arrangement fixed; one flat circular local-ground plane. The exterior world ground stays fixed. No independent asset or camera adjustment, additional perimeter, terrain thickness or support geometry. Earlier city/ground tabling is superseded only by this explicitly authorized two-level correction. Do not interpret authoring units as meters or runtime scale.
-- **Highway extent:** generator supports a longer candidate; source mesh remains immutable. A truly longer road requires a generator-built candidate, not scene scaling alone. The approved generator guardrail is 6–60 authoring units, not a gameplay/performance budget. Do not promote that candidate as approved without later review.
-- **Source geometry/material edits:** not authorized. If fitting a continuous curved run requires bending, reshaping, new wall-piece types, altered city foundation, changed road/platform geometry, or material/concept changes, stop and describe the concrete proposal for approval. Existing framing-piece appearance/materials, highway lane design, and city architecture remain as approved/provisional sources.
-- **No invented fit constraints:** do not require the full city in frame, an exposed city foundation, or an entirely visible framing run. Crop is acceptable, especially for the city. No runtime camera equivalence or responsive-fit claim.
-
-## Grounded reuse notes
-
-- Highway authoring axes: X lateral, −Y foreground, +Y travel, Z up. Current chassis is 18 units from Y=2.7; its generator accepts `--length` 6…60. The platform/endcap junction is measured and documented in `../brightvale-highway/README.md`; generator changes preserve it.
-- Framing source has two wall lengths and a complete post module: `Framing | long masonry section`, `Framing | short masonry section`, and the three components `Framing | post stone pier`, `Framing | post warm metal bezel`, `Framing | post inset amber lens`. The complete post **is required in the repeated section-post sequence**. The source has ten mesh objects overall because each post has three components and there are two instances per type. Existing source placements/gaps are disposable, not the approved module geometry.
-- The city source has a `CITY.ProvisionalLayout` root whose uniform scale/placement can be changed without editing descendant meshes. The foundation belongs to that source and need not be hidden or exposed by this direction.
-- The existing assembler currently hardcodes the 18-unit highway source and separated framing roots. A new scene pass can reassemble from source packages; do not overwrite this assembler/candidate as part of art direction unless separately asked.
-
-## Read-first references
-
-- `README.md` in this package — current candidate and the three unpromoted camera/layout diagnostics.
-- `../brightvale-highway/README.md` and `build.py` — approved junction, authoring axes, and configurable length generator.
-- `../brightvale-platform-endcaps/README.md` — fitted pair and controlling placement reference.
-- `../brightvale-outer-framing/README.md` and `build.py` — approved piece identity, exact reusable names, and distinction between approved modules and disposable placements.
-- `../brightvale-distant-city/README.md` — provisional city baseline, editable root, and foundation ownership.
-- `.lore/work/mockups/Golden City Rhythm Concert.webp` and `Neon Twilight Rhythm City.webp` — original composition references; see also `.lore/work/design/brightvale-perspective-highway.md` for approved highway hierarchy and excluded mockup details.
+This brief summarizes the retained state, not new modeling permission. Full
+approval/provenance and reproduction are in [README.md](README.md); detailed
+superseded handoffs remain at Git e32e4d4/e46e5ee. Cleanup preserves the current
+blend/previews exactly and does not authorize `.23`, exports or integration.
