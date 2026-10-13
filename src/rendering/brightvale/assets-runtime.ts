@@ -1,11 +1,11 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import cityUrl from '../../assets/production/brightvale-distant-city/city.glb?url';
-import highwayUrl from '../../assets/production/brightvale-highway/highway.glb?url';
-import platformUrl from '../../assets/production/brightvale-platform/platform.glb?url';
-import endcapsUrl from '../../assets/production/brightvale-platform-endcaps/endcaps.glb?url';
-import crowdUrl from '../../assets/production/brightvale-crowd/crowd.glb?url';
-import framingLongUrl from '../../assets/production/brightvale-outer-framing/long.glb?url';
-import framingPostUrl from '../../assets/production/brightvale-outer-framing/post.glb?url';
+import cityUrl from '../../../assets/production/brightvale-distant-city/city.glb?url';
+import highwayUrl from '../../../assets/production/brightvale-highway/highway.glb?url';
+import platformUrl from '../../../assets/production/brightvale-platform/platform.glb?url';
+import endcapsUrl from '../../../assets/production/brightvale-platform-endcaps/endcaps.glb?url';
+import crowdUrl from '../../../assets/production/brightvale-crowd/crowd.glb?url';
+import framingLongUrl from '../../../assets/production/brightvale-outer-framing/long.glb?url';
+import framingPostUrl from '../../../assets/production/brightvale-outer-framing/post.glb?url';
 import { BRIGHTVALE_ASSET_NAMES, loadBrightvaleAssets } from './assets';
 import type {
   BrightvaleAssetName,

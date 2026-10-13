@@ -4,7 +4,7 @@ import {
   type AudioBufferPort,
   type AudioContextPort,
   type AudioSourcePort,
-} from './audio';
+} from '../audio/audio';
 import { createGameController, type ControllerSnapshot } from './controller';
 import type { ChartConfig } from './chart';
 import { createGame } from './game';

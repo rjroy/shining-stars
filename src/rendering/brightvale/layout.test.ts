@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
-import authoritativeLayout from '../../assets/production/brightvale-structure-layout.json';
+import authoritativeLayout from '../../../assets/production/brightvale-structure-layout.json';
 import { describe, expect, it } from 'vitest';
 import { BRIGHTVALE_RUNTIME_LAYOUT, type BrightvaleRuntimeLayout } from './layout';
 
 const reviewMainUrl = new URL(
-  '../../assets/production/brightvale-scene-review/main.js',
+  '../../../assets/production/brightvale-scene-review/main.js',
   import.meta.url,
 );
 

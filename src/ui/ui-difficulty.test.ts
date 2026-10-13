@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { getDifficultyProfile } from './game-balance';
+import { getDifficultyProfile } from '../game/game-balance';
 
 // Vitest currently runs without a DOM environment; these focused source checks
 // cover the UI contract while scene behavior is exercised through projection tests.
-const ui = readFileSync(resolve(process.cwd(), 'src/ui.ts'), 'utf8');
+const ui = readFileSync(resolve(process.cwd(), 'src/ui/ui.ts'), 'utf8');
 
 describe('difficulty presentation contract', () => {
   it('keeps accessible judgment feedback gated by actual playback and its age', () => {

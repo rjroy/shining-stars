@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createBrightvaleViewportLayout } from './brightvale/viewport';
+import { createBrightvaleViewportLayout } from '../rendering/brightvale/viewport';
 
 const labels = {
   time: { x: 120, y: 80, width: 90, height: 24 },

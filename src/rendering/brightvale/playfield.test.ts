@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import highwayValidation from '../../assets/production/brightvale-highway/technical-validation.json';
-import platformValidation from '../../assets/production/brightvale-platform/technical-validation.json';
-import structureLayout from '../../assets/production/brightvale-structure-layout.json';
-import { getDifficultyProfile } from '../game-balance';
+import highwayValidation from '../../../assets/production/brightvale-highway/technical-validation.json';
+import platformValidation from '../../../assets/production/brightvale-platform/technical-validation.json';
+import structureLayout from '../../../assets/production/brightvale-structure-layout.json';
+import { getDifficultyProfile } from '../../game/game-balance';
 import { createBrightvaleSurfaceProfile } from './projection';
 import { createBrightvalePlayfieldContract } from './playfield';
 import { loadBrightvaleProductionAssets } from './test-assets';

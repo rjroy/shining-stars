@@ -1,4 +1,4 @@
-import type { AudioTransport, AudioTransportSnapshot } from './audio';
+import type { AudioTransport, AudioTransportSnapshot } from '../audio/audio';
 import { isDifficulty, type Difficulty } from './game-balance';
 import type { GameSession, GameSnapshot, PressResult } from './game';
 

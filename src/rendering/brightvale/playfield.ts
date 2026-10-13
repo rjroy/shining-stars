@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import layout from '../../assets/production/brightvale-structure-layout.json';
+import layout from '../../../assets/production/brightvale-structure-layout.json';
 
 const LANE_CENTERS = [-4.5, -1.5, 1.5, 4.5] as const;
 const HIT_LOCAL = { y: 0.365, z: -1.45 } as const;

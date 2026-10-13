@@ -1,18 +1,18 @@
-import type { ChartConfig } from './chart';
-import type { ControllerSnapshot } from './controller';
-import type { GameSnapshot } from './game';
-import { isFeedbackWithinVisibleAge } from './gameplay-frame';
+import type { ChartConfig } from '../game/chart';
+import type { ControllerSnapshot } from '../game/controller';
+import type { GameSnapshot } from '../game/game';
+import { isFeedbackWithinVisibleAge } from '../rendering/gameplay-frame';
 import {
   defaultDifficulty,
   getDifficultyProfile,
   type Difficulty,
-} from './game-balance';
+} from '../game/game-balance';
 import {
   createBrightvaleViewportLayout,
   type BrightvaleRendererStatus,
   type BrightvaleViewportLayout,
   type BrightvaleViewportRect,
-} from './brightvale/viewport';
+} from '../rendering/brightvale/viewport';
 
 export interface UIActions {
   readonly start: () => void;

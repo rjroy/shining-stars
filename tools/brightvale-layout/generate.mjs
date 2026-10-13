@@ -5,7 +5,10 @@ const sourceUrl = new URL(
   '../../assets/production/brightvale-structure-layout.json',
   import.meta.url,
 );
-const outputUrl = new URL('../../src/brightvale/layout.data.ts', import.meta.url);
+const outputUrl = new URL(
+  '../../src/rendering/brightvale/layout.data.ts',
+  import.meta.url,
+);
 
 const source = JSON.parse(await readFile(sourceUrl, 'utf8'));
 if (source.schema !== 'brightvale-structure-layout-v1') {

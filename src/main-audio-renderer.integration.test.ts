@@ -65,8 +65,8 @@ const harness = vi.hoisted(() => ({
   uiRendererAvailable: false,
 }));
 
-vi.mock('./styles.css', () => ({}));
-vi.mock('./scene', () => ({
+vi.mock('./ui/styles.css', () => ({}));
+vi.mock('./rendering/scene', () => ({
   createBrightvaleScene: vi.fn((_host, onUnavailable) => {
     harness.rendererCallbacks.push(onUnavailable);
     const mode = harness.sceneModes.shift() ?? 'success';
@@ -93,11 +93,11 @@ vi.mock('./scene', () => ({
     return scene;
   }),
 }));
-vi.mock('./scene-state', () => ({ projectSceneState: vi.fn(() => ({})) }));
-vi.mock('./gameplay-frame', () => ({
+vi.mock('./rendering/scene-state', () => ({ projectSceneState: vi.fn(() => ({})) }));
+vi.mock('./rendering/gameplay-frame', () => ({
   projectGameplayFrame: vi.fn(() => ({})),
 }));
-vi.mock('./ui', () => ({
+vi.mock('./ui/ui', () => ({
   createGameUI: vi.fn((_root, _chart, actions) => {
     harness.actions = actions;
     const ui = {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { ChartConfig } from './chart';
-import type { ControllerSnapshot } from './controller';
-import type { GameSnapshot } from './game';
-import { GAME_BALANCE } from './game-balance';
-import { getDifficultyProfile } from './game-balance';
+import type { ChartConfig } from '../game/chart';
+import type { ControllerSnapshot } from '../game/controller';
+import type { GameSnapshot } from '../game/game';
+import { GAME_BALANCE } from '../game/game-balance';
+import { getDifficultyProfile } from '../game/game-balance';
 import { projectSceneState } from './scene-state';
 
 const chart: ChartConfig = {

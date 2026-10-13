@@ -23,13 +23,13 @@ import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';
 import type { SceneStateProjection } from '../scene-state';
 
 const productionFiles: Readonly<Record<BrightvaleAssetName, string>> = {
-  city: '../../assets/production/brightvale-distant-city/city.glb',
-  highway: '../../assets/production/brightvale-highway/highway.glb',
-  platform: '../../assets/production/brightvale-platform/platform.glb',
-  endcaps: '../../assets/production/brightvale-platform-endcaps/endcaps.glb',
-  crowd: '../../assets/production/brightvale-crowd/crowd.glb',
-  framingLong: '../../assets/production/brightvale-outer-framing/long.glb',
-  framingPost: '../../assets/production/brightvale-outer-framing/post.glb',
+  city: '../../../assets/production/brightvale-distant-city/city.glb',
+  highway: '../../../assets/production/brightvale-highway/highway.glb',
+  platform: '../../../assets/production/brightvale-platform/platform.glb',
+  endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',
+  crowd: '../../../assets/production/brightvale-crowd/crowd.glb',
+  framingLong: '../../../assets/production/brightvale-outer-framing/long.glb',
+  framingPost: '../../../assets/production/brightvale-outer-framing/post.glb',
 };
 
 let loadedAssets: BrightvaleAssets | undefined;

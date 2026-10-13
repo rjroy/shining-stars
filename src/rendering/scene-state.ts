@@ -1,7 +1,7 @@
-import type { ControllerSnapshot } from './controller';
-import type { ChartConfig } from './chart';
-import type { GamePhase } from './game';
-import { getDifficultyProfile } from './game-balance';
+import type { ControllerSnapshot } from '../game/controller';
+import type { ChartConfig } from '../game/chart';
+import type { GamePhase } from '../game/game';
+import { getDifficultyProfile } from '../game/game-balance';
 
 export interface SceneMotionState {
   readonly powerLinePulse: boolean;

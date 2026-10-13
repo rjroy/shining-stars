@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { getDifficultyProfile } from '../game-balance';
+import { getDifficultyProfile } from '../../game/game-balance';
 import { VISIBLE_NOTE_SECONDS } from '../gameplay-frame';
 import type { BrightvaleAssets } from './assets';
 import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';

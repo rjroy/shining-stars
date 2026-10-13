@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { ChartConfig } from './chart';
-import type { ControllerSnapshot } from './controller';
-import { getDifficultyProfile } from './game-balance';
+import type { ChartConfig } from '../game/chart';
+import type { ControllerSnapshot } from '../game/controller';
+import { getDifficultyProfile } from '../game/game-balance';
 import { projectGameplayFrame, VISIBLE_NOTE_SECONDS } from './gameplay-frame';
 import type { BrightvaleViewportLayout } from './brightvale/viewport';
 

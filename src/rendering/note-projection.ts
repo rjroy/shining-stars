@@ -1,6 +1,6 @@
-import type { GameNoteState } from './game';
-import type { ChartNote } from './chart';
-import { getDifficultyProfile, type Difficulty } from './game-balance';
+import type { GameNoteState } from '../game/game';
+import type { ChartNote } from '../game/chart';
+import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
 
 export const VISIBLE_NOTE_SECONDS = 2.4;
 

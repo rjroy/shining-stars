@@ -270,7 +270,7 @@ async function main() {
     return !s.panels.includes('ready') && s.renderer === 'rendered';
   }, 'active gameplay');
   const chartSource = await readFile(
-    path.join(root, 'src/mvp-chart.ts'),
+    path.join(root, 'src/game/mvp-chart.ts'),
     'utf8',
   );
   const notes = [
@@ -535,7 +535,7 @@ async function main() {
     (x) => x.method === 'Runtime.consoleAPICalled',
   ).length;
   reports.loadedResources = await evaluate(
-    `performance.getEntriesByType('resource').map(e=>e.name).filter(x=>x.includes('/src/main')||x.includes('/src/scene')||x.includes('/src/ui')||x.toLowerCase().includes('.glb')||x.includes('/data/music/')).map(x=>new URL(x).pathname)`,
+    `performance.getEntriesByType('resource').map(e=>e.name).filter(x=>x.includes('/src/main')||x.includes('/src/rendering/')||x.includes('/src/ui/')||x.includes('/src/game/')||x.includes('/src/audio/')||x.toLowerCase().includes('.glb')||x.includes('/data/music/')).map(x=>new URL(x).pathname)`,
   );
   const outputReport = {
     proof: 'Brightvale actual gameplay browser proof',

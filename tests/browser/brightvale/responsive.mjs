@@ -17,7 +17,7 @@ const output = path.join(root, '.lore/local/evidence/brightvale-runtime');
 await mkdir(output, { recursive: true });
 const reportPath = path.join(output, 'responsive-report.json');
 const source =
-  'production src/main.ts + src/ui.ts/styles.css + default GLB scene';
+  'production src/main.ts + src/ui/ui.ts/styles.css + default GLB scene';
 const startedAt = new Date().toISOString();
 await writeResponsiveReport(reportPath, {
   status: 'running',
