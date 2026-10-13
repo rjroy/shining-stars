@@ -38,8 +38,11 @@ function productionFetch(): typeof fetch {
     const name = BRIGHTVALE_ASSET_NAMES.find(
       (candidate) => BRIGHTVALE_PRODUCTION_ASSET_URLS[candidate] === url,
     );
-    if (name === undefined) throw new Error(`Unexpected production URL: ${url}`);
-    const bytes = await readFile(new URL(productionFiles[name], import.meta.url));
+    if (name === undefined)
+      throw new Error(`Unexpected production URL: ${url}`);
+    const bytes = await readFile(
+      new URL(productionFiles[name], import.meta.url),
+    );
     return new Response(new Uint8Array(bytes), { status: 200 });
   }) as typeof fetch;
 }
@@ -314,7 +317,9 @@ async function renderWithProductionAssets(
   vi.stubGlobal('fetch', fetch);
   vi.spyOn(console, 'info').mockImplementation(() => undefined);
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
-  const assets = await loadBrightvaleRuntimeAssets(new AbortController().signal);
+  const assets = await loadBrightvaleRuntimeAssets(
+    new AbortController().signal,
+  );
   const renderer = makeRenderer();
   const unavailable = vi.fn();
   const scene = createBrightvaleScene(
@@ -337,11 +342,15 @@ async function renderWithProductionAssets(
     projectTimingWindowHalfProgress('easy'),
   );
   try {
-    const status = await vi.waitFor((): BrightvaleRendererStatus => {
-      const nextStatus = scene.updateFrame(frame);
-      if (nextStatus === 'loading') throw new Error('production assets loading');
-      return nextStatus;
-    }, { timeout: 10_000 });
+    const status = await vi.waitFor(
+      (): BrightvaleRendererStatus => {
+        const nextStatus = scene.updateFrame(frame);
+        if (nextStatus === 'loading')
+          throw new Error('production assets loading');
+        return nextStatus;
+      },
+      { timeout: 10_000 },
+    );
     const worldRender = renderer.calls.at(-2);
     const overlayRender = renderer.calls.at(-1);
     if (
@@ -388,16 +397,21 @@ function productionSurfaceHeightAt(
       localZ > bounds.max.z + 1e-5
     )
       continue;
-    const origin = new THREE.Vector3(localX, bounds.max.y + 1, localZ).applyMatrix4(
-      root.matrixWorld,
-    );
+    const origin = new THREE.Vector3(
+      localX,
+      bounds.max.y + 1,
+      localZ,
+    ).applyMatrix4(root.matrixWorld);
     const direction = new THREE.Vector3(0, -1, 0).transformDirection(
       root.matrixWorld,
     );
     const raycaster = new THREE.Raycaster(origin, direction, 0, 1000);
     for (const hit of raycaster.intersectObject(root, true)) {
       const point = hit.point.applyMatrix4(inverseRoot);
-      if (Math.abs(point.x - localX) > 1e-4 || Math.abs(point.z - localZ) > 1e-4)
+      if (
+        Math.abs(point.x - localX) > 1e-4 ||
+        Math.abs(point.z - localZ) > 1e-4
+      )
         continue;
       highest = highest === null ? point.y : Math.max(highest, point.y);
     }
@@ -496,7 +510,10 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     const renderer = makeRenderer();
     const bundle = makeAssets();
     const compositionDispose = vi.fn();
-    const composition = { root: new THREE.Group(), dispose: compositionDispose };
+    const composition = {
+      root: new THREE.Group(),
+      dispose: compositionDispose,
+    };
     const createComposition = vi.fn(() => composition);
     const unavailable = vi.fn();
     const scene = makeScene(
@@ -576,7 +593,8 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         expect(positions.count).toBeGreaterThan(0);
         for (let index = 0; index + 1 < positions.count; index += 2) {
           const sampleProgress =
-            note.progress - rendered.frame.gameplay.timingWindows.goodHalfProgress +
+            note.progress -
+            rendered.frame.gameplay.timingWindows.goodHalfProgress +
             (index / 2 / segmentCount) *
               rendered.frame.gameplay.timingWindows.goodHalfProgress *
               2;
@@ -633,7 +651,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         if (label === undefined)
           throw new Error(`first overlay pass is missing ${name} label`);
         const rect = layout.labels[name];
-        const projected = label.position.clone().project(rendered.overlayCamera);
+        const projected = label.position
+          .clone()
+          .project(rendered.overlayCamera);
         const screenX = ((projected.x + 1) * layout.width) / 2;
         const screenY = ((1 - projected.y) * layout.height) / 2;
         expect(projected.x).toBeGreaterThanOrEqual(-1);
@@ -656,7 +676,10 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         overlay: THREE.Scene | undefined,
         camera: THREE.Camera | undefined,
         layout: BrightvaleViewportLayout,
-      ): { readonly uvFailures: string[]; readonly windingFailures: string[] } => {
+      ): {
+        readonly uvFailures: string[];
+        readonly windingFailures: string[];
+      } => {
         if (overlay === undefined || camera === undefined)
           throw new Error('production overlay pass was not captured');
         overlay.updateMatrixWorld(true);
@@ -697,9 +720,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           expect(positions.count).toBeGreaterThan(0);
           expect(uvs.count).toBe(positions.count);
           expect(indices).not.toBeNull();
-          expect(materials.every((material) => material.side === THREE.FrontSide)).toBe(
-            true,
-          );
+          expect(
+            materials.every((material) => material.side === THREE.FrontSide),
+          ).toBe(true);
           let topY = 0;
           let topCount = 0;
           let bottomY = 0;
@@ -725,7 +748,8 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
               `${label.name}: texture top screenY=${topY / topCount}, bottom screenY=${bottomY / bottomCount}`,
             );
 
-          if (indices === null) throw new Error('label geometry must be indexed');
+          if (indices === null)
+            throw new Error('label geometry must be indexed');
           const areas: number[] = [];
           for (let triangle = 0; triangle < indices.count; triangle += 3) {
             const points = [0, 1, 2].map((offset) => {
@@ -738,9 +762,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
             const a = points[0]!;
             const b = points[1]!;
             const c = points[2]!;
-            areas.push(
-              (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x),
-            );
+            areas.push((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
           }
           expect(areas.length).toBeGreaterThan(0);
           if (!areas.every((area) => area > 0))
@@ -787,6 +809,70 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     }
   });
 
+  it('reuses unchanged-size label textures and disposes each texture once when resizing', async () => {
+    const context = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      strokeText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+    vi.stubGlobal('document', {
+      createElement: () => ({ width: 1, height: 1, getContext: () => context }),
+    });
+    const rendered = await renderWithProductionAssets();
+    const textureFor = (name: string): THREE.CanvasTexture => {
+      const overlay = rendered.renderer.calls.at(-1)?.scene;
+      const label = overlay?.children.find(
+        (object) => object.name === `Brightvale.Label.${name}`,
+      );
+      if (!(label instanceof THREE.Mesh))
+        throw new Error(`production label ${name} is missing`);
+      const material = label.material as THREE.Material & {
+        map?: THREE.Texture | null;
+      };
+      if (!(material.map instanceof THREE.CanvasTexture))
+        throw new Error(`production label ${name} has no canvas texture`);
+      return material.map;
+    };
+    let resizedTextureDispose = vi.fn();
+    let sameSizeTexture: THREE.CanvasTexture | undefined;
+    let resizedTexture: THREE.CanvasTexture | undefined;
+    try {
+      sameSizeTexture = textureFor('time');
+      const originalVersion = sameSizeTexture.version;
+      const sameSizeDispose = vi.fn();
+      sameSizeTexture.addEventListener('dispose', sameSizeDispose);
+      const changedTextFrame: SceneFrame = {
+        ...rendered.frame,
+        gameplay: { ...rendered.frame.gameplay, timeLabel: '00:02' },
+      };
+      expect(rendered.scene.updateFrame(changedTextFrame)).toBe('rendered');
+      expect(textureFor('time')).toBe(sameSizeTexture);
+      expect(sameSizeTexture.version).toBeGreaterThan(originalVersion);
+      expect(sameSizeDispose).not.toHaveBeenCalled();
+
+      const originalLegendTexture = textureFor('legend');
+      const replacedTextureDispose = vi.fn();
+      originalLegendTexture.addEventListener('dispose', replacedTextureDispose);
+      const resizedFrame: SceneFrame = {
+        ...changedTextFrame,
+        gameplay: {
+          ...changedTextFrame.gameplay,
+          layout: makeLayout(1024, 768),
+        },
+      };
+      expect(rendered.scene.updateFrame(resizedFrame)).toBe('rendered');
+      resizedTexture = textureFor('legend');
+      expect(resizedTexture).not.toBe(originalLegendTexture);
+      expect(replacedTextureDispose).toHaveBeenCalledTimes(1);
+      resizedTexture.addEventListener('dispose', resizedTextureDispose);
+    } finally {
+      rendered.scene.destroy();
+      rendered.assets.dispose();
+    }
+    expect(resizedTextureDispose).toHaveBeenCalledTimes(1);
+  });
+
   it('fits every actual rendered early, junction, and target envelope vertex within the viewport and HUD', async () => {
     const rendered = await renderWithProductionAssets();
     try {
@@ -809,9 +895,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           const y = ((1 - clip.y) * layout.height) / 2;
           expect(x).toBeGreaterThanOrEqual(0);
           expect(x).toBeLessThanOrEqual(layout.width);
-          expect(y).toBeGreaterThan(
-            layout.persistentHudExclusions[0]!.height,
-          );
+          expect(y).toBeGreaterThan(layout.persistentHudExclusions[0]!.height);
           expect(y).toBeLessThan(
             layout.height - layout.persistentHudExclusions[1]!.height,
           );
@@ -871,11 +955,20 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           (rect) => rect.left < 0 || rect.right > tooNarrow.width,
         );
         const overlaps = rects.some((rect, index) =>
-          rects.slice(index + 1).some((other) =>
-            Math.max(rect.left, other.left) < Math.min(rect.right, other.right),
-          ),
+          rects
+            .slice(index + 1)
+            .some(
+              (other) =>
+                Math.max(rect.left, other.left) <
+                Math.min(rect.right, other.right),
+            ),
         );
-        slotEvidence = JSON.stringify({ width: tooNarrow.width, rects, outside, overlaps });
+        slotEvidence = JSON.stringify({
+          width: tooNarrow.width,
+          rects,
+          outside,
+          overlaps,
+        });
         expect(
           outside || overlaps,
           'the rendered fixed-width lane labels must demonstrate the unusable viewport',
@@ -887,9 +980,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       expect(rendered.unavailable).not.toHaveBeenCalled();
       expect(resourceDispose).not.toHaveBeenCalled();
 
-      expect(
-        rendered.scene.updateFrame(makeFrame(makeLayout(1120, 700))),
-      ).toBe('rendered');
+      expect(rendered.scene.updateFrame(makeFrame(makeLayout(1120, 700)))).toBe(
+        'rendered',
+      );
       expect(rendered.renderer.calls).toHaveLength(initialRenderCount + 2);
       expect(rendered.renderer.calls.at(-2)?.scene).toBe(originalWorld);
       expect(rendered.fetch).toHaveBeenCalledTimes(initialFetchCount);
@@ -906,8 +999,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       brightvaleProjection,
       'createBrightvaleCameraProjection',
     );
-    let rendered: Awaited<ReturnType<typeof renderWithProductionAssets>> | null =
-      null;
+    let rendered: Awaited<
+      ReturnType<typeof renderWithProductionAssets>
+    > | null = null;
     try {
       rendered = await renderWithProductionAssets();
       const goodHalf = rendered.frame.gameplay.timingWindows.goodHalfProgress;
@@ -929,8 +1023,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       brightvaleProjection,
       'createBrightvaleCameraProjection',
     );
-    let rendered: Awaited<ReturnType<typeof renderWithProductionAssets>> | null =
-      null;
+    let rendered: Awaited<
+      ReturnType<typeof renderWithProductionAssets>
+    > | null = null;
     let resizeSpy: ReturnType<typeof vi.spyOn> | undefined;
     try {
       rendered = await renderWithProductionAssets();
@@ -949,7 +1044,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           feedback: { x: 10, y: 128, width: 100, height: 24 },
         },
       };
-      const frameWithLayout = (layout: BrightvaleViewportLayout): SceneFrame => ({
+      const frameWithLayout = (
+        layout: BrightvaleViewportLayout,
+      ): SceneFrame => ({
         ...rendered!.frame,
         gameplay: { ...rendered!.frame.gameplay, layout },
       });
@@ -961,7 +1058,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       expect(rendered.unavailable).not.toHaveBeenCalled();
 
       expect(
-        rendered.scene.updateFrame(frameWithLayout(rendered.frame.gameplay.layout)),
+        rendered.scene.updateFrame(
+          frameWithLayout(rendered.frame.gameplay.layout),
+        ),
       ).toBe('rendered');
       expect(resizeSpy).toHaveBeenCalledTimes(2);
       expect(rendered.unavailable).not.toHaveBeenCalled();
@@ -978,14 +1077,17 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       brightvaleProjection,
       'createBrightvaleCameraProjection',
     );
-    let rendered: Awaited<ReturnType<typeof renderWithProductionAssets>> | null =
-      null;
+    let rendered: Awaited<
+      ReturnType<typeof renderWithProductionAssets>
+    > | null = null;
     let resizeSpy: ReturnType<typeof vi.spyOn> | undefined;
     try {
       rendered = await renderWithProductionAssets();
       const projection = projectionFactory.mock.results.at(-1)?.value;
       if (projection === undefined || rendered.overlay === undefined)
-        throw new Error('production camera projection or overlay was not captured');
+        throw new Error(
+          'production camera projection or overlay was not captured',
+        );
       resizeSpy = vi.spyOn(projection, 'resize');
       const original = rendered.frame.gameplay.layout;
       const laneZero = rendered.overlay.children.find(
@@ -1011,7 +1113,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           time: { ...time, x, y },
         },
       };
-      const frameWithLayout = (layout: BrightvaleViewportLayout): SceneFrame => ({
+      const frameWithLayout = (
+        layout: BrightvaleViewportLayout,
+      ): SceneFrame => ({
         ...rendered!.frame,
         gameplay: { ...rendered!.frame.gameplay, layout },
       });
@@ -1033,7 +1137,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
               obstructed.labels.time.y + obstructed.labels.time.height,
               laneZero.position.y + 12,
             ),
-        ).toBe(true);
+      ).toBe(true);
       const status = rendered.scene.updateFrame(frameWithLayout(obstructed));
       expect(resizeSpy).toHaveBeenCalledTimes(1);
       const fitted = resizeSpy.mock.results.at(-1)?.value;
@@ -1041,7 +1145,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       expect(status).toBe(fitted ? 'rendered' : 'suspended');
       expect(rendered.unavailable).not.toHaveBeenCalled();
 
-      expect(rendered.scene.updateFrame(frameWithLayout(original))).toBe('rendered');
+      expect(rendered.scene.updateFrame(frameWithLayout(original))).toBe(
+        'rendered',
+      );
       expect(resizeSpy).toHaveBeenCalledTimes(2);
       expect(rendered.unavailable).not.toHaveBeenCalled();
     } finally {
@@ -1096,18 +1202,18 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect(TestResizeObserver.instances[0]?.disconnected).toBe(false);
 
     const freshMeasuredLayout = makeLayout(1200, 800);
-    expect(
-      scene.updateFrame(makeFrame(freshMeasuredLayout)),
-    ).toBe('rendered');
+    expect(scene.updateFrame(makeFrame(freshMeasuredLayout))).toBe('rendered');
     expect(renderer.calls).toHaveLength(4);
     const measuredCamera = renderer.calls.at(-2)?.camera;
     expect(measuredCamera).toBeInstanceOf(THREE.PerspectiveCamera);
     if (!(measuredCamera instanceof THREE.PerspectiveCamera))
       throw new Error('measured world camera is not perspective');
     expect(measuredCamera.aspect).toBeCloseTo(1200 / 800);
-    const timeLabel = renderer.calls.at(-1)?.scene.children.find(
-      (object) => object.name === 'Brightvale.Label.time',
-    );
+    const timeLabel = renderer.calls
+      .at(-1)
+      ?.scene.children.find(
+        (object) => object.name === 'Brightvale.Label.time',
+      );
     expect(timeLabel).toBeDefined();
     expect(timeLabel?.position.x).toBeCloseTo(
       freshMeasuredLayout.labels.time.x +

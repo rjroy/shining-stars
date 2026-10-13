@@ -109,6 +109,74 @@ async function measure() {
     })()`,
   );
 }
+async function setViewport(width, height, deviceScaleFactor = 1) {
+  layoutSequence = await evaluate('window.__brightvaleMeasuredLayouts.length');
+  await cdp('Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    deviceScaleFactor,
+    mobile: false,
+  });
+  let measuredLayout;
+  await waitFor(async () => {
+    const m = await measure();
+    if (
+      m?.viewport.width !== width ||
+      m?.viewport.height !== height ||
+      Math.abs(m.devicePixelRatio - deviceScaleFactor) > 0.001
+    )
+      return false;
+    const layouts = await evaluate(
+      `window.__brightvaleMeasuredLayouts.slice(${layoutSequence})`,
+    );
+    measuredLayout = layouts.find(
+      (layout) =>
+        Math.abs(layout.width - m.content.width) <= 1 &&
+        Math.abs(layout.height - m.content.height) <= 1,
+    );
+    return (
+      measuredLayout !== undefined &&
+      canvasMatchesMeasuredLayout(m, measuredLayout)
+    );
+  }, `measured layout, CSS canvas, and DPR ${deviceScaleFactor} backing store at ${width}x${height}`);
+  const m = await measure();
+  m.measuredLayout = measuredLayout;
+  if (m.rendererStatus !== 'rendered')
+    throw new Error(
+      `Renderer not rendered at ${width}x${height} DPR ${deviceScaleFactor}`,
+    );
+  const delta = m.canvasContentDelta;
+  if (
+    Math.abs(delta.x) > 1 ||
+    Math.abs(delta.y) > 1 ||
+    Math.abs(delta.width) > 1 ||
+    Math.abs(delta.height) > 1
+  )
+    throw new Error(
+      `Canvas/content-box delta exceeds 1 CSS px at ${width}x${height} DPR ${deviceScaleFactor}`,
+    );
+  return m;
+}
+async function inspectWebGLResize(label) {
+  const result = await evaluate(`(()=>{
+    const name=${JSON.stringify(label)};
+    const canvas=document.querySelector('.play-surface canvas');
+    const gl=canvas?.getContext('webgl2')||canvas?.getContext('webgl');
+    if(!gl)return {supported:false,label:name};
+    const width=canvas.width,height=canvas.height;
+    const pixels=new Uint8Array(width*height*4);
+    gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+    const error=gl.getError();
+    return {supported:true,label:name,width,height,error,readbackBytes:pixels.byteLength};
+  })()`);
+  evidence.webglResizeChecks.push(result);
+  if (!result.supported)
+    throw new Error(`WebGL context unavailable during ${label}`);
+  if (result.error !== 0 || result.readbackBytes === 0)
+    throw new Error(
+      `WebGL resize readback failed during ${label}: ${JSON.stringify(result)}`,
+    );
+}
 let failure;
 let evidence;
 async function main() {
@@ -174,38 +242,13 @@ async function main() {
     source,
     viewports: [],
     issues: [],
+    dprSamples: [],
+    webglResizeChecks: [],
   };
   evidence.viewports.push(await measure());
 
   for (const width of [1120, 620]) {
-    layoutSequence = await evaluate(
-      'window.__brightvaleMeasuredLayouts.length',
-    );
-    await cdp('Emulation.setDeviceMetricsOverride', {
-      width,
-      height: 700,
-      deviceScaleFactor: 1,
-      mobile: false,
-    });
-    let measuredLayout;
-    await waitFor(async () => {
-      const m = await measure();
-      if (m?.viewport.width !== width) return false;
-      const layouts = await evaluate(
-        `window.__brightvaleMeasuredLayouts.slice(${layoutSequence})`,
-      );
-      measuredLayout = layouts.find(
-        (layout) =>
-          Math.abs(layout.width - m.content.width) <= 1 &&
-          Math.abs(layout.height - m.content.height) <= 1,
-      );
-      return (
-        measuredLayout !== undefined &&
-        canvasMatchesMeasuredLayout(m, measuredLayout)
-      );
-    }, `measured layout and matching canvas at ${width}px`);
-    const m = await measure();
-    m.measuredLayout = measuredLayout;
+    const m = await setViewport(width, 700);
     evidence.viewports.push(m);
     if (m.rendererStatus !== 'rendered') {
       evidence.issues.push(`Renderer not rendered at ${width}px`);
@@ -230,6 +273,33 @@ async function main() {
       evidence.issues.push(
         `SCENE04 RED at ${width}px: DOM label-to-canvas coordinate registration exceeds 1 CSS px`,
       );
+  }
+  for (const [index, deviceScaleFactor] of [1, 1.25, 1.5, 2].entries()) {
+    // Alternate a CSS pixel to force a fresh measured-layout event when DPR
+    // changes without changing the viewport's content-box dimensions.
+    const sample = await setViewport(
+      index % 2 === 0 ? 1120 : 1119,
+      700,
+      deviceScaleFactor,
+    );
+    sample.requestedDeviceScaleFactor = deviceScaleFactor;
+    evidence.dprSamples.push(sample);
+    if (!canvasMatchesMeasuredLayout(sample, sample.measuredLayout))
+      throw new Error(
+        `Canvas failed measured content/DPR contract at DPR ${deviceScaleFactor}`,
+      );
+  }
+  for (const deviceScaleFactor of [1, 1.5]) {
+    if (deviceScaleFactor > 1) await setViewport(1366, 768, deviceScaleFactor);
+    for (const [width, height] of [
+      [800, 600],
+      [1366, 768],
+      [800, 600],
+    ]) {
+      const sample = await setViewport(width, height, deviceScaleFactor);
+      evidence.viewports.push(sample);
+      await inspectWebGLResize(`${width}x${height} DPR ${deviceScaleFactor}`);
+    }
   }
   if (evidence.issues.length > 0)
     throw new Error(
