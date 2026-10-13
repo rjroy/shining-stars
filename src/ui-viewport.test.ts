@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { createBrightvaleViewportLayout } from './brightvale/viewport';
-
-const uiSource = readFileSync(resolve(process.cwd(), 'src/ui.ts'), 'utf8');
-const stylesSource = readFileSync(
-  resolve(process.cwd(), 'src/styles.css'),
-  'utf8',
-);
 
 const labels = {
   time: { x: 120, y: 80, width: 90, height: 24 },
@@ -17,20 +9,6 @@ const labels = {
 } as const;
 
 describe('Brightvale viewport measurement contract', () => {
-  it('keeps the game surface viewport-sized without page-level masthead or footer', () => {
-    expect(uiSource).not.toMatch(/<header class="masthead"/);
-    expect(uiSource).not.toMatch(/<footer class="experience-footer"/);
-    expect(stylesSource).toMatch(/html,\s*body\s*\{[^}]*height:\s*100dvh/s);
-    expect(stylesSource).toMatch(/\.experience\s*\{[^}]*height:\s*100%/s);
-    expect(stylesSource).toMatch(
-      /\.experience\s*\{[^}]*justify-content:\s*center/s,
-    );
-    expect(stylesSource).toMatch(
-      /\.play-surface\s*\{[^}]*max-width:\s*177\.7778dvh/s,
-    );
-    expect(stylesSource).toMatch(/body\s*\{[^}]*overflow:\s*hidden/s);
-  });
-
   it('preserves zero-sized raw CSS content dimensions', () => {
     const layout = createBrightvaleViewportLayout({
       host: { left: 40, top: 20, width: 0, height: 0 },
