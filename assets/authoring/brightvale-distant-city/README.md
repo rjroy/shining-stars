@@ -82,7 +82,7 @@ All cameras are temporary in `preview.py`. Cycles, 24 samples with denoising, Ag
 | Audience / Twilight | `(0,-300,62)` → `(0,38,46)` | identical perspective, 40 mm |
 | Reverse | `(155,220,155)` → `(0,42,39)` | orthographic, scale 365 |
 
-These diagnose geometry and approximate the concept's city-facing read; **none is the exact game camera**. Current `src/scene.ts` uses distinct scenery and runway perspectives (36° and 60°). No claim of exact gameplay projection, highway occlusion, responsive fit, final lighting, material fidelity in Three.js, or city/crowd composition is made. Warm and violet previews are both restrained twilight treatments, not daytime and nighttime.
+These diagnose geometry and approximate the concept's city-facing read; **none is the exact game camera**. Current `src/rendering/scene.ts` uses distinct scenery and runway perspectives (36° and 60°). No claim of exact gameplay projection, highway occlusion, responsive fit, final lighting, material fidelity in Three.js, or city/crowd composition is made. Warm and violet previews are both restrained twilight treatments, not daytime and nighttime.
 
 ### Verified baseline measurements — 2026-10-10
 

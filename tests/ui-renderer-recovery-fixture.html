@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Brightvale UI renderer recovery probe</title>
-    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/ui/styles.css" />
     <style>
       body {
         padding: 16px;
@@ -24,9 +24,9 @@
     <pre id="results">Running real GameUI lifecycle assertions…</pre>
     <div id="app"></div>
     <script type="module">
-      import { createGame } from '/src/game.ts';
-      import { MVP_CHART } from '/src/mvp-chart.ts';
-      import { createGameUI } from '/src/ui.ts';
+      import { createGame } from '/src/game/game.ts';
+      import { MVP_CHART } from '/src/game/mvp-chart.ts';
+      import { createGameUI } from '/src/ui/ui.ts';
 
       const results = [];
       const actionCalls = [];

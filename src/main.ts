@@ -1,15 +1,15 @@
-import './styles.css';
-import { createAudioTransport } from './audio';
-import { createBrowserAudioContextAdapter } from './browser-audio';
-import { createGameController, type GameController } from './controller';
-import { createGame } from './game';
-import { projectGameplayFrame } from './gameplay-frame';
-import { MVP_CHART } from './mvp-chart';
-import { createBrightvaleScene, type BrightvaleScene } from './scene';
-import type { BrightvaleRendererStatus } from './brightvale/viewport';
-import { projectSceneState } from './scene-state';
-import { parseSongOutputVolume } from './song-volume';
-import { createGameUI } from './ui';
+import './ui/styles.css';
+import { createAudioTransport } from './audio/audio';
+import { createBrowserAudioContextAdapter } from './audio/browser-audio';
+import { createGameController, type GameController } from './game/controller';
+import { createGame } from './game/game';
+import { projectGameplayFrame } from './rendering/gameplay-frame';
+import { MVP_CHART } from './game/mvp-chart';
+import { createBrightvaleScene, type BrightvaleScene } from './rendering/scene';
+import type { BrightvaleRendererStatus } from './rendering/brightvale/viewport';
+import { projectSceneState } from './rendering/scene-state';
+import { parseSongOutputVolume } from './audio/song-volume';
+import { createGameUI } from './ui/ui';
 
 const appRoot = document.querySelector<HTMLElement>('#app');
 if (appRoot === null)

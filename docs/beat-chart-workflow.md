@@ -100,7 +100,7 @@ The command writes:
 - `data/charts/the-first-shining-star.beats.json`: source SHA-256 and path,
   song/config settings, complete onset list, selected-note provenance, and
   normalized tool commands.
-- `src/mvp-chart.ts`: deterministic `MVP_CHART: ChartConfig` projection with
+- `src/game/mvp-chart.ts`: deterministic `MVP_CHART: ChartConfig` projection with
   the source SHA-256 in a comment.
 
 Both outputs are fully built and validated before either is replaced. Each
@@ -138,7 +138,7 @@ npm run chart:check
 Check mode does not invoke FFmpeg or aubio. It hashes the current source,
 compares source path and settings with the cached artifact, rebuilds the
 expected chart from the cached raw onset timestamps, and compares the result
-with `src/mvp-chart.ts`. A changed/missing source, mismatched settings,
+with `src/game/mvp-chart.ts`. A changed/missing source, mismatched settings,
 malformed onset projection, or stale chart fails the check. Regenerate after
 changing source audio, aubio/FFmpeg behavior, or authoring settings. The
 workflow requires Python 3, FFmpeg, and the already-installed `aubioonset`; it

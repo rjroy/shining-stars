@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { ChartConfig } from './chart';
-import { createGame } from './game';
-import { getDifficultyProfile } from './game-balance';
+import type { ChartConfig } from '../game/chart';
+import { createGame } from '../game/game';
+import { getDifficultyProfile } from '../game/game-balance';
 import { projectNotes } from './note-projection';
 
 const easyChart: ChartConfig = {

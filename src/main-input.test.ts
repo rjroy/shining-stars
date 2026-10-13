@@ -18,32 +18,32 @@ const harness = vi.hoisted(() => ({
   rendererUnavailable: null as null | (() => void),
 }));
 
-vi.mock('./styles.css', () => ({}));
-vi.mock('./audio', () => ({ createAudioTransport: vi.fn(() => ({})) }));
-vi.mock('./browser-audio', () => ({
+vi.mock('./ui/styles.css', () => ({}));
+vi.mock('./audio/audio', () => ({ createAudioTransport: vi.fn(() => ({})) }));
+vi.mock('./audio/browser-audio', () => ({
   createBrowserAudioContextAdapter: vi.fn(() => ({})),
 }));
-vi.mock('./controller', () => ({
+vi.mock('./game/controller', () => ({
   createGameController: vi.fn((dependencies) => {
     harness.renderSnapshot = dependencies.render;
     return harness.controller;
   }),
 }));
-vi.mock('./game', () => ({ createGame: vi.fn() }));
-vi.mock('./scene', () => ({
+vi.mock('./game/game', () => ({ createGame: vi.fn() }));
+vi.mock('./rendering/scene', () => ({
   createBrightvaleScene: vi.fn((_host, onUnavailable) => {
     harness.sceneCreated = true;
     harness.rendererUnavailable = onUnavailable;
     return harness.scene;
   }),
 }));
-vi.mock('./scene-state', () => ({
+vi.mock('./rendering/scene-state', () => ({
   projectSceneState: vi.fn(() => ({ cityProjection: true })),
 }));
-vi.mock('./gameplay-frame', () => ({
+vi.mock('./rendering/gameplay-frame', () => ({
   projectGameplayFrame: vi.fn(() => harness.gameplayFrame),
 }));
-vi.mock('./ui', () => ({
+vi.mock('./ui/ui', () => ({
   createGameUI: vi.fn((_root, _chart, actions) => {
     harness.actions = actions;
     const ui = {

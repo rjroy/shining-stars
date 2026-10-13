@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const uiSource = readFileSync(resolve(process.cwd(), 'src/ui.ts'), 'utf8');
+const uiSource = readFileSync(resolve(process.cwd(), 'src/ui/ui.ts'), 'utf8');
 
 describe('gameplay copy', () => {
   it('explains Renown rewards and that audience misses do not remove Renown', () => {

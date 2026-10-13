@@ -1,6 +1,6 @@
-import type { ChartConfig } from './chart';
-import type { ControllerSnapshot } from './controller';
-import { getDifficultyProfile, type Difficulty } from './game-balance';
+import type { ChartConfig } from '../game/chart';
+import type { ControllerSnapshot } from '../game/controller';
+import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
 import {
   projectNotes,
   projectTimingWindowHalfProgress,

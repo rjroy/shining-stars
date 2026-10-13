@@ -15,7 +15,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SOURCE = PROJECT_ROOT / "data/music/The First Shining Star (Remastered).mp3"
 DEFAULT_ARTIFACT = PROJECT_ROOT / "data/charts/the-first-shining-star.beats.json"
-DEFAULT_CHART = PROJECT_ROOT / "src/mvp-chart.ts"
+DEFAULT_CHART = PROJECT_ROOT / "src/game/mvp-chart.ts"
 DEFAULT_SONG_CONFIG = PROJECT_ROOT / "data/charts/song-authoring.json"
 DEFAULT_DIFFICULTY_PROFILES = PROJECT_ROOT / "data/charts/difficulty-profiles.json"
 DEFAULT_SONG_ID = "the-first-shining-star"

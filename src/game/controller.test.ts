@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AudioTransport, AudioTransportSnapshot } from './audio';
+import type { AudioTransport, AudioTransportSnapshot } from '../audio/audio';
 import { createGameController, type ControllerSnapshot } from './controller';
 import type { ChartConfig, ChartLane } from './chart';
 import { createGame, type GameSession } from './game';

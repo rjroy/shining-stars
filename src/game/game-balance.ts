@@ -1,4 +1,4 @@
-import rawDifficultyProfiles from '../data/charts/difficulty-profiles.json';
+import rawDifficultyProfiles from '../../data/charts/difficulty-profiles.json';
 
 export const DIFFICULTIES = ['easy', 'normal', 'hard'] as const;
 export type Difficulty = (typeof DIFFICULTIES)[number];
