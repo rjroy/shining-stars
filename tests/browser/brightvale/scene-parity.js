@@ -385,6 +385,34 @@ function inspectEssentialAssetProjection(layout) {
   camera.updateMatrixWorld(true);
   const viewport = { width: layout.width, height: layout.height };
   const projectedAssets = {};
+  const host = document.querySelector('.play-surface');
+  assert(host, 'production scene has a play-surface host');
+  const hostRect = host.getBoundingClientRect();
+  const hostStyle = getComputedStyle(host);
+  const cssPixels = (value) => Number.parseFloat(value) || 0;
+  const content = {
+    x:
+      hostRect.x +
+      cssPixels(hostStyle.borderLeftWidth) +
+      cssPixels(hostStyle.paddingLeft),
+    y:
+      hostRect.y +
+      cssPixels(hostStyle.borderTopWidth) +
+      cssPixels(hostStyle.paddingTop),
+    width:
+      hostRect.width -
+      cssPixels(hostStyle.borderLeftWidth) -
+      cssPixels(hostStyle.borderRightWidth) -
+      cssPixels(hostStyle.paddingLeft) -
+      cssPixels(hostStyle.paddingRight),
+    height:
+      hostRect.height -
+      cssPixels(hostStyle.borderTopWidth) -
+      cssPixels(hostStyle.borderBottomWidth) -
+      cssPixels(hostStyle.paddingTop) -
+      cssPixels(hostStyle.paddingBottom),
+  };
+  const canvasRect = renderer.domElement.getBoundingClientRect();
   for (const name of ['platform', 'endcaps', 'highway']) {
     const root = worldScene.getObjectByName(`Brightvale.Asset.${name}`);
     assert(root, `production scene contains ${name} asset wrapper`);
@@ -409,8 +437,12 @@ function inspectEssentialAssetProjection(layout) {
         )
           .applyMatrix4(object.matrixWorld)
           .project(camera);
-        const x = ((projected.x + 1) * viewport.width) / 2;
-        const y = ((1 - projected.y) * viewport.height) / 2;
+        // NDC maps through the canvas's actual CSS box, not the expected host
+        // content size or its DPR-scaled drawing buffer dimensions.
+        const x =
+          canvasRect.x - content.x + ((projected.x + 1) * canvasRect.width) / 2;
+        const y =
+          canvasRect.y - content.y + ((1 - projected.y) * canvasRect.height) / 2;
         vertices += 1;
         bounds.minX = Math.min(bounds.minX, x);
         bounds.minY = Math.min(bounds.minY, y);
@@ -420,9 +452,9 @@ function inspectEssentialAssetProjection(layout) {
           !Number.isFinite(x) ||
           !Number.isFinite(y) ||
           x < 0 ||
-          x > viewport.width ||
+          x > content.width ||
           y < 0 ||
-          y > viewport.height ||
+          y > content.height ||
           projected.z < -1 ||
           projected.z > 1
         )
@@ -431,12 +463,11 @@ function inspectEssentialAssetProjection(layout) {
     });
     projectedAssets[name] = { vertices, outside, bounds };
   }
-  const canvasRect = renderer.domElement.getBoundingClientRect();
   const approachStart = playfield.point(1, -0.11).project(camera);
   const approachHit = playfield.point(1, 1).project(camera);
   const approachTravelCss = Math.abs(
-    ((1 - approachHit.y) * viewport.height) / 2 -
-      ((1 - approachStart.y) * viewport.height) / 2,
+      ((1 - approachHit.y) * canvasRect.height) / 2 -
+        ((1 - approachStart.y) * canvasRect.height) / 2,
   );
   return {
     rendererStatus: document.querySelector('[data-renderer-status]')?.hidden
@@ -461,6 +492,7 @@ function inspectEssentialAssetProjection(layout) {
       },
     },
     viewport,
+    content,
     hud: {
       persistent: layout.persistentHudExclusions,
       labels: layout.labels,
@@ -470,8 +502,20 @@ function inspectEssentialAssetProjection(layout) {
       y: canvasRect.y,
       width: canvasRect.width,
       height: canvasRect.height,
+      contentDelta: {
+        x: canvasRect.x - content.x,
+        y: canvasRect.y - content.y,
+        width: canvasRect.width - content.width,
+        height: canvasRect.height - content.height,
+      },
       bufferWidth: renderer.domElement.width,
       bufferHeight: renderer.domElement.height,
+      expectedBufferWidth: Math.floor(
+        layout.width * Math.min(Math.max(devicePixelRatio || 1, 1), 1.5),
+      ),
+      expectedBufferHeight: Math.floor(
+        layout.height * Math.min(Math.max(devicePixelRatio || 1, 1), 1.5),
+      ),
     },
     camera: {
       position: camera.position.toArray(),
@@ -506,9 +550,8 @@ function inspectOverlayTextures() {
     'lane-1',
     'lane-2',
     'lane-3',
-    'hit',
   ];
-  return names.map((name) => {
+  const labels = names.map((name) => {
     const mesh = overlayScene?.getObjectByName(`Brightvale.Label.${name}`);
     const material = mesh?.material;
     const image =
@@ -537,6 +580,11 @@ function inspectOverlayTextures() {
       screenSize: mesh ? { width: mesh.scale.x, height: mesh.scale.y } : null,
     };
   });
+  assert(
+    overlayScene?.getObjectByName('Brightvale.Label.hit') === undefined,
+    'no decorative HIT text mesh is generated',
+  );
+  return labels;
 }
 
 const waitLayout = async (requestedWidth, requestedHeight) => {
@@ -685,6 +733,9 @@ window.__brightvaleInspectViewport = async (
   try {
     const layout = await waitLayout(requestedWidth, requestedHeight);
     await drive('normal', 10.2);
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
     return inspectEssentialAssetProjection(layout);
   } catch (error) {
     window.__brightvaleParityError = String(error?.stack || error);

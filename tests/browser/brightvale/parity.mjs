@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import net from 'node:net';
@@ -12,52 +12,6 @@ const root = path.resolve(
 const output = path.join(root, '.lore/local/evidence/brightvale-runtime');
 await mkdir(output, { recursive: true });
 
-function screenshotText(imagePath, label, expected) {
-  const rect = {
-    x: Math.max(
-      0,
-      Math.floor(label.screenCenter.x - label.screenSize.width / 2),
-    ),
-    y: Math.max(
-      0,
-      Math.floor(label.screenCenter.y - label.screenSize.height / 2),
-    ),
-    width: Math.ceil(label.screenSize.width),
-    height: Math.ceil(label.screenSize.height),
-  };
-  const crop = spawnSync(
-    'magick',
-    [
-      imagePath,
-      '-crop',
-      `${rect.width}x${rect.height}+${rect.x}+${rect.y}`,
-      '+repage',
-      '-filter',
-      'point',
-      '-resize',
-      '800%',
-      'png:-',
-    ],
-    { maxBuffer: 8 * 1024 * 1024 },
-  );
-  if (crop.status !== 0)
-    throw new Error(`Could not crop ${label.name} from ${imagePath}`);
-  const text = spawnSync('tesseract', ['stdin', 'stdout', '--psm', '7'], {
-    input: crop.stdout,
-    encoding: 'utf8',
-    timeout: 10000,
-  });
-  if (text.status !== 0)
-    throw new Error(`Could not OCR ${label.name} from ${imagePath}`);
-  return {
-    label: label.name,
-    image: path.basename(imagePath),
-    rect,
-    expected: expected.source,
-    recognizedText: text.stdout.trim(),
-    readable: expected.test(text.stdout),
-  };
-}
 const scratch = `/tmp/opencode/brightvale-parity-${process.pid}`;
 await mkdir(scratch, { recursive: true });
 const freePort = () =>
@@ -192,16 +146,22 @@ try {
   });
   await cdp('Page.enable');
   await cdp('Runtime.enable');
-  const setViewport = async (width, height) => {
+  const setViewport = async (width, height, deviceScaleFactor = 1) => {
     await cdp('Emulation.setDeviceMetricsOverride', {
       width,
       height,
-      deviceScaleFactor: 1,
+      deviceScaleFactor,
       mobile: false,
     });
     await waitFor(
-      () => evaluate(`innerWidth===${width}&&innerHeight===${height}`),
-      `viewport ${width}x${height}`,
+      () =>
+        evaluate(
+          `innerWidth===${width}&&innerHeight===${height}&&Math.abs(devicePixelRatio-${deviceScaleFactor})<0.001`,
+        ),
+      `viewport ${width}x${height} at DPR ${deviceScaleFactor}`,
+    );
+    await evaluate(
+      'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
     );
   };
   await setViewport(1600, 900);
@@ -242,30 +202,28 @@ try {
       await evaluate(`window.__brightvaleInspectViewport(${width},${height})`),
     );
   }
-  const overlayTextOCR = [
-    {
-      viewport: 'reference-first-frame',
-      image: path.join(output, 'parity-overlay-first-reference.webp'),
-      sample: reference,
-    },
-    {
-      viewport: 'narrow-after-resize',
-      image: path.join(output, 'parity-overlay-after-resize-narrow.webp'),
-      sample: narrow,
-    },
-  ].map(({ viewport, image, sample }) => {
-    const labels = sample.firstFrameOverlayPixels.labels;
-    const find = (name) => labels.find((label) => label.name === name);
-    const legend = find('legend');
-    const hit = find('hit');
-    if (!legend || !hit)
-      throw new Error(`${viewport} overlay is missing legend or HIT label`);
-    return {
-      viewport,
-      legend: screenshotText(image, legend, /good[\s\S]*perfect/i),
-      hit: screenshotText(image, hit, /hit/i),
-    };
-  });
+  // Reuse one browser context while dimensions and emulated device scale
+  // change. deviceScaleFactor is not browser zoom; visualViewport.scale is
+  // reported separately by the page probe.
+  const deviceScaleFactorSamples = [];
+  for (const [width, height, deviceScaleFactor] of [
+    [1366, 768, 1],
+    [1366, 768, 1.25],
+    [1366, 768, 1.5],
+    [1366, 768, 2],
+    [1920, 600, 1.25],
+    [1280, 720, 2],
+  ]) {
+    await setViewport(width, height, deviceScaleFactor);
+    const sample = await evaluate(
+      `window.__brightvaleInspectViewport(${width},${height})`,
+    );
+    deviceScaleFactorSamples.push({
+      requestedViewport: { width, height },
+      requestedDeviceScaleFactor: deviceScaleFactor,
+      ...sample,
+    });
+  }
   parity = {
     fixtureType:
       'production createGameUI + createBrightvaleScene facade + runtime GLBs; synthetic chart snapshots, not actual audio gameplay',
@@ -282,7 +240,12 @@ try {
       },
       tolerance: 1e-6,
     },
-    viewports: { reference, narrow, measuredResponsiveViewports },
+    viewports: {
+      reference,
+      narrow,
+      measuredResponsiveViewports,
+      deviceScaleFactorSamples,
+    },
   };
   const normal = JSON.parse(
     await readFile(path.join(output, 'normal-report.json'), 'utf8'),
@@ -305,9 +268,6 @@ try {
               label.side === 0 &&
               Math.abs(label.rotationX - Math.PI) < 1e-6,
           ),
-    ),
-    hitLabelReadableOnFirstAndResizedFrames: overlayTextOCR.every(
-      (sample) => sample.hit.readable,
     ),
     cameraStableAcrossNotePopulations: [reference, narrow].every(
       (sample) => sample.camera.notePopulationMaxMatrixDelta <= 1e-6,
@@ -379,6 +339,29 @@ try {
         sample.browser.document.scrollHeight ===
           sample.browser.document.clientHeight,
     ),
+    canvasCssBoxMatchesMeasuredContentAcrossDeviceScaleFactors:
+      deviceScaleFactorSamples.every(
+        (sample) =>
+          sample.browser.devicePixelRatio ===
+            sample.requestedDeviceScaleFactor &&
+          sample.browser.visualViewport?.scale === 1 &&
+          Math.abs(sample.canvas.contentDelta.x) <= 1 &&
+          Math.abs(sample.canvas.contentDelta.y) <= 1 &&
+          Math.abs(sample.canvas.contentDelta.width) <= 1 &&
+          Math.abs(sample.canvas.contentDelta.height) <= 1 &&
+          Math.abs(
+            sample.canvas.bufferWidth - sample.canvas.expectedBufferWidth,
+          ) <= 1 &&
+          Math.abs(
+            sample.canvas.bufferHeight - sample.canvas.expectedBufferHeight,
+          ) <= 1,
+      ),
+    essentialGeometryFitsMeasuredContentAcrossDeviceScaleFactors:
+      deviceScaleFactorSamples.every((sample) =>
+        ['platform', 'endcaps', 'highway'].every(
+          (name) => sample.assets[name]?.outside === 0,
+        ),
+      ),
   };
   const failedChecks = Object.entries(visualChecks)
     .filter(([, passed]) => !passed)
@@ -393,7 +376,6 @@ try {
     actualGameplayRuns: { normal, hard },
     productionSceneParityFixture: parity,
     visualChecks,
-    overlayTextOCR,
     failedChecks,
     unverified: [
       'Direct camera-matrix equality against the real main.ts game instance is unavailable without a production hook; the parity fixture uses the same production facade, UI factory, actual GLBs, and measured layout dimensions.',

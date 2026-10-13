@@ -83,6 +83,37 @@ test('responsive readiness checks backing dimensions at the capped device pixel 
   );
 });
 
+test('DPR readiness keeps the CSS canvas at content size and caps only its backing store', () => {
+  const layout = { width: 1259.328, height: 726.064 };
+  const content = { x: 53.328, y: 20.968, ...layout };
+  for (const devicePixelRatio of [1, 1.25, 1.5, 2]) {
+    const cappedRatio = Math.min(devicePixelRatio, 1.5);
+    const correct = measurement({ content, layout, devicePixelRatio });
+    assert.equal(
+      canvasMatchesMeasuredLayout(correct, layout),
+      true,
+      `DPR ${devicePixelRatio} accepts content-sized CSS and capped backing pixels`,
+    );
+    if (devicePixelRatio > 1) {
+      assert.equal(
+        canvasMatchesMeasuredLayout(
+          {
+            ...correct,
+            canvas: {
+              ...correct.canvas,
+              width: Math.floor(layout.width * cappedRatio),
+              height: Math.floor(layout.height * cappedRatio),
+            },
+          },
+          layout,
+        ),
+        false,
+        `DPR ${devicePixelRatio} rejects a DPR-scaled CSS box`,
+      );
+    }
+  }
+});
+
 test('atomic report transitions replace timeout failure and later pass', async (context) => {
   const directory = await mkdtemp(
     path.join(os.tmpdir(), 'brightvale-responsive-report-'),

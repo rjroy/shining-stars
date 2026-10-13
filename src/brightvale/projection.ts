@@ -340,23 +340,6 @@ export function createBrightvaleCameraProjection(
       if (!constrainPoint(anchor, -4, nextLayout.height - 28)) return null;
     }
 
-    const views = anchors.map((anchor) =>
-      anchor.clone().applyMatrix4(inverseCamera),
-    );
-    const meanViewYOverDepth =
-      views.reduce((sum, view) => sum + view.y / -view.z, 0) / views.length;
-    const meanInverseDepth =
-      views.reduce((sum, view) => sum + 1 / -view.z, 0) / views.length;
-    const meanScreenYAtZero =
-      nextLayout.height / 2 -
-      (meanViewYOverDepth * nextLayout.height) / (2 * verticalTangent);
-    const meanScreenYSlope =
-      (meanInverseDepth * nextLayout.height) / (2 * verticalTangent);
-    minimum = Math.max(minimum, (-30 - meanScreenYAtZero) / meanScreenYSlope);
-    maximum = Math.min(
-      maximum,
-      (nextLayout.height - 50 - meanScreenYAtZero) / meanScreenYSlope,
-    );
     return minimum <= maximum ? { minimum, maximum } : null;
   };
 
@@ -401,21 +384,7 @@ export function createBrightvaleCameraProjection(
         height: 24,
       };
     });
-    const anchorMean = laneLabels.reduce(
-      (mean, rect) => ({
-        x: mean.x + (rect.x + rect.width / 2) / laneLabels.length,
-        y: mean.y + (rect.y - 4) / laneLabels.length,
-      }),
-      { x: 0, y: 0 },
-    );
-    const hitLabel = {
-      x: anchorMean.x - 44,
-      y: anchorMean.y + 30,
-      width: 88,
-      height: 28,
-    };
-    const labels = [...laneLabels, hitLabel];
-    for (const rect of labels) {
+    for (const rect of laneLabels) {
       if (
         rect.x < 0 ||
         rect.y < 0 ||
@@ -426,9 +395,9 @@ export function createBrightvaleCameraProjection(
         return false;
       }
     }
-    for (let first = 0; first < labels.length; first += 1) {
-      for (let second = first + 1; second < labels.length; second += 1) {
-        if (overlaps(labels[first]!, labels[second]!)) {
+    for (let first = 0; first < laneLabels.length; first += 1) {
+      for (let second = first + 1; second < laneLabels.length; second += 1) {
+        if (overlaps(laneLabels[first]!, laneLabels[second]!)) {
           return false;
         }
       }

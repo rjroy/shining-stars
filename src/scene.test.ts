@@ -670,7 +670,6 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           'lane-1',
           'lane-2',
           'lane-3',
-          'hit',
         ];
         const labels = names.map((name) => {
           const label = overlay.children.find(
@@ -681,6 +680,11 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           return label;
         });
         expect(labels).toHaveLength(names.length);
+        expect(
+          overlay.children.some(
+            (object) => object.name === 'Brightvale.Label.hit',
+          ),
+        ).toBe(false);
         const uvFailures: string[] = [];
         const windingFailures: string[] = [];
         for (const label of labels) {

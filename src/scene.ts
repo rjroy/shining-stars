@@ -331,7 +331,6 @@ export function createBrightvaleScene(
     'lane-1',
     'lane-2',
     'lane-3',
-    'hit',
   ])
     createLabel(name);
 
@@ -359,13 +358,6 @@ export function createBrightvaleScene(
   let rendererHeight = -1;
   let rendererPixelRatio = -1;
 
-  const setRendererSize = (width: number, height: number): void => {
-    if (rendererWidth === width && rendererHeight === height) return;
-    renderer.setSize(width, height, false);
-    rendererWidth = width;
-    rendererHeight = height;
-  };
-
   const setRendererPixelRatio = (): void => {
     const pixelRatio = Math.min(
       typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
@@ -386,16 +378,33 @@ export function createBrightvaleScene(
     }
   };
 
-  const alignCanvasToContentBox = (): void => {
+  const alignCanvasToContentBox = (width: number, height: number): void => {
     if (!('style' in canvas) || typeof getComputedStyle !== 'function') return;
     const style = getComputedStyle(host);
     const pixels = (value: string): number => Number.parseFloat(value) || 0;
-    canvas.style.left = `${pixels(style.paddingLeft)}px`;
-    canvas.style.right = `${pixels(style.paddingRight)}px`;
-    canvas.style.top = `${pixels(style.paddingTop)}px`;
-    canvas.style.bottom = `${pixels(style.paddingBottom)}px`;
-    canvas.style.width = 'auto';
-    canvas.style.height = 'auto';
+    const css = {
+      left: `${pixels(style.paddingLeft)}px`,
+      top: `${pixels(style.paddingTop)}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+    };
+    if (canvas.style.left !== css.left) canvas.style.left = css.left;
+    if (canvas.style.top !== css.top) canvas.style.top = css.top;
+    if (canvas.style.right !== 'auto') canvas.style.right = 'auto';
+    if (canvas.style.bottom !== 'auto') canvas.style.bottom = 'auto';
+    if (canvas.style.width !== css.width) canvas.style.width = css.width;
+    if (canvas.style.height !== css.height) canvas.style.height = css.height;
+  };
+
+  const setRendererSize = (width: number, height: number): void => {
+    // Three.js sizes the drawing buffer in DPR-scaled pixels. Keep the CSS box
+    // in measured host-content CSS pixels, even when those logical dimensions
+    // have not changed since a DPR-only resize.
+    alignCanvasToContentBox(width, height);
+    if (rendererWidth === width && rendererHeight === height) return;
+    renderer.setSize(width, height, false);
+    rendererWidth = width;
+    rendererHeight = height;
   };
 
   const readHostContentSize = (): { width: number; height: number } => {
@@ -433,7 +442,6 @@ export function createBrightvaleScene(
       gameplay: { ...lastFrame.gameplay, layout },
     };
     try {
-      alignCanvasToContentBox();
       setRendererPixelRatio();
       setRendererSize(layout.width, layout.height);
       shell?.updateFrame({ viewportUsable: viewportUsable(layout) });
@@ -671,31 +679,6 @@ export function createBrightvaleScene(
         pixelRatio,
       );
     });
-    const targetMean = anchors.reduce(
-      (sum, anchor) => ({ x: sum.x + anchor.x / 4, y: sum.y + anchor.y / 4 }),
-      { x: 0, y: 0 },
-    );
-    setRectLabel(
-      label('hit'),
-      'HIT',
-      {
-        x: targetMean.x - 44,
-        y: targetMean.y + 30,
-        width: 88,
-        height: 28,
-      },
-      {
-        color: '#fff7dd',
-        align: 'center',
-        fontScale: 0.78,
-        fontWeight: 700,
-        outlineColor: '#39251b',
-        outlineWidth: 2,
-        backgroundColor: 'rgba(42, 30, 26, 0.94)',
-      },
-      pixelRatio,
-    );
-
     const width = layout.width;
     const height = layout.height;
     const previousAutoClear = renderer.autoClear;
@@ -775,7 +758,6 @@ export function createBrightvaleScene(
   try {
     canvas.className = 'scene-canvas';
     canvas.setAttribute('aria-hidden', 'true');
-    alignCanvasToContentBox();
     host.insertBefore(canvas, host.firstChild);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -804,7 +786,6 @@ export function createBrightvaleScene(
       let width = 0;
       let height = 0;
       try {
-        alignCanvasToContentBox();
         const size = readHostContentSize();
         width = size.width;
         height = size.height;
