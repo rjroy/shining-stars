@@ -230,6 +230,18 @@ try {
     path.join(output, 'parity-overlay-after-resize-narrow.webp'),
     Buffer.from(narrowOverlayDataUrl.split(',')[1], 'base64'),
   );
+  const measuredResponsiveViewports = [];
+  for (const [width, height] of [
+    [1366, 768],
+    [1280, 720],
+    [1024, 768],
+    [1920, 600],
+  ]) {
+    await setViewport(width, height);
+    measuredResponsiveViewports.push(
+      await evaluate(`window.__brightvaleInspectViewport(${width},${height})`),
+    );
+  }
   const overlayTextOCR = [
     {
       viewport: 'reference-first-frame',
@@ -270,7 +282,7 @@ try {
       },
       tolerance: 1e-6,
     },
-    viewports: { reference, narrow },
+    viewports: { reference, narrow, measuredResponsiveViewports },
   };
   const normal = JSON.parse(
     await readFile(path.join(output, 'normal-report.json'), 'utf8'),
@@ -334,6 +346,38 @@ try {
           )
         );
       },
+    ),
+    essentialGeometryFitsResponsiveCanvas: [
+      reference.essentialProjection,
+      narrow.essentialProjection,
+      ...measuredResponsiveViewports,
+    ].every((sample) =>
+      ['platform', 'endcaps', 'highway'].every(
+        (name) => sample.assets[name]?.outside === 0,
+      ),
+    ),
+    normalApproachHasAtLeastLandingDeckTravel: [
+      reference.essentialProjection,
+      narrow.essentialProjection,
+      ...measuredResponsiveViewports,
+    ].every(
+      (sample) =>
+        sample.approach.travelCssPixels >
+        sample.approach.projectedPlatformDepthCssPixels,
+    ),
+    responsiveHarnessUsesMeasuredCanvasAndNoDocumentScroll: [
+      reference.essentialProjection,
+      narrow.essentialProjection,
+      ...measuredResponsiveViewports,
+    ].every(
+      (sample) =>
+        sample.rendererStatus === 'rendered' &&
+        Math.abs(sample.canvas.width - sample.viewport.width) <= 1 &&
+        Math.abs(sample.canvas.height - sample.viewport.height) <= 1 &&
+        sample.browser.document.scrollWidth ===
+          sample.browser.document.clientWidth &&
+        sample.browser.document.scrollHeight ===
+          sample.browser.document.clientHeight,
     ),
   };
   const failedChecks = Object.entries(visualChecks)

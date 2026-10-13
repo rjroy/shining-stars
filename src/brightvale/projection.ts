@@ -119,6 +119,47 @@ export interface BrightvaleScreenPoint {
 /** Surface samples can optionally address the real lateral footprint of notes. */
 export interface BrightvaleMeasuredSurfaceProfile extends BrightvaleSurfaceProfile {
   surfaceHeightAt(lane: number, localZ: number, localX?: number): number | null;
+  /** Conservative bounds corners for the complete gameplay-critical GLBs. */
+  readonly essentialGeometryPoints: Readonly<
+    Record<'platform' | 'highway' | 'endcaps', readonly THREE.Vector3[]>
+  >;
+}
+
+function measuredAssetBoundsCorners(
+  root: THREE.Object3D,
+  parentMatrix: THREE.Matrix4,
+): THREE.Vector3[] {
+  root.updateMatrixWorld(true);
+  const bounds = new THREE.Box3();
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const positions = object.geometry.getAttribute('position');
+    if (positions === undefined) return;
+    for (let index = 0; index < positions.count; index += 1) {
+      bounds.expandByPoint(
+        new THREE.Vector3(
+          positions.getX(index),
+          positions.getY(index),
+          positions.getZ(index),
+        )
+          .applyMatrix4(object.matrixWorld)
+          .applyMatrix4(parentMatrix),
+      );
+    }
+  });
+  if (bounds.isEmpty())
+    throw new Error('Brightvale essential asset has no mesh bounds');
+  const { min, max } = bounds;
+  return [
+    new THREE.Vector3(min.x, min.y, min.z),
+    new THREE.Vector3(min.x, min.y, max.z),
+    new THREE.Vector3(min.x, max.y, min.z),
+    new THREE.Vector3(min.x, max.y, max.z),
+    new THREE.Vector3(max.x, min.y, min.z),
+    new THREE.Vector3(max.x, min.y, max.z),
+    new THREE.Vector3(max.x, max.y, min.z),
+    new THREE.Vector3(max.x, max.y, max.z),
+  ];
 }
 
 export interface BrightvaleCameraProjection {
@@ -135,9 +176,17 @@ export interface BrightvaleCameraProjection {
 
 /** Derive queryable road/target heights from the loaded source GLB meshes. */
 export function createBrightvaleSurfaceProfile(
-  roots: Pick<BrightvaleAssets['roots'], 'highway' | 'platform'>,
+  roots: Pick<BrightvaleAssets['roots'], 'highway' | 'platform' | 'endcaps'>,
 ): BrightvaleMeasuredSurfaceProfile {
   const cache = new Map<string, number | null>();
+  const playfieldMatrix = new THREE.Matrix4().fromArray([
+    ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
+  ]);
+  const essentialGeometryPoints = {
+    platform: measuredAssetBoundsCorners(roots.platform, playfieldMatrix),
+    highway: measuredAssetBoundsCorners(roots.highway, playfieldMatrix),
+    endcaps: measuredAssetBoundsCorners(roots.endcaps, playfieldMatrix),
+  };
   const sourceRoots: SurfaceRoot[] = [roots.highway, roots.platform].map(
     (root) => {
       root.updateMatrixWorld(true);
@@ -149,6 +198,7 @@ export function createBrightvaleSurfaceProfile(
     },
   );
   return {
+    essentialGeometryPoints,
     surfaceHeightAt(lane, localZ, localX = laneCenter(lane)) {
       if (
         !Number.isInteger(lane) ||
@@ -213,7 +263,11 @@ export function createBrightvaleCameraProjection(
       throw new RangeError(
         'Brightvale progress range must be finite and ordered',
       );
-    const points: THREE.Vector3[] = [];
+    const points: THREE.Vector3[] = surface
+      ? Object.values(surface.essentialGeometryPoints).flatMap((points) =>
+          points.map((point) => point.clone()),
+        )
+      : [];
     const sampleCount = ENVELOPE_SWEEP_SAMPLES;
     for (let lane = 0; lane < 4; lane += 1) {
       for (let index = 0; index <= sampleCount; index += 1) {
@@ -310,6 +364,7 @@ export function createBrightvaleCameraProjection(
     scale: number,
     shift: number,
     nextLayout: BrightvaleViewportLayout,
+    nextProgress: BrightvaleProgressRange,
   ): boolean => {
     camera.position
       .copy(target)
@@ -396,6 +451,21 @@ export function createBrightvaleCameraProjection(
       }
     }
 
+    if (surface !== undefined) {
+      const deckY = surface.essentialGeometryPoints.platform.map(
+        (point) => projectRect(point).y,
+      );
+      const landingDeckDepth = Math.max(...deckY) - Math.min(...deckY);
+      for (let lane = 0; lane < 4; lane += 1) {
+        const approachY = projectRect(
+          playfield.point(lane, nextProgress.minimum),
+        ).y;
+        const hitY = projectRect(playfield.hitAnchor(lane)).y;
+        if (hitY <= approachY || hitY - approachY < landingDeckDepth)
+          return false;
+      }
+    }
+
     return true;
   };
 
@@ -466,7 +536,7 @@ export function createBrightvaleCameraProjection(
         (left, right) => Math.abs(left) - Math.abs(right),
       );
       for (const shift of orderedShifts) {
-        if (!fits(scale, shift, nextLayout)) continue;
+        if (!fits(scale, shift, nextLayout, nextProgress)) continue;
         camera.position
           .copy(target)
           .addScaledVector(cameraRay, scale)

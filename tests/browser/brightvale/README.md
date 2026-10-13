@@ -25,6 +25,14 @@ camera-matrix comparison against `main.ts`. The Normal/Hard runs exercise the
 actual app and chart. Responsive evidence covers the current checked viewport
 samples, not a minimum supported viewport or device-performance budget.
 
+The parity responsive probes report the measured content box, canvas and
+backing-buffer size, browser/visual viewport and document overflow, HUD slots,
+camera pose, and projected source-GLB vertices for the playable platform,
+endcaps, and highway. These are production scene-facade projections, not
+Ready-screen screenshots; decorative city bounds are intentionally not a
+playability criterion. Current Chrome zoom is not changed by this harness, and
+`deviceScaleFactor` is not treated as browser zoom.
+
 Runtime-layout data is regenerated from the authoritative structure JSON and
 accepted review source with:
 

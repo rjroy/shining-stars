@@ -165,84 +165,6 @@ function measuredEnvelopePoints(
   return { points, measuredSurfaceSamples, fallbackSamples };
 }
 
-function measuredCameraWitness(
-  points: readonly THREE.Vector3[],
-  layout: BrightvaleViewportLayout,
-): { readonly minimumShift: number; readonly maximumShift: number } | null {
-  const authored = BRIGHTVALE_RUNTIME_LAYOUT.camera;
-  const camera = new THREE.PerspectiveCamera(
-    authored.verticalFovDegrees,
-    layout.width / layout.height,
-    authored.near,
-    authored.far,
-  );
-  camera.position.fromArray([...authored.positionGltf]);
-  camera.quaternion.fromArray([...authored.quaternionXyzw]).normalize();
-  const cameraUp = new THREE.Vector3(0, 1, 0).applyQuaternion(
-    camera.quaternion,
-  );
-  const labels = Object.values(layout.labels);
-  const feasibleShifts: number[] = [];
-  camera.updateMatrixWorld(true);
-  const inverseAuthoredCamera = camera.matrixWorld.clone().invert();
-  const verticalTangent = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  let minimumShift = Number.NEGATIVE_INFINITY;
-  let maximumShift = Number.POSITIVE_INFINITY;
-  for (const point of points) {
-    const view = point.clone().applyMatrix4(inverseAuthoredCamera);
-    const depth = -view.z;
-    if (depth < camera.near || depth > camera.far) return null;
-    minimumShift = Math.max(minimumShift, view.y - verticalTangent * depth);
-    maximumShift = Math.min(maximumShift, view.y + verticalTangent * depth);
-  }
-  if (minimumShift > maximumShift) return null;
-  // Derive the scan interval from the authored frustum and measured geometry;
-  // the 1/8-unit scan resolves only HUD/label holes within that interval.
-  const scanSteps = Math.ceil((maximumShift - minimumShift) * 8);
-
-  for (let step = 0; step <= scanSteps; step += 1) {
-    const shift = Math.min(minimumShift + step / 8, maximumShift);
-    camera.position
-      .fromArray([...authored.positionGltf])
-      .addScaledVector(cameraUp, shift);
-    camera.updateMatrixWorld(true);
-    const inverseCamera = camera.matrixWorld.clone().invert();
-    let feasible = true;
-    for (const worldPoint of points) {
-      const view = worldPoint.clone().applyMatrix4(inverseCamera);
-      const projected = worldPoint.clone().project(camera);
-      const x = ((projected.x + 1) * layout.width) / 2;
-      const y = ((1 - projected.y) * layout.height) / 2;
-      if (
-        -view.z < camera.near ||
-        -view.z > camera.far ||
-        !Number.isFinite(x) ||
-        !Number.isFinite(y) ||
-        x < 0 ||
-        x > layout.width ||
-        y < 0 ||
-        y > layout.height ||
-        layout.persistentHudExclusions.some((rect) =>
-          rectanglesOverlap({ x, y, width: 0.01, height: 0.01 }, rect),
-        ) ||
-        labels.some((rect) =>
-          rectanglesOverlap({ x, y, width: 0.01, height: 0.01 }, rect),
-        )
-      ) {
-        feasible = false;
-        break;
-      }
-    }
-    if (feasible) feasibleShifts.push(shift);
-  }
-
-  if (feasibleShifts.length === 0) return null;
-  return {
-    minimumShift: feasibleShifts[0]!,
-    maximumShift: feasibleShifts.at(-1)!,
-  };
-}
-
 describe('Brightvale source-geometry projection', () => {
   it('derives the physical road and raised target profile from loaded GLB meshes', () => {
     const profile = createBrightvaleSurfaceProfile(assets.roots);
@@ -348,7 +270,197 @@ describe('Brightvale source-geometry projection', () => {
     },
   );
 
-  it('keeps the normal source-surface envelope inside a controlled HUD and label layout with fixed authored optics', () => {
+  it.each([
+    {
+      name: '1120×700 measured content box',
+      layout: {
+        width: 1028.4,
+        height: 661.6,
+        persistentHudExclusions: [
+          { x: 0, y: 25.8, width: 383.328, height: 69.188 },
+          { x: 574.044, y: 47.988, width: 100, height: 47 },
+          { x: 864.747, y: 0, width: 163.656, height: 95 },
+          { x: 11.997, y: 234.972, width: 254.891, height: 18.844 },
+          { x: 938.169, y: 230.972, width: 78.234, height: 26.844 },
+        ],
+        labels: {
+          time: { x: 920.403, y: 116.972, width: 96, height: 14 },
+          countdown: { x: 840.403, y: 192.378, width: 176, height: 22.391 },
+          legend: { x: 11.997, y: 139.175, width: 1004.406, height: 40 },
+          feedback: { x: 11.997, y: 189.175, width: 1004.406, height: 28.797 },
+        },
+      },
+    },
+    {
+      name: '1600×900 measured content box',
+      layout: {
+        width: 1494,
+        height: 851.2,
+        persistentHudExclusions: [
+          { x: 0, y: 25.803, width: 383.328, height: 69.188 },
+          { x: 806.844, y: 47.991, width: 100, height: 47 },
+          { x: 1330.344, y: 0, width: 163.656, height: 95 },
+          { x: 12, y: 237.772, width: 254.891, height: 18.844 },
+          { x: 1403.766, y: 233.772, width: 78.234, height: 26.844 },
+        ],
+        labels: {
+          time: { x: 1386, y: 119.772, width: 96, height: 14 },
+          countdown: { x: 1306, y: 195.178, width: 176, height: 22.391 },
+          legend: { x: 12, y: 141.975, width: 1470, height: 40 },
+          feedback: { x: 12, y: 191.975, width: 1470, height: 28.797 },
+        },
+      },
+    },
+  ])(
+    'keeps every physical platform and endcap vertex in the playfield at $name',
+    ({ layout }) => {
+      const profile = createBrightvaleSurfaceProfile(assets.roots);
+      const playfield = createBrightvalePlayfieldContract(profile);
+      const halfProgress =
+        getDifficultyProfile('normal').timing.goodWindowSeconds /
+        VISIBLE_NOTE_SECONDS;
+      const projection = createBrightvaleCameraProjection(
+        playfield,
+        layout,
+        { minimum: -halfProgress, maximum: 1 + halfProgress },
+        profile,
+      );
+      let outsideVertices = 0;
+      let bottommostOutside = Number.NEGATIVE_INFINITY;
+      const playfieldMatrix = new THREE.Matrix4().fromArray([
+        ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
+      ]);
+
+      for (const name of ['platform', 'endcaps'] as const) {
+        const root = assets.roots[name];
+        root.updateMatrixWorld(true);
+        root.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return;
+          const positions = object.geometry.getAttribute('position');
+          if (positions === undefined) return;
+          for (let index = 0; index < positions.count; index += 1) {
+            const world = new THREE.Vector3(
+              positions.getX(index),
+              positions.getY(index),
+              positions.getZ(index),
+            )
+              .applyMatrix4(object.matrixWorld)
+              .applyMatrix4(playfieldMatrix);
+            const screen = projection.project(world);
+            if (
+              !Number.isFinite(screen.x) ||
+              !Number.isFinite(screen.y) ||
+              screen.x < 0 ||
+              screen.x > layout.width ||
+              screen.y < 0 ||
+              screen.y > layout.height
+            )
+              outsideVertices += 1;
+            if (screen.y > layout.height)
+              bottommostOutside = Math.max(bottommostOutside, screen.y);
+          }
+        });
+      }
+
+      expect(projection.usable).toBe(true);
+      expect(
+        outsideVertices,
+        `${outsideVertices} platform/endcap vertices exceed content bounds; bottommost=${bottommostOutside}`,
+      ).toBe(0);
+    },
+  );
+
+  it.each(['normal', 'hard', 'easy'] as const)(
+    'preserves a readable %s approach at the wide-short measured layout',
+    (difficulty) => {
+      const layout: BrightvaleViewportLayout = {
+        width: 1814,
+        height: 566.8,
+        persistentHudExclusions: [
+          { x: 0, y: 25.8, width: 383.33, height: 69.19 },
+          { x: 966.84, y: 47.99, width: 100, height: 47 },
+          { x: 1650.34, y: 0, width: 163.66, height: 95 },
+          { x: 12, y: 233.57, width: 254.89, height: 18.84 },
+          { x: 1723.77, y: 229.57, width: 78.23, height: 26.84 },
+        ],
+        labels: {
+          time: { x: 1706, y: 115.57, width: 96, height: 14 },
+          countdown: { x: 1626, y: 190.98, width: 176, height: 22.39 },
+          legend: { x: 12, y: 137.78, width: 1790, height: 40 },
+          feedback: { x: 12, y: 187.78, width: 1790, height: 28.8 },
+        },
+      };
+      const profile = createBrightvaleSurfaceProfile(assets.roots);
+      const playfield = createBrightvalePlayfieldContract(profile);
+      const halfProgress =
+        getDifficultyProfile(difficulty).timing.goodWindowSeconds /
+        VISIBLE_NOTE_SECONDS;
+      const projection = createBrightvaleCameraProjection(
+        playfield,
+        layout,
+        { minimum: -halfProgress, maximum: 1 + halfProgress },
+        profile,
+      );
+      const approach = Array.from({ length: 32 }, (_, index) =>
+        projection.project(
+          playfield.point(1, -halfProgress + ((1 + halfProgress) * index) / 31),
+        ),
+      );
+      const approachSpan = Math.abs(approach.at(-1)!.y - approach[0]!.y);
+      const playfieldMatrix = new THREE.Matrix4().fromArray([
+        ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
+      ]);
+      const noteCenter = playfield
+        .point(1, 0.5)
+        .applyMatrix4(playfieldMatrix.clone().invert());
+      const noteLength = 0.3; // Production scene BoxGeometry's longitudinal dimension.
+      const noteEnds = [-1, 1].map((direction) => {
+        const local = noteCenter.clone();
+        local.z += (direction * noteLength) / 2;
+        const height = profile.surfaceHeightAt(1, local.z, local.x);
+        if (height !== null) local.y = height + 0.03;
+        return projection.project(local.applyMatrix4(playfieldMatrix));
+      });
+      const projectedNoteLength = Math.abs(noteEnds[1]!.y - noteEnds[0]!.y);
+      const platform = assets.roots.platform;
+      platform.updateMatrixWorld(true);
+      let platformMinY = Number.POSITIVE_INFINITY;
+      let platformMaxY = Number.NEGATIVE_INFINITY;
+      platform.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        const positions = object.geometry.getAttribute('position');
+        if (!positions) return;
+        for (let index = 0; index < positions.count; index += 1) {
+          const screen = projection.project(
+            new THREE.Vector3(
+              positions.getX(index),
+              positions.getY(index),
+              positions.getZ(index),
+            )
+              .applyMatrix4(object.matrixWorld)
+              .applyMatrix4(playfieldMatrix),
+          );
+          platformMinY = Math.min(platformMinY, screen.y);
+          platformMaxY = Math.max(platformMaxY, screen.y);
+        }
+      });
+      const projectedLandingDeckDepth = platformMaxY - platformMinY;
+
+      expect(projection.usable).toBe(true);
+      expect(approach.every((point) => Number.isFinite(point.y))).toBe(true);
+      expect(
+        approach.every(
+          (point, index) => index === 0 || point.y > approach[index - 1]!.y,
+        ),
+      ).toBe(true);
+      // A full normal approach should span at least the projected landing deck,
+      // while remaining many actual note-bar lengths (not a fixed viewport budget).
+      expect(approachSpan).toBeGreaterThan(projectedLandingDeckDepth);
+      expect(approachSpan).toBeGreaterThan(6 * projectedNoteLength);
+    },
+  );
+
+  it('fits the normal envelope and complete essential geometry around measured HUD with authored optics', () => {
     const layout = authoredScaleWitnessViewport();
     const profile = createBrightvaleSurfaceProfile(assets.roots);
     const playfield = createBrightvalePlayfieldContract(profile);
@@ -360,10 +472,6 @@ describe('Brightvale source-geometry projection', () => {
       maximum: 1 + halfProgress,
     };
     const envelope = measuredEnvelopePoints(playfield, profile, progress);
-    const witness = measuredCameraWitness(envelope.points, layout);
-    expect(witness).not.toBeNull();
-    expect(witness!.minimumShift).toBeLessThanOrEqual(witness!.maximumShift);
-    expect(witness!.maximumShift).toBeLessThan(0);
     expect(envelope.measuredSurfaceSamples).toBeGreaterThan(0);
     expect(envelope.fallbackSamples).toBeGreaterThan(0);
 
@@ -388,7 +496,11 @@ describe('Brightvale source-geometry projection', () => {
     expect(
       projection.camera.quaternion.angleTo(authoredQuaternion),
     ).toBeLessThan(1e-7);
-    const projectedGeometry = envelope.points.map((point) => {
+    const requiredGeometry = [
+      ...envelope.points,
+      ...Object.values(profile.essentialGeometryPoints).flat(),
+    ];
+    const projectedGeometry = requiredGeometry.map((point) => {
       const view = point
         .clone()
         .applyMatrix4(projection.camera.matrixWorld.clone().invert());
@@ -428,19 +540,40 @@ describe('Brightvale source-geometry projection', () => {
     const authoredUp = new THREE.Vector3(0, 1, 0).applyQuaternion(
       authoredQuaternion,
     );
+    const authoredTarget = playfield
+      .hitAnchor(1)
+      .add(playfield.hitAnchor(2))
+      .multiplyScalar(0.5);
+    const authoredRay = authoredPosition.clone().sub(authoredTarget);
     const cameraOffset = projection.camera.position
       .clone()
       .sub(authoredPosition);
-    const verticalShift = cameraOffset.dot(authoredUp);
-    const nonVerticalMovement = cameraOffset
-      .addScaledVector(authoredUp, -verticalShift)
+    const aa = authoredRay.dot(authoredRay);
+    const ab = authoredRay.dot(authoredUp);
+    const bb = authoredUp.dot(authoredUp);
+    const ar = cameraOffset.dot(authoredRay);
+    const br = cameraOffset.dot(authoredUp);
+    const determinant = aa * bb - ab * ab;
+    const rayCoefficient = (ar * bb - br * ab) / determinant;
+    const upCoefficient = (br * aa - ar * ab) / determinant;
+    const cameraPathError = cameraOffset
+      .addScaledVector(authoredRay, -rayCoefficient)
+      .addScaledVector(authoredUp, -upCoefficient)
       .length();
+    expect(cameraPathError).toBeLessThan(1e-4);
+    expect(Number.isFinite(rayCoefficient) && rayCoefficient > -1).toBe(true);
+
+    const approach = [0, 1, 2, 3].map((lane) => ({
+      start: projection.project(playfield.point(lane, progress.minimum)),
+      hit: projection.project(playfield.hitAnchor(lane)),
+    }));
+    const deckYs = profile.essentialGeometryPoints.platform.map(
+      (point) => projection.project(point).y,
+    );
+    const deckDepth = Math.max(...deckYs) - Math.min(...deckYs);
     expect(
-      nonVerticalMovement,
-      `expected authored-scale camera-up witness ${JSON.stringify({ witness, verticalShift, measuredSurfaceSamples: envelope.measuredSurfaceSamples, fallbackSamples: envelope.fallbackSamples })}`,
-    ).toBeLessThan(1e-4);
-    expect(verticalShift).toBeGreaterThanOrEqual(witness!.minimumShift - 0.125);
-    expect(verticalShift).toBeLessThanOrEqual(witness!.maximumShift + 0.125);
+      approach.every(({ start, hit }) => hit.y - start.y > deckDepth),
+    ).toBe(true);
   });
 
   it.each(['normal', 'easy'] as const)(

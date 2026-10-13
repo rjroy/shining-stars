@@ -380,6 +380,116 @@ function inspectSubmittedNotes(frame) {
   };
 }
 
+function inspectEssentialAssetProjection(layout) {
+  worldScene.updateMatrixWorld(true);
+  camera.updateMatrixWorld(true);
+  const viewport = { width: layout.width, height: layout.height };
+  const projectedAssets = {};
+  for (const name of ['platform', 'endcaps', 'highway']) {
+    const root = worldScene.getObjectByName(`Brightvale.Asset.${name}`);
+    assert(root, `production scene contains ${name} asset wrapper`);
+    root.updateMatrixWorld(true);
+    let vertices = 0;
+    let outside = 0;
+    const bounds = {
+      minX: Infinity,
+      minY: Infinity,
+      maxX: -Infinity,
+      maxY: -Infinity,
+    };
+    root.traverse((object) => {
+      if (!object.isMesh) return;
+      const positions = object.geometry.getAttribute('position');
+      if (!positions) return;
+      for (let index = 0; index < positions.count; index += 1) {
+        const projected = new THREE.Vector3(
+          positions.getX(index),
+          positions.getY(index),
+          positions.getZ(index),
+        )
+          .applyMatrix4(object.matrixWorld)
+          .project(camera);
+        const x = ((projected.x + 1) * viewport.width) / 2;
+        const y = ((1 - projected.y) * viewport.height) / 2;
+        vertices += 1;
+        bounds.minX = Math.min(bounds.minX, x);
+        bounds.minY = Math.min(bounds.minY, y);
+        bounds.maxX = Math.max(bounds.maxX, x);
+        bounds.maxY = Math.max(bounds.maxY, y);
+        if (
+          !Number.isFinite(x) ||
+          !Number.isFinite(y) ||
+          x < 0 ||
+          x > viewport.width ||
+          y < 0 ||
+          y > viewport.height ||
+          projected.z < -1 ||
+          projected.z > 1
+        )
+          outside += 1;
+      }
+    });
+    projectedAssets[name] = { vertices, outside, bounds };
+  }
+  const canvasRect = renderer.domElement.getBoundingClientRect();
+  const approachStart = playfield.point(1, -0.11).project(camera);
+  const approachHit = playfield.point(1, 1).project(camera);
+  const approachTravelCss = Math.abs(
+    ((1 - approachHit.y) * viewport.height) / 2 -
+      ((1 - approachStart.y) * viewport.height) / 2,
+  );
+  return {
+    rendererStatus: document.querySelector('[data-renderer-status]')?.hidden
+      ? 'rendered'
+      : 'not-rendered',
+    browser: {
+      innerWidth,
+      innerHeight,
+      devicePixelRatio,
+      visualViewport: visualViewport
+        ? {
+            width: visualViewport.width,
+            height: visualViewport.height,
+            scale: visualViewport.scale,
+          }
+        : null,
+      document: {
+        clientWidth: document.documentElement.clientWidth,
+        clientHeight: document.documentElement.clientHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+      },
+    },
+    viewport,
+    hud: {
+      persistent: layout.persistentHudExclusions,
+      labels: layout.labels,
+    },
+    canvas: {
+      x: canvasRect.x,
+      y: canvasRect.y,
+      width: canvasRect.width,
+      height: canvasRect.height,
+      bufferWidth: renderer.domElement.width,
+      bufferHeight: renderer.domElement.height,
+    },
+    camera: {
+      position: camera.position.toArray(),
+      aspect: camera.aspect,
+      fov: camera.fov,
+    },
+    approach: {
+      normalStartProgress: -0.11,
+      hitProgress: 1,
+      travelCssPixels: approachTravelCss,
+      projectedPlatformDepthCssPixels:
+        projectedAssets.platform.bounds.maxY -
+        projectedAssets.platform.bounds.minY,
+    },
+    assets: projectedAssets,
+  };
+}
+
 function matrixDelta(first, second) {
   return Math.max(
     ...first.map((value, index) => Math.abs(value - second[index])),
@@ -431,13 +541,14 @@ function inspectOverlayTextures() {
 
 const waitLayout = async (requestedWidth, requestedHeight) => {
   const started = performance.now();
+  const expectedMaxWidth = Math.min(requestedWidth, requestedHeight * (16 / 9));
   while (performance.now() - started < 20000) {
     const layout = ui.getGameplayLayout();
     if (
       window.innerWidth === requestedWidth &&
       window.innerHeight === requestedHeight &&
-      layout.width >= requestedWidth * 0.8 &&
-      layout.width <= requestedWidth &&
+      layout.width >= expectedMaxWidth * 0.8 &&
+      layout.width <= expectedMaxWidth &&
       layout.height >= requestedHeight * 0.8 &&
       layout.height <= requestedHeight
     )
@@ -450,6 +561,7 @@ const waitLayout = async (requestedWidth, requestedHeight) => {
 async function runViewport(requestedWidth, requestedHeight) {
   const layout = await waitLayout(requestedWidth, requestedHeight);
   const normal = await drive('normal', 10.2);
+  const essentialProjection = inspectEssentialAssetProjection(layout);
   const firstFrameOverlayPixels = {
     viewport: [requestedWidth, requestedHeight],
     labels: inspectOverlayTextures(),
@@ -529,6 +641,7 @@ async function runViewport(requestedWidth, requestedHeight) {
       modeChangeMatrixDelta: matrixDelta(matrixAtAudience, matrixAtTwilight),
     },
     projectedHitAnchors: labels,
+    essentialProjection,
     crowdIdPass: crowd,
     hardGeometryOnly: {
       difficulty:
@@ -561,6 +674,19 @@ window.__brightvaleRunViewport = async (requestedWidth, requestedHeight) => {
     return result;
   } catch (error) {
     reportNode.textContent = error?.stack || String(error);
+    window.__brightvaleParityError = String(error?.stack || error);
+    throw error;
+  }
+};
+window.__brightvaleInspectViewport = async (
+  requestedWidth,
+  requestedHeight,
+) => {
+  try {
+    const layout = await waitLayout(requestedWidth, requestedHeight);
+    await drive('normal', 10.2);
+    return inspectEssentialAssetProjection(layout);
+  } catch (error) {
     window.__brightvaleParityError = String(error?.stack || error);
     throw error;
   }

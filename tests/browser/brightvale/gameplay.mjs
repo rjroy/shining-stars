@@ -150,6 +150,7 @@ function timingLegendScreenshotProbe(name) {
   };
 }
 async function resize(width, height) {
+  const expectedHostWidth = Math.min(width, height * (16 / 9));
   await command('Emulation.setDeviceMetricsOverride', {
     width,
     height,
@@ -158,23 +159,26 @@ async function resize(width, height) {
   });
   await waitFor(async () => {
     const s = await status();
-    const canvas = await evaluate(
-      `(()=>{const c=document.querySelector('.play-surface canvas');const r=c?.getBoundingClientRect();return c&&r?{bufferWidth:c.width,bufferHeight:c.height,width:r.width,height:r.height}:null})()`,
+    const measurement = await evaluate(
+      `(()=>{const h=document.querySelector('.play-surface');const c=h?.querySelector('canvas');if(!h||!c)return null;const r=h.getBoundingClientRect();const q=c.getBoundingClientRect();const s=getComputedStyle(h);const n=v=>parseFloat(v)||0;const w=r.width-n(s.borderLeftWidth)-n(s.borderRightWidth)-n(s.paddingLeft)-n(s.paddingRight);const y=r.height-n(s.borderTopWidth)-n(s.borderBottomWidth)-n(s.paddingTop)-n(s.paddingBottom);return{bufferWidth:c.width,bufferHeight:c.height,width:q.width,height:q.height,contentWidth:w,contentHeight:y,canvasOffsetX:q.x-(r.x+n(s.borderLeftWidth)+n(s.paddingLeft)),canvasOffsetY:q.y-(r.y+n(s.borderTopWidth)+n(s.paddingTop))}})()`,
     );
     return (
-      Math.abs((s.host?.width ?? 0) - width) < 1 &&
+      Math.abs((s.host?.width ?? 0) - expectedHostWidth) < 1 &&
       Math.abs((s.host?.height ?? 0) - height) < 1 &&
-      canvas?.width >= width * 0.75 &&
-      canvas.width <= width &&
-      Math.abs(canvas.bufferWidth - canvas.width) < 2 &&
-      Math.abs(canvas.bufferHeight - canvas.height) < 2
+      measurement !== null &&
+      Math.abs(measurement.width - measurement.contentWidth) <= 1 &&
+      Math.abs(measurement.height - measurement.contentHeight) <= 1 &&
+      Math.abs(measurement.canvasOffsetX) <= 1 &&
+      Math.abs(measurement.canvasOffsetY) <= 1 &&
+      Math.abs(measurement.bufferWidth - measurement.width) < 2 &&
+      Math.abs(measurement.bufferHeight - measurement.height) < 2
     );
   }, `host ${width}x${height}`);
 }
 async function inspect() {
   const state = await status();
   const visible = await evaluate(
-    `(()=>{const c=document.querySelector('.play-surface canvas');return c?{canvas:{width:c.width,height:c.height,rect:(()=>{const r=c.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()},labels:[...document.querySelectorAll('[data-time],[data-countdown],[data-timing-legend],[data-feedback]')].map(e=>({key:e.dataset.time!==undefined?'time':e.dataset.countdown!==undefined?'countdown':e.dataset.timingLegend!==undefined?'legend':'feedback',text:e.textContent.trim(),rect:(()=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()}))}:null})()`,
+    `(()=>{const host=document.querySelector('.play-surface');const c=host?.querySelector('canvas');if(!host||!c)return null;const r=host.getBoundingClientRect();const s=getComputedStyle(host);const n=v=>parseFloat(v)||0;const content={x:r.x+n(s.borderLeftWidth)+n(s.paddingLeft),y:r.y+n(s.borderTopWidth)+n(s.paddingTop),width:r.width-n(s.borderLeftWidth)-n(s.borderRightWidth)-n(s.paddingLeft)-n(s.paddingRight),height:r.height-n(s.borderTopWidth)-n(s.borderBottomWidth)-n(s.paddingTop)-n(s.paddingBottom)};const cr=c.getBoundingClientRect();const rect=e=>{const q=e.getBoundingClientRect();return{x:q.x,y:q.y,width:q.width,height:q.height}};return{viewport:{innerWidth,innerHeight,devicePixelRatio,visualViewport:visualViewport?{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale}:null,document:{clientWidth:document.documentElement.clientWidth,clientHeight:document.documentElement.clientHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight}},host:{x:r.x,y:r.y,width:r.width,height:r.height},content,canvas:{width:c.width,height:c.height,rect:{x:cr.x,y:cr.y,width:cr.width,height:cr.height},contentDelta:{x:cr.x-content.x,y:cr.y-content.y,width:cr.width-content.width,height:cr.height-content.height}},hud:[...document.querySelectorAll('.play-heading,.performance-controls,[data-time],[data-countdown],[data-timing-legend],[data-feedback]')].map(e=>({selector:e.className||e.tagName,key:e.dataset.time!==undefined?'time':e.dataset.countdown!==undefined?'countdown':e.dataset.timingLegend!==undefined?'legend':e.dataset.feedback!==undefined?'feedback':undefined,text:e.textContent.trim(),rect:rect(e)}))}})()`,
   );
   return { state, visible };
 }
@@ -333,6 +337,23 @@ async function main() {
       await screenshot('audience-narrow.webp');
       resizedNarrow = true;
       capturedNarrowAudience = true;
+
+      reports.activeResponsiveFrames = [];
+      for (const [width, height, name] of [
+        [1920, 600, 'wide-short'],
+        [1366, 768, 'laptop'],
+        [1280, 720, 'compact-laptop'],
+      ]) {
+        await resize(width, height);
+        const capture = await inspect();
+        reports.activeResponsiveFrames.push({ width, height, capture });
+        if (capture.state.renderer !== 'rendered')
+          throw new Error(
+            `Active renderer not rendered at ${width}x${height}: ${JSON.stringify(capture.state)}`,
+          );
+        await screenshot(`audience-${name}.webp`);
+      }
+      await resize(1120, 700);
     }
     if (!capturedNarrowTwilight && note.id === 't02') {
       await waitTransport(note.time);

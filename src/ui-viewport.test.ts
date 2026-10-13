@@ -22,6 +22,12 @@ describe('Brightvale viewport measurement contract', () => {
     expect(uiSource).not.toMatch(/<footer class="experience-footer"/);
     expect(stylesSource).toMatch(/html,\s*body\s*\{[^}]*height:\s*100dvh/s);
     expect(stylesSource).toMatch(/\.experience\s*\{[^}]*height:\s*100%/s);
+    expect(stylesSource).toMatch(
+      /\.experience\s*\{[^}]*justify-content:\s*center/s,
+    );
+    expect(stylesSource).toMatch(
+      /\.play-surface\s*\{[^}]*max-width:\s*177\.7778dvh/s,
+    );
     expect(stylesSource).toMatch(/body\s*\{[^}]*overflow:\s*hidden/s);
   });
 
