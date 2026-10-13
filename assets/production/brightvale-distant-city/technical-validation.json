@@ -1,0 +1,474 @@
+{
+  "pass_geometry_export": true,
+  "source_sha256": "4beb993e9b580bb0b6dd47e5523a0ad9aecc8c26804a4b4cbdc42cc5488caa2c",
+  "blender": "5.2.1 LTS",
+  "exporter": "5.2.40",
+  "whole_source": {
+    "objects": 221,
+    "mesh_objects": 196,
+    "unique_meshes": 64,
+    "linked_additional_placements": 132,
+    "unique_vertices": 87554,
+    "unique_triangles": 149012,
+    "placed_triangles": 500928,
+    "bounds_blender": [
+      [
+        -133.0,
+        -12.0,
+        -13.0
+      ],
+      [
+        133.0,
+        99.0,
+        118.0
+      ]
+    ]
+  },
+  "source_surfaces": {
+    "families": {
+      "protected_structure": 24,
+      "palazzo": 9,
+      "tower": 23,
+      "landmark": 8
+    },
+    "recognized_shells": {
+      "lancet": 3768,
+      "mullion": 631
+    },
+    "exact_retained_polygons": true,
+    "source_degenerate_triangles": {}
+  },
+  "derived_native": {
+    "objects": 221,
+    "mesh_objects": 196,
+    "unique_meshes": 64,
+    "linked_additional_placements": 132,
+    "unique_vertices": 58654,
+    "unique_triangles": 71110,
+    "placed_triangles": 216633,
+    "bounds_blender": [
+      [
+        -133.0,
+        -12.0,
+        -13.0
+      ],
+      [
+        133.0,
+        99.0,
+        118.0
+      ]
+    ],
+    "intentional_open_detail_edges": 28900,
+    "invalid_nonmanifold_edges": 0,
+    "degenerate_faces": 0
+  },
+  "glb": {
+    "nodes": 221,
+    "unique_meshes": 64,
+    "unique_primitives": 288,
+    "placed_primitives": 1080,
+    "placed_triangles": 216633,
+    "unique_triangles": 71110,
+    "decoded_unique_primitive_vertices": 123122,
+    "buffer_bytes": 3143448,
+    "bounds_gltf": {
+      "min": [
+        -133.0,
+        -13.0,
+        -99.0
+      ],
+      "max": [
+        133.0,
+        118.0,
+        12.0
+      ]
+    },
+    "linked_node_groups": [
+      [
+        "District.00.Palazzo.0",
+        "District.01.Palazzo.3",
+        "District.03.Palazzo.0",
+        "District.04.Palazzo.3",
+        "District.06.Palazzo.0",
+        "District.07.Palazzo.3",
+        "District.10.Palazzo.3",
+        "District.12.Palazzo.0",
+        "District.13.Palazzo.3",
+        "District.15.Palazzo.0",
+        "District.16.Palazzo.3",
+        "District.18.Palazzo.0",
+        "District.19.Palazzo.3"
+      ],
+      [
+        "District.00.Palazzo.1",
+        "District.01.Palazzo.4",
+        "District.03.Palazzo.1",
+        "District.04.Palazzo.4",
+        "District.06.Palazzo.1",
+        "District.07.Palazzo.4",
+        "District.10.Palazzo.4",
+        "District.12.Palazzo.1",
+        "District.13.Palazzo.4",
+        "District.15.Palazzo.1",
+        "District.16.Palazzo.4",
+        "District.18.Palazzo.1",
+        "District.19.Palazzo.4"
+      ],
+      [
+        "District.00.Palazzo.2",
+        "District.01.Palazzo.5",
+        "District.03.Palazzo.2",
+        "District.04.Palazzo.5",
+        "District.06.Palazzo.2",
+        "District.07.Palazzo.5",
+        "District.10.Palazzo.5",
+        "District.12.Palazzo.2",
+        "District.13.Palazzo.5",
+        "District.15.Palazzo.2",
+        "District.16.Palazzo.5",
+        "District.18.Palazzo.2",
+        "District.19.Palazzo.5"
+      ],
+      [
+        "District.00.Palazzo.3",
+        "District.02.Palazzo.0",
+        "District.03.Palazzo.3",
+        "District.05.Palazzo.0",
+        "District.06.Palazzo.3",
+        "District.08.Palazzo.0",
+        "District.11.Palazzo.0",
+        "District.12.Palazzo.3",
+        "District.14.Palazzo.0",
+        "District.15.Palazzo.3",
+        "District.17.Palazzo.0",
+        "District.18.Palazzo.3",
+        "District.20.Palazzo.0"
+      ],
+      [
+        "District.00.Palazzo.4",
+        "District.02.Palazzo.1",
+        "District.03.Palazzo.4",
+        "District.05.Palazzo.1",
+        "District.06.Palazzo.4",
+        "District.08.Palazzo.1",
+        "District.11.Palazzo.1",
+        "District.12.Palazzo.4",
+        "District.14.Palazzo.1",
+        "District.15.Palazzo.4",
+        "District.17.Palazzo.1",
+        "District.18.Palazzo.4",
+        "District.20.Palazzo.1"
+      ],
+      [
+        "District.00.Palazzo.5",
+        "District.02.Palazzo.2",
+        "District.03.Palazzo.5",
+        "District.05.Palazzo.2",
+        "District.06.Palazzo.5",
+        "District.08.Palazzo.2",
+        "District.11.Palazzo.2",
+        "District.12.Palazzo.5",
+        "District.14.Palazzo.2",
+        "District.15.Palazzo.5",
+        "District.17.Palazzo.2",
+        "District.18.Palazzo.5",
+        "District.20.Palazzo.2"
+      ],
+      [
+        "District.00.Tower.0",
+        "District.03.Tower.1",
+        "District.06.Tower.2"
+      ],
+      [
+        "District.00.Tower.1",
+        "District.03.Tower.2"
+      ],
+      [
+        "District.00.Tower.2",
+        "District.06.Tower.0"
+      ],
+      [
+        "District.01.Palazzo.0",
+        "District.02.Palazzo.3",
+        "District.04.Palazzo.0",
+        "District.05.Palazzo.3",
+        "District.07.Palazzo.0",
+        "District.08.Palazzo.3",
+        "District.10.Palazzo.0",
+        "District.11.Palazzo.3",
+        "District.13.Palazzo.0",
+        "District.14.Palazzo.3",
+        "District.16.Palazzo.0",
+        "District.17.Palazzo.3",
+        "District.19.Palazzo.0",
+        "District.20.Palazzo.3"
+      ],
+      [
+        "District.01.Palazzo.1",
+        "District.02.Palazzo.4",
+        "District.04.Palazzo.1",
+        "District.05.Palazzo.4",
+        "District.07.Palazzo.1",
+        "District.08.Palazzo.4",
+        "District.10.Palazzo.1",
+        "District.11.Palazzo.4",
+        "District.13.Palazzo.1",
+        "District.14.Palazzo.4",
+        "District.16.Palazzo.1",
+        "District.17.Palazzo.4",
+        "District.19.Palazzo.1",
+        "District.20.Palazzo.4"
+      ],
+      [
+        "District.01.Palazzo.2",
+        "District.02.Palazzo.5",
+        "District.04.Palazzo.2",
+        "District.05.Palazzo.5",
+        "District.07.Palazzo.2",
+        "District.08.Palazzo.5",
+        "District.10.Palazzo.2",
+        "District.11.Palazzo.5",
+        "District.13.Palazzo.2",
+        "District.14.Palazzo.5",
+        "District.16.Palazzo.2",
+        "District.17.Palazzo.5",
+        "District.19.Palazzo.2",
+        "District.20.Palazzo.5"
+      ],
+      [
+        "District.01.Tower.0",
+        "District.04.Tower.1"
+      ],
+      [
+        "District.02.Tower.0",
+        "District.05.Tower.1"
+      ],
+      [
+        "District.03.Tower.0",
+        "District.06.Tower.1"
+      ],
+      [
+        "District.04.Tower.0",
+        "District.07.Tower.1"
+      ],
+      [
+        "District.08.Tower.0",
+        "District.11.Tower.1",
+        "District.20.Tower.0"
+      ],
+      [
+        "District.08.Tower.1",
+        "District.17.Tower.0",
+        "District.20.Tower.1"
+      ],
+      [
+        "District.10.Tower.0",
+        "District.13.Tower.1"
+      ],
+      [
+        "District.10.Tower.1",
+        "District.19.Tower.0"
+      ],
+      [
+        "District.11.Tower.0",
+        "District.14.Tower.1"
+      ],
+      [
+        "District.12.Tower.0",
+        "District.15.Tower.1"
+      ],
+      [
+        "District.12.Tower.2",
+        "District.18.Tower.0"
+      ],
+      [
+        "District.13.Tower.0",
+        "District.16.Tower.1"
+      ],
+      [
+        "District.14.Tower.0",
+        "District.17.Tower.1"
+      ],
+      [
+        "District.15.Tower.0",
+        "District.18.Tower.1"
+      ],
+      [
+        "District.16.Tower.0",
+        "District.19.Tower.1"
+      ]
+    ],
+    "triangles_by_role": {
+      "Limestone": 30048,
+      "Cornice": 115723,
+      "Recess": 26890,
+      "Slate": 14272,
+      "Gilt": 12340,
+      "Window": 17360
+    },
+    "materials": {
+      "Limestone": {
+        "baseColorFactor": [
+          0.41999998688697815,
+          0.3100000023841858,
+          0.20999999344348907,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "body",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Cornice": {
+        "baseColorFactor": [
+          0.6200000047683716,
+          0.49000000953674316,
+          0.30000001192092896,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "stone_trim",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Recess": {
+        "baseColorFactor": [
+          0.10000000149011612,
+          0.08500000089406967,
+          0.11999999731779099,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "recess",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Slate": {
+        "baseColorFactor": [
+          0.03500000014901161,
+          0.08500000089406967,
+          0.14000000059604645,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "roof",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Gilt": {
+        "baseColorFactor": [
+          0.6499999761581421,
+          0.3799999952316284,
+          0.10499999672174454,
+          1
+        ],
+        "metallicFactor": 0.47999998927116394,
+        "roughnessFactor": 0.38999998569488525,
+        "city_role": "gold",
+        "emissiveFactor": [
+          0,
+          0,
+          0
+        ],
+        "emissiveStrength": 0
+      },
+      "Window": {
+        "baseColorFactor": [
+          1,
+          0.4699999988079071,
+          0.11999999731779099,
+          1
+        ],
+        "metallicFactor": 0,
+        "roughnessFactor": 0.6800000071525574,
+        "city_role": "emissive_window",
+        "emissiveFactor": [
+          1,
+          0.4699999988079071,
+          0.11999999731779099
+        ],
+        "emissiveStrength": 1.7999999523162842
+      }
+    },
+    "degenerate_triangles": {
+      "area_threshold": 1e-10,
+      "unique_count": 0,
+      "placed_count": 0,
+      "meshes": {}
+    },
+    "maximum_position_error": 7.62939453125e-06,
+    "maximum_normal_component_error": 6.490619853138924e-05,
+    "extensions": [
+      "KHR_materials_emissive_strength"
+    ]
+  },
+  "transfer_bytes": 3359324,
+  "derivative_reopen_and_independent_regeneration": "PASS",
+  "source_unchanged": true,
+  "unchanged_source_export": {
+    "transfer_bytes": 7063500,
+    "unique_primitives": 288,
+    "placed_primitives": 1080,
+    "unique_triangles": 149012,
+    "degenerate_triangles": {
+      "area_threshold": 1e-10,
+      "unique_count": 0,
+      "placed_count": 0,
+      "meshes": {}
+    }
+  },
+  "relocated_reproduction_byte_identical": true,
+  "negative_tests": {
+    "extra_reference_node_rejected": true,
+    "missing_landmark_rejected": true,
+    "role_loss_rejected": true,
+    "transform_drift_rejected": true,
+    "unexpected_compression_rejected": true,
+    "reuse_lost_rejected": true,
+    "missing_rear_district_rejected": true,
+    "missing_infrastructure_rejected": true,
+    "flipped_normals_rejected": true,
+    "reversed_winding_rejected": true,
+    "existing_output_rejected": true,
+    "source_output_rejected": true,
+    "outside_scope_rejected": true,
+    "changed_source_rejected": true,
+    "wrong_material_rejected": true,
+    "deep_structural_panel_rejected": true,
+    "wrong_outline_rejected": true,
+    "broken_ring_rejected": true,
+    "slice_or_partial_native_rejected": true
+  },
+  "reimport": {
+    "pass_geometry_material_winding_hierarchy": true,
+    "maximum_position_error": 7.62939453125e-06,
+    "maximum_normal_component_error": 0.00033954138052649796
+  },
+  "limitations": [
+    "Not an official Khronos-validator run; explicit structural and geometry checks.",
+    "Intentional open single-face window details; not a watertight derivative.",
+    "Linked mesh nodes are shared buffers, not automatic GPU instancing.",
+    "Blender reimport normal reconstruction is measured, not assumed exact.",
+    "Browser MeshToon appearance, target-device performance and runtime integration remain separate pending gates."
+  ]
+}

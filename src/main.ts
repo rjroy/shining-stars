@@ -6,6 +6,7 @@ import { createGame } from './game';
 import { projectGameplayFrame } from './gameplay-frame';
 import { MVP_CHART } from './mvp-chart';
 import { createBrightvaleScene, type BrightvaleScene } from './scene';
+import type { BrightvaleRendererStatus } from './brightvale/viewport';
 import { projectSceneState } from './scene-state';
 import { parseSongOutputVolume } from './song-volume';
 import { createGameUI } from './ui';
@@ -27,6 +28,7 @@ let scene: BrightvaleScene | null = null;
 let animationFrame = 0;
 let disposed = false;
 let rendererAvailable = false;
+let rendererStatus: BrightvaleRendererStatus = 'unavailable';
 let rendererGeneration = 0;
 let playbackActionEpoch = 0;
 let playbackActionPending = false;
@@ -61,9 +63,18 @@ const ui = createGameUI(applicationRoot, MVP_CHART, {
 
 const RENDERER_UNAVAILABLE_MESSAGE =
   'The three-dimensional playfield could not start. Playback is locked.';
+const RENDERER_LOADING_MESSAGE = 'Loading Brightvale…';
+const RENDERER_SUSPENDED_MESSAGE =
+  'Resize the window to continue playing.';
 
-function showRendererStatus(message: string): void {
-  ui.setRendererStatus(false, message);
+function showRendererStatus(
+  status: BrightvaleRendererStatus,
+  message?: string,
+): void {
+  rendererStatus = status;
+  rendererAvailable = status === 'rendered';
+  if (message === undefined) ui.setRendererStatus(status);
+  else ui.setRendererStatus(status, message);
   if (renderingSceneFrame) {
     rendererStatusNeedsRender = true;
   } else if (controller !== null) {
@@ -85,19 +96,31 @@ function invalidatePlaybackForRendererFailure(): void {
 
 function handleRendererUnavailable(generation: number): void {
   if (disposed || generation !== rendererGeneration) return;
+  const alreadySuspended = rendererStatus === 'suspended';
   // A scene may report the same failure from both creation and its first frame.
   rendererGeneration += 1;
-  rendererAvailable = false;
   scene = null;
+  if (!alreadySuspended) invalidatePlaybackForRendererFailure();
+  showRendererStatus('unavailable', RENDERER_UNAVAILABLE_MESSAGE);
+}
+
+function handleRendererSuspended(generation: number): void {
+  if (
+    disposed ||
+    generation !== rendererGeneration ||
+    rendererStatus === 'suspended'
+  )
+    return;
+  rendererAvailable = false;
   invalidatePlaybackForRendererFailure();
-  showRendererStatus(RENDERER_UNAVAILABLE_MESSAGE);
+  showRendererStatus('suspended', RENDERER_SUSPENDED_MESSAGE);
 }
 
 function createRenderer(): void {
   if (disposed) return;
   const generation = ++rendererGeneration;
   rendererAvailable = false;
-  ui.setRendererStatus(false, RENDERER_UNAVAILABLE_MESSAGE);
+  showRendererStatus('loading', RENDERER_LOADING_MESSAGE);
   const host = applicationRoot.querySelector<HTMLElement>('.play-surface');
   if (host === null) {
     handleRendererUnavailable(generation);
@@ -122,7 +145,7 @@ function createRenderer(): void {
 }
 
 function retryRenderer(): void {
-  if (disposed || rendererAvailable) return;
+  if (disposed || rendererStatus !== 'unavailable') return;
   createRenderer();
   if (scene !== null) renderCurrent();
 }
@@ -136,7 +159,7 @@ function renderSnapshot(
   const generation = rendererGeneration;
   renderingSceneFrame = true;
   try {
-    currentScene.updateFrame({
+    const status = currentScene.updateFrame({
       city: projectSceneState(snapshot, MVP_CHART, reducedMotion),
       gameplay: projectGameplayFrame(
         snapshot,
@@ -146,6 +169,18 @@ function renderSnapshot(
         audioContext?.currentTime ?? 0,
       ),
     });
+    if (generation === rendererGeneration && scene === currentScene) {
+      if (status === 'rendered') {
+        if (rendererStatus !== 'rendered') showRendererStatus('rendered');
+      } else if (status === 'loading') {
+        if (rendererStatus !== 'loading')
+          showRendererStatus('loading', RENDERER_LOADING_MESSAGE);
+      } else if (status === 'suspended') {
+        handleRendererSuspended(generation);
+      } else if (status === 'unavailable') {
+        handleRendererUnavailable(generation);
+      }
+    }
   } finally {
     renderingSceneFrame = false;
   }
@@ -155,15 +190,6 @@ function renderSnapshot(
       controller?.snapshot() ?? snapshot,
       audioContext?.currentTime ?? 0,
     );
-  }
-  if (
-    generation === rendererGeneration &&
-    scene === currentScene &&
-    !rendererAvailable
-  ) {
-    rendererAvailable = true;
-    ui.setRendererStatus(true);
-    ui.render(snapshot, audioContext?.currentTime ?? 0);
   }
 }
 
@@ -307,6 +333,7 @@ function dispose(): void {
   reducedMotionQuery.removeEventListener('change', onReducedMotionChange);
   rendererGeneration += 1;
   rendererAvailable = false;
+  rendererStatus = 'unavailable';
   scene?.destroy();
   scene = null;
   ui.destroy();

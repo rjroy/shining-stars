@@ -11,6 +11,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:brightvale:browser": "node --test tests/browser/brightvale/responsive.test.mjs && node tests/browser/brightvale/cli.mjs",
     "chart:generate": "python3 scripts/beat_chart.py",
     "chart:check": "python3 scripts/beat_chart.py --check",
     "test:chart": "python3 -m unittest tests/test_beat_chart.py tests/test_beat_chart_workflow.py",

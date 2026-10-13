@@ -1,0 +1,274 @@
+{
+  "pass": true,
+  "blender": "5.2.1 LTS",
+  "exporter": "5.2.40",
+  "original_blends_and_scripts_unchanged": {
+    "neon-twilight-platform/platform.blend": "ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af",
+    "neon-twilight-platform/build.py": "b1ea971880e84f9d3ca0d113d19d7e3dbdbac6c7e568db4b980bbd7c80c2f94a",
+    "neon-twilight-platform/validate.py": "4ba32161b928d49199938adde41576f064cf169f24f33d5652c53c5cc661f017",
+    "neon-twilight-platform/preview.py": "e1a22fb63d9857f6dfabed5d166d7046fe1fb79c0ffb6148ffeb1d9ff99f21ca",
+    "neon-twilight-platform/mode-preview.py": "587ab74a437654aae82dbfea584f3d376e42852172834ba7827b68c9099785a4",
+    "brightvale-highway/highway.blend": "2f2eca2987cd42b105c579420ca2e2cbc71ad75d73bcbf164aca60afe32652e5",
+    "brightvale-highway/build.py": "c48aae15008446cfbc351d8a49390f3f099356d420722ada977f46b11c26b82e",
+    "brightvale-highway/validate.py": "cc3286a1e2b2a5309b1612534e839d04ae50ffee0884f397d198475edf972e8c",
+    "brightvale-highway/preview.py": "d3dcaf2db48682dbdc26f4910097e358a13da30aa901c3fe3eeeaf7a9a6c3436",
+    "brightvale-outer-framing/framing.blend": "cd17e3162c434ce4054f6c32d86d4b6a885e9dbad44c1841b563513fffd75542",
+    "brightvale-outer-framing/build.py": "bb4e2aa841b06f7e4ae0d411e1f4a0274d642b1d8428085014fe481c0f97a1a5",
+    "brightvale-outer-framing/validate.py": "c993747f0b674b21b926700328f0b0e80f6cf30467c84d80e1e30563e911ccb0",
+    "brightvale-outer-framing/preview.py": "d8c279a02c9db45aa2caf6c32413e6dd33e4feda80357cd2eebfb60e366220ff",
+    "brightvale-platform-endcaps/endcaps.blend": "c49ae80c34350ddb7281c3192c4ed90921852f0386fa047a9196087cc13b4207",
+    "brightvale-platform-endcaps/build.py": "d906e167a4c42587ef0728ac3ed09fd1e4bce2fb7ce35f18c892775d4482b68e",
+    "brightvale-platform-endcaps/validate.py": "155a45f38cb73eb6eb2af7849b7fab9a933816fa5729a6535e8095a3e22f1d8c",
+    "brightvale-platform-endcaps/preview.py": "ff0b363e4f133b5ca1b092fe7710b67e0ccc6bb4e94ff4da499260e43300973d",
+    "brightvale-scene-review/scene-review.blend": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+    "brightvale-scene-review/assemble.py": "388c8072d447054ee71ea5f49cf9353415c98ee2835b68501c60a6be5fa27f8c",
+    "brightvale-scene-review/preview.py": "1191ef88e7c8840c5c7051571491fff0f1e1362df0cbf905204d166e0f6002dd",
+    "brightvale-scene-review/validate.py": "05ea931903a0292daa2e4c41154591d542cb74ea4758b0080df78a734f9edc4c",
+    "brightvale-scene-review/build.py": "45aaa391dbcc86b5d8bd1e09a8d5d914534046026072cabd882aa3ed0d946dea",
+    "brightvale-scene-review/scripts/compose.py": "7b673e19923cffb47c8ea7ffd0cc9036d569fe9801bcfcd972b717030f3e0fdc",
+    "brightvale-scene-review/scripts/framing.py": "6fe18bf4e3cefa5185dbeaff0d10548f4c57c69a3fabc520aaf613202abc92cc",
+    "brightvale-scene-review/scripts/ground.py": "4f4c04d78cd87eb8399682750264df6d591d85f1ea3073ead76f0a6846855433",
+    "brightvale-scene-review/scripts/crowd.py": "df6901890c10ae3371624eae2baee03c40d80df23e11c511a0f17ebcd4e5ed3c",
+    "brightvale-scene-review/scripts/signatures.py": "7082316636d3ab90e33b99ae387b6e0879782d85fca34dca7b28b6a4f3e72671",
+    "brightvale-scene-review/scripts/checks.py": "e2c4b28227cdf60f4c9ae29b79d126344a1d989e97a9cd83dd77066eb778e691"
+  },
+  "existing_endcaps_glb_unchanged": "76301ee2ab5915a299c4fd54949dceee26a5db4023e767bfa8ceba893390c2b5",
+  "independent_relocated_reproduction": {
+    "platform": {
+      "independent_relocated_byte_identical": true,
+      "glb_sha256": "dd540482fbb77616b93b900f563da1520f65e81f35a60365741d2b362f9e7571",
+      "transfer_bytes": 970376,
+      "nodes": 53,
+      "triangles": 24446,
+      "material_roles": 27,
+      "primitives": 66,
+      "max_direct_position_error": 0.0,
+      "max_direct_normal_error": 6.556510925292969e-05,
+      "max_reimport_normal_error": 0.002361234277486801,
+      "inherited_near_zero_area_triangles": 160,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true,
+        "changed_source_rejected": true
+      }
+    },
+    "highway": {
+      "independent_relocated_byte_identical": true,
+      "glb_sha256": "e650f6d7b65b2710e5605ba8231741a1d893effd96e5d53116e31d39d30da751",
+      "transfer_bytes": 417772,
+      "nodes": 14,
+      "triangles": 11336,
+      "material_roles": 8,
+      "primitives": 18,
+      "max_direct_position_error": 0.0,
+      "max_direct_normal_error": 6.42538070678711e-05,
+      "max_reimport_normal_error": 0.004180967807769775,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true,
+        "changed_source_rejected": true
+      }
+    },
+    "long": {
+      "independent_relocated_byte_identical": true,
+      "glb_sha256": "8cb0f33f672b366a7725158f21524a42bc55afe2d21153575030a991a9b4d012",
+      "transfer_bytes": 144180,
+      "nodes": 1,
+      "triangles": 2668,
+      "material_roles": 4,
+      "primitives": 4,
+      "max_direct_position_error": 0.0,
+      "max_direct_normal_error": 6.473064422607422e-05,
+      "max_reimport_normal_error": 0.005134224891662598,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true,
+        "changed_source_rejected": true
+      }
+    },
+    "short": {
+      "independent_relocated_byte_identical": true,
+      "glb_sha256": "80ac9da813ae7503c2c9bf2db6d571e8526236958307295c140733bab8019539",
+      "transfer_bytes": 80080,
+      "nodes": 1,
+      "triangles": 1448,
+      "material_roles": 4,
+      "primitives": 4,
+      "max_direct_position_error": 0.0,
+      "max_direct_normal_error": 5.4776668548583984e-05,
+      "max_reimport_normal_error": 0.0018149018287658691,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true,
+        "changed_source_rejected": true
+      }
+    },
+    "post": {
+      "independent_relocated_byte_identical": true,
+      "glb_sha256": "54b718163e06fb27b357bd3ac3255319b345a747e84159c5b618a233fec1a6fb",
+      "transfer_bytes": 55784,
+      "nodes": 3,
+      "triangles": 968,
+      "material_roles": 6,
+      "primitives": 6,
+      "max_direct_position_error": 0.0,
+      "max_direct_normal_error": 5.911290645599365e-05,
+      "max_reimport_normal_error": 0.0005138963460922241,
+      "inherited_near_zero_area_triangles": 0,
+      "negative_tests": {
+        "extra_reference_rejected": true,
+        "role_loss_rejected": true,
+        "origin_drift_rejected": true,
+        "negative_scale_rejected": true,
+        "base_change_rejected": true,
+        "compression_rejected": true,
+        "flipped_normals_rejected": true,
+        "existing_output_rejected": true,
+        "source_output_rejected": true,
+        "outside_output_rejected": true,
+        "nested_output_rejected": true,
+        "changed_source_rejected": true
+      }
+    }
+  },
+  "layout_relocated_byte_identical": true,
+  "layout": {
+    "pass": true,
+    "source_sha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+    "section_count": 26,
+    "complete_post_count": 27,
+    "existing_sample_root_count": 10,
+    "negative_tests": {
+      "tilt_loss_rejected": true,
+      "post_component_loss_rejected": true,
+      "ground_level_change_rejected": true,
+      "camera_change_rejected": true,
+      "missing_section_rejected": true
+    }
+  },
+  "assembled_current_study_match": {
+    "pass": true,
+    "source_sha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+    "artifact_hashes": {
+      "platform": "dd540482fbb77616b93b900f563da1520f65e81f35a60365741d2b362f9e7571",
+      "highway": "e650f6d7b65b2710e5605ba8231741a1d893effd96e5d53116e31d39d30da751",
+      "endcaps": "76301ee2ab5915a299c4fd54949dceee26a5db4023e767bfa8ceba893390c2b5",
+      "long": "8cb0f33f672b366a7725158f21524a42bc55afe2d21153575030a991a9b4d012",
+      "post": "54b718163e06fb27b357bd3ac3255319b345a747e84159c5b618a233fec1a6fb"
+    },
+    "joins": {
+      "lanes": [
+        {
+          "index": 0,
+          "center": -4.5,
+          "width": 2.75,
+          "travel_top": 0.4400002956390381,
+          "terminal_top": 0.5019998550415039,
+          "terminal_under": 0.4920003414154053,
+          "nominal_clearance": 0.0020003318786621094
+        },
+        {
+          "index": 1,
+          "center": -1.5,
+          "width": 2.75,
+          "travel_top": 0.4400002956390381,
+          "terminal_top": 0.5019996166229248,
+          "terminal_under": 0.4920003414154053,
+          "nominal_clearance": 0.0020003318786621094
+        },
+        {
+          "index": 2,
+          "center": 1.5,
+          "width": 2.75,
+          "travel_top": 0.4400002956390381,
+          "terminal_top": 0.5019996166229248,
+          "terminal_under": 0.4920003414154053,
+          "nominal_clearance": 0.0020003318786621094
+        },
+        {
+          "index": 3,
+          "center": 4.5,
+          "width": 2.75,
+          "travel_top": 0.4399998188018799,
+          "terminal_top": 0.5019998550415039,
+          "terminal_under": 0.4920003414154053,
+          "nominal_clearance": 0.0020003318786621094
+        }
+      ],
+      "chassis_gap": 0.0,
+      "sampled_junction_min_clearance": 0.002454519271850586,
+      "sampled_junction_clearance_count": 84,
+      "endcap_boundary_contact_only": true,
+      "outer_nose_lateral_clearance": 0.125
+    },
+    "framing": {
+      "sections": 26,
+      "complete_posts": 27,
+      "actual_exported_solid_joint_samples": 5200,
+      "maximum_radius_residual": 2.411413259295614e-06,
+      "nominal_body_overlap_each_joint": 0.12
+    },
+    "study_object_geometry_matches": 176,
+    "study_assembled_triangle_matches": 133854,
+    "max_study_assembled_position_error": 3.814697265625e-06,
+    "negative_tests": {
+      "shifted_lane_rejected": true,
+      "shifted_section_rejected": true,
+      "actual_solid_joint_gap_rejected": true,
+      "missing_post_bezel_rejected": true
+    },
+    "study_framing_material_collision_suffix_normalized": ".001",
+    "limitations": [
+      "Blender importer normal reconstruction is not exact; strict original-normal checks apply to GLB directly in per-package validators.",
+      "Intentional inlay embedding retained; no exhaustive self-intersection or physical support/collision claim.",
+      "No browser/game integration."
+    ]
+  },
+  "actual_evidence_inspected": [
+    "authoring/brightvale-scene-review/preview-audience.webp",
+    "authoring/brightvale-scene-review/preview-twilight.webp",
+    "authoring/brightvale-outer-framing/neutral-modules.webp"
+  ],
+  "geometry_simplification": false,
+  "production_blend_needed": false,
+  "browser_approval": "PENDING; separate parent/designer combined end review"
+}

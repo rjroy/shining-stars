@@ -3,38 +3,19 @@ import type { ControllerSnapshot } from './controller';
 import { getDifficultyProfile, type Difficulty } from './game-balance';
 import {
   projectNotes,
-  projectTimingWindowGeometry,
-  RUNWAY_TRAVEL_FRACTION,
+  projectTimingWindowHalfProgress,
+  VISIBLE_NOTE_SECONDS,
   type ProjectedNote,
-  type TimingWindowGeometry,
+  type TimingWindowProgress,
 } from './note-projection';
-
-export interface ScreenRect {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
-
-/** Cached CSS-pixel geometry measured by the UI resize observer. */
-export interface GameplayLayout {
-  readonly width: number;
-  readonly height: number;
-  readonly stage: ScreenRect;
-  readonly board: ScreenRect;
-  readonly header: ScreenRect;
-  readonly legend: ScreenRect;
-  readonly feedback: ScreenRect;
-}
+import type { BrightvaleViewportLayout } from './brightvale/viewport';
 
 export interface GameplayLane {
   readonly index: 0 | 1 | 2 | 3;
-  readonly x: number;
-  readonly width: number;
 }
 
 export interface GameplayFrame {
-  readonly layout: GameplayLayout;
+  readonly layout: BrightvaleViewportLayout;
   readonly transportTime: number;
   readonly difficulty: Difficulty;
   readonly playing: boolean;
@@ -43,7 +24,7 @@ export interface GameplayFrame {
   readonly notes: readonly ProjectedNote[];
   /** Worst-case safe pool size derived from this chart, not a fixed peak. */
   readonly noteCapacity: number;
-  readonly timingWindows: TimingWindowGeometry;
+  readonly timingWindows: TimingWindowProgress;
   readonly feedback: {
     readonly eventId: number;
     readonly runId: number;
@@ -57,10 +38,8 @@ export interface GameplayFrame {
   readonly countdownLabel: string;
 }
 
-export const VISIBLE_NOTE_SECONDS = 2.4;
+export { VISIBLE_NOTE_SECONDS } from './note-projection';
 export const FEEDBACK_VISIBLE_SECONDS = 0.65;
-export const LOGICAL_PLAYFIELD_WIDTH = 480;
-export const LOGICAL_PLAYFIELD_HEIGHT = 240;
 
 /** Whether a transport-clock feedback event is inside its visible age window. */
 export function isFeedbackWithinVisibleAge(
@@ -71,25 +50,6 @@ export function isFeedbackWithinVisibleAge(
     transportTime >= onsetTransportTime &&
     transportTime - onsetTransportTime < FEEDBACK_VISIBLE_SECONDS
   );
-}
-
-/** Fit the logical 2:1 board inside its measured CSS slot without stretching. */
-export function containPlayfield(available: ScreenRect): ScreenRect {
-  const scale = Math.max(
-    0,
-    Math.min(
-      available.width / LOGICAL_PLAYFIELD_WIDTH,
-      available.height / LOGICAL_PLAYFIELD_HEIGHT,
-    ),
-  );
-  const width = LOGICAL_PLAYFIELD_WIDTH * scale;
-  const height = LOGICAL_PLAYFIELD_HEIGHT * scale;
-  return {
-    x: available.x + (available.width - width) / 2,
-    y: available.y + (available.height - height) / 2,
-    width,
-    height,
-  };
 }
 
 function formatTime(seconds: number): string {
@@ -103,20 +63,13 @@ function formatTime(seconds: number): string {
 export function projectGameplayFrame(
   snapshot: ControllerSnapshot,
   chart: ChartConfig,
-  layout: GameplayLayout,
+  layout: BrightvaleViewportLayout,
   reducedMotion: boolean,
   audioNow = 0,
 ): GameplayFrame {
   const { game, audio } = snapshot;
   const profile = getDifficultyProfile(game.difficulty);
-  const board = containPlayfield(layout.board);
-  const fittedLayout = { ...layout, board };
-  const runwayTravelPx = board.height * RUNWAY_TRAVEL_FRACTION;
-  const timingWindows = projectTimingWindowGeometry(
-    game.difficulty,
-    runwayTravelPx,
-    VISIBLE_NOTE_SECONDS,
-  );
+  const timingWindows = projectTimingWindowHalfProgress(game.difficulty);
   const playing =
     game.status === 'playing' &&
     (audio.status === 'playing' || audio.status === 'starting');
@@ -142,19 +95,16 @@ export function projectGameplayFrame(
           onsetTransportTime: event.onsetTransportTime,
         }
       : null;
-  const laneWidth = board.width / 4;
   const milliseconds = (seconds: number) => Math.round(seconds * 1000);
 
   return {
-    layout: fittedLayout,
+    layout,
     transportTime: game.transportTime,
     difficulty: game.difficulty,
     playing,
     reducedMotion,
     lanes: [0, 1, 2, 3].map((index) => ({
       index: index as 0 | 1 | 2 | 3,
-      x: board.x + laneWidth * index,
-      width: laneWidth,
     })),
     notes,
     noteCapacity: chart.notes.length,

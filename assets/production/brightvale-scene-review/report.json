@@ -1,0 +1,7021 @@
+{
+  "state": "passed-harness-validation-not-final-runtime-approval",
+  "sameSceneAndCamera": true,
+  "modeDifference": {
+    "metric": "ImageMagick absolute-error changed-pixel count in 1600x500 lower scene crop (excludes sky/backdrop)",
+    "changedPixels": 121285,
+    "crop": "1600x500+0+400"
+  },
+  "method": "All source GLBs remain unchanged. Browser-only shared MeshToonMaterial instances use a nearest-filtered three-step ramp; original base-color and emissive channels/strengths are retained separately. PBR roughness/metallic/environment response is not reproduced. Procedural mineral fine noise remains unbaked; source constant base colors and roughness are used.",
+  "limitations": [
+    "Static crowd poses only; no animation. Audience count/layout beyond the ten original study samples is a review visualization choice, not an approved population target.",
+    "Background is fixed; verify mode difference on scene surfaces.",
+    "Software renderer metrics are local structural evidence only, not mobile/device budgets.",
+    "No mineral noise bake, texture synthesis, game integration, collision/support claims, or changes to source geometry/assets.",
+    "Study composition intentionally retains inherited skyline crop and exact camera framing."
+  ],
+  "modeResults": {
+    "audience": {
+      "state": "passed-structural-checks-not-final-runtime-approval",
+      "mode": "audience",
+      "environment": "local Chromium/SwiftShader browser review; timings and draw counts are not target-device claims",
+      "layout": {
+        "schema": "brightvale-structure-layout-v1",
+        "sourceSha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+        "units": "provisional authoring units; NOT approved meters",
+        "playfieldTiltDegrees": 14,
+        "playfieldMatrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0.9702957272529602,
+          0.24192194640636444,
+          0,
+          0,
+          -0.24192194640636444,
+          0.9702957272529602,
+          0,
+          0,
+          9.558073997497559,
+          0.2404211014509201,
+          1
+        ],
+        "cityMatrix": [
+          0.3499999940395355,
+          0,
+          0,
+          0,
+          0,
+          0.3499999940395355,
+          0,
+          0,
+          0,
+          0,
+          0.3499999940395355,
+          0,
+          0,
+          3.8999998569488525,
+          -55,
+          1
+        ]
+      },
+      "inputs": {
+        "platform": {
+          "bytes": 970376,
+          "sha256": "dd540482fbb77616b93b900f563da1520f65e81f35a60365741d2b362f9e7571",
+          "path": "brightvale-platform/platform.glb"
+        },
+        "highway": {
+          "bytes": 417772,
+          "sha256": "e650f6d7b65b2710e5605ba8231741a1d893effd96e5d53116e31d39d30da751",
+          "path": "brightvale-highway/highway.glb"
+        },
+        "endcaps": {
+          "bytes": 138388,
+          "sha256": "76301ee2ab5915a299c4fd54949dceee26a5db4023e767bfa8ceba893390c2b5",
+          "path": "brightvale-platform-endcaps/endcaps.glb"
+        },
+        "long": {
+          "bytes": 144180,
+          "sha256": "8cb0f33f672b366a7725158f21524a42bc55afe2d21153575030a991a9b4d012",
+          "path": "brightvale-outer-framing/long.glb"
+        },
+        "post": {
+          "bytes": 55784,
+          "sha256": "54b718163e06fb27b357bd3ac3255319b345a747e84159c5b618a233fec1a6fb",
+          "path": "brightvale-outer-framing/post.glb"
+        },
+        "city": {
+          "bytes": 3359324,
+          "sha256": "47bfaf2f18ed154cc86e5495102e0b4b888dca8cded12c1c8f47ec67fe040579",
+          "path": "brightvale-distant-city/city.glb"
+        },
+        "crowd": {
+          "bytes": 449668,
+          "sha256": "57a36fc257fef491946d1d616445e2845bca9cad7ed9a575db4afa3fbdf3b5bb",
+          "path": "brightvale-crowd/crowd.glb"
+        }
+      },
+      "importedAssetCounts": {
+        "platform": {
+          "meshes": 66,
+          "triangles": 24446
+        },
+        "highway": {
+          "meshes": 18,
+          "triangles": 11336
+        },
+        "endcaps": {
+          "meshes": 4,
+          "triangles": 2568
+        },
+        "long": {
+          "meshes": 4,
+          "triangles": 2668
+        },
+        "post": {
+          "meshes": 6,
+          "triangles": 968
+        },
+        "city": {
+          "meshes": 1080,
+          "triangles": 216633
+        },
+        "crowd": {
+          "meshes": 126,
+          "triangles": 18214
+        }
+      },
+      "assembly": {
+        "framingLongSections": 26,
+        "wholePosts": 27,
+        "crowdIndividuals": 25,
+        "crowdOriginalStudySamples": 10,
+        "crowdAddedForReview": 15,
+        "batching": {
+          "city": {
+            "sourceMeshes": 1080,
+            "instancedDrawables": 288,
+            "sourceInstances": 1080,
+            "boundsError": 8.881784197001252e-16
+          },
+          "framing": {
+            "sourceMeshes": 266,
+            "instancedDrawables": 10,
+            "sourceInstances": 266,
+            "boundsError": 0
+          },
+          "audience": {
+            "sourceMeshes": 350,
+            "instancedDrawables": 98,
+            "sourceInstances": 350,
+            "boundsError": 2.0445676085500963e-07
+          }
+        },
+        "crowdInstances": [
+          {
+            "id": "L01",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.9422590732574463,
+              0,
+              -0.3905737102031708,
+              0,
+              0,
+              1.0199999809265137,
+              0,
+              0,
+              0.3905737102031708,
+              0,
+              0.9422590732574463,
+              0,
+              -8,
+              8.25,
+              -1.2999999523162842,
+              1
+            ]
+          },
+          {
+            "id": "L02",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "saved study sample",
+            "matrix": [
+              0.9270802736282349,
+              0,
+              -0.3748629093170166,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.3748629093170166,
+              0,
+              0.9270802736282349,
+              0,
+              -9.300000190734863,
+              8.25,
+              -5,
+              1
+            ]
+          },
+          {
+            "id": "L03",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "saved study sample",
+            "matrix": [
+              0.8882517218589783,
+              0,
+              -0.41401562094688416,
+              0,
+              0,
+              0.9800000190734863,
+              0,
+              0,
+              0.41401562094688416,
+              0,
+              0.8882517218589783,
+              0,
+              -11,
+              8.25,
+              -8.600000381469727,
+              1
+            ]
+          },
+          {
+            "id": "L04",
+            "variant": "B",
+            "pose": "Reaching",
+            "source": "saved study sample",
+            "matrix": [
+              0.9311944246292114,
+              0,
+              -0.4402009844779968,
+              0,
+              0,
+              1.0299999713897705,
+              0,
+              0,
+              0.4402009844779968,
+              0,
+              0.9311944246292114,
+              0,
+              -13,
+              8.25,
+              -12.5,
+              1
+            ]
+          },
+          {
+            "id": "L05",
+            "variant": "A",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.9103664755821228,
+              0,
+              -0.41380295157432556,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.41380295157432556,
+              0,
+              0.9103664755821228,
+              0,
+              -15,
+              8.25,
+              -18,
+              1
+            ]
+          },
+          {
+            "id": "R01",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "saved study sample",
+            "matrix": [
+              0.9385576844215393,
+              0,
+              0.3993862569332123,
+              0,
+              0,
+              1.0199999809265137,
+              0,
+              0,
+              -0.3993862569332123,
+              0,
+              0.9385576844215393,
+              0,
+              8,
+              8.25,
+              -0.800000011920929,
+              1
+            ]
+          },
+          {
+            "id": "R02",
+            "variant": "A",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.8930540084838867,
+              0,
+              0.3786219656467438,
+              0,
+              0,
+              0.9700000286102295,
+              0,
+              0,
+              -0.3786219656467438,
+              0,
+              0.8930540084838867,
+              0,
+              9.199999809265137,
+              8.25,
+              -3.700000047683716,
+              1
+            ]
+          },
+          {
+            "id": "R03",
+            "variant": "B",
+            "pose": "Reaching",
+            "source": "saved study sample",
+            "matrix": [
+              0.9090648293495178,
+              0,
+              0.41665470600128174,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.41665470600128174,
+              0,
+              0.9090648293495178,
+              0,
+              11,
+              8.25,
+              -9,
+              1
+            ]
+          },
+          {
+            "id": "R04",
+            "variant": "C",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.9303758144378662,
+              0,
+              0.441928505897522,
+              0,
+              0,
+              1.0299999713897705,
+              0,
+              0,
+              -0.441928505897522,
+              0,
+              0.9303758144378662,
+              0,
+              13.300000190734863,
+              8.25,
+              -13,
+              1
+            ]
+          },
+          {
+            "id": "R05",
+            "variant": "A",
+            "pose": "Calm",
+            "source": "saved study sample",
+            "matrix": [
+              0.9149178266525269,
+              0,
+              0.4036402106285095,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.4036402106285095,
+              0,
+              0.9149178266525269,
+              0,
+              15,
+              8.25,
+              -19,
+              1
+            ]
+          },
+          {
+            "id": "extra-01",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8678423165716618,
+              0,
+              -0.49683972623727624,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.49683972623727624,
+              0,
+              0.8678423165716618,
+              0,
+              -11.45,
+              8.25,
+              -5,
+              1
+            ]
+          },
+          {
+            "id": "extra-02",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8952042745161881,
+              0,
+              0.44565604100914574,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.44565604100914574,
+              0,
+              0.8952042745161881,
+              0,
+              11.45,
+              8.25,
+              -8,
+              1
+            ]
+          },
+          {
+            "id": "extra-03",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8632338921730931,
+              0,
+              -0.5048041673794826,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.5048041673794826,
+              0,
+              0.8632338921730931,
+              0,
+              -13.45,
+              8.25,
+              -8,
+              1
+            ]
+          },
+          {
+            "id": "extra-04",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9151852282974797,
+              0,
+              0.403033494769467,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.403033494769467,
+              0,
+              0.9151852282974797,
+              0,
+              11.45,
+              8.25,
+              -11,
+              1
+            ]
+          },
+          {
+            "id": "extra-05",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.888193607259963,
+              0,
+              -0.45946938529409614,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.45946938529409614,
+              0,
+              0.888193607259963,
+              0,
+              -13.45,
+              8.25,
+              -11,
+              1
+            ]
+          },
+          {
+            "id": "extra-06",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8596732533657595,
+              0,
+              0.5108442986346532,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.5108442986346532,
+              0,
+              0.8596732533657595,
+              0,
+              15.45,
+              8.25,
+              -11,
+              1
+            ]
+          },
+          {
+            "id": "extra-07",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9301263928291774,
+              0,
+              -0.3672395585480718,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.3672395585480718,
+              0,
+              0.9301263928291774,
+              0,
+              -11.45,
+              8.25,
+              -14,
+              1
+            ]
+          },
+          {
+            "id": "extra-08",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9071795823110789,
+              0,
+              0.42074363386496594,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.42074363386496594,
+              0,
+              0.9071795823110789,
+              0,
+              13.45,
+              8.25,
+              -14,
+              1
+            ]
+          },
+          {
+            "id": "extra-09",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8825634633483265,
+              0,
+              -0.4701932934045394,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.4701932934045394,
+              0,
+              0.8825634633483265,
+              0,
+              -15.45,
+              8.25,
+              -14,
+              1
+            ]
+          },
+          {
+            "id": "extra-10",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9415420406846665,
+              0,
+              0.3368955114324822,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.3368955114324822,
+              0,
+              0.9415420406846665,
+              0,
+              11.45,
+              8.25,
+              -17,
+              1
+            ]
+          },
+          {
+            "id": "extra-11",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9218792197630828,
+              0,
+              -0.3874773595566708,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.3874773595566708,
+              0,
+              0.9218792197630828,
+              0,
+              -13.45,
+              8.25,
+              -17,
+              1
+            ]
+          },
+          {
+            "id": "extra-12",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9005326392160972,
+              0,
+              0.43478841487152187,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.43478841487152187,
+              0,
+              0.9005326392160972,
+              0,
+              15.45,
+              8.25,
+              -17,
+              1
+            ]
+          },
+          {
+            "id": "extra-13",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9504336105932535,
+              0,
+              -0.31092756689407863,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.31092756689407863,
+              0,
+              0.9504336105932535,
+              0,
+              -11.45,
+              8.25,
+              -20,
+              1
+            ]
+          },
+          {
+            "id": "extra-14",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9334486732286194,
+              0,
+              0.3587109901407122,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.3587109901407122,
+              0,
+              0.9334486732286194,
+              0,
+              13.45,
+              8.25,
+              -20,
+              1
+            ]
+          },
+          {
+            "id": "extra-15",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9148326100712881,
+              0,
+              -0.40383325216004,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.40383325216004,
+              0,
+              0.9148326100712881,
+              0,
+              -15.45,
+              8.25,
+              -20,
+              1
+            ]
+          }
+        ],
+        "cityWorldBounds": {
+          "min": [
+            -46.549999207258224,
+            -0.6500000655651101,
+            -89.64999940991402
+          ],
+          "max": [
+            46.549999207258224,
+            45.199999153614044,
+            -50.800000071525574
+          ]
+        },
+        "playfieldWorldBounds": {
+          "min": [
+            -6.980000019073486,
+            8.250601544466342,
+            -43.20437453982955
+          ],
+          "max": [
+            6.980000019073486,
+            20.8619843510338,
+            3.2354593240913534
+          ]
+        },
+        "crowdVisibility": [
+          {
+            "name": "Audience.L01.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -8.808891672606052,
+                8.092590239532736,
+                -2.085746785195206
+              ],
+              "max": [
+                -7.1583368727581504,
+                10.53776450340982,
+                -0.43519198534730363
+              ]
+            }
+          },
+          {
+            "name": "Audience.L02.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -10.09010765444921,
+                8.095676701408177,
+                -5.764903379574169
+              ],
+              "max": [
+                -8.475674040981037,
+                10.370601619373343,
+                -4.070103721144289
+              ]
+            }
+          },
+          {
+            "name": "Audience.L03.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -11.772525188242472,
+                8.098763165823897,
+                -9.351257551251184
+              ],
+              "max": [
+                -10.190340178386041,
+                10.183062833053953,
+                -7.769072541394753
+              ]
+            }
+          },
+          {
+            "name": "Audience.L04.B.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -13.811341804837618,
+                8.09104700816127,
+                -13.288932078563832
+              ],
+              "max": [
+                -12.148475240520199,
+                10.434219602437572,
+                -11.54338033997259
+              ]
+            }
+          },
+          {
+            "name": "Audience.L05.A.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -15.791735234306,
+                8.095676704346989,
+                -18.77090291946286
+              ],
+              "max": [
+                -14.173544239705134,
+                10.492906412201037,
+                -17.152711924861993
+              ]
+            }
+          },
+          {
+            "name": "Audience.R01.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                7.158706809302544,
+                8.09259024162102,
+                -1.581290565978517
+              ],
+              "max": [
+                8.805470720543056,
+                10.261963273477543,
+                0.06547334526199533
+              ]
+            }
+          },
+          {
+            "name": "Audience.R02.A.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                8.399292838621946,
+                8.10030639903302,
+                -4.447356433777864
+              ],
+              "max": [
+                9.96893814764464,
+                10.425619283283604,
+                -2.8777111247551694
+              ]
+            }
+          },
+          {
+            "name": "Audience.R03.B.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.144921548982172,
+                8.09567670385028,
+                -9.765725622567203
+              ],
+              "max": [
+                11.788200008529012,
+                10.370601610239031,
+                -8.136384196428178
+              ]
+            }
+          },
+          {
+            "name": "Audience.R04.C.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                12.448091631600704,
+                8.09104700840965,
+                -13.794336316551593
+              ],
+              "max": [
+                14.114828322782028,
+                10.560193545015373,
+                -12.12759962537027
+              ]
+            }
+          },
+          {
+            "name": "Audience.R05.A.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                14.17466074196124,
+                8.095676700061876,
+                -19.766206019078506
+              ],
+              "max": [
+                15.789135234621966,
+                10.22251306669555,
+                -18.15173152641778
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-01.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -12.238251593903342,
+                8.09567670458582,
+                -5.772686933198733
+              ],
+              "max": [
+                -10.620060601402436,
+                10.492906411457254,
+                -4.154495940697826
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-02.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.622776482107987,
+                8.09567670458582,
+                -8.76709009091463
+              ],
+              "max": [
+                12.237250935082663,
+                10.222513050098279,
+                -7.152615637939955
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-03.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -14.234176722832812,
+                8.09567670458582,
+                -8.767817416650352
+              ],
+              "max": [
+                -12.61974313723963,
+                10.370601607487862,
+                -7.074505315607132
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-04.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.623996051458077,
+                8.09567670458582,
+                -11.770700757422665
+              ],
+              "max": [
+                12.242187043958983,
+                10.492906411457254,
+                -10.152509764921758
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-05.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -14.236631449428375,
+                8.09567670458582,
+                -11.767404497600126
+              ],
+              "max": [
+                -12.622156996453699,
+                10.222513050098279,
+                -10.15293004462545
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-06.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                14.577252694925836,
+                8.09567670458582,
+                -11.76797992990309
+              ],
+              "max": [
+                16.233901041577184,
+                10.370601607487862,
+                -10.153546344309907
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-07.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -12.243688705907129,
+                8.09567670458582,
+                -14.770073931188762
+              ],
+              "max": [
+                -10.625497713406222,
+                10.492906411457254,
+                -13.151882938687855
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-08.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                12.623893726311943,
+                8.09567670458582,
+                -14.766553035496942
+              ],
+              "max": [
+                14.238368179286619,
+                10.222513050098279,
+                -13.152078582522266
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-09.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -16.23575641850377,
+                8.09567670458582,
+                -14.766935184091617
+              ],
+              "max": [
+                -14.621322832910586,
+                10.370601607487862,
+                -13.072801355159433
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-10.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.626770736317823,
+                8.09567670458582,
+                -17.769595010851752
+              ],
+              "max": [
+                12.24496172881873,
+                10.492906411457254,
+                -16.151404018350846
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-11.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -14.239860068526509,
+                8.09567670458582,
+                -17.765893802342617
+              ],
+              "max": [
+                -12.625385615551833,
+                10.222513050098279,
+                -16.15141934936794
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-12.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                14.591443168401092,
+                8.09567670458582,
+                -17.766115042151558
+              ],
+              "max": [
+                16.237372353813285,
+                10.370601607487862,
+                -16.139760167214177
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-13.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -12.246051161228278,
+                8.09567670458582,
+                -20.769221983082232
+              ],
+              "max": [
+                -10.627860168727372,
+                10.492906411457254,
+                -19.151030990581326
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-14.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                12.626675698012065,
+                8.09567670458582,
+                -20.765374948232996
+              ],
+              "max": [
+                14.24115015098674,
+                10.222513050098279,
+                -19.15090049525832
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-15.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -16.238785196972476,
+                8.09567670458582,
+                -20.765462368599565
+              ],
+              "max": [
+                -14.624351611379293,
+                10.370601607487862,
+                -19.07063053255708
+              ]
+            }
+          }
+        ]
+      },
+      "materialTreatment": "All source GLBs remain unchanged. Browser-only shared MeshToonMaterial instances use a nearest-filtered three-step ramp; original base-color and emissive channels/strengths are retained separately. PBR roughness/metallic/environment response is not reproduced. Procedural mineral fine noise remains unbaked; source constant base colors and roughness are used.",
+      "baselineMaterials": [
+        {
+          "name": "Gold | illuminated edge",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.949999988079071,
+            0.550000011920929,
+            0.1599999964237213
+          ],
+          "metalness": 0.6800000071525574,
+          "roughness": 0.20000000298023224,
+          "emissive": [
+            0.3499999940395355,
+            0.12600000286102286,
+            0.019249999567866327
+          ],
+          "emissiveIntensity": 1,
+          "role": "Gold | illuminated edge"
+        },
+        {
+          "name": "Gold | brushed warm alloy",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7200000286102295,
+            0.36000001430511475,
+            0.07500000298023224
+          ],
+          "metalness": 0.8199999928474426,
+          "roughness": 0.23000000417232513,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Gold | brushed warm alloy"
+        },
+        {
+          "name": "Crest shield | solid midnight enamel",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.017999999225139618,
+            0.02500000037252903,
+            0.06400000303983688
+          ],
+          "metalness": 0.47999998927116394,
+          "roughness": 0.28999999165534973,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Crest shield | solid midnight enamel"
+        },
+        {
+          "name": "Hit rim | cyan emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.001052631642153472,
+            0.1894736941171156,
+            1
+          ],
+          "emissiveIntensity": 1.2825000065565106,
+          "role": "Hit rim | cyan emission"
+        },
+        {
+          "name": "Hit | cyan pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.0011363636964955178,
+            0.1931818212605705,
+            1
+          ],
+          "emissiveIntensity": 1.0999999940395355,
+          "role": "Hit | cyan pure emitter"
+        },
+        {
+          "name": "Hit rim | magenta emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.0012195122636830277,
+            0.21951220575930613
+          ],
+          "emissiveIntensity": 1.1070000098943709,
+          "role": "Hit rim | magenta emission"
+        },
+        {
+          "name": "Hit | magenta pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.0012195122636830277,
+            0.21951220575930613
+          ],
+          "emissiveIntensity": 1.0249999910593033,
+          "role": "Hit | magenta pure emitter"
+        },
+        {
+          "name": "Hit rim | amber emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.15789474509759632,
+            0.001052631642153472
+          ],
+          "emissiveIntensity": 1.234999939203263,
+          "role": "Hit rim | amber emission"
+        },
+        {
+          "name": "Hit | amber pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.16842105098048074,
+            0.001052631642153472
+          ],
+          "emissiveIntensity": 1.1400000309944147,
+          "role": "Hit | amber pure emitter"
+        },
+        {
+          "name": "Hit rim | green emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.0013000000140629686,
+            0.9360000028610216,
+            0.05199999693036084
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hit rim | green emission"
+        },
+        {
+          "name": "Hit | green pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.0012000001046806597,
+            0.8640000686645521,
+            0.048000000834464984
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hit | green pure emitter"
+        },
+        {
+          "name": "Panel | sapphire mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.012000000104308128,
+            0.03799999877810478,
+            0.14000000059604645
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | sapphire mineral glass"
+        },
+        {
+          "name": "Hit well | recessed midnight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.00800000037997961,
+            0.012000000104308128,
+            0.02500000037252903
+          ],
+          "metalness": 0.25,
+          "roughness": 0.3799999952316284,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hit well | recessed midnight"
+        },
+        {
+          "name": "Panel | plum mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07500000298023224,
+            0.012000000104308128,
+            0.054999999701976776
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | plum mineral glass"
+        },
+        {
+          "name": "Panel | amber mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.0949999988079071,
+            0.03799999877810478,
+            0.00800000037997961
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | amber mineral glass"
+        },
+        {
+          "name": "Panel | emerald mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.00800000037997961,
+            0.07500000298023224,
+            0.03799999877810478
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | emerald mineral glass"
+        },
+        {
+          "name": "Inlay | sapphire",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.019999999552965164,
+            0.2199999988079071,
+            0.699999988079071
+          ],
+          "metalness": 0.6499999761581421,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0034999998621642603,
+            0.038499999135732654,
+            0.2449999916553498
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay | sapphire"
+        },
+        {
+          "name": "Inlay facet | cyan highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.36000001430511475,
+            0.949999988079071
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0034999998621642603,
+            0.06300000143051143,
+            0.26249999552965164
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | cyan highlight"
+        },
+        {
+          "name": "Lane edge | cyan",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.23999999463558197,
+            0.7200000286102295
+          ],
+          "metalness": 0.550000011920929,
+          "roughness": 0.2199999988079071,
+          "emissive": [
+            0.006999999724328521,
+            0.11199999558925633,
+            0.699999988079071
+          ],
+          "emissiveIntensity": 1,
+          "role": "Lane edge | cyan"
+        },
+        {
+          "name": "Inlay | magenta",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5699999928474426,
+            0.02500000037252903,
+            0.27000001072883606
+          ],
+          "metalness": 0.6499999761581421,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.15000000596046448,
+            0.0030000000521540615,
+            0.06600000226497649
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay | magenta"
+        },
+        {
+          "name": "Inlay facet | magenta highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7799999713897705,
+            0.05999999865889549,
+            0.36000001430511475
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.16500001013278975,
+            0.0030000000521540615,
+            0.07500000298023224
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | magenta highlight"
+        },
+        {
+          "name": "Lane edge | magenta",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.02500000037252903,
+            0.28999999165534973
+          ],
+          "metalness": 0.5,
+          "roughness": 0.23000000417232513,
+          "emissive": [
+            0.4949999976158139,
+            0.00824999999441206,
+            0.17599999988079063
+          ],
+          "emissiveIntensity": 1,
+          "role": "Lane edge | magenta"
+        },
+        {
+          "name": "Inlay facet | amber highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.9800000190734863,
+            0.5699999928474426,
+            0.17000000178813934
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.19500000059604616,
+            0.06600000226497649,
+            0.009000000156462185
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | amber highlight"
+        },
+        {
+          "name": "Inlay | emerald",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.44999998807907104,
+            0.18000000715255737
+          ],
+          "metalness": 0.6499999761581421,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0030000000521540615,
+            0.09000000715255752,
+            0.024000000417232492
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay | emerald"
+        },
+        {
+          "name": "Inlay facet | green highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.6200000047683716,
+            0.2800000011920929
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0030000000521540615,
+            0.10500000238418572,
+            0.024000000417232492
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | green highlight"
+        },
+        {
+          "name": "Lane edge | green",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.41999998688697815,
+            0.1899999976158142
+          ],
+          "metalness": 0.5,
+          "roughness": 0.23000000417232513,
+          "emissive": [
+            0.005499999996274707,
+            0.44000001609325423,
+            0.12100000196695326
+          ],
+          "emissiveIntensity": 1,
+          "role": "Lane edge | green"
+        },
+        {
+          "name": "Midnight blue | chassis",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.012000000104308128,
+            0.02500000037252903,
+            0.06499999761581421
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.25999999046325684,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Midnight blue | chassis"
+        },
+        {
+          "name": "Highway lanes | quiet midnight enamel.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.017000000923871994,
+            0.032999999821186066,
+            0.07100000232458115
+          ],
+          "metalness": 0.3799999952316284,
+          "roughness": 0.3400000035762787,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway lanes | quiet midnight enamel.001"
+        },
+        {
+          "name": "Highway panels | broad quiet seam.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.028999999165534973,
+            0.06199999898672104
+          ],
+          "metalness": 0.30000001192092896,
+          "roughness": 0.47999998927116394,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway panels | broad quiet seam.001"
+        },
+        {
+          "name": "Highway inlay | cyan.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.18000000715255737,
+            0.5199999809265137
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.0021999999389052394,
+            0.03960000135898589,
+            0.11439999518394472
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | cyan.001"
+        },
+        {
+          "name": "Highway inlay | magenta.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.47999998927116394,
+            0.017999999225139618,
+            0.1599999964237213
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.10559999706745149,
+            0.003959999808073045,
+            0.03519999902248383
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | magenta.001"
+        },
+        {
+          "name": "Highway inlay | amber.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.2199999988079071,
+            0.02500000037252903
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.12759999563694002,
+            0.04839999947547913,
+            0.005500000052154064
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | amber.001"
+        },
+        {
+          "name": "Highway inlay | green.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.00800000037997961,
+            0.3400000035762787,
+            0.12999999523162842
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.0017600000740587707,
+            0.07480000038146972,
+            0.02859999879598618
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | green.001"
+        },
+        {
+          "name": "Highway chassis | midnight-blue alloy.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.012000000104308128,
+            0.024000000208616257,
+            0.054999999701976776
+          ],
+          "metalness": 0.5,
+          "roughness": 0.3499999940395355,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway chassis | midnight-blue alloy.001"
+        },
+        {
+          "name": "Highway edging | muted warm titanium.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2800000011920929,
+            0.1899999976158142,
+            0.10000000149011612
+          ],
+          "metalness": 0.7200000286102295,
+          "roughness": 0.3700000047683716,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway edging | muted warm titanium.001"
+        },
+        {
+          "name": "Endcap body | midnight-blue enamel",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.02800000086426735,
+            0.06499999761581421
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.3199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Endcap body | midnight-blue enamel"
+        },
+        {
+          "name": "Endcap edging | warm brushed gold",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7200000286102295,
+            0.36000001430511475,
+            0.07500000298023224
+          ],
+          "metalness": 0.8199999928474426,
+          "roughness": 0.25,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Endcap edging | warm brushed gold"
+        },
+        {
+          "name": "Framing | midnight stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.04699999839067459,
+            0.09799999743700027
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | midnight stone"
+        },
+        {
+          "name": "Framing | alternate stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03099999949336052,
+            0.0560000017285347,
+            0.10999999940395355
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | alternate stone"
+        },
+        {
+          "name": "Framing | blue gray capstone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.13500000536441803,
+            0.15000000596046448,
+            0.18000000715255737
+          ],
+          "metalness": 0,
+          "roughness": 0.7200000286102295,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | blue gray capstone"
+        },
+        {
+          "name": "Framing | recessed mortar",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.01600000075995922,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | recessed mortar"
+        },
+        {
+          "name": "Framing | amber lens",
+          "type": "MeshStandardMaterial",
+          "color": [
+            1,
+            0.4399999976158142,
+            0.07000000029802322
+          ],
+          "metalness": 0,
+          "roughness": 0.3199999928474426,
+          "emissive": [
+            1,
+            0.4399999976158142,
+            0.07000000029802322
+          ],
+          "emissiveIntensity": 1.5,
+          "role": "Framing | amber lens"
+        },
+        {
+          "name": "Framing | midnight stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.04699999839067459,
+            0.09799999743700027
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | midnight stone"
+        },
+        {
+          "name": "Framing | alternate stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03099999949336052,
+            0.0560000017285347,
+            0.10999999940395355
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | alternate stone"
+        },
+        {
+          "name": "Framing | blue gray capstone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.13500000536441803,
+            0.15000000596046448,
+            0.18000000715255737
+          ],
+          "metalness": 0,
+          "roughness": 0.7200000286102295,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | blue gray capstone"
+        },
+        {
+          "name": "Framing | recessed mortar",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.01600000075995922,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | recessed mortar"
+        },
+        {
+          "name": "Framing | warm metal",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.47999998927116394,
+            0.2549999952316284,
+            0.05999999865889549
+          ],
+          "metalness": 0.7200000286102295,
+          "roughness": 0.3199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | warm metal"
+        },
+        {
+          "name": "Limestone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.41999998688697815,
+            0.3100000023841858,
+            0.20999999344348907
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "body"
+        },
+        {
+          "name": "Cornice",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6200000047683716,
+            0.49000000953674316,
+            0.30000001192092896
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "stone_trim"
+        },
+        {
+          "name": "Recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.10000000149011612,
+            0.08500000089406967,
+            0.11999999731779099
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "recess"
+        },
+        {
+          "name": "Slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03500000014901161,
+            0.08500000089406967,
+            0.14000000059604645
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "roof"
+        },
+        {
+          "name": "Gilt",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6499999761581421,
+            0.3799999952316284,
+            0.10499999672174454
+          ],
+          "metalness": 0.47999998927116394,
+          "roughness": 0.38999998569488525,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "gold"
+        },
+        {
+          "name": "Window",
+          "type": "MeshStandardMaterial",
+          "color": [
+            1,
+            0.4699999988079071,
+            0.11999999731779099
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            1,
+            0.4699999988079071,
+            0.11999999731779099
+          ],
+          "emissiveIntensity": 1.7999999523162842,
+          "role": "emissive_window"
+        },
+        {
+          "name": "Skin",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5699999928474426,
+            0.3149999976158142,
+            0.18000000715255737
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin"
+        },
+        {
+          "name": "Eye.Dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.013000000268220901,
+            0.00800000037997961,
+            0.009999999776482582
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.Dark"
+        },
+        {
+          "name": "Hair",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.026000000536441803,
+            0.02199999988079071,
+            0.02500000037252903
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair"
+        },
+        {
+          "name": "Skin.Shadow",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.30000001192092896,
+            0.125,
+            0.07500000298023224
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin.Shadow"
+        },
+        {
+          "name": "Eye.White",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.8799999952316284,
+            0.8399999737739563,
+            0.7300000190734863
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.White"
+        },
+        {
+          "name": "Hair.Plane",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.03200000151991844,
+            0.032999999821186066
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair.Plane"
+        },
+        {
+          "name": "Eye.Iris",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2199999988079071,
+            0.09000000357627869,
+            0.035999998450279236
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.Iris"
+        },
+        {
+          "name": "Eye.Light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.9800000190734863,
+            0.9700000286102295,
+            0.9100000262260437
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.Light"
+        },
+        {
+          "name": "Tee",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03500000014901161,
+            0.20499999821186066,
+            0.22499999403953552
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee"
+        },
+        {
+          "name": "Tee.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.027000000700354576,
+            0.1550000011920929,
+            0.17399999499320984
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee.Seam"
+        },
+        {
+          "name": "Sole",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.30000001192092896,
+            0.28999999165534973,
+            0.27000001072883606
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Sole"
+        },
+        {
+          "name": "Shoe",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6499999761581421,
+            0.6200000047683716,
+            0.5400000214576721
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Shoe"
+        },
+        {
+          "name": "Pants",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.08500000089406967,
+            0.0989999994635582,
+            0.125
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants"
+        },
+        {
+          "name": "Pants.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.05999999865889549,
+            0.06800000369548798,
+            0.08500000089406967
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants.Seam"
+        },
+        {
+          "name": "B.Skin",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6700000166893005,
+            0.4000000059604645,
+            0.27000001072883606
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin"
+        },
+        {
+          "name": "B.Hair",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.08500000089406967,
+            0.028999999165534973,
+            0.017999999225139618
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair"
+        },
+        {
+          "name": "B.Skin.Shadow",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3499999940395355,
+            0.1599999964237213,
+            0.10499999672174454
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin.Shadow"
+        },
+        {
+          "name": "B.Hair.Plane",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.14000000059604645,
+            0.052000001072883606,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair.Plane"
+        },
+        {
+          "name": "B.Tee",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4699999988079071,
+            0.11500000208616257,
+            0.0820000022649765
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee"
+        },
+        {
+          "name": "B.Tee.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3199999928474426,
+            0.06599999964237213,
+            0.04399999976158142
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee.Seam"
+        },
+        {
+          "name": "B.Sole",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.33000001311302185,
+            0.28999999165534973,
+            0.23999999463558197
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Sole"
+        },
+        {
+          "name": "B.Shoe",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7300000190734863,
+            0.6899999976158142,
+            0.5899999737739563
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Shoe"
+        },
+        {
+          "name": "B.Pants",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.039000000804662704,
+            0.06300000101327896,
+            0.10499999672174454
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants"
+        },
+        {
+          "name": "B.Pants.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.03799999877810478,
+            0.06199999898672104
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants.Seam"
+        },
+        {
+          "name": "C.Skin",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3199999928474426,
+            0.1550000011920929,
+            0.08500000089406967
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin"
+        },
+        {
+          "name": "C.Hair",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.020999999716877937,
+            0.01600000075995922,
+            0.012000000104308128
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair"
+        },
+        {
+          "name": "C.Tee",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4699999988079071,
+            0.27000001072883606,
+            0.06599999964237213
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee"
+        },
+        {
+          "name": "C.Tee.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.25,
+            0.12300000339746475,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee.Seam"
+        },
+        {
+          "name": "C.Skin.Shadow",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.15000000596046448,
+            0.052000001072883606,
+            0.026000000536441803
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin.Shadow"
+        },
+        {
+          "name": "C.Hair.Plane",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.04699999839067459,
+            0.029999999329447746,
+            0.017999999225139618
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair.Plane"
+        },
+        {
+          "name": "C.Sole",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.38999998569488525,
+            0.3400000035762787,
+            0.25
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Sole"
+        },
+        {
+          "name": "C.Shoe",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.12999999523162842,
+            0.10499999672174454,
+            0.07900000363588333
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Shoe"
+        },
+        {
+          "name": "C.Pants",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11500000208616257,
+            0.13500000536441803,
+            0.08500000089406967
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants"
+        },
+        {
+          "name": "C.Pants.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07000000029802322,
+            0.07800000160932541,
+            0.04500000178813934
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants.Seam"
+        }
+      ],
+      "toonMaterials": [
+        {
+          "name": "Gold | illuminated edge | Gold | illuminated edge | review toon",
+          "color": "f9c46f",
+          "emissive": "a06326",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Gold | brushed warm alloy | Gold | brushed warm alloy | review toon",
+          "color": "dda24d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Crest shield | solid midnight enamel | Crest shield | solid midnight enamel | review toon",
+          "color": "242c48",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | cyan emission | Hit rim | cyan emission | review toon",
+          "color": "000000",
+          "emissive": "0378ff",
+          "emissiveIntensity": 1.2825000065565106,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | cyan pure emitter | Hit | cyan pure emitter | review toon",
+          "color": "000000",
+          "emissive": "047aff",
+          "emissiveIntensity": 1.0999999940395355,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | magenta emission | Hit rim | magenta emission | review toon",
+          "color": "000000",
+          "emissive": "ff0481",
+          "emissiveIntensity": 1.1070000098943709,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | magenta pure emitter | Hit | magenta pure emitter | review toon",
+          "color": "000000",
+          "emissive": "ff0481",
+          "emissiveIntensity": 1.0249999910593033,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | amber emission | Hit rim | amber emission | review toon",
+          "color": "000000",
+          "emissive": "ff6f03",
+          "emissiveIntensity": 1.234999939203263,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | amber pure emitter | Hit | amber pure emitter | review toon",
+          "color": "000000",
+          "emissive": "ff7203",
+          "emissiveIntensity": 1.1400000309944147,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | green emission | Hit rim | green emission | review toon",
+          "color": "000000",
+          "emissive": "04f840",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | green pure emitter | Hit | green pure emitter | review toon",
+          "color": "000000",
+          "emissive": "04ef3e",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | sapphire mineral glass | Panel | sapphire mineral glass | review toon",
+          "color": "1d3769",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit well | recessed midnight | Hit well | recessed midnight | review toon",
+          "color": "161d2c",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | plum mineral glass | Panel | plum mineral glass | review toon",
+          "color": "4d1d42",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | amber mineral glass | Panel | amber mineral glass | review toon",
+          "color": "573716",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | emerald mineral glass | Panel | emerald mineral glass | review toon",
+          "color": "164d37",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay | sapphire | Inlay | sapphire | review toon",
+          "color": "2781da",
+          "emissive": "0b3788",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | cyan highlight | Inlay facet | cyan highlight | review toon",
+          "color": "38a2f9",
+          "emissive": "0b478c",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Lane edge | cyan | Lane edge | cyan | review toon",
+          "color": "2186dd",
+          "emissive": "145eda",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay | magenta | Inlay | magenta | review toon",
+          "color": "c72c8e",
+          "emissive": "6c0a49",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | magenta highlight | Inlay facet | magenta highlight | review toon",
+          "color": "e545a2",
+          "emissive": "710a4d",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Lane edge | magenta | Lane edge | magenta | review toon",
+          "color": "c82c93",
+          "emissive": "bb1674",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | amber highlight | Inlay facet | amber highlight | review toon",
+          "color": "fdc773",
+          "emissive": "7a4918",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay | emerald | Inlay | emerald | review toon",
+          "color": "21b376",
+          "emissive": "0a552b",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | green highlight | Inlay facet | green highlight | review toon",
+          "color": "38ce90",
+          "emissive": "0a5b2b",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Lane edge | green | Lane edge | green | review toon",
+          "color": "19ad79",
+          "emissive": "11b162",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Midnight blue | chassis | Midnight blue | chassis | review toon",
+          "color": "1d2c48",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway lanes | quiet midnight enamel.001 | Highway lanes | quiet midnight enamel.001 | review toon",
+          "color": "23334b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway panels | broad quiet seam.001 | Highway panels | broad quiet seam.001 | review toon",
+          "color": "213046",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | cyan.001 | Highway inlay | cyan.001 | review toon",
+          "color": "1976bf",
+          "emissive": "07385f",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | magenta.001 | Highway inlay | magenta.001 | review toon",
+          "color": "b8246f",
+          "emissive": "5b0d35",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | amber.001 | Highway inlay | amber.001 | review toon",
+          "color": "c8812c",
+          "emissive": "643e11",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | green.001 | Highway inlay | green.001 | review toon",
+          "color": "169e65",
+          "emissive": "064d2f",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway chassis | midnight-blue alloy.001 | Highway chassis | midnight-blue alloy.001 | review toon",
+          "color": "1d2b42",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway edging | muted warm titanium.001 | Highway edging | muted warm titanium.001 | review toon",
+          "color": "907959",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Endcap body | midnight-blue enamel | Endcap body | midnight-blue enamel | review toon",
+          "color": "212f48",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Endcap edging | warm brushed gold | Endcap edging | warm brushed gold | review toon",
+          "color": "dda24d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | midnight stone | Framing | midnight stone | review toon",
+          "color": "2c3d58",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | alternate stone | Framing | alternate stone | review toon",
+          "color": "31435d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | blue gray capstone | Framing | blue gray capstone | review toon",
+          "color": "676c76",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | recessed mortar | Framing | recessed mortar | review toon",
+          "color": "19222f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | amber lens | Framing | amber lens | review toon",
+          "color": "ffb14b",
+          "emissive": "ffb14b",
+          "emissiveIntensity": 1.5,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | warm metal | Framing | warm metal | review toon",
+          "color": "b88a45",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Limestone | body | review toon",
+          "color": "ad977e",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Cornice | stone_trim | review toon",
+          "color": "ceba95",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Recess | recess | review toon",
+          "color": "595261",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Slate | roof | review toon",
+          "color": "355269",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Gilt | gold | review toon",
+          "color": "d3a65b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Window | emissive_window | review toon",
+          "color": "ffb661",
+          "emissive": "ffb661",
+          "emissiveIntensity": 1.7999999523162842,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Skin | Skin | review toon",
+          "color": "c79876",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.Dark | Eye.Dark | review toon",
+          "color": "1e1619",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hair | Hair | review toon",
+          "color": "2d292c",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Skin.Shadow | Skin.Shadow | review toon",
+          "color": "95634d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.White | Eye.White | review toon",
+          "color": "f1ecde",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hair.Plane | Hair.Plane | review toon",
+          "color": "383233",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.Iris | Eye.Iris | review toon",
+          "color": "815535",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.Light | Eye.Light | review toon",
+          "color": "fdfcf5",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Tee | Tee | review toon",
+          "color": "357d82",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Tee.Seam | Tee.Seam | review toon",
+          "color": "2e6e74",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Sole | Sole | review toon",
+          "color": "95938e",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Shoe | Shoe | review toon",
+          "color": "d3cec2",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Pants | Pants | review toon",
+          "color": "525963",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Pants.Seam | Pants.Seam | review toon",
+          "color": "454a52",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Skin | Skin | review toon",
+          "color": "d6aa8e",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Hair | Hair | review toon",
+          "color": "523024",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Skin.Shadow | Skin.Shadow | review toon",
+          "color": "a06f5b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Hair.Plane | Hair.Plane | review toon",
+          "color": "69402f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Tee | Tee | review toon",
+          "color": "b65f51",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Tee.Seam | Tee.Seam | review toon",
+          "color": "99493b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Sole | Sole | review toon",
+          "color": "9b9386",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Shoe | Shoe | review toon",
+          "color": "ded8ca",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Pants | Pants | review toon",
+          "color": "38475b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Pants.Seam | Pants.Seam | review toon",
+          "color": "2c3746",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Skin | Skin | review toon",
+          "color": "996e52",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Hair | Hair | review toon",
+          "color": "28221d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Tee | Tee | review toon",
+          "color": "b68e49",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Tee.Seam | Tee.Seam | review toon",
+          "color": "89622f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Skin.Shadow | Skin.Shadow | review toon",
+          "color": "6c402d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Hair.Plane | Hair.Plane | review toon",
+          "color": "3d3024",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Sole | Sole | review toon",
+          "color": "a89e89",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Shoe | Shoe | review toon",
+          "color": "655b4f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Pants | Pants | review toon",
+          "color": "5f6752",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Pants.Seam | Pants.Seam | review toon",
+          "color": "4b4f3c",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        }
+      ],
+      "geometry": {
+        "loadedMeshObjects": 1304,
+        "decodedGeometryArrayBytes": 5162148,
+        "sceneMeshObjects": 486,
+        "sceneTriangles": 401581
+      },
+      "renderer": {
+        "calls": 485,
+        "triangles": 401177,
+        "points": 0,
+        "lines": 0,
+        "webgl": {
+          "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+          "vendor": "Google Inc. (Google)",
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        }
+      },
+      "localFetchParseAssemblyAndFirstRenderMs": 80.6,
+      "lighting": {
+        "preset": "audience",
+        "hemisphere": {
+          "sky": 16766107,
+          "ground": 2569037,
+          "intensity": 1.25
+        },
+        "point": {
+          "color": 16759134,
+          "intensity": 78,
+          "position": [
+            -12,
+            22,
+            3
+          ]
+        },
+        "toneMapping": "ACESFilmicToneMapping",
+        "outputColorSpace": "SRGBColorSpace",
+        "exposure": 1.05
+      },
+      "camera": {
+        "fov": 39.76070473,
+        "aspect": 1.7777777777777777,
+        "position": [
+          0,
+          13.8999996185,
+          15
+        ],
+        "rotation": [
+          -0.1148765842,
+          0,
+          0,
+          "XYZ"
+        ],
+        "matrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0.9934089383030991,
+          -0.11462408690807331,
+          0,
+          0,
+          0.11462408690807331,
+          0.9934089383030991,
+          0,
+          0,
+          13.8999996185,
+          15,
+          1
+        ],
+        "projection": [
+          1.555555555525217,
+          0,
+          0,
+          0,
+          0,
+          2.765432098711497,
+          0,
+          0,
+          0,
+          0,
+          -1.000040000800016,
+          -1,
+          0,
+          0,
+          -0.2000040000800016,
+          0
+        ]
+      },
+      "loaderWarnings": [],
+      "limitations": [
+        "Static crowd poses only; no animation. Audience count/layout beyond the ten original study samples is a review visualization choice, not an approved population target.",
+        "Background is fixed; verify mode difference on scene surfaces.",
+        "Software renderer metrics are local structural evidence only, not mobile/device budgets.",
+        "No mineral noise bake, texture synthesis, game integration, collision/support claims, or changes to source geometry/assets.",
+        "Study composition intentionally retains inherited skyline crop and exact camera framing."
+      ]
+    },
+    "twilight": {
+      "state": "passed-structural-checks-not-final-runtime-approval",
+      "mode": "twilight",
+      "environment": "local Chromium/SwiftShader browser review; timings and draw counts are not target-device claims",
+      "layout": {
+        "schema": "brightvale-structure-layout-v1",
+        "sourceSha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+        "units": "provisional authoring units; NOT approved meters",
+        "playfieldTiltDegrees": 14,
+        "playfieldMatrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0.9702957272529602,
+          0.24192194640636444,
+          0,
+          0,
+          -0.24192194640636444,
+          0.9702957272529602,
+          0,
+          0,
+          9.558073997497559,
+          0.2404211014509201,
+          1
+        ],
+        "cityMatrix": [
+          0.3499999940395355,
+          0,
+          0,
+          0,
+          0,
+          0.3499999940395355,
+          0,
+          0,
+          0,
+          0,
+          0.3499999940395355,
+          0,
+          0,
+          3.8999998569488525,
+          -55,
+          1
+        ]
+      },
+      "inputs": {
+        "platform": {
+          "bytes": 970376,
+          "sha256": "dd540482fbb77616b93b900f563da1520f65e81f35a60365741d2b362f9e7571",
+          "path": "brightvale-platform/platform.glb"
+        },
+        "highway": {
+          "bytes": 417772,
+          "sha256": "e650f6d7b65b2710e5605ba8231741a1d893effd96e5d53116e31d39d30da751",
+          "path": "brightvale-highway/highway.glb"
+        },
+        "endcaps": {
+          "bytes": 138388,
+          "sha256": "76301ee2ab5915a299c4fd54949dceee26a5db4023e767bfa8ceba893390c2b5",
+          "path": "brightvale-platform-endcaps/endcaps.glb"
+        },
+        "long": {
+          "bytes": 144180,
+          "sha256": "8cb0f33f672b366a7725158f21524a42bc55afe2d21153575030a991a9b4d012",
+          "path": "brightvale-outer-framing/long.glb"
+        },
+        "post": {
+          "bytes": 55784,
+          "sha256": "54b718163e06fb27b357bd3ac3255319b345a747e84159c5b618a233fec1a6fb",
+          "path": "brightvale-outer-framing/post.glb"
+        },
+        "city": {
+          "bytes": 3359324,
+          "sha256": "47bfaf2f18ed154cc86e5495102e0b4b888dca8cded12c1c8f47ec67fe040579",
+          "path": "brightvale-distant-city/city.glb"
+        },
+        "crowd": {
+          "bytes": 449668,
+          "sha256": "57a36fc257fef491946d1d616445e2845bca9cad7ed9a575db4afa3fbdf3b5bb",
+          "path": "brightvale-crowd/crowd.glb"
+        }
+      },
+      "importedAssetCounts": {
+        "platform": {
+          "meshes": 66,
+          "triangles": 24446
+        },
+        "highway": {
+          "meshes": 18,
+          "triangles": 11336
+        },
+        "endcaps": {
+          "meshes": 4,
+          "triangles": 2568
+        },
+        "long": {
+          "meshes": 4,
+          "triangles": 2668
+        },
+        "post": {
+          "meshes": 6,
+          "triangles": 968
+        },
+        "city": {
+          "meshes": 1080,
+          "triangles": 216633
+        },
+        "crowd": {
+          "meshes": 126,
+          "triangles": 18214
+        }
+      },
+      "assembly": {
+        "framingLongSections": 26,
+        "wholePosts": 27,
+        "crowdIndividuals": 25,
+        "crowdOriginalStudySamples": 10,
+        "crowdAddedForReview": 15,
+        "batching": {
+          "city": {
+            "sourceMeshes": 1080,
+            "instancedDrawables": 288,
+            "sourceInstances": 1080,
+            "boundsError": 8.881784197001252e-16
+          },
+          "framing": {
+            "sourceMeshes": 266,
+            "instancedDrawables": 10,
+            "sourceInstances": 266,
+            "boundsError": 0
+          },
+          "audience": {
+            "sourceMeshes": 350,
+            "instancedDrawables": 98,
+            "sourceInstances": 350,
+            "boundsError": 2.0445676085500963e-07
+          }
+        },
+        "crowdInstances": [
+          {
+            "id": "L01",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.9422590732574463,
+              0,
+              -0.3905737102031708,
+              0,
+              0,
+              1.0199999809265137,
+              0,
+              0,
+              0.3905737102031708,
+              0,
+              0.9422590732574463,
+              0,
+              -8,
+              8.25,
+              -1.2999999523162842,
+              1
+            ]
+          },
+          {
+            "id": "L02",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "saved study sample",
+            "matrix": [
+              0.9270802736282349,
+              0,
+              -0.3748629093170166,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.3748629093170166,
+              0,
+              0.9270802736282349,
+              0,
+              -9.300000190734863,
+              8.25,
+              -5,
+              1
+            ]
+          },
+          {
+            "id": "L03",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "saved study sample",
+            "matrix": [
+              0.8882517218589783,
+              0,
+              -0.41401562094688416,
+              0,
+              0,
+              0.9800000190734863,
+              0,
+              0,
+              0.41401562094688416,
+              0,
+              0.8882517218589783,
+              0,
+              -11,
+              8.25,
+              -8.600000381469727,
+              1
+            ]
+          },
+          {
+            "id": "L04",
+            "variant": "B",
+            "pose": "Reaching",
+            "source": "saved study sample",
+            "matrix": [
+              0.9311944246292114,
+              0,
+              -0.4402009844779968,
+              0,
+              0,
+              1.0299999713897705,
+              0,
+              0,
+              0.4402009844779968,
+              0,
+              0.9311944246292114,
+              0,
+              -13,
+              8.25,
+              -12.5,
+              1
+            ]
+          },
+          {
+            "id": "L05",
+            "variant": "A",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.9103664755821228,
+              0,
+              -0.41380295157432556,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.41380295157432556,
+              0,
+              0.9103664755821228,
+              0,
+              -15,
+              8.25,
+              -18,
+              1
+            ]
+          },
+          {
+            "id": "R01",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "saved study sample",
+            "matrix": [
+              0.9385576844215393,
+              0,
+              0.3993862569332123,
+              0,
+              0,
+              1.0199999809265137,
+              0,
+              0,
+              -0.3993862569332123,
+              0,
+              0.9385576844215393,
+              0,
+              8,
+              8.25,
+              -0.800000011920929,
+              1
+            ]
+          },
+          {
+            "id": "R02",
+            "variant": "A",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.8930540084838867,
+              0,
+              0.3786219656467438,
+              0,
+              0,
+              0.9700000286102295,
+              0,
+              0,
+              -0.3786219656467438,
+              0,
+              0.8930540084838867,
+              0,
+              9.199999809265137,
+              8.25,
+              -3.700000047683716,
+              1
+            ]
+          },
+          {
+            "id": "R03",
+            "variant": "B",
+            "pose": "Reaching",
+            "source": "saved study sample",
+            "matrix": [
+              0.9090648293495178,
+              0,
+              0.41665470600128174,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.41665470600128174,
+              0,
+              0.9090648293495178,
+              0,
+              11,
+              8.25,
+              -9,
+              1
+            ]
+          },
+          {
+            "id": "R04",
+            "variant": "C",
+            "pose": "Cheering",
+            "source": "saved study sample",
+            "matrix": [
+              0.9303758144378662,
+              0,
+              0.441928505897522,
+              0,
+              0,
+              1.0299999713897705,
+              0,
+              0,
+              -0.441928505897522,
+              0,
+              0.9303758144378662,
+              0,
+              13.300000190734863,
+              8.25,
+              -13,
+              1
+            ]
+          },
+          {
+            "id": "R05",
+            "variant": "A",
+            "pose": "Calm",
+            "source": "saved study sample",
+            "matrix": [
+              0.9149178266525269,
+              0,
+              0.4036402106285095,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.4036402106285095,
+              0,
+              0.9149178266525269,
+              0,
+              15,
+              8.25,
+              -19,
+              1
+            ]
+          },
+          {
+            "id": "extra-01",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8678423165716618,
+              0,
+              -0.49683972623727624,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.49683972623727624,
+              0,
+              0.8678423165716618,
+              0,
+              -11.45,
+              8.25,
+              -5,
+              1
+            ]
+          },
+          {
+            "id": "extra-02",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8952042745161881,
+              0,
+              0.44565604100914574,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.44565604100914574,
+              0,
+              0.8952042745161881,
+              0,
+              11.45,
+              8.25,
+              -8,
+              1
+            ]
+          },
+          {
+            "id": "extra-03",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8632338921730931,
+              0,
+              -0.5048041673794826,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.5048041673794826,
+              0,
+              0.8632338921730931,
+              0,
+              -13.45,
+              8.25,
+              -8,
+              1
+            ]
+          },
+          {
+            "id": "extra-04",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9151852282974797,
+              0,
+              0.403033494769467,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.403033494769467,
+              0,
+              0.9151852282974797,
+              0,
+              11.45,
+              8.25,
+              -11,
+              1
+            ]
+          },
+          {
+            "id": "extra-05",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.888193607259963,
+              0,
+              -0.45946938529409614,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.45946938529409614,
+              0,
+              0.888193607259963,
+              0,
+              -13.45,
+              8.25,
+              -11,
+              1
+            ]
+          },
+          {
+            "id": "extra-06",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8596732533657595,
+              0,
+              0.5108442986346532,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.5108442986346532,
+              0,
+              0.8596732533657595,
+              0,
+              15.45,
+              8.25,
+              -11,
+              1
+            ]
+          },
+          {
+            "id": "extra-07",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9301263928291774,
+              0,
+              -0.3672395585480718,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.3672395585480718,
+              0,
+              0.9301263928291774,
+              0,
+              -11.45,
+              8.25,
+              -14,
+              1
+            ]
+          },
+          {
+            "id": "extra-08",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9071795823110789,
+              0,
+              0.42074363386496594,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.42074363386496594,
+              0,
+              0.9071795823110789,
+              0,
+              13.45,
+              8.25,
+              -14,
+              1
+            ]
+          },
+          {
+            "id": "extra-09",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.8825634633483265,
+              0,
+              -0.4701932934045394,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.4701932934045394,
+              0,
+              0.8825634633483265,
+              0,
+              -15.45,
+              8.25,
+              -14,
+              1
+            ]
+          },
+          {
+            "id": "extra-10",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9415420406846665,
+              0,
+              0.3368955114324822,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.3368955114324822,
+              0,
+              0.9415420406846665,
+              0,
+              11.45,
+              8.25,
+              -17,
+              1
+            ]
+          },
+          {
+            "id": "extra-11",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9218792197630828,
+              0,
+              -0.3874773595566708,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.3874773595566708,
+              0,
+              0.9218792197630828,
+              0,
+              -13.45,
+              8.25,
+              -17,
+              1
+            ]
+          },
+          {
+            "id": "extra-12",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9005326392160972,
+              0,
+              0.43478841487152187,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.43478841487152187,
+              0,
+              0.9005326392160972,
+              0,
+              15.45,
+              8.25,
+              -17,
+              1
+            ]
+          },
+          {
+            "id": "extra-13",
+            "variant": "B",
+            "pose": "Cheering",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9504336105932535,
+              0,
+              -0.31092756689407863,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.31092756689407863,
+              0,
+              0.9504336105932535,
+              0,
+              -11.45,
+              8.25,
+              -20,
+              1
+            ]
+          },
+          {
+            "id": "extra-14",
+            "variant": "C",
+            "pose": "Calm",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9334486732286194,
+              0,
+              0.3587109901407122,
+              0,
+              0,
+              1,
+              0,
+              0,
+              -0.3587109901407122,
+              0,
+              0.9334486732286194,
+              0,
+              13.45,
+              8.25,
+              -20,
+              1
+            ]
+          },
+          {
+            "id": "extra-15",
+            "variant": "A",
+            "pose": "Reaching",
+            "source": "review-only distributed plaza fill",
+            "matrix": [
+              0.9148326100712881,
+              0,
+              -0.40383325216004,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0.40383325216004,
+              0,
+              0.9148326100712881,
+              0,
+              -15.45,
+              8.25,
+              -20,
+              1
+            ]
+          }
+        ],
+        "cityWorldBounds": {
+          "min": [
+            -46.549999207258224,
+            -0.6500000655651101,
+            -89.64999940991402
+          ],
+          "max": [
+            46.549999207258224,
+            45.199999153614044,
+            -50.800000071525574
+          ]
+        },
+        "playfieldWorldBounds": {
+          "min": [
+            -6.980000019073486,
+            8.250601544466342,
+            -43.20437453982955
+          ],
+          "max": [
+            6.980000019073486,
+            20.8619843510338,
+            3.2354593240913534
+          ]
+        },
+        "crowdVisibility": [
+          {
+            "name": "Audience.L01.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -8.808891672606052,
+                8.092590239532736,
+                -2.085746785195206
+              ],
+              "max": [
+                -7.1583368727581504,
+                10.53776450340982,
+                -0.43519198534730363
+              ]
+            }
+          },
+          {
+            "name": "Audience.L02.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -10.09010765444921,
+                8.095676701408177,
+                -5.764903379574169
+              ],
+              "max": [
+                -8.475674040981037,
+                10.370601619373343,
+                -4.070103721144289
+              ]
+            }
+          },
+          {
+            "name": "Audience.L03.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -11.772525188242472,
+                8.098763165823897,
+                -9.351257551251184
+              ],
+              "max": [
+                -10.190340178386041,
+                10.183062833053953,
+                -7.769072541394753
+              ]
+            }
+          },
+          {
+            "name": "Audience.L04.B.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -13.811341804837618,
+                8.09104700816127,
+                -13.288932078563832
+              ],
+              "max": [
+                -12.148475240520199,
+                10.434219602437572,
+                -11.54338033997259
+              ]
+            }
+          },
+          {
+            "name": "Audience.L05.A.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -15.791735234306,
+                8.095676704346989,
+                -18.77090291946286
+              ],
+              "max": [
+                -14.173544239705134,
+                10.492906412201037,
+                -17.152711924861993
+              ]
+            }
+          },
+          {
+            "name": "Audience.R01.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                7.158706809302544,
+                8.09259024162102,
+                -1.581290565978517
+              ],
+              "max": [
+                8.805470720543056,
+                10.261963273477543,
+                0.06547334526199533
+              ]
+            }
+          },
+          {
+            "name": "Audience.R02.A.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                8.399292838621946,
+                8.10030639903302,
+                -4.447356433777864
+              ],
+              "max": [
+                9.96893814764464,
+                10.425619283283604,
+                -2.8777111247551694
+              ]
+            }
+          },
+          {
+            "name": "Audience.R03.B.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.144921548982172,
+                8.09567670385028,
+                -9.765725622567203
+              ],
+              "max": [
+                11.788200008529012,
+                10.370601610239031,
+                -8.136384196428178
+              ]
+            }
+          },
+          {
+            "name": "Audience.R04.C.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                12.448091631600704,
+                8.09104700840965,
+                -13.794336316551593
+              ],
+              "max": [
+                14.114828322782028,
+                10.560193545015373,
+                -12.12759962537027
+              ]
+            }
+          },
+          {
+            "name": "Audience.R05.A.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                14.17466074196124,
+                8.095676700061876,
+                -19.766206019078506
+              ],
+              "max": [
+                15.789135234621966,
+                10.22251306669555,
+                -18.15173152641778
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-01.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -12.238251593903342,
+                8.09567670458582,
+                -5.772686933198733
+              ],
+              "max": [
+                -10.620060601402436,
+                10.492906411457254,
+                -4.154495940697826
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-02.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.622776482107987,
+                8.09567670458582,
+                -8.76709009091463
+              ],
+              "max": [
+                12.237250935082663,
+                10.222513050098279,
+                -7.152615637939955
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-03.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -14.234176722832812,
+                8.09567670458582,
+                -8.767817416650352
+              ],
+              "max": [
+                -12.61974313723963,
+                10.370601607487862,
+                -7.074505315607132
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-04.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.623996051458077,
+                8.09567670458582,
+                -11.770700757422665
+              ],
+              "max": [
+                12.242187043958983,
+                10.492906411457254,
+                -10.152509764921758
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-05.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -14.236631449428375,
+                8.09567670458582,
+                -11.767404497600126
+              ],
+              "max": [
+                -12.622156996453699,
+                10.222513050098279,
+                -10.15293004462545
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-06.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                14.577252694925836,
+                8.09567670458582,
+                -11.76797992990309
+              ],
+              "max": [
+                16.233901041577184,
+                10.370601607487862,
+                -10.153546344309907
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-07.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -12.243688705907129,
+                8.09567670458582,
+                -14.770073931188762
+              ],
+              "max": [
+                -10.625497713406222,
+                10.492906411457254,
+                -13.151882938687855
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-08.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                12.623893726311943,
+                8.09567670458582,
+                -14.766553035496942
+              ],
+              "max": [
+                14.238368179286619,
+                10.222513050098279,
+                -13.152078582522266
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-09.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -16.23575641850377,
+                8.09567670458582,
+                -14.766935184091617
+              ],
+              "max": [
+                -14.621322832910586,
+                10.370601607487862,
+                -13.072801355159433
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-10.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                10.626770736317823,
+                8.09567670458582,
+                -17.769595010851752
+              ],
+              "max": [
+                12.24496172881873,
+                10.492906411457254,
+                -16.151404018350846
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-11.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -14.239860068526509,
+                8.09567670458582,
+                -17.765893802342617
+              ],
+              "max": [
+                -12.625385615551833,
+                10.222513050098279,
+                -16.15141934936794
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-12.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                14.591443168401092,
+                8.09567670458582,
+                -17.766115042151558
+              ],
+              "max": [
+                16.237372353813285,
+                10.370601607487862,
+                -16.139760167214177
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-13.B.Cheering",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -12.246051161228278,
+                8.09567670458582,
+                -20.769221983082232
+              ],
+              "max": [
+                -10.627860168727372,
+                10.492906411457254,
+                -19.151030990581326
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-14.C.Calm",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                12.626675698012065,
+                8.09567670458582,
+                -20.765374948232996
+              ],
+              "max": [
+                14.24115015098674,
+                10.222513050098279,
+                -19.15090049525832
+              ]
+            }
+          },
+          {
+            "name": "Audience.extra-15.A.Reaching",
+            "meshSpheresInFrustum": 14,
+            "bounds": {
+              "min": [
+                -16.238785196972476,
+                8.09567670458582,
+                -20.765462368599565
+              ],
+              "max": [
+                -14.624351611379293,
+                10.370601607487862,
+                -19.07063053255708
+              ]
+            }
+          }
+        ]
+      },
+      "materialTreatment": "All source GLBs remain unchanged. Browser-only shared MeshToonMaterial instances use a nearest-filtered three-step ramp; original base-color and emissive channels/strengths are retained separately. PBR roughness/metallic/environment response is not reproduced. Procedural mineral fine noise remains unbaked; source constant base colors and roughness are used.",
+      "baselineMaterials": [
+        {
+          "name": "Gold | illuminated edge",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.949999988079071,
+            0.550000011920929,
+            0.1599999964237213
+          ],
+          "metalness": 0.6800000071525574,
+          "roughness": 0.20000000298023224,
+          "emissive": [
+            0.3499999940395355,
+            0.12600000286102286,
+            0.019249999567866327
+          ],
+          "emissiveIntensity": 1,
+          "role": "Gold | illuminated edge"
+        },
+        {
+          "name": "Gold | brushed warm alloy",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7200000286102295,
+            0.36000001430511475,
+            0.07500000298023224
+          ],
+          "metalness": 0.8199999928474426,
+          "roughness": 0.23000000417232513,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Gold | brushed warm alloy"
+        },
+        {
+          "name": "Crest shield | solid midnight enamel",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.017999999225139618,
+            0.02500000037252903,
+            0.06400000303983688
+          ],
+          "metalness": 0.47999998927116394,
+          "roughness": 0.28999999165534973,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Crest shield | solid midnight enamel"
+        },
+        {
+          "name": "Hit rim | cyan emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.001052631642153472,
+            0.1894736941171156,
+            1
+          ],
+          "emissiveIntensity": 1.2825000065565106,
+          "role": "Hit rim | cyan emission"
+        },
+        {
+          "name": "Hit | cyan pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.0011363636964955178,
+            0.1931818212605705,
+            1
+          ],
+          "emissiveIntensity": 1.0999999940395355,
+          "role": "Hit | cyan pure emitter"
+        },
+        {
+          "name": "Hit rim | magenta emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.0012195122636830277,
+            0.21951220575930613
+          ],
+          "emissiveIntensity": 1.1070000098943709,
+          "role": "Hit rim | magenta emission"
+        },
+        {
+          "name": "Hit | magenta pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.0012195122636830277,
+            0.21951220575930613
+          ],
+          "emissiveIntensity": 1.0249999910593033,
+          "role": "Hit | magenta pure emitter"
+        },
+        {
+          "name": "Hit rim | amber emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.15789474509759632,
+            0.001052631642153472
+          ],
+          "emissiveIntensity": 1.234999939203263,
+          "role": "Hit rim | amber emission"
+        },
+        {
+          "name": "Hit | amber pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            1,
+            0.16842105098048074,
+            0.001052631642153472
+          ],
+          "emissiveIntensity": 1.1400000309944147,
+          "role": "Hit | amber pure emitter"
+        },
+        {
+          "name": "Hit rim | green emission",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.0013000000140629686,
+            0.9360000028610216,
+            0.05199999693036084
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hit rim | green emission"
+        },
+        {
+          "name": "Hit | green pure emitter",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "metalness": 0,
+          "roughness": 1,
+          "emissive": [
+            0.0012000001046806597,
+            0.8640000686645521,
+            0.048000000834464984
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hit | green pure emitter"
+        },
+        {
+          "name": "Panel | sapphire mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.012000000104308128,
+            0.03799999877810478,
+            0.14000000059604645
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | sapphire mineral glass"
+        },
+        {
+          "name": "Hit well | recessed midnight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.00800000037997961,
+            0.012000000104308128,
+            0.02500000037252903
+          ],
+          "metalness": 0.25,
+          "roughness": 0.3799999952316284,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hit well | recessed midnight"
+        },
+        {
+          "name": "Panel | plum mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07500000298023224,
+            0.012000000104308128,
+            0.054999999701976776
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | plum mineral glass"
+        },
+        {
+          "name": "Panel | amber mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.0949999988079071,
+            0.03799999877810478,
+            0.00800000037997961
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | amber mineral glass"
+        },
+        {
+          "name": "Panel | emerald mineral glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.00800000037997961,
+            0.07500000298023224,
+            0.03799999877810478
+          ],
+          "metalness": 0.41999998688697815,
+          "roughness": 0.3100000023841858,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Panel | emerald mineral glass"
+        },
+        {
+          "name": "Inlay | sapphire",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.019999999552965164,
+            0.2199999988079071,
+            0.699999988079071
+          ],
+          "metalness": 0.6499999761581421,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0034999998621642603,
+            0.038499999135732654,
+            0.2449999916553498
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay | sapphire"
+        },
+        {
+          "name": "Inlay facet | cyan highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.36000001430511475,
+            0.949999988079071
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0034999998621642603,
+            0.06300000143051143,
+            0.26249999552965164
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | cyan highlight"
+        },
+        {
+          "name": "Lane edge | cyan",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.23999999463558197,
+            0.7200000286102295
+          ],
+          "metalness": 0.550000011920929,
+          "roughness": 0.2199999988079071,
+          "emissive": [
+            0.006999999724328521,
+            0.11199999558925633,
+            0.699999988079071
+          ],
+          "emissiveIntensity": 1,
+          "role": "Lane edge | cyan"
+        },
+        {
+          "name": "Inlay | magenta",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5699999928474426,
+            0.02500000037252903,
+            0.27000001072883606
+          ],
+          "metalness": 0.6499999761581421,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.15000000596046448,
+            0.0030000000521540615,
+            0.06600000226497649
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay | magenta"
+        },
+        {
+          "name": "Inlay facet | magenta highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7799999713897705,
+            0.05999999865889549,
+            0.36000001430511475
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.16500001013278975,
+            0.0030000000521540615,
+            0.07500000298023224
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | magenta highlight"
+        },
+        {
+          "name": "Lane edge | magenta",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.02500000037252903,
+            0.28999999165534973
+          ],
+          "metalness": 0.5,
+          "roughness": 0.23000000417232513,
+          "emissive": [
+            0.4949999976158139,
+            0.00824999999441206,
+            0.17599999988079063
+          ],
+          "emissiveIntensity": 1,
+          "role": "Lane edge | magenta"
+        },
+        {
+          "name": "Inlay facet | amber highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.9800000190734863,
+            0.5699999928474426,
+            0.17000000178813934
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.19500000059604616,
+            0.06600000226497649,
+            0.009000000156462185
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | amber highlight"
+        },
+        {
+          "name": "Inlay | emerald",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.44999998807907104,
+            0.18000000715255737
+          ],
+          "metalness": 0.6499999761581421,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0030000000521540615,
+            0.09000000715255752,
+            0.024000000417232492
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay | emerald"
+        },
+        {
+          "name": "Inlay facet | green highlight",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.6200000047683716,
+            0.2800000011920929
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.23999999463558197,
+          "emissive": [
+            0.0030000000521540615,
+            0.10500000238418572,
+            0.024000000417232492
+          ],
+          "emissiveIntensity": 1,
+          "role": "Inlay facet | green highlight"
+        },
+        {
+          "name": "Lane edge | green",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.41999998688697815,
+            0.1899999976158142
+          ],
+          "metalness": 0.5,
+          "roughness": 0.23000000417232513,
+          "emissive": [
+            0.005499999996274707,
+            0.44000001609325423,
+            0.12100000196695326
+          ],
+          "emissiveIntensity": 1,
+          "role": "Lane edge | green"
+        },
+        {
+          "name": "Midnight blue | chassis",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.012000000104308128,
+            0.02500000037252903,
+            0.06499999761581421
+          ],
+          "metalness": 0.5799999833106995,
+          "roughness": 0.25999999046325684,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Midnight blue | chassis"
+        },
+        {
+          "name": "Highway lanes | quiet midnight enamel.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.017000000923871994,
+            0.032999999821186066,
+            0.07100000232458115
+          ],
+          "metalness": 0.3799999952316284,
+          "roughness": 0.3400000035762787,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway lanes | quiet midnight enamel.001"
+        },
+        {
+          "name": "Highway panels | broad quiet seam.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.028999999165534973,
+            0.06199999898672104
+          ],
+          "metalness": 0.30000001192092896,
+          "roughness": 0.47999998927116394,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway panels | broad quiet seam.001"
+        },
+        {
+          "name": "Highway inlay | cyan.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.18000000715255737,
+            0.5199999809265137
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.0021999999389052394,
+            0.03960000135898589,
+            0.11439999518394472
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | cyan.001"
+        },
+        {
+          "name": "Highway inlay | magenta.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.47999998927116394,
+            0.017999999225139618,
+            0.1599999964237213
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.10559999706745149,
+            0.003959999808073045,
+            0.03519999902248383
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | magenta.001"
+        },
+        {
+          "name": "Highway inlay | amber.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.2199999988079071,
+            0.02500000037252903
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.12759999563694002,
+            0.04839999947547913,
+            0.005500000052154064
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | amber.001"
+        },
+        {
+          "name": "Highway inlay | green.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.00800000037997961,
+            0.3400000035762787,
+            0.12999999523162842
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.30000001192092896,
+          "emissive": [
+            0.0017600000740587707,
+            0.07480000038146972,
+            0.02859999879598618
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway inlay | green.001"
+        },
+        {
+          "name": "Highway chassis | midnight-blue alloy.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.012000000104308128,
+            0.024000000208616257,
+            0.054999999701976776
+          ],
+          "metalness": 0.5,
+          "roughness": 0.3499999940395355,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway chassis | midnight-blue alloy.001"
+        },
+        {
+          "name": "Highway edging | muted warm titanium.001",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2800000011920929,
+            0.1899999976158142,
+            0.10000000149011612
+          ],
+          "metalness": 0.7200000286102295,
+          "roughness": 0.3700000047683716,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Highway edging | muted warm titanium.001"
+        },
+        {
+          "name": "Endcap body | midnight-blue enamel",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.014999999664723873,
+            0.02800000086426735,
+            0.06499999761581421
+          ],
+          "metalness": 0.44999998807907104,
+          "roughness": 0.3199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Endcap body | midnight-blue enamel"
+        },
+        {
+          "name": "Endcap edging | warm brushed gold",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7200000286102295,
+            0.36000001430511475,
+            0.07500000298023224
+          ],
+          "metalness": 0.8199999928474426,
+          "roughness": 0.25,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Endcap edging | warm brushed gold"
+        },
+        {
+          "name": "Framing | midnight stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.04699999839067459,
+            0.09799999743700027
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | midnight stone"
+        },
+        {
+          "name": "Framing | alternate stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03099999949336052,
+            0.0560000017285347,
+            0.10999999940395355
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | alternate stone"
+        },
+        {
+          "name": "Framing | blue gray capstone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.13500000536441803,
+            0.15000000596046448,
+            0.18000000715255737
+          ],
+          "metalness": 0,
+          "roughness": 0.7200000286102295,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | blue gray capstone"
+        },
+        {
+          "name": "Framing | recessed mortar",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.01600000075995922,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | recessed mortar"
+        },
+        {
+          "name": "Framing | amber lens",
+          "type": "MeshStandardMaterial",
+          "color": [
+            1,
+            0.4399999976158142,
+            0.07000000029802322
+          ],
+          "metalness": 0,
+          "roughness": 0.3199999928474426,
+          "emissive": [
+            1,
+            0.4399999976158142,
+            0.07000000029802322
+          ],
+          "emissiveIntensity": 1.5,
+          "role": "Framing | amber lens"
+        },
+        {
+          "name": "Framing | midnight stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.04699999839067459,
+            0.09799999743700027
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | midnight stone"
+        },
+        {
+          "name": "Framing | alternate stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03099999949336052,
+            0.0560000017285347,
+            0.10999999940395355
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | alternate stone"
+        },
+        {
+          "name": "Framing | blue gray capstone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.13500000536441803,
+            0.15000000596046448,
+            0.18000000715255737
+          ],
+          "metalness": 0,
+          "roughness": 0.7200000286102295,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | blue gray capstone"
+        },
+        {
+          "name": "Framing | recessed mortar",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.009999999776482582,
+            0.01600000075995922,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.800000011920929,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | recessed mortar"
+        },
+        {
+          "name": "Framing | warm metal",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.47999998927116394,
+            0.2549999952316284,
+            0.05999999865889549
+          ],
+          "metalness": 0.7200000286102295,
+          "roughness": 0.3199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Framing | warm metal"
+        },
+        {
+          "name": "Limestone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.41999998688697815,
+            0.3100000023841858,
+            0.20999999344348907
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "body"
+        },
+        {
+          "name": "Cornice",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6200000047683716,
+            0.49000000953674316,
+            0.30000001192092896
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "stone_trim"
+        },
+        {
+          "name": "Recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.10000000149011612,
+            0.08500000089406967,
+            0.11999999731779099
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "recess"
+        },
+        {
+          "name": "Slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03500000014901161,
+            0.08500000089406967,
+            0.14000000059604645
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "roof"
+        },
+        {
+          "name": "Gilt",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6499999761581421,
+            0.3799999952316284,
+            0.10499999672174454
+          ],
+          "metalness": 0.47999998927116394,
+          "roughness": 0.38999998569488525,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "gold"
+        },
+        {
+          "name": "Window",
+          "type": "MeshStandardMaterial",
+          "color": [
+            1,
+            0.4699999988079071,
+            0.11999999731779099
+          ],
+          "metalness": 0,
+          "roughness": 0.6800000071525574,
+          "emissive": [
+            1,
+            0.4699999988079071,
+            0.11999999731779099
+          ],
+          "emissiveIntensity": 1.7999999523162842,
+          "role": "emissive_window"
+        },
+        {
+          "name": "Skin",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5699999928474426,
+            0.3149999976158142,
+            0.18000000715255737
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin"
+        },
+        {
+          "name": "Eye.Dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.013000000268220901,
+            0.00800000037997961,
+            0.009999999776482582
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.Dark"
+        },
+        {
+          "name": "Hair",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.026000000536441803,
+            0.02199999988079071,
+            0.02500000037252903
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair"
+        },
+        {
+          "name": "Skin.Shadow",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.30000001192092896,
+            0.125,
+            0.07500000298023224
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin.Shadow"
+        },
+        {
+          "name": "Eye.White",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.8799999952316284,
+            0.8399999737739563,
+            0.7300000190734863
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.White"
+        },
+        {
+          "name": "Hair.Plane",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.03200000151991844,
+            0.032999999821186066
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair.Plane"
+        },
+        {
+          "name": "Eye.Iris",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2199999988079071,
+            0.09000000357627869,
+            0.035999998450279236
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.Iris"
+        },
+        {
+          "name": "Eye.Light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.9800000190734863,
+            0.9700000286102295,
+            0.9100000262260437
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Eye.Light"
+        },
+        {
+          "name": "Tee",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03500000014901161,
+            0.20499999821186066,
+            0.22499999403953552
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee"
+        },
+        {
+          "name": "Tee.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.027000000700354576,
+            0.1550000011920929,
+            0.17399999499320984
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee.Seam"
+        },
+        {
+          "name": "Sole",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.30000001192092896,
+            0.28999999165534973,
+            0.27000001072883606
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Sole"
+        },
+        {
+          "name": "Shoe",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6499999761581421,
+            0.6200000047683716,
+            0.5400000214576721
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Shoe"
+        },
+        {
+          "name": "Pants",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.08500000089406967,
+            0.0989999994635582,
+            0.125
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants"
+        },
+        {
+          "name": "Pants.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.05999999865889549,
+            0.06800000369548798,
+            0.08500000089406967
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants.Seam"
+        },
+        {
+          "name": "B.Skin",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6700000166893005,
+            0.4000000059604645,
+            0.27000001072883606
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin"
+        },
+        {
+          "name": "B.Hair",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.08500000089406967,
+            0.028999999165534973,
+            0.017999999225139618
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair"
+        },
+        {
+          "name": "B.Skin.Shadow",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3499999940395355,
+            0.1599999964237213,
+            0.10499999672174454
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin.Shadow"
+        },
+        {
+          "name": "B.Hair.Plane",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.14000000059604645,
+            0.052000001072883606,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair.Plane"
+        },
+        {
+          "name": "B.Tee",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4699999988079071,
+            0.11500000208616257,
+            0.0820000022649765
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee"
+        },
+        {
+          "name": "B.Tee.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3199999928474426,
+            0.06599999964237213,
+            0.04399999976158142
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee.Seam"
+        },
+        {
+          "name": "B.Sole",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.33000001311302185,
+            0.28999999165534973,
+            0.23999999463558197
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Sole"
+        },
+        {
+          "name": "B.Shoe",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7300000190734863,
+            0.6899999976158142,
+            0.5899999737739563
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Shoe"
+        },
+        {
+          "name": "B.Pants",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.039000000804662704,
+            0.06300000101327896,
+            0.10499999672174454
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants"
+        },
+        {
+          "name": "B.Pants.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.03799999877810478,
+            0.06199999898672104
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants.Seam"
+        },
+        {
+          "name": "C.Skin",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3199999928474426,
+            0.1550000011920929,
+            0.08500000089406967
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin"
+        },
+        {
+          "name": "C.Hair",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.020999999716877937,
+            0.01600000075995922,
+            0.012000000104308128
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair"
+        },
+        {
+          "name": "C.Tee",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4699999988079071,
+            0.27000001072883606,
+            0.06599999964237213
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee"
+        },
+        {
+          "name": "C.Tee.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.25,
+            0.12300000339746475,
+            0.02800000086426735
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Tee.Seam"
+        },
+        {
+          "name": "C.Skin.Shadow",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.15000000596046448,
+            0.052000001072883606,
+            0.026000000536441803
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Skin.Shadow"
+        },
+        {
+          "name": "C.Hair.Plane",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.04699999839067459,
+            0.029999999329447746,
+            0.017999999225139618
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Hair.Plane"
+        },
+        {
+          "name": "C.Sole",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.38999998569488525,
+            0.3400000035762787,
+            0.25
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Sole"
+        },
+        {
+          "name": "C.Shoe",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.12999999523162842,
+            0.10499999672174454,
+            0.07900000363588333
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Shoe"
+        },
+        {
+          "name": "C.Pants",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11500000208616257,
+            0.13500000536441803,
+            0.08500000089406967
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants"
+        },
+        {
+          "name": "C.Pants.Seam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07000000029802322,
+            0.07800000160932541,
+            0.04500000178813934
+          ],
+          "metalness": 0,
+          "roughness": 0.8199999928474426,
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "emissiveIntensity": 1,
+          "role": "Pants.Seam"
+        }
+      ],
+      "toonMaterials": [
+        {
+          "name": "Gold | illuminated edge | Gold | illuminated edge | review toon",
+          "color": "f9c46f",
+          "emissive": "a06326",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Gold | brushed warm alloy | Gold | brushed warm alloy | review toon",
+          "color": "dda24d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Crest shield | solid midnight enamel | Crest shield | solid midnight enamel | review toon",
+          "color": "242c48",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | cyan emission | Hit rim | cyan emission | review toon",
+          "color": "000000",
+          "emissive": "0378ff",
+          "emissiveIntensity": 1.2825000065565106,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | cyan pure emitter | Hit | cyan pure emitter | review toon",
+          "color": "000000",
+          "emissive": "047aff",
+          "emissiveIntensity": 1.0999999940395355,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | magenta emission | Hit rim | magenta emission | review toon",
+          "color": "000000",
+          "emissive": "ff0481",
+          "emissiveIntensity": 1.1070000098943709,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | magenta pure emitter | Hit | magenta pure emitter | review toon",
+          "color": "000000",
+          "emissive": "ff0481",
+          "emissiveIntensity": 1.0249999910593033,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | amber emission | Hit rim | amber emission | review toon",
+          "color": "000000",
+          "emissive": "ff6f03",
+          "emissiveIntensity": 1.234999939203263,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | amber pure emitter | Hit | amber pure emitter | review toon",
+          "color": "000000",
+          "emissive": "ff7203",
+          "emissiveIntensity": 1.1400000309944147,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit rim | green emission | Hit rim | green emission | review toon",
+          "color": "000000",
+          "emissive": "04f840",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit | green pure emitter | Hit | green pure emitter | review toon",
+          "color": "000000",
+          "emissive": "04ef3e",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | sapphire mineral glass | Panel | sapphire mineral glass | review toon",
+          "color": "1d3769",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hit well | recessed midnight | Hit well | recessed midnight | review toon",
+          "color": "161d2c",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | plum mineral glass | Panel | plum mineral glass | review toon",
+          "color": "4d1d42",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | amber mineral glass | Panel | amber mineral glass | review toon",
+          "color": "573716",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Panel | emerald mineral glass | Panel | emerald mineral glass | review toon",
+          "color": "164d37",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay | sapphire | Inlay | sapphire | review toon",
+          "color": "2781da",
+          "emissive": "0b3788",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | cyan highlight | Inlay facet | cyan highlight | review toon",
+          "color": "38a2f9",
+          "emissive": "0b478c",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Lane edge | cyan | Lane edge | cyan | review toon",
+          "color": "2186dd",
+          "emissive": "145eda",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay | magenta | Inlay | magenta | review toon",
+          "color": "c72c8e",
+          "emissive": "6c0a49",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | magenta highlight | Inlay facet | magenta highlight | review toon",
+          "color": "e545a2",
+          "emissive": "710a4d",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Lane edge | magenta | Lane edge | magenta | review toon",
+          "color": "c82c93",
+          "emissive": "bb1674",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | amber highlight | Inlay facet | amber highlight | review toon",
+          "color": "fdc773",
+          "emissive": "7a4918",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay | emerald | Inlay | emerald | review toon",
+          "color": "21b376",
+          "emissive": "0a552b",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Inlay facet | green highlight | Inlay facet | green highlight | review toon",
+          "color": "38ce90",
+          "emissive": "0a5b2b",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Lane edge | green | Lane edge | green | review toon",
+          "color": "19ad79",
+          "emissive": "11b162",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Midnight blue | chassis | Midnight blue | chassis | review toon",
+          "color": "1d2c48",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway lanes | quiet midnight enamel.001 | Highway lanes | quiet midnight enamel.001 | review toon",
+          "color": "23334b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway panels | broad quiet seam.001 | Highway panels | broad quiet seam.001 | review toon",
+          "color": "213046",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | cyan.001 | Highway inlay | cyan.001 | review toon",
+          "color": "1976bf",
+          "emissive": "07385f",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | magenta.001 | Highway inlay | magenta.001 | review toon",
+          "color": "b8246f",
+          "emissive": "5b0d35",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | amber.001 | Highway inlay | amber.001 | review toon",
+          "color": "c8812c",
+          "emissive": "643e11",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway inlay | green.001 | Highway inlay | green.001 | review toon",
+          "color": "169e65",
+          "emissive": "064d2f",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway chassis | midnight-blue alloy.001 | Highway chassis | midnight-blue alloy.001 | review toon",
+          "color": "1d2b42",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Highway edging | muted warm titanium.001 | Highway edging | muted warm titanium.001 | review toon",
+          "color": "907959",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Endcap body | midnight-blue enamel | Endcap body | midnight-blue enamel | review toon",
+          "color": "212f48",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Endcap edging | warm brushed gold | Endcap edging | warm brushed gold | review toon",
+          "color": "dda24d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | midnight stone | Framing | midnight stone | review toon",
+          "color": "2c3d58",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | alternate stone | Framing | alternate stone | review toon",
+          "color": "31435d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | blue gray capstone | Framing | blue gray capstone | review toon",
+          "color": "676c76",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | recessed mortar | Framing | recessed mortar | review toon",
+          "color": "19222f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | amber lens | Framing | amber lens | review toon",
+          "color": "ffb14b",
+          "emissive": "ffb14b",
+          "emissiveIntensity": 1.5,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Framing | warm metal | Framing | warm metal | review toon",
+          "color": "b88a45",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Limestone | body | review toon",
+          "color": "ad977e",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Cornice | stone_trim | review toon",
+          "color": "ceba95",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Recess | recess | review toon",
+          "color": "595261",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Slate | roof | review toon",
+          "color": "355269",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Gilt | gold | review toon",
+          "color": "d3a65b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Window | emissive_window | review toon",
+          "color": "ffb661",
+          "emissive": "ffb661",
+          "emissiveIntensity": 1.7999999523162842,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Skin | Skin | review toon",
+          "color": "c79876",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.Dark | Eye.Dark | review toon",
+          "color": "1e1619",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hair | Hair | review toon",
+          "color": "2d292c",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Skin.Shadow | Skin.Shadow | review toon",
+          "color": "95634d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.White | Eye.White | review toon",
+          "color": "f1ecde",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Hair.Plane | Hair.Plane | review toon",
+          "color": "383233",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.Iris | Eye.Iris | review toon",
+          "color": "815535",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Eye.Light | Eye.Light | review toon",
+          "color": "fdfcf5",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Tee | Tee | review toon",
+          "color": "357d82",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Tee.Seam | Tee.Seam | review toon",
+          "color": "2e6e74",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Sole | Sole | review toon",
+          "color": "95938e",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Shoe | Shoe | review toon",
+          "color": "d3cec2",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Pants | Pants | review toon",
+          "color": "525963",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "Pants.Seam | Pants.Seam | review toon",
+          "color": "454a52",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Skin | Skin | review toon",
+          "color": "d6aa8e",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Hair | Hair | review toon",
+          "color": "523024",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Skin.Shadow | Skin.Shadow | review toon",
+          "color": "a06f5b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Hair.Plane | Hair.Plane | review toon",
+          "color": "69402f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Tee | Tee | review toon",
+          "color": "b65f51",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Tee.Seam | Tee.Seam | review toon",
+          "color": "99493b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Sole | Sole | review toon",
+          "color": "9b9386",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Shoe | Shoe | review toon",
+          "color": "ded8ca",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Pants | Pants | review toon",
+          "color": "38475b",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "B.Pants.Seam | Pants.Seam | review toon",
+          "color": "2c3746",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Skin | Skin | review toon",
+          "color": "996e52",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Hair | Hair | review toon",
+          "color": "28221d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Tee | Tee | review toon",
+          "color": "b68e49",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Tee.Seam | Tee.Seam | review toon",
+          "color": "89622f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Skin.Shadow | Skin.Shadow | review toon",
+          "color": "6c402d",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Hair.Plane | Hair.Plane | review toon",
+          "color": "3d3024",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Sole | Sole | review toon",
+          "color": "a89e89",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Shoe | Shoe | review toon",
+          "color": "655b4f",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Pants | Pants | review toon",
+          "color": "5f6752",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        },
+        {
+          "name": "C.Pants.Seam | Pants.Seam | review toon",
+          "color": "4b4f3c",
+          "emissive": "000000",
+          "emissiveIntensity": 1,
+          "gradientSteps": 3,
+          "side": 2
+        }
+      ],
+      "geometry": {
+        "loadedMeshObjects": 1304,
+        "decodedGeometryArrayBytes": 5162148,
+        "sceneMeshObjects": 486,
+        "sceneTriangles": 401581
+      },
+      "renderer": {
+        "calls": 485,
+        "triangles": 401177,
+        "points": 0,
+        "lines": 0,
+        "webgl": {
+          "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+          "vendor": "Google Inc. (Google)",
+          "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+        }
+      },
+      "localFetchParseAssemblyAndFirstRenderMs": 80.6,
+      "lighting": {
+        "preset": "twilight",
+        "hemisphere": {
+          "sky": 12034303,
+          "ground": 2168894,
+          "intensity": 1
+        },
+        "point": {
+          "color": 9858559,
+          "intensity": 96,
+          "position": [
+            12,
+            24,
+            -12
+          ]
+        },
+        "toneMapping": "ACESFilmicToneMapping",
+        "outputColorSpace": "SRGBColorSpace",
+        "exposure": 1.05
+      },
+      "camera": {
+        "fov": 39.76070473,
+        "aspect": 1.7777777777777777,
+        "position": [
+          0,
+          13.8999996185,
+          15
+        ],
+        "rotation": [
+          -0.1148765842,
+          0,
+          0,
+          "XYZ"
+        ],
+        "matrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0.9934089383030991,
+          -0.11462408690807331,
+          0,
+          0,
+          0.11462408690807331,
+          0.9934089383030991,
+          0,
+          0,
+          13.8999996185,
+          15,
+          1
+        ],
+        "projection": [
+          1.555555555525217,
+          0,
+          0,
+          0,
+          0,
+          2.765432098711497,
+          0,
+          0,
+          0,
+          0,
+          -1.000040000800016,
+          -1,
+          0,
+          0,
+          -0.2000040000800016,
+          0
+        ]
+      },
+      "loaderWarnings": [],
+      "limitations": [
+        "Static crowd poses only; no animation. Audience count/layout beyond the ten original study samples is a review visualization choice, not an approved population target.",
+        "Background is fixed; verify mode difference on scene surfaces.",
+        "Software renderer metrics are local structural evidence only, not mobile/device budgets.",
+        "No mineral noise bake, texture synthesis, game integration, collision/support claims, or changes to source geometry/assets.",
+        "Study composition intentionally retains inherited skyline crop and exact camera framing."
+      ]
+    }
+  }
+}

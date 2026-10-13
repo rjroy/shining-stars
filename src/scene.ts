@@ -1,20 +1,41 @@
 import * as THREE from 'three';
-import { getDifficultyProfile } from './game-balance';
+import type { GameplayFrame } from './gameplay-frame';
+import type { BrightvaleAssets } from './brightvale/assets';
+import { loadBrightvaleRuntimeAssets } from './brightvale/assets-runtime';
 import {
-  isFeedbackWithinVisibleAge,
-  LOGICAL_PLAYFIELD_HEIGHT,
-  VISIBLE_NOTE_SECONDS,
-  type GameplayFrame,
-} from './gameplay-frame';
-import { RUNWAY_HIT_LINE_TOP_FRACTION } from './note-projection';
+  createBrightvaleComposition,
+  type BrightvaleComposition,
+} from './brightvale/composition';
+import { BRIGHTVALE_RUNTIME_LAYOUT } from './brightvale/layout';
+import {
+  createBrightvaleCameraProjection,
+  createBrightvaleSurfaceProfile,
+  type BrightvaleCameraProjection,
+  type BrightvaleMeasuredSurfaceProfile,
+  type BrightvaleProgressRange,
+} from './brightvale/projection';
+import {
+  createBrightvalePlayfieldContract,
+  type BrightvalePlayfieldContract,
+} from './brightvale/playfield';
+import {
+  createBrightvaleSceneShell,
+  type BrightvaleFrameStatus,
+  type BrightvaleShellComposition,
+} from './brightvale/scene-shell';
 import type { SceneStateProjection } from './scene-state';
+import type {
+  BrightvaleRendererStatus,
+  BrightvaleViewportLayout,
+  BrightvaleViewportRect,
+} from './brightvale/viewport';
 
 export interface BrightvaleScene {
-  /** Render city and the complete gameplay surface in the shared context. */
+  /** Render the latest app-owned state and report whether the viewport is ready. */
   updateFrame(frame: {
     readonly city: SceneStateProjection;
     readonly gameplay: GameplayFrame;
-  }): void;
+  }): BrightvaleRendererStatus;
   destroy(): void;
 }
 
@@ -41,212 +62,723 @@ export type SceneRendererFactory = (
   parameters: THREE.WebGLRendererParameters,
 ) => SceneRenderer;
 
-function createPlane(
-  parent: THREE.Group,
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  role: string,
-): THREE.Mesh {
-  material.depthTest = false;
-  if (material instanceof THREE.MeshBasicMaterial) material.fog = false;
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.layers.mask = parent.layers.mask;
-  mesh.userData.gameplayRole = role;
-  mesh.userData.pooled = true;
-  mesh.visible = false;
-  parent.add(mesh);
-  return mesh;
+/** Narrow seam for deterministic facade lifecycle tests. */
+export interface BrightvaleSceneDependencies {
+  readonly loadAssets: (signal: AbortSignal) => Promise<BrightvaleAssets>;
+  readonly createComposition: (
+    assets: BrightvaleAssets,
+    world: THREE.Scene,
+  ) => BrightvaleShellComposition;
 }
 
-function placePlane(
-  mesh: THREE.Mesh,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  z: number,
-  screenHeight: number,
-): void {
-  mesh.position.set(x + width / 2, screenHeight - y - height / 2, z);
-  mesh.scale.set(width, height, 1);
-  mesh.renderOrder = z;
-  mesh.visible = width > 0 && height > 0;
+interface FrameState {
+  readonly city: SceneStateProjection;
+  readonly gameplay: GameplayFrame;
 }
 
-function paintText(
-  layer: CanvasTextLayer,
-  value: string,
-  availableWidth: number,
-  displayedHeight: number,
-  resizeCanvas: (layer: CanvasTextLayer, width: number, height: number) => void,
-): number {
-  if (
-    layer.value === value &&
-    layer.renderedHeight === displayedHeight &&
-    layer.renderedWidth === availableWidth
-  )
-    return layer.renderedAspect;
-  const context = layer.context;
-  if (context === null) return layer.canvas.width / layer.canvas.height;
-  const height = layer.canvas.height;
-  let textureFontSize =
-    (layer.fontSize * height) / Math.max(1, displayedHeight);
-  context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
-  const sourceWidthLimit = Math.max(
-    1,
-    (availableWidth * height) / Math.max(1, displayedHeight) - 16,
-  );
-  let measuredWidth = context.measureText(value).width;
-  if (measuredWidth > sourceWidthLimit) {
-    textureFontSize *= sourceWidthLimit / measuredWidth;
-    context.font = `500 ${textureFontSize}px Manrope, sans-serif`;
-    measuredWidth = context.measureText(value).width;
-  }
-  const width = Math.max(24, Math.ceil(measuredWidth + 16));
-  if (layer.canvas.width !== width || layer.canvas.height !== height) {
-    resizeCanvas(layer, width, height);
-  } else {
-    context.clearRect(0, 0, width, height);
-  }
-  const paintContext = layer.context;
-  if (paintContext === null) return layer.renderedAspect;
-  paintContext.font = `500 ${textureFontSize}px Manrope, sans-serif`;
-  paintContext.fillStyle = layer.color;
-  paintContext.textAlign = layer.alignment;
-  paintContext.textBaseline = 'middle';
-  paintContext.fillText(
-    value,
-    layer.alignment === 'right'
-      ? layer.canvas.width - 8
-      : layer.alignment === 'center'
-        ? layer.canvas.width / 2
-        : 8,
-    height / 2,
-    width - 16,
-  );
-  if (layer.texture !== null) layer.texture.needsUpdate = true;
-  layer.value = value;
-  layer.renderedHeight = displayedHeight;
-  layer.renderedWidth = availableWidth;
-  layer.renderedAspect = width / height;
-  return layer.renderedAspect;
-}
-
-function createTextTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  return texture;
-}
-
-interface BuildingInstance {
-  readonly x: number;
-  readonly z: number;
-  readonly width: number;
-  readonly height: number;
-  readonly depth: number;
-  readonly phase: number;
-}
-
-interface CanvasTextLayer {
-  canvas: HTMLCanvasElement;
-  context: CanvasRenderingContext2D | null;
+interface OverlayLabel {
+  readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  readonly canvas: HTMLCanvasElement | null;
+  readonly context: CanvasRenderingContext2D | null;
   texture: THREE.CanvasTexture | null;
-  readonly material: THREE.MeshBasicMaterial;
-  readonly mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
-  readonly fontSize: number;
-  readonly color: string;
-  readonly alignment: 'left' | 'center' | 'right';
   value: string;
-  renderedHeight: number;
-  renderedWidth: number;
-  renderedAspect: number;
+  width: number;
+  height: number;
 }
 
-const BUILDINGS: readonly BuildingInstance[] = [
-  { x: -7.2, z: -1.5, width: 1.15, height: 3.1, depth: 1.2, phase: 0.3 },
-  { x: -5.7, z: -2.0, width: 1.05, height: 4.4, depth: 1.1, phase: 1.1 },
-  { x: -4.2, z: -1.3, width: 1.2, height: 2.7, depth: 1.3, phase: 2.2 },
-  { x: -2.7, z: -2.2, width: 1.2, height: 3.8, depth: 1.25, phase: 0.8 },
-  { x: 2.7, z: -2.0, width: 1.1, height: 3.3, depth: 1.2, phase: 1.9 },
-  { x: 4.2, z: -1.5, width: 1.25, height: 4.2, depth: 1.3, phase: 0.1 },
-  { x: 5.8, z: -2.1, width: 1.1, height: 2.8, depth: 1.1, phase: 2.7 },
-  { x: 7.2, z: -1.4, width: 1.15, height: 3.6, depth: 1.3, phase: 1.4 },
-];
+interface NoteVisual {
+  readonly good: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  readonly perfect: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  readonly bar: THREE.Mesh<THREE.BoxGeometry, THREE.Material>;
+}
 
-const WIND_BEAD_COUNT = 4;
+const LANE_COLORS = [0x65d8ff, 0xe98bc8, 0xffd475, 0x91e6b0] as const;
+const LANE_WIDTH = 2.35;
+const NOTE_THICKNESS = 0.08;
+const NOTE_LENGTH = 0.3;
+const WINDOW_WIDTH = 2.55;
+const WINDOW_SEGMENTS = 12;
+const DEVICE_PIXEL_RATIO_CAP = 1.5;
 
-/** Create one low-cost twilight city illustration behind the rhythm interface. */
+function timingProgress(frame: GameplayFrame): BrightvaleProgressRange {
+  const half = frame.timingWindows.goodHalfProgress;
+  return {
+    minimum: -half,
+    maximum: 1 + half,
+  };
+}
+
+function viewportUsable(layout: BrightvaleViewportLayout): boolean {
+  return layout.width > 0 && layout.height > 0;
+}
+
+function makeEnvelopeGeometry(): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  const vertices = new Float32Array((WINDOW_SEGMENTS + 1) * 2 * 3);
+  const indices: number[] = [];
+  for (let index = 0; index < WINDOW_SEGMENTS; index += 1) {
+    const a = index * 2;
+    const b = a + 1;
+    const c = a + 2;
+    const d = a + 3;
+    indices.push(a, c, b, b, c, d);
+  }
+  geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  return geometry;
+}
+
+function setRectLabel(
+  label: OverlayLabel,
+  text: string,
+  rect: BrightvaleViewportRect,
+  options: {
+    readonly color: string;
+    readonly align: CanvasTextAlign;
+    readonly fontScale?: number;
+    readonly fontWeight?: number;
+    readonly outlineColor?: string;
+    readonly outlineWidth?: number;
+    readonly backgroundColor?: string;
+  },
+  pixelRatio: number,
+  ownedTextures: Set<THREE.Texture>,
+): void {
+  const { mesh, canvas, context } = label;
+  const width = Math.max(0, rect.width);
+  const height = Math.max(0, rect.height);
+  mesh.position.set(rect.x + width / 2, rect.y + height / 2, 1);
+  mesh.scale.set(width, height, 1);
+  mesh.visible = text.length > 0 && width > 0 && height > 0 && context !== null;
+  if (context === null || canvas === null || !mesh.visible)
+    return;
+  if (label.value === text && label.width === width && label.height === height)
+    return;
+
+  const ratio = Math.max(1, pixelRatio);
+  const canvasWidth = Math.max(1, Math.ceil(width * ratio));
+  const canvasHeight = Math.max(1, Math.ceil(height * ratio));
+  const canvasResized =
+    canvas.width !== canvasWidth || canvas.height !== canvasHeight;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  if (options.backgroundColor !== undefined) {
+    context.fillStyle = options.backgroundColor;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  context.fillStyle = options.color;
+  if (options.outlineColor !== undefined && (options.outlineWidth ?? 0) > 0) {
+    context.strokeStyle = options.outlineColor;
+    context.lineWidth = options.outlineWidth ?? 0;
+    context.lineJoin = 'round';
+  }
+  context.textAlign = options.align;
+  context.textBaseline = 'middle';
+  context.font = `${options.fontWeight ?? 400} ${Math.max(10, Math.round(height * (options.fontScale ?? 0.58) * ratio))}px Manrope, sans-serif`;
+  const x =
+    options.align === 'left'
+      ? 0
+      : options.align === 'right'
+        ? canvas.width
+        : canvas.width / 2;
+  if (options.outlineColor !== undefined && (options.outlineWidth ?? 0) > 0)
+    context.strokeText(text, x, canvas.height / 2, canvas.width);
+  context.fillText(text, x, canvas.height / 2, canvas.width);
+  const texture = label.texture;
+  if (texture === null) {
+    const initialTexture = new THREE.CanvasTexture(canvas);
+    initialTexture.colorSpace = THREE.SRGBColorSpace;
+    label.mesh.material.map = initialTexture;
+    label.texture = initialTexture;
+    ownedTextures.add(initialTexture);
+  } else if (canvasResized) {
+    const resizedTexture = new THREE.CanvasTexture(canvas);
+    try {
+      resizedTexture.copy(texture);
+      label.mesh.material.map = resizedTexture;
+      label.texture = resizedTexture;
+      ownedTextures.add(resizedTexture);
+      ownedTextures.delete(texture);
+      texture.dispose();
+    } catch (error) {
+      resizedTexture.dispose();
+      throw error;
+    }
+  } else {
+    texture.needsUpdate = true;
+  }
+  label.value = text;
+  label.width = width;
+  label.height = height;
+}
+
+function normalizedLayoutKey(
+  layout: BrightvaleViewportLayout,
+  range: BrightvaleProgressRange,
+): string {
+  return JSON.stringify([
+    layout.width,
+    layout.height,
+    layout.persistentHudExclusions,
+    layout.labels.time,
+    layout.labels.countdown,
+    layout.labels.legend,
+    layout.labels.feedback,
+    range.minimum,
+    range.maximum,
+  ]);
+}
+
+/** Create the scene facade around one renderer and one asynchronous asset shell. */
 export function createBrightvaleScene(
   host: HTMLElement,
   onUnavailable: () => void,
   rendererFactory: SceneRendererFactory = (parameters) =>
     new THREE.WebGLRenderer(parameters),
+  dependencies?: BrightvaleSceneDependencies,
 ): BrightvaleScene | null {
-  const geometries = new Set<THREE.BufferGeometry>();
-  const materials = new Set<THREE.Material>();
-  const textures = new Set<THREE.Texture>();
-  const instancedMeshes = new Set<THREE.InstancedMesh>();
   let renderer: SceneRenderer;
-  let canvas: HTMLCanvasElement;
-
   try {
     renderer = rendererFactory({
       alpha: true,
       antialias: true,
       powerPreference: 'low-power',
     });
-    canvas = renderer.domElement;
-  } catch {
+  } catch (error) {
+    console.error('[Brightvale] renderer initialization failed', { error });
     onUnavailable();
     return null;
   }
 
-  const scene = new THREE.Scene();
-  let observer: ResizeObserver | null = null;
-  let cleaned = false;
-  let fallbackShown = false;
-  let onContextLost: ((event: Event) => void) | null = null;
-  let resizeListener: (() => void) | null = null;
-  let lastFrame: {
-    readonly city: SceneStateProjection;
-    readonly gameplay: GameplayFrame;
-  } | null = null;
+  const canvas = renderer.domElement;
+  const worldScene = new THREE.Scene();
+  const overlayScene = new THREE.Scene();
+  const overlayCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 10);
+  overlayCamera.position.set(0, 0, 5);
+  overlayCamera.lookAt(0, 0, 0);
+  const ownedGeometries = new Set<THREE.BufferGeometry>();
+  const ownedMaterials = new Set<THREE.Material>();
+  const ownedTextures = new Set<THREE.Texture>();
+  const overlayLabels = new Map<string, OverlayLabel>();
+  const noteVisuals: NoteVisual[] = [];
+  const barGeometry = new THREE.BoxGeometry(
+    LANE_WIDTH,
+    NOTE_THICKNESS,
+    NOTE_LENGTH,
+  );
+  const goodMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffd475,
+    transparent: true,
+    opacity: 0.16,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const perfectMaterial = new THREE.MeshBasicMaterial({
+    color: 0x9de7d0,
+    transparent: true,
+    opacity: 0.28,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const barMaterials = LANE_COLORS.map(
+    (color) =>
+      new THREE.MeshToonMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.12,
+        transparent: true,
+        opacity: 0.96,
+        side: THREE.DoubleSide,
+      }),
+  );
+  ownedGeometries.add(barGeometry);
+  ownedMaterials.add(goodMaterial);
+  ownedMaterials.add(perfectMaterial);
+  barMaterials.forEach((material) => ownedMaterials.add(material));
 
-  function cleanup(): void {
-    if (cleaned) return;
-    cleaned = true;
+  const createLabel = (name: string): OverlayLabel => {
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    });
+    ownedGeometries.add(geometry);
+    ownedMaterials.add(material);
+    let canvasElement: HTMLCanvasElement | null = null;
+    let context: CanvasRenderingContext2D | null = null;
+    let texture: THREE.CanvasTexture | null = null;
+    try {
+      if (typeof document !== 'undefined') {
+        canvasElement = document.createElement('canvas');
+        canvasElement.width = 1;
+        canvasElement.height = 1;
+        context = canvasElement.getContext('2d');
+      }
+    } catch {
+      context = null;
+      texture = null;
+    }
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = `Brightvale.Label.${name}`;
+    mesh.userData.gameplayRole = 'screen-label';
+    mesh.rotation.x = Math.PI;
+    mesh.visible = false;
+    overlayScene.add(mesh);
+    const result: OverlayLabel = {
+      mesh,
+      canvas: canvasElement,
+      context,
+      texture,
+      value: '',
+      width: 0,
+      height: 0,
+    };
+    overlayLabels.set(name, result);
+    return result;
+  };
+
+  for (const name of [
+    'time',
+    'countdown',
+    'legend',
+    'feedback',
+    'lane-0',
+    'lane-1',
+    'lane-2',
+    'lane-3',
+  ])
+    createLabel(name);
+
+  const playfieldMatrix = new THREE.Matrix4().fromArray([
+    ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
+  ]);
+  const playfieldRotation = new THREE.Quaternion().setFromRotationMatrix(
+    playfieldMatrix,
+  );
+  const composition = {
+    current: null as BrightvaleComposition | null,
+    profile: null as BrightvaleMeasuredSurfaceProfile | null,
+    playfield: createBrightvalePlayfieldContract(),
+    projection: null as BrightvaleCameraProjection | null,
+  };
+
+  let lastFrame: FrameState | null = null;
+  let lastProjectionKey = '';
+  let disposed = false;
+  let failureNotified = false;
+  let observer: ResizeObserver | null = null;
+  let resizeListener: (() => void) | null = null;
+  let shell: ReturnType<typeof createBrightvaleSceneShell> | null = null;
+  let rendererWidth = -1;
+  let rendererHeight = -1;
+  let rendererPixelRatio = -1;
+
+  const setRendererPixelRatio = (): void => {
+    const pixelRatio = Math.min(
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
+      DEVICE_PIXEL_RATIO_CAP,
+    );
+    if (rendererPixelRatio === pixelRatio) return;
+    renderer.setPixelRatio(pixelRatio);
+    rendererPixelRatio = pixelRatio;
+  };
+
+  const notifyUnavailable = (): void => {
+    if (failureNotified) return;
+    failureNotified = true;
+    try {
+      onUnavailable();
+    } catch (error) {
+      console.error('[Brightvale] unavailable callback failed', { error });
+    }
+  };
+
+  const alignCanvasToContentBox = (width: number, height: number): void => {
+    if (!('style' in canvas) || typeof getComputedStyle !== 'function') return;
+    const style = getComputedStyle(host);
+    const pixels = (value: string): number => Number.parseFloat(value) || 0;
+    const css = {
+      left: `${pixels(style.paddingLeft)}px`,
+      top: `${pixels(style.paddingTop)}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+    };
+    if (canvas.style.left !== css.left) canvas.style.left = css.left;
+    if (canvas.style.top !== css.top) canvas.style.top = css.top;
+    if (canvas.style.right !== 'auto') canvas.style.right = 'auto';
+    if (canvas.style.bottom !== 'auto') canvas.style.bottom = 'auto';
+    if (canvas.style.width !== css.width) canvas.style.width = css.width;
+    if (canvas.style.height !== css.height) canvas.style.height = css.height;
+  };
+
+  const setRendererSize = (width: number, height: number): void => {
+    // Three.js sizes the drawing buffer in DPR-scaled pixels. Keep the CSS box
+    // in measured host-content CSS pixels, even when those logical dimensions
+    // have not changed since a DPR-only resize.
+    alignCanvasToContentBox(width, height);
+    if (rendererWidth === width && rendererHeight === height) return;
+    renderer.setSize(width, height, false);
+    rendererWidth = width;
+    rendererHeight = height;
+  };
+
+  const readHostContentSize = (): { width: number; height: number } => {
+    if (typeof getComputedStyle !== 'function')
+      return { width: host.clientWidth, height: host.clientHeight };
+    const style = getComputedStyle(host);
+    const pixels = (value: string): number => Number.parseFloat(value) || 0;
+    const rect = host.getBoundingClientRect();
+    return {
+      width: Math.max(
+        0,
+        rect.width -
+          pixels(style.borderLeftWidth) -
+          pixels(style.borderRightWidth) -
+          pixels(style.paddingLeft) -
+          pixels(style.paddingRight),
+      ),
+      height: Math.max(
+        0,
+        rect.height -
+          pixels(style.borderTopWidth) -
+          pixels(style.borderBottomWidth) -
+          pixels(style.paddingTop) -
+          pixels(style.paddingBottom),
+      ),
+    };
+  };
+
+  const onLayoutMeasured = (event: Event): void => {
+    if (disposed || lastFrame === null) return;
+    const layout = (event as CustomEvent<BrightvaleViewportLayout>).detail;
+    if (layout === undefined) return;
+    lastFrame = {
+      city: lastFrame.city,
+      gameplay: { ...lastFrame.gameplay, layout },
+    };
+    try {
+      setRendererPixelRatio();
+      setRendererSize(layout.width, layout.height);
+      shell?.updateFrame({ viewportUsable: viewportUsable(layout) });
+    } catch (error) {
+      console.error('[Brightvale] measured viewport update failed', {
+        width: layout.width,
+        height: layout.height,
+        error,
+      });
+      shell?.destroy();
+      releaseRenderer();
+      notifyUnavailable();
+    }
+  };
+
+  const releaseRenderer = (): void => {
+    if (disposed) return;
+    disposed = true;
     observer?.disconnect();
     observer = null;
-    if (resizeListener !== null) {
+    if (resizeListener !== null && typeof window !== 'undefined')
       window.removeEventListener('resize', resizeListener);
-    }
-    if (onContextLost !== null) {
-      canvas.removeEventListener('webglcontextlost', onContextLost);
-    }
+    host.removeEventListener?.('brightvale-layout-measured', onLayoutMeasured);
+    canvas.removeEventListener('webglcontextlost', onContextLost);
     canvas.remove();
-    for (const mesh of instancedMeshes) mesh.dispose();
-    instancedMeshes.clear();
-    for (const geometry of geometries) geometry.dispose();
-    geometries.clear();
-    for (const material of materials) material.dispose();
-    materials.clear();
-    for (const texture of textures) texture.dispose();
-    textures.clear();
-    scene.clear();
+    overlayScene.clear();
+    worldScene.clear();
+    for (const texture of ownedTextures) texture.dispose();
+    ownedTextures.clear();
+    for (const geometry of ownedGeometries) geometry.dispose();
+    ownedGeometries.clear();
+    for (const material of ownedMaterials) material.dispose();
+    ownedMaterials.clear();
     renderer.dispose();
-  }
+    console.info('[Brightvale] scene renderer disposed');
+  };
 
-  function showFallback(): void {
-    if (fallbackShown) return;
-    fallbackShown = true;
-    onUnavailable();
-  }
+  const resizeOverlay = (layout: BrightvaleViewportLayout): void => {
+    overlayCamera.left = 0;
+    overlayCamera.right = layout.width;
+    overlayCamera.top = 0;
+    overlayCamera.bottom = layout.height;
+    overlayCamera.updateProjectionMatrix();
+    overlayCamera.updateMatrixWorld(true);
+  };
 
-  function failScene(): void {
-    cleanup();
-    showFallback();
+  const updateEnvelope = (
+    mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>,
+    lane: number,
+    start: number,
+    end: number,
+    playfield: BrightvalePlayfieldContract,
+  ): void => {
+    const positions = mesh.geometry.getAttribute(
+      'position',
+    ) as THREE.BufferAttribute;
+    const width = WINDOW_WIDTH / 2;
+    const inversePlayfield = playfieldMatrix.clone().invert();
+    const measuredSurface = composition.profile?.surfaceHeightAt;
+    const clearanceHeight = (
+      sampleLane: number,
+      x: number,
+      z: number,
+      fallback: number,
+    ): number => {
+      let height = measuredSurface?.(sampleLane, z, x) ?? null;
+      if (height === null && measuredSurface !== undefined) {
+        const direction = z < -1.45 ? 1 : -1;
+        const nearZ = z + direction * 0.025;
+        const farZ = z + direction * 0.075;
+        const near = measuredSurface(sampleLane, nearZ, x);
+        const far = measuredSurface(sampleLane, farZ, x);
+        if (near !== null && far !== null)
+          height = near + ((near - far) / (nearZ - farZ)) * (z - nearZ);
+        else if (near !== null) height = near;
+      }
+      return height === null ? fallback + 0.025 : height + 0.03;
+    };
+    for (let index = 0; index <= WINDOW_SEGMENTS; index += 1) {
+      const amount = index / WINDOW_SEGMENTS;
+      const progress = THREE.MathUtils.lerp(start, end, amount);
+      const center = playfield
+        .point(lane, progress)
+        .applyMatrix4(inversePlayfield);
+      const edge = (x: number): THREE.Vector3 => {
+        const local = center.clone();
+        local.x = x;
+        local.y = clearanceHeight(lane, x, local.z, local.y);
+        return local.applyMatrix4(playfieldMatrix);
+      };
+      const left = edge(center.x - width);
+      const right = edge(center.x + width);
+      positions.setXYZ(index * 2, left.x, left.y, left.z);
+      positions.setXYZ(index * 2 + 1, right.x, right.y, right.z);
+    }
+    positions.needsUpdate = true;
+    mesh.geometry.computeVertexNormals();
+    mesh.geometry.computeBoundingSphere();
+  };
+
+  const ensureNoteVisuals = (count: number): void => {
+    while (noteVisuals.length < count) {
+      const goodGeometry = makeEnvelopeGeometry();
+      const perfectGeometry = makeEnvelopeGeometry();
+      ownedGeometries.add(goodGeometry);
+      ownedGeometries.add(perfectGeometry);
+      const good = new THREE.Mesh(goodGeometry, goodMaterial);
+      const perfect = new THREE.Mesh(perfectGeometry, perfectMaterial);
+      good.userData.gameplayRole = 'note-good-envelope';
+      perfect.userData.gameplayRole = 'note-perfect-envelope';
+      good.frustumCulled = false;
+      perfect.frustumCulled = false;
+      const bar = new THREE.Mesh(barGeometry, barMaterials[0]!);
+      bar.userData.gameplayRole = 'note-bar';
+      worldScene.add(good, perfect, bar);
+      noteVisuals.push({ good, perfect, bar });
+    }
+  };
+
+  const renderFrame = (): void => {
+    if (lastFrame === null) throw new Error('Brightvale has no gameplay frame');
+    const frame = lastFrame;
+    const layout = frame.gameplay.layout;
+    const range = timingProgress(frame.gameplay);
+    if (composition.current === null || composition.projection === null)
+      throw new Error('Brightvale composition is not ready');
+
+    const key = normalizedLayoutKey(layout, range);
+    if (key !== lastProjectionKey) {
+      const usable = composition.projection.resize(layout, range);
+      lastProjectionKey = key;
+      if (!usable) return;
+      resizeOverlay(layout);
+    }
+    if (!composition.projection.usable) return;
+    composition.current.updateAppearance?.(frame.city);
+
+    const playfield = composition.playfield;
+    ensureNoteVisuals(frame.gameplay.notes.length);
+    for (let index = 0; index < noteVisuals.length; index += 1) {
+      const visual = noteVisuals[index];
+      const note = frame.gameplay.notes[index];
+      if (visual === undefined) continue;
+      if (note === undefined || !frame.gameplay.playing) {
+        visual.good.visible = false;
+        visual.perfect.visible = false;
+        visual.bar.visible = false;
+        continue;
+      }
+      const goodHalf = frame.gameplay.timingWindows.goodHalfProgress;
+      const perfectHalf = frame.gameplay.timingWindows.perfectHalfProgress;
+      updateEnvelope(
+        visual.good,
+        note.lane,
+        note.progress - goodHalf,
+        note.progress + goodHalf,
+        playfield,
+      );
+      updateEnvelope(
+        visual.perfect,
+        note.lane,
+        note.progress - perfectHalf,
+        note.progress + perfectHalf,
+        playfield,
+      );
+      const noteCenter = playfield.visualPoint(note.lane, note.progress);
+      visual.bar.position.copy(noteCenter);
+      visual.bar.quaternion.copy(playfieldRotation);
+      visual.bar.material = barMaterials[note.lane] ?? barMaterials[0]!;
+      visual.bar.visible = true;
+      visual.good.visible = true;
+      visual.perfect.visible = true;
+    }
+
+    const pixelRatio = Math.min(
+      typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
+      DEVICE_PIXEL_RATIO_CAP,
+    );
+    const label = (name: string) => overlayLabels.get(name)!;
+    setRectLabel(
+      label('time'),
+      frame.gameplay.timeLabel,
+      layout.labels.time,
+      {
+        color: '#f4f0df',
+        align: 'right',
+      },
+      pixelRatio,
+      ownedTextures,
+    );
+    setRectLabel(
+      label('countdown'),
+      frame.gameplay.countdownLabel,
+      layout.labels.countdown,
+      { color: '#f4f0df', align: 'center' },
+      pixelRatio,
+      ownedTextures,
+    );
+    setRectLabel(
+      label('legend'),
+      frame.gameplay.legendLabel,
+      layout.labels.legend,
+      { color: '#d7e7df', align: 'center' },
+      pixelRatio,
+      ownedTextures,
+    );
+    setRectLabel(
+      label('feedback'),
+      frame.gameplay.feedbackLabel,
+      layout.labels.feedback,
+      {
+        color:
+          frame.gameplay.feedback?.quality === 'perfect'
+            ? '#ffd475'
+            : frame.gameplay.feedback?.quality === 'good'
+              ? '#9de7d0'
+              : '#bbc6d3',
+        align: 'center',
+      },
+      pixelRatio,
+      ownedTextures,
+    );
+
+    const anchors = [0, 1, 2, 3].map((lane) =>
+      composition.projection!.project(playfield.hitAnchor(lane)),
+    );
+    anchors.forEach((anchor, lane) => {
+      const slot = {
+        x: anchor.x - 18,
+        y: anchor.y + 4,
+        width: 36,
+        height: 24,
+      };
+      setRectLabel(
+        label(`lane-${lane}`),
+        ['D', 'F', 'J', 'K'][lane] ?? '',
+        slot,
+        { color: '#f4f0df', align: 'center' },
+        pixelRatio,
+        ownedTextures,
+      );
+    });
+    const width = layout.width;
+    const height = layout.height;
+    const previousAutoClear = renderer.autoClear;
+    try {
+      renderer.autoClear = false;
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissorTest(false);
+      renderer.clear(true, true, true);
+      renderer.render(worldScene, composition.projection.camera);
+      renderer.clearDepth();
+      renderer.render(overlayScene, overlayCamera);
+    } finally {
+      renderer.autoClear = previousAutoClear;
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissor(0, 0, width, height);
+    }
+  };
+
+  const createShellComposition = (
+    assets: BrightvaleAssets,
+  ): BrightvaleShellComposition => {
+    const frame = lastFrame;
+    if (frame === null)
+      throw new Error('cannot compose without a viewport frame');
+    if (dependencies === undefined) {
+      composition.profile = createBrightvaleSurfaceProfile(assets.roots);
+      composition.playfield = createBrightvalePlayfieldContract(
+        composition.profile,
+      );
+      composition.projection = createBrightvaleCameraProjection(
+        composition.playfield,
+        frame.gameplay.layout,
+        timingProgress(frame.gameplay),
+        composition.profile,
+      );
+      composition.current = createBrightvaleComposition(
+        assets,
+        BRIGHTVALE_RUNTIME_LAYOUT,
+        worldScene,
+      );
+    } else {
+      composition.playfield = createBrightvalePlayfieldContract();
+      composition.projection = createBrightvaleCameraProjection(
+        composition.playfield,
+        frame.gameplay.layout,
+        timingProgress(frame.gameplay),
+      );
+      composition.current = dependencies.createComposition(
+        assets,
+        worldScene,
+      ) as BrightvaleComposition;
+    }
+    resizeOverlay(frame.gameplay.layout);
+    lastProjectionKey = normalizedLayoutKey(
+      frame.gameplay.layout,
+      timingProgress(frame.gameplay),
+    );
+    return composition.current;
+  };
+
+  const cleanup = (): void => {
+    if (disposed) return;
+    shell?.destroy();
+    releaseRenderer();
+  };
+
+  function onContextLost(event: Event): void {
+    event.preventDefault();
+    if (disposed) return;
+    console.error('[Brightvale] WebGL context lost');
+    shell?.destroy();
+    releaseRenderer();
+    notifyUnavailable();
   }
 
   try {
@@ -254,1269 +786,101 @@ export function createBrightvaleScene(
     canvas.setAttribute('aria-hidden', 'true');
     host.insertBefore(canvas, host.firstChild);
     renderer.setClearColor(0x000000, 0);
-    renderer.autoClear = false;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
-
-    scene.fog = new THREE.Fog(0x111a2b, 18, 42);
-    const cityscape = new THREE.Group();
-    scene.add(cityscape);
-    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 80);
-    camera.layers.set(0);
-    const baseCameraPosition = new THREE.Vector3(0, 6.7, 19);
-    const cameraLookAt = new THREE.Vector3(0, 1.5, 0);
-    camera.position.copy(baseCameraPosition);
-    camera.lookAt(cameraLookAt);
-
-    const ambient = new THREE.HemisphereLight(0xc5e0e1, 0x101626, 1.15);
-    scene.add(ambient);
-    const cityLight = new THREE.PointLight(0x6bd9c0, 22, 23, 2);
-    cityLight.position.set(-1, 4.4, -2.4);
-    scene.add(cityLight);
-
-    function ownGeometry<T extends THREE.BufferGeometry>(geometry: T): T {
-      geometries.add(geometry);
-      return geometry;
-    }
-    function ownMaterial<T extends THREE.Material>(material: T): T {
-      materials.add(material);
-      return material;
-    }
-
-    const groundMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0x101b2a,
-        roughness: 0.94,
-        metalness: 0.04,
-      }),
-    );
-    const ground = new THREE.Mesh(
-      ownGeometry(new THREE.PlaneGeometry(34, 34)),
-      groundMaterial,
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.set(0, -0.45, 0);
-    scene.add(ground);
-
-    const buildingMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0x26394d,
-        emissive: 0x143042,
-        emissiveIntensity: 0.18,
-        roughness: 0.9,
-        metalness: 0.02,
-      }),
-    );
-    const buildingGeometry = ownGeometry(new THREE.BoxGeometry(1, 1, 1));
-    const buildings = new THREE.InstancedMesh(
-      buildingGeometry,
-      buildingMaterial,
-      BUILDINGS.length,
-    );
-    instancedMeshes.add(buildings);
-    buildings.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    const buildingTransform = new THREE.Object3D();
-    BUILDINGS.forEach((building, index) => {
-      buildingTransform.position.set(
-        building.x,
-        building.height / 2 - 0.44,
-        building.z,
-      );
-      buildingTransform.scale.set(
-        building.width,
-        building.height,
-        building.depth,
-      );
-      buildingTransform.updateMatrix();
-      buildings.setMatrixAt(index, buildingTransform.matrix);
-    });
-    cityscape.add(buildings);
-
-    const windowMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0x9de7d0,
-        emissive: 0x72cbb0,
-        emissiveIntensity: 0.75,
-        roughness: 0.4,
-      }),
-    );
-    const windowGeometry = ownGeometry(new THREE.BoxGeometry(0.1, 0.14, 0.035));
-    const windowPlacements: Array<{ x: number; y: number; z: number }> = [];
-    for (const building of BUILDINGS) {
-      const rows = Math.max(2, Math.floor(building.height / 0.72));
-      for (let row = 0; row < rows; row += 1) {
-        for (const side of [-1, 1]) {
-          windowPlacements.push({
-            x: building.x + side * building.width * 0.2,
-            y: -0.22 + row * 0.55,
-            z: building.z + building.depth / 2 + 0.022,
-          });
-        }
-      }
-    }
-    const windows = new THREE.InstancedMesh(
-      windowGeometry,
-      windowMaterial,
-      windowPlacements.length,
-    );
-    instancedMeshes.add(windows);
-    windowPlacements.forEach((placement, index) => {
-      buildingTransform.position.set(placement.x, placement.y, placement.z);
-      buildingTransform.scale.setScalar(1);
-      buildingTransform.updateMatrix();
-      windows.setMatrixAt(index, buildingTransform.matrix);
-    });
-    cityscape.add(windows);
-
-    const pressureMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0x25233c,
-        transparent: true,
-        opacity: 0.16,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
-    );
-    const pressureVeil = new THREE.Mesh(
-      ownGeometry(new THREE.PlaneGeometry(18, 5.8)),
-      pressureMaterial,
-    );
-    pressureVeil.position.set(0, 2.5, -3.6);
-    cityscape.add(pressureVeil);
-
-    const wireMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0xd2c99d,
-        emissive: 0xffd475,
-        emissiveIntensity: 0.32,
-        roughness: 0.3,
-        metalness: 0.15,
-      }),
-    );
-    const wireCurves = [
-      new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-9, 8.55, -1.6),
-        new THREE.Vector3(-5, 8.85, -1.9),
-        new THREE.Vector3(0, 8.3, -1.8),
-        new THREE.Vector3(5, 8.7, -1.7),
-        new THREE.Vector3(9, 8.35, -1.6),
-      ]),
-      new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-8, 7.75, -1.8),
-        new THREE.Vector3(-4, 8.05, -2.0),
-        new THREE.Vector3(1, 7.6, -1.9),
-        new THREE.Vector3(6, 7.95, -1.7),
-        new THREE.Vector3(9, 7.65, -1.6),
-      ]),
-    ];
-    for (const curve of wireCurves) {
-      const wire = new THREE.Mesh(
-        ownGeometry(new THREE.TubeGeometry(curve, 48, 0.018, 5, false)),
-        wireMaterial,
-      );
-      cityscape.add(wire);
-    }
-
-    const windMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0x75cdb9,
-        emissive: 0x58c4ad,
-        emissiveIntensity: 0.4,
-        transparent: true,
-        opacity: 0.32,
-        roughness: 0.5,
-        side: THREE.DoubleSide,
-      }),
-    );
-    const windCurves = [
-      new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-9, 0.9, -1.2),
-        new THREE.Vector3(-5, 1.4, -1.45),
-        new THREE.Vector3(-1, 1.0, -1.55),
-        new THREE.Vector3(4, 1.5, -1.3),
-        new THREE.Vector3(9, 1.05, -1.1),
-      ]),
-      new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-8, 1.8, -2.2),
-        new THREE.Vector3(-4, 2.0, -2.1),
-        new THREE.Vector3(0, 1.75, -2.3),
-        new THREE.Vector3(5, 2.2, -2.0),
-        new THREE.Vector3(9, 1.9, -1.8),
-      ]),
-    ];
-    for (const curve of windCurves) {
-      const ribbon = new THREE.Mesh(
-        ownGeometry(new THREE.TubeGeometry(curve, 48, 0.035, 6, false)),
-        windMaterial,
-      );
-      cityscape.add(ribbon);
-    }
-
-    const beadMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({ color: 0xb4f4dc, transparent: true }),
-    );
-    const beadGeometry = ownGeometry(new THREE.SphereGeometry(0.07, 8, 6));
-    const windBeads: THREE.Mesh[] = [];
-    for (let index = 0; index < WIND_BEAD_COUNT; index += 1) {
-      const bead = new THREE.Mesh(beadGeometry, beadMaterial);
-      bead.position.z = -1.35 - (index % 2) * 0.8;
-      bead.visible = false;
-      scene.add(bead);
-      windBeads.push(bead);
-    }
-
-    const crowdMaterial = ownMaterial(
-      new THREE.MeshStandardMaterial({
-        color: 0x172338,
-        emissive: 0x111d2e,
-        emissiveIntensity: 0.32,
-        roughness: 0.9,
-      }),
-    );
-    const crowdHeadGeometry = ownGeometry(new THREE.SphereGeometry(0.22, 8, 6));
-    const crowdBodyGeometry = ownGeometry(
-      new THREE.CapsuleGeometry(0.22, 0.58, 3, 5),
-    );
-    for (let index = 0; index < 8; index += 1) {
-      const side = index < 4 ? -1 : 1;
-      const localIndex = index % 4;
-      const x = side * (2.5 + localIndex * 0.72);
-      const z = 5.7 + (localIndex % 2) * 0.45;
-      const torso = new THREE.Mesh(crowdBodyGeometry, crowdMaterial);
-      torso.position.set(x, -0.03, z);
-      torso.scale.setScalar(0.78 + (localIndex % 3) * 0.06);
-      scene.add(torso);
-      const crowdHead = new THREE.Mesh(crowdHeadGeometry, crowdMaterial);
-      crowdHead.position.set(x, 0.52, z);
-      crowdHead.scale.setScalar(0.78 + (localIndex % 3) * 0.06);
-      scene.add(crowdHead);
-    }
-
-    const stageCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 200);
-    stageCamera.layers.set(1);
-    stageCamera.position.set(0, 0, 100);
-    stageCamera.lookAt(0, 0, 0);
-    const boardCamera = new THREE.PerspectiveCamera(60, 2, 0.1, 100);
-    boardCamera.layers.set(3);
-    boardCamera.position.set(0, 8.5, 13.5);
-    boardCamera.lookAt(0, 0, -2.2);
-    const runwayCamera = boardCamera;
-    const overlayBoardCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 200);
-    overlayBoardCamera.layers.set(2);
-    overlayBoardCamera.position.set(0, 0, 100);
-    overlayBoardCamera.lookAt(0, 0, 0);
-    const stageLayer = new THREE.Group();
-    stageLayer.layers.set(1);
-    stageLayer.name = 'gameplay-stage';
-    const boardLayer = new THREE.Group();
-    boardLayer.layers.set(2);
-    boardLayer.name = 'gameplay-board';
-    scene.add(stageLayer, boardLayer);
-
-    // The runway is a real ground plane. Normalized progress is represented
-    // by distance along this single world-space path; overlays remain in their
-    // existing screen-space pass so labels and controls are not foreshortened.
-    const runwayFar = new THREE.Vector3(0, 0.012, -13);
-    const runwayHit = new THREE.Vector3(0, 0.012, 4.5);
-    const runwayPoint = (progress: number): THREE.Vector3 =>
-      runwayFar.clone().lerp(runwayHit, progress);
-    const worldRunway = new THREE.Group();
-    worldRunway.layers.set(3);
-    worldRunway.name = 'perspective-runway';
-    scene.add(worldRunway);
-    const worldPlaneGeometry = ownGeometry(new THREE.PlaneGeometry(1, 1));
-    const runwaySurfaceMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0x101a2b, transparent: true, opacity: 0.94, side: THREE.DoubleSide,
-      depthWrite: false, fog: false,
-    }));
-    const runwayLaneMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0x9ab9c5, transparent: true, opacity: 0.16,
-      side: THREE.DoubleSide, depthWrite: false, fog: false,
-    }));
-    const runwayDividerMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0xd9e8ea, transparent: true, opacity: 0.36,
-      side: THREE.DoubleSide, depthWrite: false, fog: false,
-    }));
-    const runwayGoodMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0xffd475, transparent: true, opacity: 0.055,
-      side: THREE.DoubleSide, depthWrite: false, fog: false,
-    }));
-    const runwayPerfectMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0x9de7d0, transparent: true, opacity: 0.09,
-      side: THREE.DoubleSide, depthWrite: false, fog: false,
-    }));
-    const runwayGoodEdgeMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0xffd475, transparent: true, opacity: 0.72,
-      side: THREE.DoubleSide, depthWrite: false, fog: false,
-    }));
-    const runwayPerfectEdgeMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0xc5f5e7, transparent: true, opacity: 0.92,
-      side: THREE.DoubleSide, depthWrite: false, fog: false,
-    }));
-    const runwayHitMaterial = ownMaterial(new THREE.MeshBasicMaterial({
-      color: 0xffd475, transparent: true, opacity: 1, side: THREE.DoubleSide,
-      depthWrite: false, fog: false,
-    }));
-    const worldLanes: THREE.Mesh[] = [];
-    const worldGoodTargets: THREE.Mesh[] = [];
-    const worldPerfectTargets: THREE.Mesh[] = [];
-    const worldGoodTargetEdges: Array<[THREE.Mesh, THREE.Mesh]> = [];
-    const worldPerfectTargetEdges: Array<[THREE.Mesh, THREE.Mesh]> = [];
-    const worldHitAccents: THREE.Mesh[] = [];
-    const RUNWAY_LANE_SPACING = 4;
-    function worldStrip(
-      role: string, material: THREE.Material, lane: number,
-      from: number, to: number, width: number,
-    ): THREE.Mesh {
-      const mesh = new THREE.Mesh(worldPlaneGeometry, material);
-      mesh.layers.set(3);
-      mesh.userData.gameplayRole = role;
-      mesh.rotation.x = -Math.PI / 2;
-      const a = runwayPoint(from);
-      const b = runwayPoint(to);
-      mesh.position.set((lane - 1.5) * RUNWAY_LANE_SPACING, 0.025, (a.z + b.z) / 2);
-      mesh.scale.set(width, Math.abs(b.z - a.z), 1);
-      mesh.renderOrder =
-        role === 'runway-surface' ? 1
-          : role === 'lane' || role === 'lane-divider' ? 2
-            : role === 'hit-line' ? 4
-              : role === 'note-halo' ? 5
-                : role === 'note-bar' ? 6
-                  : 3;
-      worldRunway.add(mesh);
-      return mesh;
-    }
-    function setWorldStrip(mesh: THREE.Mesh, lane: number, from: number, to: number, width: number): void {
-      const a = runwayPoint(from);
-      const b = runwayPoint(to);
-      mesh.position.set((lane - 1.5) * RUNWAY_LANE_SPACING, 0.025, (a.z + b.z) / 2);
-      mesh.scale.set(width, Math.max(0.0001, Math.abs(b.z - a.z)), 1);
-      mesh.visible = true;
-    }
-    worldStrip('runway-surface', runwaySurfaceMaterial, 1.5, -0.24, 1.24, 16.3);
-    // Four stable lane centers; the perspective camera supplies depth rather
-    // than a hand-skewed lane layout.
-    for (let lane = 0; lane < 4; lane += 1) {
-      worldLanes.push(worldStrip('lane', runwayLaneMaterial, lane, -0.24, 1.24, 3.9));
-      worldGoodTargets.push(worldStrip('good-band', runwayGoodMaterial, lane, 0.8, 1.2, 3.7));
-      worldPerfectTargets.push(worldStrip('perfect-band', runwayPerfectMaterial, lane, 0.9, 1.1, 3.2));
-      worldGoodTargetEdges.push([
-        worldStrip('good-band-edge', runwayGoodEdgeMaterial, lane, 0.798, 0.802, 3.45),
-        worldStrip('good-band-edge', runwayGoodEdgeMaterial, lane, 1.198, 1.202, 3.45),
-      ]);
-      worldPerfectTargetEdges.push([
-        worldStrip('perfect-band-edge', runwayPerfectEdgeMaterial, lane, 0.898, 0.902, 2.95),
-        worldStrip('perfect-band-edge', runwayPerfectEdgeMaterial, lane, 1.098, 1.102, 2.95),
-      ]);
-      worldHitAccents.push(worldStrip('hit-line', runwayHitMaterial, lane, 0.996, 1.004, 3.75));
-    }
-    for (let divider = 0; divider < 3; divider += 1) {
-      worldStrip('lane-divider', runwayDividerMaterial, divider + 0.5, -0.24, 1.24, 0.04);
-    }
-
-    const planeGeometry = ownGeometry(new THREE.PlaneGeometry(1, 1));
-    function makeTextLayer(
-      parent: THREE.Group,
-      role: string,
-      color: string,
-      fontSize: number,
-      alignment: CanvasTextLayer['alignment'],
-    ): CanvasTextLayer {
-      const canvas =
-        typeof document === 'undefined'
-          ? ({ width: 512, height: 64 } as HTMLCanvasElement)
-          : document.createElement('canvas');
-      canvas.width = 1024;
-      canvas.height = 128;
-      const context =
-        typeof document === 'undefined' ? null : canvas.getContext('2d');
-      let texture: THREE.CanvasTexture | null = null;
-      if (context !== null) {
-        texture = createTextTexture(canvas);
-        textures.add(texture);
-      }
-      const material = ownMaterial(
-        new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          map: texture,
-          transparent: true,
-          opacity: texture === null ? 0 : 1,
-          depthTest: false,
-          depthWrite: false,
-          toneMapped: false,
-        }),
-      );
-      material.fog = false;
-      const mesh = new THREE.Mesh(planeGeometry, material);
-      mesh.layers.mask = parent.layers.mask;
-      mesh.userData.gameplayRole = role;
-      parent.add(mesh);
-      return {
-        canvas,
-        context,
-        texture,
-        material,
-        mesh,
-        fontSize,
-        color,
-        alignment,
-        value: '',
-        renderedHeight: 0,
-        renderedWidth: 0,
-        renderedAspect: canvas.width / canvas.height,
-      };
-    }
-    function resizeTextCanvas(
-      layer: CanvasTextLayer,
-      width: number,
-      height: number,
-    ): void {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d');
-      if (context === null) throw new Error('Unable to create text canvas');
-
-      const texture = createTextTexture(canvas);
-      const oldTexture = layer.texture;
-      layer.canvas = canvas;
-      layer.context = context;
-      layer.texture = texture;
-      layer.material.map = texture;
-      layer.material.opacity = 1;
-      textures.add(texture);
-      if (oldTexture !== null) {
-        textures.delete(oldTexture);
-        oldTexture.dispose();
-      }
-    }
-    const stageBackdropMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0x09101d,
-        transparent: true,
-        opacity: 0.64,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const boardBackdropMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0x080e1a,
-        transparent: true,
-        opacity: 0.42,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const laneMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0x9ab9c5,
-        transparent: true,
-        opacity: 0.055,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const laneAltMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.025,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    laneAltMaterial.fog = false;
-    const separatorMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xd9e8ea,
-        transparent: true,
-        opacity: 0.14,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const goodMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffd475,
-        transparent: true,
-        opacity: 0.12,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const goodEdgeMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffd475,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const perfectMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0x9de7d0,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const perfectEdgeMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xc5f5e7,
-        transparent: true,
-        opacity: 0.98,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const hitMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xffd475,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const padMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xf4f0df,
-        transparent: true,
-        opacity: 0.14,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const stageBackdrop = createPlane(
-      stageLayer,
-      planeGeometry,
-      stageBackdropMaterial,
-      'stage-backdrop',
-    );
-    const stageBorderMaterial = ownMaterial(
-      new THREE.MeshBasicMaterial({
-        color: 0xccdee3,
-        transparent: true,
-        opacity: 0.2,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    const stageEdges = Array.from({ length: 4 }, () =>
-      createPlane(stageLayer, planeGeometry, stageBorderMaterial, 'stage-edge'),
-    );
-    const boardBackdrop = createPlane(
-      boardLayer,
-      planeGeometry,
-      boardBackdropMaterial,
-      'board-backdrop',
-    );
-    const laneMeshes: THREE.Mesh[] = [];
-    const laneDividers: THREE.Mesh[] = [];
-    const goodBands: THREE.Mesh[] = [];
-    const goodEdges: THREE.Mesh[] = [];
-    const perfectBands: THREE.Mesh[] = [];
-    const perfectEdges: THREE.Mesh[] = [];
-    const hitPads: THREE.Mesh[] = [];
-    const laneKeyLabels: CanvasTextLayer[] = [];
-    for (let lane = 0; lane < 4; lane += 1) {
-      laneMeshes.push(
-        createPlane(boardLayer, planeGeometry, laneMaterial, 'overlay-lane'),
-      );
-      laneDividers.push(
-        createPlane(
-          boardLayer,
-          planeGeometry,
-          separatorMaterial,
-          'lane-divider',
-        ),
-      );
-      goodBands.push(
-        createPlane(boardLayer, planeGeometry, goodMaterial, 'overlay-good-band'),
-      );
-      goodEdges.push(
-        createPlane(boardLayer, planeGeometry, goodEdgeMaterial, 'good-edge'),
-        createPlane(boardLayer, planeGeometry, goodEdgeMaterial, 'good-edge'),
-      );
-      perfectBands.push(
-        createPlane(boardLayer, planeGeometry, perfectMaterial, 'overlay-perfect-band'),
-      );
-      perfectEdges.push(
-        createPlane(
-          boardLayer,
-          planeGeometry,
-          perfectEdgeMaterial,
-          'perfect-edge',
-        ),
-        createPlane(
-          boardLayer,
-          planeGeometry,
-          perfectEdgeMaterial,
-          'perfect-edge',
-        ),
-      );
-      hitPads.push(
-        createPlane(boardLayer, planeGeometry, padMaterial, 'hit-pad'),
-      );
-      laneKeyLabels.push(
-        makeTextLayer(boardLayer, 'lane-key', '#e5e5d9', 12, 'center'),
-      );
-    }
-    const hitLine = createPlane(
-      boardLayer,
-      planeGeometry,
-      hitMaterial,
-      'overlay-hit-line',
-    );
-    const hitLabel = makeTextLayer(
-      boardLayer,
-      'hit-label',
-      '#ffd475',
-      10,
-      'center',
-    );
-    const feedbackBacker = createPlane(
-      stageLayer,
-      planeGeometry,
-      boardBackdropMaterial,
-      'feedback-backdrop',
-    );
-    const headerChartText = makeTextLayer(
-      stageLayer,
-      'stage-label',
-      '#bbc6d3',
-      12,
-      'left',
-    );
-    const headerTimeText = makeTextLayer(
-      stageLayer,
-      'time-label',
-      '#f4f0df',
-      14,
-      'right',
-    );
-    const legendText = makeTextLayer(
-      stageLayer,
-      'timing-legend',
-      '#d7e7df',
-      13,
-      'left',
-    );
-    const feedbackText = makeTextLayer(
-      stageLayer,
-      'feedback',
-      '#bbc6d3',
-      14,
-      'right',
-    );
-    const noteWindowPool: Array<{
-      readonly good: THREE.Mesh;
-      readonly perfect: THREE.Mesh;
-    }> = [];
-    const laneNoteMaterials = [0x65d8ff, 0xe98bc8, 0xffd475, 0x91e6b0].map((color) =>
-      ownMaterial(new THREE.MeshBasicMaterial({
-        color, toneMapped: false, side: THREE.DoubleSide,
-        transparent: true, opacity: 1, depthWrite: false, fog: false,
-      })),
-    );
-    const laneNoteHaloMaterials = [0x65d8ff, 0xe98bc8, 0xffd475, 0x91e6b0].map((color) =>
-      ownMaterial(new THREE.MeshBasicMaterial({
-        color, toneMapped: false, side: THREE.DoubleSide,
-        transparent: true, opacity: 0.2, depthWrite: false, fog: false,
-      })),
-    );
-    const worldNotePool: Array<{
-      readonly good: THREE.Mesh;
-      readonly perfect: THREE.Mesh;
-      readonly halo: THREE.Mesh;
-      readonly bar: THREE.Mesh;
-    }> = [];
-
-    observer =
-      typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
-    resizeListener = resize;
-
-    function resize(): void {
-      if (cleaned) return;
-      try {
-        const width = Math.max(1, host.clientWidth);
-        const height = Math.max(1, host.clientHeight);
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-        stageCamera.left = 0;
-        stageCamera.right = width;
-        stageCamera.top = height;
-        stageCamera.bottom = 0;
-        stageCamera.updateProjectionMatrix();
-        runwayCamera.aspect = width / height;
-        runwayCamera.updateProjectionMatrix();
-        overlayBoardCamera.left = 0;
-        overlayBoardCamera.right = width;
-        overlayBoardCamera.top = height;
-        overlayBoardCamera.bottom = 0;
-        overlayBoardCamera.updateProjectionMatrix();
-        cityscape.scale.x = Math.max(0.38, Math.min(1, camera.aspect / 1.25));
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-        renderer.setSize(width, height, false);
-        if (lastFrame !== null) renderFrame(lastFrame);
-      } catch {
-        failScene();
-      }
-    }
-
-    function render(state: SceneStateProjection, transportTime: number): void {
-      const intensity = state.cityIntensity;
-      const audience = state.phase !== 'twilight';
-      const beat = state.motion.powerLinePulse
-        ? 0.5 + 0.5 * Math.sin(transportTime * 2.4)
-        : 0.5;
-      wireMaterial.color.setHex(
-        audience ? 0xffd68a : 0xc6a8ff,
-      );
-      wireMaterial.emissive.setHex(
-        audience ? 0xffad4d : 0x8a63ed,
-      );
-      wireMaterial.emissiveIntensity =
-        0.14 + state.cityBrightness * 0.35 + intensity * beat * 0.38;
-      buildingMaterial.emissiveIntensity =
-        0.08 + state.cityBrightness * 0.27 + intensity * beat * 0.2;
-      buildingMaterial.color.setHex(audience ? 0x35404a : 0x302942);
-      buildingMaterial.emissive.setHex(audience ? 0x704725 : 0x523575);
-      windowMaterial.color.setHex(audience ? 0xffd28a : 0xc5a3ff);
-      windowMaterial.emissive.setHex(audience ? 0xffa83d : 0x9a63ff);
-      crowdMaterial.color.setHex(audience ? 0x302b32 : 0x28233d);
-      crowdMaterial.emissive.setHex(audience ? 0x302018 : 0x291d46);
-      windowMaterial.emissiveIntensity =
-        0.3 + state.cityBrightness * 0.7 + intensity * beat * 0.65;
-      windMaterial.color.setHex(audience ? 0xe6b96f : 0x9a78ee);
-      windMaterial.opacity = 0.1 + state.cityBrightness * 0.22;
-      beadMaterial.opacity = 0.2 + intensity * 0.8;
-      pressureVeil.visible = state.phase === 'twilight';
-      pressureMaterial.opacity = 0.14 + (1 - intensity) * 0.17;
-      cityLight.color.setHex(audience ? 0xffbd69 : 0x8b63e8);
-      cityLight.intensity = 10 + state.cityBrightness * 24;
-
-      for (let index = 0; index < BUILDINGS.length; index += 1) {
-        const building = BUILDINGS[index];
-        if (building === undefined) continue;
-        const pulse = state.motion.buildingPulse
-          ? Math.sin(transportTime * 1.8 + building.phase) * 0.035 * intensity
-          : 0;
-        buildingTransform.position.set(
-          building.x,
-          building.height / 2 - 0.44 + pulse / 2,
-          building.z,
-        );
-        buildingTransform.scale.set(
-          building.width,
-          building.height * (1 + pulse),
-          building.depth,
-        );
-        buildingTransform.updateMatrix();
-        buildings.setMatrixAt(index, buildingTransform.matrix);
-      }
-      buildings.instanceMatrix.needsUpdate = true;
-
-      for (let index = 0; index < windBeads.length; index += 1) {
-        const bead = windBeads[index];
-        if (bead === undefined) continue;
-        bead.visible = state.motion.windTravel && intensity > 0.02;
-        const progress = (transportTime * 0.24 + index * 0.27) % 1;
-        bead.position.set(
-          -8.5 + progress * 17,
-          1.1 + Math.sin(progress * Math.PI * 2 + index) * 0.18,
-          -1.35 - (index % 2) * 0.8,
-        );
-        bead.scale.setScalar(0.55 + intensity * 0.75);
-      }
-
-      camera.position.copy(baseCameraPosition);
-      camera.lookAt(cameraLookAt);
-    }
-
-    function placeText(
-      layer: CanvasTextLayer,
-      rect: {
-        readonly x: number;
-        readonly y: number;
-        readonly width: number;
-        readonly height: number;
-      },
-      value: string,
-      z: number,
-      screenHeight: number,
-    ): void {
-      const aspect = paintText(
-        layer,
-        value,
-        rect.width,
-        rect.height,
-        resizeTextCanvas,
-      );
-      const width = Math.min(rect.width, rect.height * aspect);
-      const textHeight = width / aspect;
-      const x =
-        layer.alignment === 'right'
-          ? rect.x + rect.width - width
-          : layer.alignment === 'center'
-            ? rect.x + (rect.width - width) / 2
-            : rect.x;
-      placePlane(
-        layer.mesh,
-        x,
-        rect.y + (rect.height - textHeight) / 2,
-        width,
-        textHeight,
-        z,
-        screenHeight,
-      );
-    }
-
-    function projectRunwayToBoard(
-      worldPosition: THREE.Vector3,
-      board: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
-    ): { readonly x: number; readonly y: number } {
-      runwayCamera.updateMatrixWorld(true);
-      const projected = worldPosition.clone().project(runwayCamera);
-      return {
-        x: board.x + ((projected.x + 1) * board.width) / 2,
-        y: board.y + ((1 - projected.y) * board.height) / 2,
-      };
-    }
-
-    function ensureNoteWindowPool(capacity: number): void {
-      while (noteWindowPool.length < capacity) {
-        const good = createPlane(
-          boardLayer,
-          planeGeometry,
-          goodMaterial,
-          'overlay-note-good-envelope',
-        );
-        const perfect = createPlane(
-          boardLayer,
-          planeGeometry,
-          perfectMaterial,
-          'overlay-note-perfect-envelope',
-        );
-        noteWindowPool.push({ good, perfect });
-        const worldGood = worldStrip('note-good-envelope', runwayGoodMaterial, 0, 0, 0, 0.7);
-        const worldPerfect = worldStrip('note-perfect-envelope', runwayPerfectMaterial, 0, 0, 0, 0.62);
-        const halo = worldStrip('note-halo', laneNoteHaloMaterials[0]!, 0, 0, 0, 2.8);
-        const bar = worldStrip('note-bar', laneNoteMaterials[0]!, 0, 0, 0, 2.35);
-        worldNotePool.push({ good: worldGood, perfect: worldPerfect, halo, bar });
-      }
-    }
-
-    function renderGameplay(frame: GameplayFrame): void {
-      const { layout } = frame;
-      const activeFeedback =
-        frame.feedback !== null &&
-        frame.playing &&
-        isFeedbackWithinVisibleAge(
-          frame.transportTime,
-          frame.feedback.onsetTransportTime,
-        )
-          ? frame.feedback
-          : null;
-      const width = layout.width;
-      const height = layout.height;
-      const stage = layout.stage;
-      const board = layout.board;
-      runwayCamera.aspect = board.width / Math.max(1, board.height);
-      runwayCamera.updateProjectionMatrix();
-      const boardScale = board.height / LOGICAL_PLAYFIELD_HEIGHT;
-      const hitY = board.y + board.height * RUNWAY_HIT_LINE_TOP_FRACTION;
-
-      placePlane(
-        stageBackdrop,
-        stage.x,
-        stage.y,
-        stage.width,
-        stage.height,
-        0,
-        height,
-      );
-      placePlane(stageEdges[0]!, stage.x, stage.y, stage.width, 1, 1, height);
-      placePlane(
-        stageEdges[1]!,
-        stage.x,
-        stage.y + stage.height - 1,
-        stage.width,
-        1,
-        1,
-        height,
-      );
-      placePlane(stageEdges[2]!, stage.x, stage.y, 1, stage.height, 1, height);
-      placePlane(
-        stageEdges[3]!,
-        stage.x + stage.width - 1,
-        stage.y,
-        1,
-        stage.height,
-        1,
-        height,
-      );
-      placePlane(
-        boardBackdrop,
-        board.x,
-        board.y,
-        board.width,
-        board.height,
-        0,
-        height,
-      );
-      placePlane(
-        feedbackBacker,
-        layout.feedback.x,
-        layout.feedback.y,
-        layout.feedback.width,
-        layout.feedback.height,
-        1,
-        height,
-      );
-      feedbackBacker.visible = activeFeedback !== null;
-
-      placeText(
-        headerChartText,
-        {
-          x: layout.header.x,
-          y: layout.header.y,
-          width: layout.header.width * 0.76,
-          height: layout.header.height,
-        },
-        'Onset-derived chart · play-test timing',
-        3,
-        height,
-      );
-      placeText(
-        headerTimeText,
-        {
-          x: layout.header.x + layout.header.width * 0.78,
-          y: layout.header.y,
-          width: layout.header.width * 0.22,
-          height: layout.header.height,
-        },
-        frame.timeLabel,
-        3,
-        height,
-      );
-      placeText(legendText, layout.legend, frame.legendLabel, 3, height);
-      legendText.mesh.visible = frame.playing;
-      const countdownVisible = frame.countdownLabel.length > 0;
-      placeText(
-        feedbackText,
-        layout.feedback,
-        countdownVisible ? frame.countdownLabel : frame.feedbackLabel,
-        3,
-        height,
-      );
-      feedbackText.mesh.material.color.set(
-        activeFeedback?.quality === 'perfect'
-          ? 0xffd475
-          : activeFeedback?.quality === 'good'
-            ? 0x9de7d0
-            : 0xbbc6d3,
-      );
-      feedbackText.mesh.userData.activeJudgement = activeFeedback !== null;
-      feedbackText.mesh.userData.eventId = activeFeedback?.eventId ?? null;
-      feedbackText.mesh.userData.runId = activeFeedback?.runId ?? null;
-
-      for (let index = 0; index < 4; index += 1) {
-        const lane = frame.lanes[index];
-        if (lane === undefined) continue;
-        placePlane(
-          laneMeshes[index]!,
-          lane.x,
-          board.y,
-          lane.width,
-          board.height,
-          1,
-          height,
-        );
-        laneMeshes[index]!.material =
-          index % 2 === 0 ? laneMaterial : laneAltMaterial;
-        laneMeshes[index]!.renderOrder = 1;
-        if (index < 3) {
-          placePlane(
-            laneDividers[index]!,
-            lane.x + lane.width - 0.5 * boardScale,
-            board.y,
-            boardScale,
-            board.height,
-            2,
-            height,
-          );
-        } else {
-          laneDividers[index]!.visible = false;
-        }
-        const goodHeight = frame.timingWindows.goodEnvelopeHeightPx;
-        const goodY = hitY - frame.timingWindows.goodHalfHeightPx;
-        const goodX = lane.x + lane.width * 0.08;
-        const goodWidth = lane.width * 0.84;
-        placePlane(
-          goodBands[index]!,
-          goodX,
-          goodY,
-          goodWidth,
-          goodHeight,
-          3,
-          height,
-        );
-        placePlane(
-          goodEdges[index * 2]!,
-          goodX,
-          goodY,
-          goodWidth,
-          boardScale,
-          4,
-          height,
-        );
-        placePlane(
-          goodEdges[index * 2 + 1]!,
-          goodX,
-          goodY + goodHeight - boardScale,
-          goodWidth,
-          boardScale,
-          4,
-          height,
-        );
-        const perfectHeight = frame.timingWindows.perfectEnvelopeHeightPx;
-        const perfectY = hitY - frame.timingWindows.perfectHalfHeightPx;
-        const perfectX = lane.x + lane.width * 0.16;
-        const perfectWidth = lane.width * 0.68;
-        placePlane(
-          perfectBands[index]!,
-          perfectX,
-          perfectY,
-          perfectWidth,
-          perfectHeight,
-          5,
-          height,
-        );
-        placePlane(
-          perfectEdges[index * 2]!,
-          perfectX,
-          perfectY,
-          perfectWidth,
-          boardScale,
-          6,
-          height,
-        );
-        placePlane(
-          perfectEdges[index * 2 + 1]!,
-          perfectX,
-          perfectY + perfectHeight - boardScale,
-          perfectWidth,
-          boardScale,
-          6,
-          height,
-        );
-        placePlane(
-          hitPads[index]!,
-          lane.x + lane.width * 0.13,
-          hitY - 9 * boardScale,
-          lane.width * 0.74,
-          18 * boardScale,
-          7,
-          height,
-        );
-        const keyText = ['D', 'F', 'J', 'K'][index] ?? '';
-        const runwayTarget = projectRunwayToBoard(
-          runwayPoint(1).setX((index - 1.5) * RUNWAY_LANE_SPACING),
-          board,
-        );
-        placeText(
-          laneKeyLabels[index]!,
-          {
-            x: runwayTarget.x - lane.width * 0.4,
-            y: runwayTarget.y - 11 * boardScale,
-            width: lane.width * 0.8,
-            height: 22 * boardScale,
-          },
-          keyText,
-          8,
-          height,
-        );
-      }
-      placePlane(
-        hitLine,
-        board.x,
-        hitY - boardScale,
-        board.width,
-        2 * boardScale,
-        8,
-        height,
-      );
-      const rightmostTarget = projectRunwayToBoard(
-        runwayPoint(1).setX((3 - 1.5) * RUNWAY_LANE_SPACING),
-        board,
-      );
-      const hitLabelRect = {
-        x: rightmostTarget.x - 22 * boardScale,
-        y: rightmostTarget.y - 7 * boardScale,
-        width: 44 * boardScale,
-        height: 14 * boardScale,
-      };
-      placeText(hitLabel, hitLabelRect, 'HIT', 9, height);
-      const rightmostKey = laneKeyLabels[3]!.mesh;
-      const keyCenterY = height - rightmostKey.position.y;
-      const labelGap = 4;
-      const hitCenterY =
-        keyCenterY - (rightmostKey.scale.y + hitLabel.mesh.scale.y) / 2 - labelGap;
-      placeText(
-        hitLabel,
-        { ...hitLabelRect, y: hitCenterY - hitLabelRect.height / 2 },
-        'HIT',
-        9,
-        height,
-      );
-
-      const activeTiming = getDifficultyProfile(frame.difficulty).timing;
-      const goodHalf = activeTiming.goodWindowSeconds / VISIBLE_NOTE_SECONDS;
-      const perfectHalf = activeTiming.perfectWindowSeconds / VISIBLE_NOTE_SECONDS;
-    for (let lane = 0; lane < 4; lane += 1) {
-      setWorldStrip(worldLanes[lane]!, lane, -0.24, 1.24, 3.9);
-      setWorldStrip(worldGoodTargets[lane]!, lane, 1 - goodHalf, 1 + goodHalf, 3.7);
-      setWorldStrip(worldPerfectTargets[lane]!, lane, 1 - perfectHalf, 1 + perfectHalf, 3.2);
-      setWorldStrip(worldGoodTargetEdges[lane]![0], lane, 1 - goodHalf - 0.002, 1 - goodHalf + 0.002, 3.45);
-      setWorldStrip(worldGoodTargetEdges[lane]![1], lane, 1 + goodHalf - 0.002, 1 + goodHalf + 0.002, 3.45);
-      setWorldStrip(worldPerfectTargetEdges[lane]![0], lane, 1 - perfectHalf - 0.002, 1 - perfectHalf + 0.002, 2.95);
-      setWorldStrip(worldPerfectTargetEdges[lane]![1], lane, 1 + perfectHalf - 0.002, 1 + perfectHalf + 0.002, 2.95);
-      setWorldStrip(worldHitAccents[lane]!, lane, 0.996, 1.004, 3.75);
-        // The original flat screen-space playfield is superseded by the world
-        // runway; keep its labels, but do not draw a second competing set of
-        // lane panels and timing bands over the perspective geometry.
-        laneMeshes[lane]!.visible = false;
-        goodBands[lane]!.visible = false;
-        perfectBands[lane]!.visible = false;
-        hitPads[lane]!.visible = false;
-        goodEdges[lane * 2]!.visible = false;
-        goodEdges[lane * 2 + 1]!.visible = false;
-        perfectEdges[lane * 2]!.visible = false;
-        perfectEdges[lane * 2 + 1]!.visible = false;
-      }
-      for (const divider of laneDividers) divider.visible = false;
-      hitLine.visible = false;
-      boardBackdrop.visible = false;
-
-      ensureNoteWindowPool(frame.noteCapacity);
-      for (let index = 0; index < noteWindowPool.length; index += 1) {
-        const pool = noteWindowPool[index];
-        const projected = frame.notes[index];
-        if (pool === undefined || projected === undefined) {
-          if (pool !== undefined) {
-            pool.good.visible = false;
-            pool.perfect.visible = false;
-          }
-          const worldPool = worldNotePool[index];
-          if (worldPool !== undefined) {
-            worldPool.good.visible = false;
-            worldPool.perfect.visible = false;
-            worldPool.halo.visible = false;
-            worldPool.bar.visible = false;
-          }
-          continue;
-        }
-        pool.good.visible = false;
-        pool.perfect.visible = false;
-        const worldPool = worldNotePool[index];
-        if (worldPool !== undefined) {
-          const p = projected.progress;
-          setWorldStrip(worldPool.good, projected.lane, p - goodHalf, p + goodHalf, 3.0);
-          setWorldStrip(worldPool.perfect, projected.lane, p - perfectHalf, p + perfectHalf, 2.5);
-          setWorldStrip(worldPool.halo, projected.lane, p - 0.03, p + 0.03, 2.8);
-          setWorldStrip(worldPool.bar, projected.lane, p - 0.015, p + 0.015, 2.35);
-          worldPool.halo.material = laneNoteHaloMaterials[projected.lane] ?? laneNoteHaloMaterials[0]!;
-          worldPool.bar.material = laneNoteMaterials[projected.lane] ?? laneNoteMaterials[0]!;
-          worldPool.good.visible = frame.playing;
-          worldPool.perfect.visible = frame.playing;
-          worldPool.halo.visible = frame.playing;
-          worldPool.bar.visible = frame.playing;
-        }
-      }
-
-      if (countdownVisible) {
-        feedbackBacker.visible = true;
-      }
-
-      renderer.setViewport(0, 0, width, height);
-      renderer.setScissor(0, 0, width, height);
-      renderer.setScissorTest(false);
-      renderer.clear(true, true, true);
-      renderer.render(scene, camera);
-
-      renderer.setViewport(0, 0, width, height);
-      renderer.setScissor(
-        stage.x,
-        height - stage.y - stage.height,
-        stage.width,
-        stage.height,
-      );
-      renderer.setScissorTest(true);
-      renderer.clearDepth();
-      renderer.render(scene, stageCamera);
-
-      renderer.setViewport(
-        board.x,
-        height - board.y - board.height,
-        board.width,
-        board.height,
-      );
-      renderer.setScissor(
-        board.x,
-        height - board.y - board.height,
-        board.width,
-        board.height,
-      );
-      renderer.clearDepth();
-      renderer.render(scene, runwayCamera);
-      renderer.setViewport(0, 0, width, height);
-      renderer.clearDepth();
-      renderer.render(scene, overlayBoardCamera);
-
-      renderer.setScissorTest(false);
-      renderer.setViewport(0, 0, width, height);
-      renderer.setScissor(0, 0, width, height);
-    }
-
-    function renderFrame(frame: {
-      readonly city: SceneStateProjection;
-      readonly gameplay: GameplayFrame;
-    }): void {
-      render(frame.city, frame.gameplay.transportTime);
-      renderGameplay(frame.gameplay);
-    }
-
-    onContextLost = (event: Event): void => {
-      event.preventDefault();
-      failScene();
-    };
-
+    setRendererPixelRatio();
+    const initialSize = readHostContentSize();
+    setRendererSize(initialSize.width, initialSize.height);
     canvas.addEventListener('webglcontextlost', onContextLost);
-    if (observer !== null) observer.observe(host);
-    else window.addEventListener('resize', resize);
-    resize();
-    if (cleaned) return null;
 
-    return {
-      updateFrame(frame) {
-        if (cleaned) return;
-        lastFrame = frame;
-        try {
-          renderFrame(frame);
-        } catch {
-          failScene();
-        }
+    shell = createBrightvaleSceneShell({
+      scene: worldScene,
+      loadAssets:
+        dependencies?.loadAssets ??
+        ((signal) => loadBrightvaleRuntimeAssets(signal)),
+      createComposition: createShellComposition,
+      render: renderFrame,
+      onFailure: () => {
+        releaseRenderer();
+        notifyUnavailable();
       },
-      destroy() {
-        cleanup();
-      },
+    });
+
+    const onResize = (): void => {
+      if (disposed) return;
+      let width = 0;
+      let height = 0;
+      try {
+        const size = readHostContentSize();
+        width = size.width;
+        height = size.height;
+        setRendererPixelRatio();
+        setRendererSize(width, height);
+        if (
+          lastFrame !== null &&
+          lastFrame.gameplay.layout.width === width &&
+          lastFrame.gameplay.layout.height === height
+        )
+          shell?.updateFrame({ viewportUsable: width > 0 && height > 0 });
+      } catch (error) {
+        console.error('[Brightvale] scene resize failed', {
+          width,
+          height,
+          error,
+        });
+        shell?.destroy();
+        releaseRenderer();
+        notifyUnavailable();
+      }
     };
-  } catch {
-    failScene();
+    observer =
+      typeof ResizeObserver === 'function'
+        ? new ResizeObserver(onResize)
+        : null;
+    if (observer !== null) observer.observe(host);
+    else if (typeof window !== 'undefined') {
+      resizeListener = onResize;
+      window.addEventListener('resize', onResize);
+    }
+    host.addEventListener?.('brightvale-layout-measured', onLayoutMeasured);
+    console.info('[Brightvale] scene renderer initialized');
+  } catch (error) {
+    console.error('[Brightvale] scene initialization failed', { error });
+    shell?.destroy();
+    releaseRenderer();
+    notifyUnavailable();
     return null;
   }
+
+  return {
+    updateFrame(frame): BrightvaleFrameStatus {
+      if (disposed || shell === null) return 'unavailable';
+      lastFrame = frame;
+      if (viewportUsable(frame.gameplay.layout)) {
+        try {
+          setRendererPixelRatio();
+          setRendererSize(
+            frame.gameplay.layout.width,
+            frame.gameplay.layout.height,
+          );
+        } catch (error) {
+          console.error('[Brightvale] renderer sizing failed', { error });
+          shell.destroy();
+          releaseRenderer();
+          notifyUnavailable();
+          return 'unavailable';
+        }
+      }
+      const status = shell.updateFrame({
+        viewportUsable: viewportUsable(frame.gameplay.layout),
+      });
+      if (composition.projection !== null && !composition.projection.usable)
+        return 'suspended';
+      return status;
+    },
+    destroy(): void {
+      cleanup();
+    },
+  };
 }

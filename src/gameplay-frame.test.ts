@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from './chart';
 import type { ControllerSnapshot } from './controller';
+import { getDifficultyProfile } from './game-balance';
 import {
   FEEDBACK_VISIBLE_SECONDS,
   isFeedbackWithinVisibleAge,
   projectGameplayFrame,
-  type GameplayLayout,
+  VISIBLE_NOTE_SECONDS,
 } from './gameplay-frame';
-import { projectTimingWindowGeometry } from './note-projection';
+import type { BrightvaleViewportLayout } from './brightvale/viewport';
 
 const chart: ChartConfig = {
   sourceStart: 0,
@@ -18,14 +19,16 @@ const chart: ChartConfig = {
   notes: [{ id: 'n-1', lane: 2, time: 12 }],
 };
 
-const layout: GameplayLayout = {
+const layout: BrightvaleViewportLayout = {
   width: 640,
   height: 480,
-  stage: { x: 20, y: 30, width: 600, height: 400 },
-  board: { x: 80, y: 80, width: 480, height: 240 },
-  header: { x: 40, y: 40, width: 500, height: 24 },
-  legend: { x: 80, y: 340, width: 480, height: 30 },
-  feedback: { x: 80, y: 380, width: 480, height: 25 },
+  persistentHudExclusions: [{ x: 4, y: 8, width: 120, height: 24 }],
+  labels: {
+    time: { x: 8, y: 8, width: 70, height: 20 },
+    countdown: { x: 80, y: 8, width: 70, height: 20 },
+    legend: { x: 8, y: 420, width: 200, height: 24 },
+    feedback: { x: 220, y: 420, width: 200, height: 24 },
+  },
 };
 
 function snapshot(
@@ -71,31 +74,44 @@ function snapshot(
 }
 
 describe('shared gameplay timing geometry', () => {
-  it('scales note and fixed-target envelopes from the active profile and measured runway', () => {
-    const normalTarget = projectTimingWindowGeometry('normal', 153.6, 2.4);
-    const hardTarget = projectTimingWindowGeometry('hard', 153.6, 2.4);
-    const resizedTarget = projectTimingWindowGeometry('normal', 76.8, 2.4);
+  it('passes the measured viewport through without fitting a legacy board', () => {
+    const projected = projectGameplayFrame(snapshot(), chart, layout, false);
+    expect(projected.layout).toBe(layout);
+    expect(projected.layout).toMatchObject({
+      width: 640,
+      height: 480,
+      persistentHudExclusions: layout.persistentHudExclusions,
+      labels: layout.labels,
+    });
+  });
 
-    expect(
-      hardTarget.goodEnvelopeHeightPx / normalTarget.goodEnvelopeHeightPx,
-    ).toBeCloseTo(2 / 3);
-    expect(
-      hardTarget.perfectEnvelopeHeightPx / normalTarget.perfectEnvelopeHeightPx,
-    ).toBeCloseTo(2 / 3);
-    expect(resizedTarget.goodEnvelopeHeightPx).toBeCloseTo(
-      normalTarget.goodEnvelopeHeightPx / 2,
-    );
-
+  it('projects note centers and indexed lanes without legacy pixel positions', () => {
     const projected = projectGameplayFrame(snapshot(), chart, layout, false);
     expect(projected.difficulty).toBe('hard');
     expect(projected.notes).toHaveLength(1);
-    expect(projected.notes[0]).toMatchObject({
-      lane: 2,
-      progress: 1,
-      bottomPercent: 18,
+    expect(projected.notes[0]).toEqual({ id: 'n-1', lane: 2, progress: 1 });
+    expect(projected.notes[0]).not.toHaveProperty('bottomPercent');
+    expect(projected.lanes).toEqual([
+      { index: 0 },
+      { index: 1 },
+      { index: 2 },
+      { index: 3 },
+    ]);
+    expect(projected.lanes[0]).not.toHaveProperty('x');
+    expect(projected.lanes[0]).not.toHaveProperty('width');
+  });
+
+  it('projects difficulty timing windows as half-progress over the fixed approach duration', () => {
+    const projected = projectGameplayFrame(snapshot(), chart, layout, false);
+    const profile = getDifficultyProfile('hard');
+    expect(projected.timingWindows).toEqual({
+      goodHalfProgress:
+        profile.timing.goodWindowSeconds / VISIBLE_NOTE_SECONDS,
+      perfectHalfProgress:
+        profile.timing.perfectWindowSeconds / VISIBLE_NOTE_SECONDS,
     });
-    expect(projected.timingWindows).toEqual(hardTarget);
-    expect(projected.lanes.map((lane) => lane.x)).toEqual([80, 200, 320, 440]);
+    expect(projected.timingWindows).not.toHaveProperty('goodHalfHeightPx');
+    expect(1 + projected.timingWindows.goodHalfProgress).toBeGreaterThan(1);
   });
 
   it('uses immutable run feedback and expires or clears it without wall-clock time', () => {

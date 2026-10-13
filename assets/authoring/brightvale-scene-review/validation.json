@@ -1,0 +1,587 @@
+{
+  "pass": true,
+  "blender": "5.2.1 LTS",
+  "scene_sha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+  "state_fingerprint": "5f2382487b4e6f65b5cc0788e55c4b0accb66e15e04bbf374242ef3d581eb081",
+  "visible_pixel_grid_step": 2,
+  "visibility": {
+    "L01": {
+      "location": [
+        -8.0,
+        1.2999999523162842,
+        8.25
+      ],
+      "yaw": 0.392950177192688,
+      "facing_dot": 0.9979966431856155,
+      "plaza_margin": 6.223163978969907,
+      "bounds": [
+        [
+          -8.437875958713771,
+          1.0164273617519637,
+          8.249999997999739
+        ],
+        [
+          -7.4632071572288154,
+          1.4586965599489923,
+          10.23867061472555
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.09836675630923003,
+          0.18782845484349714
+        ],
+        [
+          0.1525575611583675,
+          0.35416430650665237
+        ]
+      ],
+      "tested_samples": 3300,
+      "visible_samples": 488,
+      "upper_body_samples": 487,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          159,
+          584
+        ],
+        [
+          241,
+          664
+        ]
+      ],
+      "first_hit_owners": {
+        "endcaps": 1694,
+        "platform": 34,
+        "local-ground": 961,
+        "L01": 488,
+        "L02": 123
+      }
+    },
+    "L02": {
+      "location": [
+        -9.300000190734863,
+        5.0,
+        8.25
+      ],
+      "yaw": 0.38424888253211975,
+      "facing_dot": 0.9986993372440338,
+      "plaza_margin": 8.67290813841829,
+      "bounds": [
+        [
+          -9.86774681368091,
+          4.558228775498369,
+          8.24999999803898
+        ],
+        [
+          -8.601887055820718,
+          5.147671219438462,
+          10.045854330062866
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.11529480424860672,
+          0.27312015026025294
+        ],
+        [
+          0.16628685180400565,
+          0.3956909163085572
+        ]
+      ],
+      "tested_samples": 2352,
+      "visible_samples": 343,
+      "upper_body_samples": 314,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          186,
+          544
+        ],
+        [
+          248,
+          610
+        ]
+      ],
+      "first_hit_owners": {
+        "local-ground": 556,
+        "L01": 398,
+        "endcaps": 969,
+        "L02": 343,
+        "L03": 67,
+        "L04": 19
+      }
+    },
+    "L03": {
+      "location": [
+        -11.0,
+        8.600000381469727,
+        8.25
+      ],
+      "yaw": 0.43616312742233276,
+      "facing_dot": 0.9999999552965164,
+      "plaza_margin": 10.681655214720543,
+      "bounds": [
+        [
+          -11.426739473642016,
+          8.343988636067428,
+          8.249999998078124
+        ],
+        [
+          -10.519331210653103,
+          8.783803776443737,
+          10.063226816181782
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.1258520744791139,
+          0.3308593799166311
+        ],
+        [
+          0.1612845310377351,
+          0.4373220475486287
+        ]
+      ],
+      "tested_samples": 1421,
+      "visible_samples": 241,
+      "upper_body_samples": 221,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          203,
+          508
+        ],
+        [
+          253,
+          562
+        ]
+      ],
+      "first_hit_owners": {
+        "L01": 46,
+        "local-ground": 509,
+        "L02": 312,
+        "endcaps": 185,
+        "L03": 241,
+        "L04": 101,
+        "L05": 27
+      }
+    },
+    "L04": {
+      "location": [
+        -13.0,
+        12.5,
+        8.25
+      ],
+      "yaw": 0.44159236550331116,
+      "facing_dot": 1.0000000149011612,
+      "plaza_margin": 11.262372416710612,
+      "bounds": [
+        [
+          -13.558621289037752,
+          12.0124332891606,
+          8.249999997980208
+        ],
+        [
+          -12.263551356478821,
+          12.664274721660721,
+          10.115123903203965
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.1144578288144853,
+          0.376574159868431
+        ],
+        [
+          0.1534413502940663,
+          0.46991197835733833
+        ]
+      ],
+      "tested_samples": 1376,
+      "visible_samples": 251,
+      "upper_body_samples": 203,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          183,
+          477
+        ],
+        [
+          243,
+          559
+        ]
+      ],
+      "first_hit_owners": {
+        "local-ground": 738,
+        "L03": 231,
+        "L02": 59,
+        "L04": 251,
+        "L05": 97
+      }
+    },
+    "L05": {
+      "location": [
+        -15.0,
+        18.0,
+        8.25
+      ],
+      "yaw": 0.4266274869441986,
+      "facing_dot": 0.9999999850988388,
+      "plaza_margin": 11.407732107728636,
+      "bounds": [
+        [
+          -15.419838086738022,
+          17.707783834048588,
+          8.24999999803898
+        ],
+        [
+          -14.476989141176315,
+          18.15149626036452,
+          10.19967770576477
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.13575359437341672,
+          0.4231105288774371
+        ],
+        [
+          0.16203883357522575,
+          0.504863024377649
+        ]
+      ],
+      "tested_samples": 836,
+      "visible_samples": 223,
+      "upper_body_samples": 145,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          217,
+          449
+        ],
+        [
+          257,
+          517
+        ]
+      ],
+      "first_hit_owners": {
+        "L04": 104,
+        "L03": 37,
+        "local-ground": 426,
+        "L05": 223,
+        "framing": 46
+      }
+    },
+    "R01": {
+      "location": [
+        8.0,
+        0.800000011920929,
+        8.25
+      ],
+      "yaw": -0.40232110023498535,
+      "facing_dot": 0.9977978020906448,
+      "plaza_margin": 5.775577217787166,
+      "bounds": [
+        [
+          7.513137148995626,
+          0.5329031321804734,
+          8.249999997999739
+        ],
+        [
+          8.465513522752593,
+          1.0020877543467814,
+          10.13723600196397
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.8564360490276932,
+          0.1733165218847108
+        ],
+        [
+          0.9117305102245243,
+          0.33795660336359445
+        ]
+      ],
+      "tested_samples": 3375,
+      "visible_samples": 605,
+      "upper_body_samples": 576,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          1390,
+          596
+        ],
+        [
+          1458,
+          690
+        ]
+      ],
+      "first_hit_owners": {
+        "platform": 9,
+        "endcaps": 1582,
+        "local-ground": 997,
+        "R01": 605,
+        "R02": 182
+      }
+    },
+    "R02": {
+      "location": [
+        9.199999809265137,
+        3.700000047683716,
+        8.25
+      ],
+      "yaw": -0.40099209547042847,
+      "facing_dot": 0.9984201639890671,
+      "plaza_margin": 7.807243921249558,
+      "bounds": [
+        [
+          8.717193169610654,
+          3.3942627860748864,
+          8.24999999809781
+        ],
+        [
+          9.619259633983644,
+          3.8447381327146735,
+          10.141186620941454
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.8545572033837157,
+          0.24701178621901637
+        ],
+        [
+          0.8998332259654565,
+          0.3844619517777132
+        ]
+      ],
+      "tested_samples": 2331,
+      "visible_samples": 455,
+      "upper_body_samples": 390,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          1369,
+          555
+        ],
+        [
+          1439,
+          637
+        ]
+      ],
+      "first_hit_owners": {
+        "endcaps": 453,
+        "R01": 538,
+        "local-ground": 849,
+        "R02": 455,
+        "R03": 25,
+        "R04": 11
+      }
+    },
+    "R03": {
+      "location": [
+        11.0,
+        9.0,
+        8.25
+      ],
+      "yaw": -0.4297622740268707,
+      "facing_dot": 1.0,
+      "plaza_margin": 10.747747953243156,
+      "bounds": [
+        [
+          10.29120846100762,
+          8.274959892919473,
+          8.24999999803898
+        ],
+        [
+          11.273109638839589,
+          9.15840023137686,
+          10.060799956321716
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.8271282734434604,
+          0.33619120041891926
+        ],
+        [
+          0.8707894033360941,
+          0.4397444371258656
+        ]
+      ],
+      "tested_samples": 1692,
+      "visible_samples": 367,
+      "upper_body_samples": 245,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          1341,
+          505
+        ],
+        [
+          1391,
+          595
+        ]
+      ],
+      "first_hit_owners": {
+        "endcaps": 514,
+        "local-ground": 545,
+        "R02": 91,
+        "R03": 367,
+        "R04": 161,
+        "R05": 14
+      }
+    },
+    "R04": {
+      "location": [
+        13.300000190734863,
+        13.0,
+        8.25
+      ],
+      "yaw": -0.44344833493232727,
+      "facing_dot": 1.0000000447034836,
+      "plaza_margin": 11.42635779025305,
+      "bounds": [
+        [
+          12.792693210335411,
+          12.65688475661817,
+          8.249999997980149
+        ],
+        [
+          13.731198438366242,
+          13.2065517441583,
+          10.258167490014728
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.8506381101348864,
+          0.38154116749407374
+        ],
+        [
+          0.8827787796010151,
+          0.4799061655042448
+        ]
+      ],
+      "tested_samples": 1170,
+      "visible_samples": 336,
+      "upper_body_samples": 231,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          1361,
+          468
+        ],
+        [
+          1409,
+          556
+        ]
+      ],
+      "first_hit_owners": {
+        "R03": 160,
+        "R02": 2,
+        "local-ground": 669,
+        "R04": 336,
+        "R05": 3
+      }
+    },
+    "R05": {
+      "location": [
+        15.0,
+        19.0,
+        8.25
+      ],
+      "yaw": -0.41549208760261536,
+      "facing_dot": 1.0000000596046448,
+      "plaza_margin": 11.49288273535686,
+      "bounds": [
+        [
+          14.524644100000339,
+          18.7323898631717,
+          8.24999999803898
+        ],
+        [
+          15.45317686921266,
+          19.16931778946902,
+          10.045854330062866
+        ]
+      ],
+      "screen_rectangle": [
+        [
+          0.8276544361387355,
+          0.42997368853887763
+        ],
+        [
+          0.8527132622362836,
+          0.5028574249455786
+        ]
+      ],
+      "tested_samples": 714,
+      "visible_samples": 212,
+      "upper_body_samples": 134,
+      "visible_sample_rectangle_pixels_top_left": [
+        [
+          1326,
+          449
+        ],
+        [
+          1360,
+          511
+        ]
+      ],
+      "first_hit_owners": {
+        "local-ground": 455,
+        "R03": 22,
+        "R05": 212,
+        "R04": 16,
+        "framing": 9
+      }
+    }
+  },
+  "unobstructed_lane_rays": 820,
+  "arc": {
+    "sections": 26,
+    "complete_posts": 27,
+    "radius": 26.996365752526287,
+    "center": [
+      0.0,
+      20.0,
+      8.25
+    ],
+    "maximum_radius_residual": 2.411413259295614e-06,
+    "minimum_nominal_body_overlap": 0.11999934527053413,
+    "actual_evaluated_solid_joint_samples": 5200
+  },
+  "ground": {
+    "city_ground_contact_error": -8.940696716308594e-08,
+    "lower_ground_z": -0.6499999761581421,
+    "local_ground_z": 8.25,
+    "two_level_separation": 8.899999976158142,
+    "radius": 26.996365752526287,
+    "footprint_margins": {
+      "platform": 3.356354431240714,
+      "endcaps": 3.080211352238905,
+      "highway": 3.0506253826596534,
+      "crowd": 5.775577217813453
+    },
+    "rear_perimeter_foot_overlap_samples": 261,
+    "circle_to_city_plan_gap": 3.8036343189992863
+  },
+  "source_sha256": {
+    "platform": "ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af",
+    "endcaps": "c49ae80c34350ddb7281c3192c4ed90921852f0386fa047a9196087cc13b4207",
+    "highway": "2f2eca2987cd42b105c579420ca2e2cbc71ad75d73bcbf164aca60afe32652e5",
+    "framing": "cd17e3162c434ce4054f6c32d86d4b6a885e9dbad44c1841b563513fffd75542",
+    "city": "4beb993e9b580bb0b6dd47e5523a0ad9aecc8c26804a4b4cbdc42cc5488caa2c",
+    "crowd": "854a120872c1152c0c7722e5f49f2d78572da69d485afbc646a5a6bcdba1b397"
+  },
+  "comparison": {
+    "sha256": "d1db2e9bd8fd7ee27848a2dd32291c67652d2bb8f48870bc16e33b8c6711c487",
+    "exact_semantic_match": true
+  },
+  "negative_tests": {
+    "lane_intrusion_rejected": true,
+    "floating_feet_rejected": true,
+    "hidden_spectator_rejected": true,
+    "camera_drift_rejected": true,
+    "buried_city_rejected": true,
+    "wrong_plaza_height_rejected": true,
+    "oversized_plaza_rejected": true,
+    "noncircular_post_rejected": true,
+    "hidden_post_lens_rejected": true,
+    "actual_joint_gap_rejected": true
+  }
+}

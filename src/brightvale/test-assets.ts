@@ -1,0 +1,37 @@
+import { readFile } from 'node:fs/promises';
+import {
+  BRIGHTVALE_ASSET_NAMES,
+  type BrightvaleAssetName,
+  type BrightvaleAssets,
+} from './assets';
+import {
+  BRIGHTVALE_PRODUCTION_ASSET_URLS,
+  loadBrightvaleRuntimeAssets,
+} from './assets-runtime';
+
+const PRODUCTION_FILES: Readonly<Record<BrightvaleAssetName, string>> = {
+  city: '../../assets/production/brightvale-distant-city/city.glb',
+  highway: '../../assets/production/brightvale-highway/highway.glb',
+  platform: '../../assets/production/brightvale-platform/platform.glb',
+  endcaps: '../../assets/production/brightvale-platform-endcaps/endcaps.glb',
+  crowd: '../../assets/production/brightvale-crowd/crowd.glb',
+  framingLong: '../../assets/production/brightvale-outer-framing/long.glb',
+  framingPost: '../../assets/production/brightvale-outer-framing/post.glb',
+};
+
+/** Load the actual production bundle through the runtime GLTFLoader boundary. */
+export async function loadBrightvaleProductionAssets(): Promise<BrightvaleAssets> {
+  return loadBrightvaleRuntimeAssets(new AbortController().signal, {
+    fetch: async (url) => {
+      const name = BRIGHTVALE_ASSET_NAMES.find(
+        (candidate) => BRIGHTVALE_PRODUCTION_ASSET_URLS[candidate] === url,
+      );
+      if (name === undefined)
+        throw new Error(`Unexpected production asset URL: ${url}`);
+      const bytes = await readFile(
+        new URL(PRODUCTION_FILES[name], import.meta.url),
+      );
+      return new Response(new Uint8Array(bytes), { status: 200 });
+    },
+  });
+}

@@ -1,0 +1,558 @@
+{
+  "pass": true,
+  "kind": "highway",
+  "blender": "5.2.1 LTS",
+  "exporter": "5.2.40",
+  "source": "brightvale-scene-review/scene-review.blend",
+  "source_sha256": "fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b",
+  "glb_sha256": "e650f6d7b65b2710e5605ba8231741a1d893effd96e5d53116e31d39d30da751",
+  "transfer_bytes": 417772,
+  "geometry_simplified": false,
+  "glb": {
+    "nodes": 14,
+    "triangles": 11336,
+    "primitives": 18,
+    "decoded_primitive_vertices": 13986,
+    "bounds_gltf": {
+      "min": [
+        -6.0,
+        -0.30000001192092896,
+        -44.70000076293945
+      ],
+      "max": [
+        6.0,
+        0.5049999952316284,
+        -2.5350000858306885
+      ],
+      "dimensions": [
+        12.0,
+        0.8050000071525574,
+        42.165000677108765
+      ]
+    },
+    "meshes": {
+      "Highway lane 1 | continuous inset bed and terminal ramp": {
+        "triangles": 2012,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.885958671569824e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway lanes | quiet midnight enamel.001": 1700,
+          "Highway panels | broad quiet seam.001": 312
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 1008,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 1 | embedded colored edge inlay": {
+        "triangles": 252,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.7756900787353516e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway inlay | cyan.001": 252
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 128,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 2 | continuous inset bed and terminal ramp": {
+        "triangles": 2012,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 6.335973739624023e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway lanes | quiet midnight enamel.001": 1700,
+          "Highway panels | broad quiet seam.001": 312
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 1008,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 2 | embedded colored edge inlay": {
+        "triangles": 252,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.46574592590332e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway inlay | magenta.001": 252
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 128,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 3 | continuous inset bed and terminal ramp": {
+        "triangles": 2012,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.8203935623168945e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway lanes | quiet midnight enamel.001": 1700,
+          "Highway panels | broad quiet seam.001": 312
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 1008,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 3 | embedded colored edge inlay": {
+        "triangles": 252,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 6.300210952758789e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway inlay | amber.001": 252
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 128,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 4 | continuous inset bed and terminal ramp": {
+        "triangles": 2012,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.874037742614746e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway lanes | quiet midnight enamel.001": 1700,
+          "Highway panels | broad quiet seam.001": 312
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 1008,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway lane 4 | embedded colored edge inlay": {
+        "triangles": 252,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.716085433959961e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway inlay | green.001": 252
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 128,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway | continuous four-channel profiled chassis": {
+        "triangles": 1148,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.97834587097168e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway chassis | midnight-blue alloy.001": 1148
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 576,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway | slim muted metal divider 1": {
+        "triangles": 188,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.665421485900879e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway edging | muted warm titanium.001": 188
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 96,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway | slim muted metal divider 2": {
+        "triangles": 188,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.742907524108887e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway edging | muted warm titanium.001": 188
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 96,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway | slim muted metal divider 3": {
+        "triangles": 188,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 5.665421485900879e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway edging | muted warm titanium.001": 188
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 96,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway | slim muted metal left shoulder": {
+        "triangles": 284,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 6.42538070678711e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway edging | muted warm titanium.001": 284
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 144,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      },
+      "Highway | slim muted metal right shoulder": {
+        "triangles": 284,
+        "max_position_error": 0.0,
+        "max_corner_normal_error": 6.264448165893555e-05,
+        "inherited_near_zero_area_triangles": 0,
+        "triangles_by_role": {
+          "Highway edging | muted warm titanium.001": 284
+        },
+        "source_type": "MESH",
+        "source_evaluated_vertices": 144,
+        "source_modifiers": [
+          "BEVEL",
+          "WEIGHTED_NORMAL"
+        ],
+        "origin_gltf": [
+          0.0,
+          0.0,
+          -2.700000047683716
+        ]
+      }
+    },
+    "material_roles": {
+      "Highway chassis | midnight-blue alloy.001": {
+        "base": [
+          0.012000000104308128,
+          0.024000000208616257,
+          0.054999999701976776,
+          1.0
+        ],
+        "metallic": 0.5,
+        "roughness": 0.3499999940395355,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.012000000104308128,
+          0.024000000208616257,
+          0.054999999701976776,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway edging | muted warm titanium.001": {
+        "base": [
+          0.2800000011920929,
+          0.1899999976158142,
+          0.10000000149011612,
+          1.0
+        ],
+        "metallic": 0.7200000286102295,
+        "roughness": 0.3700000047683716,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.2800000011920929,
+          0.1899999976158142,
+          0.10000000149011612,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway inlay | amber.001": {
+        "base": [
+          0.5799999833106995,
+          0.2199999988079071,
+          0.02500000037252903,
+          1.0
+        ],
+        "metallic": 0.44999998807907104,
+        "roughness": 0.30000001192092896,
+        "emission": [
+          0.5799999833106995,
+          0.2199999988079071,
+          0.02500000037252903
+        ],
+        "strength": 0.2199999988079071,
+        "procedural_fallback": false,
+        "role_color": [
+          0.5799999833106995,
+          0.2199999988079071,
+          0.02500000037252903,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway inlay | cyan.001": {
+        "base": [
+          0.009999999776482582,
+          0.18000000715255737,
+          0.5199999809265137,
+          1.0
+        ],
+        "metallic": 0.44999998807907104,
+        "roughness": 0.30000001192092896,
+        "emission": [
+          0.009999999776482582,
+          0.18000000715255737,
+          0.5199999809265137
+        ],
+        "strength": 0.2199999988079071,
+        "procedural_fallback": false,
+        "role_color": [
+          0.009999999776482582,
+          0.18000000715255737,
+          0.5199999809265137,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway inlay | green.001": {
+        "base": [
+          0.00800000037997961,
+          0.3400000035762787,
+          0.12999999523162842,
+          1.0
+        ],
+        "metallic": 0.44999998807907104,
+        "roughness": 0.30000001192092896,
+        "emission": [
+          0.00800000037997961,
+          0.3400000035762787,
+          0.12999999523162842
+        ],
+        "strength": 0.2199999988079071,
+        "procedural_fallback": false,
+        "role_color": [
+          0.00800000037997961,
+          0.3400000035762787,
+          0.12999999523162842,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway inlay | magenta.001": {
+        "base": [
+          0.47999998927116394,
+          0.017999999225139618,
+          0.1599999964237213,
+          1.0
+        ],
+        "metallic": 0.44999998807907104,
+        "roughness": 0.30000001192092896,
+        "emission": [
+          0.47999998927116394,
+          0.017999999225139618,
+          0.1599999964237213
+        ],
+        "strength": 0.2199999988079071,
+        "procedural_fallback": false,
+        "role_color": [
+          0.47999998927116394,
+          0.017999999225139618,
+          0.1599999964237213,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway lanes | quiet midnight enamel.001": {
+        "base": [
+          0.017000000923871994,
+          0.032999999821186066,
+          0.07100000232458115,
+          1.0
+        ],
+        "metallic": 0.3799999952316284,
+        "roughness": 0.3400000035762787,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.017000000923871994,
+          0.032999999821186066,
+          0.07100000232458115,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Highway panels | broad quiet seam.001": {
+        "base": [
+          0.014999999664723873,
+          0.028999999165534973,
+          0.06199999898672104,
+          1.0
+        ],
+        "metallic": 0.30000001192092896,
+        "roughness": 0.47999998927116394,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.014999999664723873,
+          0.028999999165534973,
+          0.06199999898672104,
+          1.0
+        ],
+        "double_sided": true
+      }
+    },
+    "extensions": []
+  },
+  "settings": {
+    "export_format": "GLB",
+    "use_selection": true,
+    "use_active_scene": true,
+    "export_apply": true,
+    "export_normals": true,
+    "export_yup": true,
+    "export_materials": "EXPORT",
+    "export_animations": false,
+    "export_cameras": false,
+    "export_lights": false,
+    "export_extras": false,
+    "export_texcoords": false,
+    "export_tangents": false,
+    "export_vertex_color": "NONE",
+    "export_attributes": false,
+    "export_gpu_instances": false,
+    "export_hierarchy_full_collections": false,
+    "export_draco_mesh_compression_enable": false,
+    "export_meshopt_compression_enable": false,
+    "export_image_format": "NONE"
+  },
+  "negative_tests": {
+    "extra_reference_rejected": true,
+    "role_loss_rejected": true,
+    "origin_drift_rejected": true,
+    "negative_scale_rejected": true,
+    "base_change_rejected": true,
+    "compression_rejected": true,
+    "flipped_normals_rejected": true,
+    "existing_output_rejected": true,
+    "source_output_rejected": true,
+    "outside_output_rejected": true,
+    "nested_output_rejected": true
+  },
+  "limitations": [
+    "Provisional authoring units, not approved meters.",
+    "No official Khronos validator run.",
+    "Unsupported platform mineral noise uses the authored constant base/roughness; no texture bake.",
+    "Pure platform emission uses black-base Principled emission; portable intensity preserved, runtime appearance pending.",
+    "Inherited near-zero-area triangles, if any, are measured per mesh and preserved.",
+    "Browser review/appearance/performance and integration approval belong to the parent lane."
+  ]
+}

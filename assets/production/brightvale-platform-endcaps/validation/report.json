@@ -1,0 +1,562 @@
+{
+  "state": "passed-harness-validation-not-visual-approval",
+  "method": "Same GLB geometry/transforms and camera; shared derived two-role MeshToonMaterial mapping with a 3-step ramp. Audience uses warm amber lighting; Twilight uses violet lighting. Imported PBR materials are retained as baseline evidence, not rendered.",
+  "limitations": "Harness-only toon consumer treatment; does not demonstrate exported GLB toon portability or final game appearance. Toon mapping discards metallic/roughness response, environment reflections, and source PBR BRDF behavior. SwiftShader is not target-device evidence.",
+  "modeResults": {
+    "audience": {
+      "evidence": "audience.webp",
+      "lighting": {
+        "outputColorSpace": "SRGBColorSpace",
+        "toneMapping": "ACESFilmicToneMapping",
+        "toneMappingExposure": 1.05,
+        "cameraFovDegrees": 36,
+        "representativeCityIntensity": 0.5,
+        "representativeCityBrightness": 0.61,
+        "hemisphere": {
+          "sky": "ffd49b",
+          "ground": "27334d",
+          "intensity": 1.05
+        },
+        "point": {
+          "color": "#ffb95e",
+          "position": [
+            -3.5,
+            4.4,
+            -2.4
+          ],
+          "intensity": 30,
+          "distance": 23,
+          "decay": 2
+        }
+      },
+      "renderer": {
+        "calls": 4,
+        "triangles": 2568
+      },
+      "baselinePbrMaterials": [
+        {
+          "name": "Endcap body | midnight-blue enamel",
+          "type": "MeshStandardMaterial",
+          "color": "212f48",
+          "baseColorLinear": [
+            0.014999999664723873,
+            0.02800000086426735,
+            0.06499999761581421
+          ],
+          "roughness": 0.3199999928474426,
+          "metalness": 0.44999998807907104,
+          "emissive": "000000",
+          "maps": []
+        },
+        {
+          "name": "Endcap edging | warm brushed gold",
+          "type": "MeshStandardMaterial",
+          "color": "dda24d",
+          "baseColorLinear": [
+            0.7200000286102295,
+            0.36000001430511475,
+            0.07500000298023224
+          ],
+          "roughness": 0.25,
+          "metalness": 0.8199999928474426,
+          "emissive": "000000",
+          "maps": []
+        }
+      ],
+      "toonMaterialMapping": [
+        {
+          "name": "Endcap body | midnight-blue enamel | validation toon",
+          "color": "#244b8e",
+          "type": "MeshToonMaterial",
+          "gradientSteps": 3
+        },
+        {
+          "name": "Endcap edging | warm brushed gold | validation toon",
+          "color": "#e6a647",
+          "type": "MeshToonMaterial",
+          "gradientSteps": 3
+        }
+      ],
+      "framing": {
+        "min": [
+          -6.980000019073486,
+          -0.6499999761581421,
+          -2.700000047683716
+        ],
+        "max": [
+          6.980000019073486,
+          1.149999976158142,
+          2.799999952316284
+        ],
+        "center": [
+          0,
+          0.25,
+          0.04999995231628418
+        ],
+        "size": [
+          13.960000038146973,
+          1.7999999523162842,
+          5.5
+        ],
+        "camera": {
+          "fovDegrees": 36,
+          "position": [
+            0,
+            4.765749337669828,
+            16.82774556842803
+          ],
+          "target": [
+            0,
+            0.25,
+            0.04999995231628418
+          ]
+        }
+      },
+      "renderInvariants": {
+        "camera": {
+          "position": [
+            0,
+            4.765749337669828,
+            16.82774556842803
+          ],
+          "quaternion": [
+            -0.13108192303180535,
+            0,
+            0,
+            0.9913715395623801
+          ],
+          "projection": [
+            1.7311969896610804,
+            0,
+            0,
+            0,
+            0,
+            3.0776835371752536,
+            0,
+            0,
+            0,
+            0,
+            -1.0044752257342462,
+            -1,
+            0,
+            0,
+            -0.3482741758483699,
+            0
+          ],
+          "target": [
+            0,
+            0.25,
+            0.04999995231628418
+          ]
+        },
+        "material": [
+          {
+            "name": "Endcap body | midnight-blue enamel",
+            "color": [
+              0.014999999664723873,
+              0.02800000086426735,
+              0.06499999761581421
+            ],
+            "metalness": 0.44999998807907104,
+            "roughness": 0.3199999928474426,
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "map": false,
+            "envMap": false
+          },
+          {
+            "name": "Endcap edging | warm brushed gold",
+            "color": [
+              0.7200000286102295,
+              0.36000001430511475,
+              0.07500000298023224
+            ],
+            "metalness": 0.8199999928474426,
+            "roughness": 0.25,
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "map": false,
+            "envMap": false
+          }
+        ],
+        "geometry": [
+          {
+            "name": "Endcap_profile_|_left",
+            "attributes": {
+              "position": {
+                "count": 647,
+                "itemSize": 3,
+                "hash": "569443d4"
+              },
+              "normal": {
+                "count": 647,
+                "itemSize": 3,
+                "hash": "b79cae64"
+              }
+            },
+            "index": {
+              "count": 993,
+              "hash": "ee3375f7"
+            },
+            "material": [
+              "Endcap body | midnight-blue enamel"
+            ]
+          },
+          {
+            "name": "Endcap_profile_|_left_1",
+            "attributes": {
+              "position": {
+                "count": 1843,
+                "itemSize": 3,
+                "hash": "65f5c63d"
+              },
+              "normal": {
+                "count": 1843,
+                "itemSize": 3,
+                "hash": "092e8624"
+              }
+            },
+            "index": {
+              "count": 2859,
+              "hash": "ab064339"
+            },
+            "material": [
+              "Endcap edging | warm brushed gold"
+            ]
+          },
+          {
+            "name": "Endcap_profile_|_right",
+            "attributes": {
+              "position": {
+                "count": 644,
+                "itemSize": 3,
+                "hash": "9a12d172"
+              },
+              "normal": {
+                "count": 644,
+                "itemSize": 3,
+                "hash": "57778111"
+              }
+            },
+            "index": {
+              "count": 990,
+              "hash": "1bf951ca"
+            },
+            "material": [
+              "Endcap body | midnight-blue enamel"
+            ]
+          },
+          {
+            "name": "Endcap_profile_|_right_1",
+            "attributes": {
+              "position": {
+                "count": 1848,
+                "itemSize": 3,
+                "hash": "c70ce553"
+              },
+              "normal": {
+                "count": 1848,
+                "itemSize": 3,
+                "hash": "e169e127"
+              }
+            },
+            "index": {
+              "count": 2862,
+              "hash": "e8c4ec53"
+            },
+            "material": [
+              "Endcap edging | warm brushed gold"
+            ]
+          }
+        ]
+      },
+      "loaderWarnings": []
+    },
+    "twilight": {
+      "evidence": "twilight.webp",
+      "lighting": {
+        "outputColorSpace": "SRGBColorSpace",
+        "toneMapping": "ACESFilmicToneMapping",
+        "toneMappingExposure": 1.05,
+        "cameraFovDegrees": 36,
+        "representativeCityIntensity": 0.5,
+        "representativeCityBrightness": 0.61,
+        "hemisphere": {
+          "sky": "b7a0ff",
+          "ground": "21183e",
+          "intensity": 0.8
+        },
+        "point": {
+          "color": "#966dff",
+          "position": [
+            3.5,
+            4.4,
+            -2.4
+          ],
+          "intensity": 42,
+          "distance": 23,
+          "decay": 2
+        }
+      },
+      "renderer": {
+        "calls": 4,
+        "triangles": 2568
+      },
+      "baselinePbrMaterials": [
+        {
+          "name": "Endcap body | midnight-blue enamel",
+          "type": "MeshStandardMaterial",
+          "color": "212f48",
+          "baseColorLinear": [
+            0.014999999664723873,
+            0.02800000086426735,
+            0.06499999761581421
+          ],
+          "roughness": 0.3199999928474426,
+          "metalness": 0.44999998807907104,
+          "emissive": "000000",
+          "maps": []
+        },
+        {
+          "name": "Endcap edging | warm brushed gold",
+          "type": "MeshStandardMaterial",
+          "color": "dda24d",
+          "baseColorLinear": [
+            0.7200000286102295,
+            0.36000001430511475,
+            0.07500000298023224
+          ],
+          "roughness": 0.25,
+          "metalness": 0.8199999928474426,
+          "emissive": "000000",
+          "maps": []
+        }
+      ],
+      "toonMaterialMapping": [
+        {
+          "name": "Endcap body | midnight-blue enamel | validation toon",
+          "color": "#244b8e",
+          "type": "MeshToonMaterial",
+          "gradientSteps": 3
+        },
+        {
+          "name": "Endcap edging | warm brushed gold | validation toon",
+          "color": "#e6a647",
+          "type": "MeshToonMaterial",
+          "gradientSteps": 3
+        }
+      ],
+      "framing": {
+        "min": [
+          -6.980000019073486,
+          -0.6499999761581421,
+          -2.700000047683716
+        ],
+        "max": [
+          6.980000019073486,
+          1.149999976158142,
+          2.799999952316284
+        ],
+        "center": [
+          0,
+          0.25,
+          0.04999995231628418
+        ],
+        "size": [
+          13.960000038146973,
+          1.7999999523162842,
+          5.5
+        ],
+        "camera": {
+          "fovDegrees": 36,
+          "position": [
+            0,
+            4.765749337669828,
+            16.82774556842803
+          ],
+          "target": [
+            0,
+            0.25,
+            0.04999995231628418
+          ]
+        }
+      },
+      "renderInvariants": {
+        "camera": {
+          "position": [
+            0,
+            4.765749337669828,
+            16.82774556842803
+          ],
+          "quaternion": [
+            -0.13108192303180535,
+            0,
+            0,
+            0.9913715395623801
+          ],
+          "projection": [
+            1.7311969896610804,
+            0,
+            0,
+            0,
+            0,
+            3.0776835371752536,
+            0,
+            0,
+            0,
+            0,
+            -1.0044752257342462,
+            -1,
+            0,
+            0,
+            -0.3482741758483699,
+            0
+          ],
+          "target": [
+            0,
+            0.25,
+            0.04999995231628418
+          ]
+        },
+        "material": [
+          {
+            "name": "Endcap body | midnight-blue enamel",
+            "color": [
+              0.014999999664723873,
+              0.02800000086426735,
+              0.06499999761581421
+            ],
+            "metalness": 0.44999998807907104,
+            "roughness": 0.3199999928474426,
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "map": false,
+            "envMap": false
+          },
+          {
+            "name": "Endcap edging | warm brushed gold",
+            "color": [
+              0.7200000286102295,
+              0.36000001430511475,
+              0.07500000298023224
+            ],
+            "metalness": 0.8199999928474426,
+            "roughness": 0.25,
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "map": false,
+            "envMap": false
+          }
+        ],
+        "geometry": [
+          {
+            "name": "Endcap_profile_|_left",
+            "attributes": {
+              "position": {
+                "count": 647,
+                "itemSize": 3,
+                "hash": "569443d4"
+              },
+              "normal": {
+                "count": 647,
+                "itemSize": 3,
+                "hash": "b79cae64"
+              }
+            },
+            "index": {
+              "count": 993,
+              "hash": "ee3375f7"
+            },
+            "material": [
+              "Endcap body | midnight-blue enamel"
+            ]
+          },
+          {
+            "name": "Endcap_profile_|_left_1",
+            "attributes": {
+              "position": {
+                "count": 1843,
+                "itemSize": 3,
+                "hash": "65f5c63d"
+              },
+              "normal": {
+                "count": 1843,
+                "itemSize": 3,
+                "hash": "092e8624"
+              }
+            },
+            "index": {
+              "count": 2859,
+              "hash": "ab064339"
+            },
+            "material": [
+              "Endcap edging | warm brushed gold"
+            ]
+          },
+          {
+            "name": "Endcap_profile_|_right",
+            "attributes": {
+              "position": {
+                "count": 644,
+                "itemSize": 3,
+                "hash": "9a12d172"
+              },
+              "normal": {
+                "count": 644,
+                "itemSize": 3,
+                "hash": "57778111"
+              }
+            },
+            "index": {
+              "count": 990,
+              "hash": "1bf951ca"
+            },
+            "material": [
+              "Endcap body | midnight-blue enamel"
+            ]
+          },
+          {
+            "name": "Endcap_profile_|_right_1",
+            "attributes": {
+              "position": {
+                "count": 1848,
+                "itemSize": 3,
+                "hash": "c70ce553"
+              },
+              "normal": {
+                "count": 1848,
+                "itemSize": 3,
+                "hash": "e169e127"
+              }
+            },
+            "index": {
+              "count": 2862,
+              "hash": "e8c4ec53"
+            },
+            "material": [
+              "Endcap edging | warm brushed gold"
+            ]
+          }
+        ]
+      },
+      "loaderWarnings": []
+    }
+  },
+  "imageComparison": {
+    "metric": "ImageMagick absolute-error changed-pixel count",
+    "changedPixels": 2987,
+    "totalPixels": 518400
+  }
+}
