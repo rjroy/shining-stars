@@ -224,6 +224,26 @@ try {
       ...sample,
     });
   }
+  const textureResizeRegressions = [];
+  let textureResizeResult;
+  for (const deviceScaleFactor of [1, 1.5]) {
+    if (deviceScaleFactor > 1) {
+      await setViewport(1366, 768, deviceScaleFactor);
+      await evaluate('window.__brightvalePrimeTextureResizeRegression(1366,768)');
+    }
+    for (const [width, height] of [
+      [800, 600],
+      [800, 600],
+      [1366, 768],
+      [800, 600],
+    ]) {
+      await setViewport(width, height, deviceScaleFactor);
+      textureResizeResult = await evaluate(
+        `window.__brightvaleRunTextureResizeRegressionStep(${width},${height})`,
+      );
+      textureResizeRegressions.push(textureResizeResult);
+    }
+  }
   parity = {
     fixtureType:
       'production createGameUI + createBrightvaleScene facade + runtime GLBs; synthetic chart snapshots, not actual audio gameplay',
@@ -245,6 +265,11 @@ try {
       narrow,
       measuredResponsiveViewports,
       deviceScaleFactorSamples,
+      textureResizeRegressions,
+      textureResizeResult,
+      textureUploadErrors: browserLog
+        .split('\n')
+        .filter((line) => /GL_INVALID_VALUE.*glCopySubTextureCHROMIUM/i.test(line)),
     },
   };
   const normal = JSON.parse(
@@ -361,6 +386,12 @@ try {
         ['platform', 'endcaps', 'highway'].every(
           (name) => sample.assets[name]?.outside === 0,
         ),
+      ),
+    resizedCanvasTexturesAreReallocatedAndDisposed:
+      textureResizeResult?.checks?.every((check) => check.passed) === true,
+    noCanvasTextureCopyOffsetOverflow:
+      !/GL_INVALID_VALUE.*glCopySubTextureCHROMIUM.*Offset overflows texture dimensions/i.test(
+        browserLog,
       ),
   };
   const failedChecks = Object.entries(visualChecks)

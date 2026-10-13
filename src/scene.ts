@@ -80,7 +80,7 @@ interface OverlayLabel {
   readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   readonly canvas: HTMLCanvasElement | null;
   readonly context: CanvasRenderingContext2D | null;
-  readonly texture: THREE.CanvasTexture | null;
+  texture: THREE.CanvasTexture | null;
   value: string;
   width: number;
   height: number;
@@ -142,21 +142,26 @@ function setRectLabel(
     readonly backgroundColor?: string;
   },
   pixelRatio: number,
+  ownedTextures: Set<THREE.Texture>,
 ): void {
-  const { mesh, canvas, context, texture } = label;
+  const { mesh, canvas, context } = label;
   const width = Math.max(0, rect.width);
   const height = Math.max(0, rect.height);
   mesh.position.set(rect.x + width / 2, rect.y + height / 2, 1);
   mesh.scale.set(width, height, 1);
   mesh.visible = text.length > 0 && width > 0 && height > 0 && context !== null;
-  if (context === null || canvas === null || texture === null || !mesh.visible)
+  if (context === null || canvas === null || !mesh.visible)
     return;
   if (label.value === text && label.width === width && label.height === height)
     return;
 
   const ratio = Math.max(1, pixelRatio);
-  canvas.width = Math.max(1, Math.ceil(width * ratio));
-  canvas.height = Math.max(1, Math.ceil(height * ratio));
+  const canvasWidth = Math.max(1, Math.ceil(width * ratio));
+  const canvasHeight = Math.max(1, Math.ceil(height * ratio));
+  const canvasResized =
+    canvas.width !== canvasWidth || canvas.height !== canvasHeight;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
   context.clearRect(0, 0, canvas.width, canvas.height);
   if (options.backgroundColor !== undefined) {
     context.fillStyle = options.backgroundColor;
@@ -180,7 +185,29 @@ function setRectLabel(
   if (options.outlineColor !== undefined && (options.outlineWidth ?? 0) > 0)
     context.strokeText(text, x, canvas.height / 2, canvas.width);
   context.fillText(text, x, canvas.height / 2, canvas.width);
-  texture.needsUpdate = true;
+  const texture = label.texture;
+  if (texture === null) {
+    const initialTexture = new THREE.CanvasTexture(canvas);
+    initialTexture.colorSpace = THREE.SRGBColorSpace;
+    label.mesh.material.map = initialTexture;
+    label.texture = initialTexture;
+    ownedTextures.add(initialTexture);
+  } else if (canvasResized) {
+    const resizedTexture = new THREE.CanvasTexture(canvas);
+    try {
+      resizedTexture.copy(texture);
+      label.mesh.material.map = resizedTexture;
+      label.texture = resizedTexture;
+      ownedTextures.add(resizedTexture);
+      ownedTextures.delete(texture);
+      texture.dispose();
+    } catch (error) {
+      resizedTexture.dispose();
+      throw error;
+    }
+  } else {
+    texture.needsUpdate = true;
+  }
   label.value = text;
   label.width = width;
   label.height = height;
@@ -292,12 +319,6 @@ export function createBrightvaleScene(
         canvasElement.width = 1;
         canvasElement.height = 1;
         context = canvasElement.getContext('2d');
-        if (context !== null) {
-          texture = new THREE.CanvasTexture(canvasElement);
-          texture.colorSpace = THREE.SRGBColorSpace;
-          material.map = texture;
-          ownedTextures.add(texture);
-        }
       }
     } catch {
       context = null;
@@ -630,6 +651,7 @@ export function createBrightvaleScene(
         align: 'right',
       },
       pixelRatio,
+      ownedTextures,
     );
     setRectLabel(
       label('countdown'),
@@ -637,6 +659,7 @@ export function createBrightvaleScene(
       layout.labels.countdown,
       { color: '#f4f0df', align: 'center' },
       pixelRatio,
+      ownedTextures,
     );
     setRectLabel(
       label('legend'),
@@ -644,6 +667,7 @@ export function createBrightvaleScene(
       layout.labels.legend,
       { color: '#d7e7df', align: 'center' },
       pixelRatio,
+      ownedTextures,
     );
     setRectLabel(
       label('feedback'),
@@ -659,6 +683,7 @@ export function createBrightvaleScene(
         align: 'center',
       },
       pixelRatio,
+      ownedTextures,
     );
 
     const anchors = [0, 1, 2, 3].map((lane) =>
@@ -677,6 +702,7 @@ export function createBrightvaleScene(
         slot,
         { color: '#f4f0df', align: 'center' },
         pixelRatio,
+        ownedTextures,
       );
     });
     const width = layout.width;

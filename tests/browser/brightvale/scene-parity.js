@@ -742,6 +742,98 @@ window.__brightvaleInspectViewport = async (
     throw error;
   }
 };
+window.__brightvaleRunTextureResizeRegressionStep = async (width, height) => {
+  window.__brightvaleTextureResizeSnapshots ??= [];
+  window.__brightvaleTextureDisposeCounts ??= new Map();
+  const snapshot = async () => {
+    const layout = await waitLayout(width, height);
+    const gl = renderer.getContext();
+    while (gl.getError() !== gl.NO_ERROR) {}
+    const frame = await drive('normal', 10.2);
+    assert(frame.status === 'rendered', `rendered labels at ${width}x${height}`);
+    const mesh = overlayScene?.getObjectByName('Brightvale.Label.legend');
+    const texture = mesh?.material?.map;
+    assert(texture instanceof THREE.CanvasTexture, 'time label has a canvas texture');
+    let disposeCount = window.__brightvaleTextureDisposeCounts.get(texture);
+    if (disposeCount === undefined) {
+      disposeCount = { value: 0 };
+      window.__brightvaleTextureDisposeCounts.set(texture, disposeCount);
+      texture.addEventListener('dispose', () => {
+        disposeCount.value += 1;
+      });
+    }
+    const image = texture.image;
+    const context = image.getContext('2d');
+    const glError = gl.getError();
+    const pixels = new Uint8Array(renderer.domElement.width * renderer.domElement.height * 4);
+    gl.readPixels(0, 0, renderer.domElement.width, renderer.domElement.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    let visiblePixels = 0;
+    const rect = layout.labels.legend;
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    const bounds = {
+      left: Math.max(0, Math.floor(rect.x * ratio)),
+      right: Math.min(renderer.domElement.width, Math.ceil((rect.x + rect.width) * ratio)),
+      top: Math.max(0, Math.floor(rect.y * ratio)),
+      bottom: Math.min(renderer.domElement.height, Math.ceil((rect.y + rect.height) * ratio)),
+    };
+    for (let y = bounds.top; y < bounds.bottom; y += 1)
+      for (let x = bounds.left; x < bounds.right; x += 1) {
+        const offset = ((renderer.domElement.height - 1 - y) * renderer.domElement.width + x) * 4;
+        if (pixels[offset + 1] > pixels[offset] * 1.05 && pixels[offset + 2] > pixels[offset] * 1.03 && pixels[offset + 3] > 0) visiblePixels += 1;
+      }
+    assert(context && image.width > 0 && image.height > 0, 'label canvas has pixels');
+    return {
+      requested: [width, height],
+      dpr: window.devicePixelRatio,
+      layout: [layout.width, layout.height],
+      canvas: [image.width, image.height],
+      meshSize: [mesh.scale.x, mesh.scale.y],
+      texture,
+      visiblePixels,
+      glError,
+      disposeCount,
+    };
+  };
+  const entry = await snapshot();
+  window.__brightvaleTextureResizeSnapshots.push(entry);
+  const snapshots = window.__brightvaleTextureResizeSnapshots;
+  if (snapshots.length < 8) return { count: snapshots.length };
+  const check = (condition, name) => ({ name, passed: condition });
+  const checks = [];
+  for (const offset of [0, 4]) {
+    const [first, sameSize, grown, shrunk] = snapshots.slice(offset, offset + 4);
+    checks.push(
+      check(first.texture === sameSize.texture, `DPR ${first.dpr} same-size update reuses texture`),
+      check(first.texture !== grown.texture, `DPR ${first.dpr} growth replaces texture`),
+      check(grown.texture !== shrunk.texture, `DPR ${first.dpr} shrink replaces texture`),
+    );
+  }
+  for (const sample of snapshots) {
+    checks.push(
+      check(sample.visiblePixels > 0, `DPR ${sample.dpr} label readback has visible pixels at ${sample.requested}`),
+      check(sample.glError === 0, `DPR ${sample.dpr} has no WebGL error at ${sample.requested}`),
+    );
+  }
+  scene.destroy();
+  for (const texture of new Set(snapshots.map((sample) => sample.texture))) {
+    const lastUse = snapshots.findLastIndex((sample) => sample.texture === texture);
+    const disposeCount = snapshots.find((sample) => sample.texture === texture).disposeCount.value;
+    checks.push(
+      check(disposeCount === 1, `texture replaced/disposed exactly once (${lastUse})`),
+    );
+  }
+  return {
+    checks,
+    snapshots: snapshots.map(({ texture, disposeCount, ...sample }) => ({
+      ...sample,
+      disposeCount: disposeCount.value,
+    })),
+  };
+};
+window.__brightvalePrimeTextureResizeRegression = async (width, height) => {
+  await waitLayout(width, height);
+  await drive('normal', 10.2);
+};
 window.__brightvaleParityDispose = () => {
   scene.destroy();
   ui.destroy();
