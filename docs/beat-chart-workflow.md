@@ -8,8 +8,10 @@ original source audio is never modified.
 
 `data/charts/song-authoring.json` is the JSON collection for chart settings.
 Songs are keyed by stable song ID and each entry identifies its source path.
-Only the currently playable song is configured; other audio files do not have
-guessed excerpt settings. The active entry is:
+The currently playable song retains its existing settings. Six additional
+full-recording entries are offline candidates; their measured duration and
+midpoint are recorded explicitly in the collection. The current runtime entry
+is:
 
 ```json
 {
@@ -107,6 +109,39 @@ Both outputs are fully built and validated before either is replaced. Each
 file is replaced atomically on its own; the pair is not a cross-file
 transaction. This is a low-density onset-derived starting chart, not a claim
 that aubio inferred a downbeat, meter, melody, or human-verified musical fit.
+
+## Prepare the six full-song candidates safely
+
+The six candidate settings use `start_time: 0`, the full duration measured from
+each MP3 container with FFprobe, and `twilight_time: duration / 2` (the exact
+midpoint is stored in the JSON settings). They provisionally reuse the current
+song's strength 100, Normal+Hard difficulty list, 64 ms minimum spacing,
+stride 2, and lane pattern `[0, 2, 1, 3]`. These are starting settings, not
+playability or musical approval.
+
+Each generated artifact and TypeScript chart is isolated from the default live
+artifact and `src/game/mvp-chart.ts`. Generate and verify all six with:
+
+```sh
+for song in never-again the-abandoned-child the-commodity the-game \
+  the-last-true-performer the-rising-star; do
+  npm run chart:generate -- --song "$song" \
+    --artifact "data/charts/candidates/$song.beats.json" \
+    --chart "src/game/$song.candidate.ts"
+done
+for song in never-again the-abandoned-child the-commodity the-game \
+  the-last-true-performer the-rising-star; do
+  npm run chart:check -- --song "$song" \
+    --artifact "data/charts/candidates/$song.beats.json" \
+    --chart "src/game/$song.candidate.ts"
+done
+```
+
+The generated chart includes source SHA-256; the beat artifact also retains
+the complete onset list, selected-onset provenance, settings, and normalized
+tool commands. Onsets are aubio's detected transient times, not a musically
+verified beat grid, downbeat, meter, melody, or playability assessment. Review
+and approve candidates separately before any runtime catalog integration.
 
 ## Author another source safely
 
