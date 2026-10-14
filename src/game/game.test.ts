@@ -155,7 +155,7 @@ describe('game model', () => {
     expect(game.press(1, 2)).toBeNull();
     expect(game.snapshot()).toMatchObject({ renown: 0, personalStrength: 0 });
     expect(game.snapshot().notes).toEqual([
-      { id: 'lane-zero', phase: 'audience', outcome: null },
+      { id: 'lane-zero', lane: 0, phase: 'audience', outcome: null },
     ]);
     expect(game.press(0, 2)).toMatchObject({
       noteId: 'lane-zero',

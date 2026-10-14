@@ -367,7 +367,7 @@ describe('audio and controller timing integration', () => {
       const cancelled = cancelWithoutPublishing(controller);
       expect(rendered).toHaveLength(rendersBeforeCancel);
       expect(cancelled.audio.status).toBe('paused');
-      expect(cancelled.feedback).toBeNull();
+      expect(cancelled.feedback).toEqual([]);
       expect(audio.snapshot().hasActiveSource).toBe(false);
 
       gesture.resolve();
@@ -408,7 +408,7 @@ describe('audio and controller timing integration', () => {
 
     await expect(pendingStart).resolves.toMatchObject({
       audio: { status: 'paused', hasActiveSource: false },
-      feedback: null,
+      feedback: [],
     });
     expect(context.sources).toHaveLength(0);
     expect(audio.snapshot().status).toBe('paused');

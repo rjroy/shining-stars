@@ -16,9 +16,9 @@ const easyChart: ChartConfig = {
 describe('projectNotes', () => {
   it('projects unresolved upcoming notes into the visible runway and hides resolved or distant notes', () => {
     const notes = [
-      { id: 'far', phase: 'audience' as const, outcome: null },
-      { id: 'near', phase: 'audience' as const, outcome: null },
-      { id: 'hit', phase: 'audience' as const, outcome: 'good' as const },
+      { id: 'far', lane: 0 as const, phase: 'audience' as const, outcome: null },
+      { id: 'near', lane: 2 as const, phase: 'audience' as const, outcome: null },
+      { id: 'hit', lane: 1 as const, phase: 'audience' as const, outcome: 'good' as const },
     ];
 
     expect(
@@ -38,7 +38,7 @@ describe('projectNotes', () => {
   it('clamps an imminent note to the hit line', () => {
     expect(
       projectNotes(
-        [{ id: 'now', phase: 'audience', outcome: null }],
+        [{ id: 'now', lane: 3, phase: 'audience', outcome: null }],
         [{ id: 'now', lane: 3, time: 0.8 }],
         1,
         2,

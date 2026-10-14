@@ -10,21 +10,12 @@ import { createGame } from '../game/game';
 const ui = readFileSync(resolve(process.cwd(), 'src/ui/ui.ts'), 'utf8');
 
 describe('difficulty presentation contract', () => {
-  it('keeps accessible judgment feedback gated by actual playback and its age', () => {
-    const visibilityRule = ui.slice(
-      ui.indexOf('const isJudgmentVisible'),
-      ui.indexOf('const bars = getResourceBars'),
-    );
-    expect(visibilityRule).toMatch(/judgment !== null/);
-    expect(visibilityRule).toMatch(/isPlaying/);
-    expect(visibilityRule).toMatch(
-      /isFeedbackWithinVisibleAge\(\s*game\.transportTime,\s*judgment\.onsetTransportTime,\s*\)/,
-    );
+  it('keeps gameplay feedback in a polite live region', () => {
+    // Event ordering, deduplication, reset, and announcement wording are
+    // behaviorally covered by ui-feedback.test.ts.
     expect(ui).toMatch(
-      /isPlaying = audio\.status === 'playing' && game\.status === 'playing'/,
+      /data-gameplay-status role="status" aria-live="polite"/,
     );
-    expect(ui).toMatch(/!isJudgmentVisible \|\| judgment === null/);
-    expect(ui).toMatch(/role="status" aria-live="polite"/);
   });
 
   it('removes difficulty selection UI but keeps the default run configuration', () => {

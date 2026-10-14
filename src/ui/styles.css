@@ -319,13 +319,11 @@ h1 {
   background: transparent;
 }
 .stage-topline,
-.timing-window-legend,
-.feedback-row {
+.timing-window-legend {
   visibility: hidden;
   pointer-events: none;
 }
-.stage-topline,
-.feedback-row {
+.stage-topline {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -354,12 +352,6 @@ h1 {
   line-height: 1.45;
   text-align: center;
   text-wrap: balance;
-}
-.feedback-row {
-  flex: 0 0 1.8rem;
-  height: 1.8rem;
-  color: var(--muted);
-  font-size: 0.76rem;
 }
 .renderer-status {
   position: absolute;
@@ -418,12 +410,6 @@ h1 {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-[data-feedback][data-quality='perfect'] {
-  color: var(--gold);
-}
-[data-feedback][data-quality='good'] {
-  color: var(--mint);
 }
 [data-countdown] {
   flex: 0 0 11rem;

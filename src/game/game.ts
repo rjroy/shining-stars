@@ -15,6 +15,7 @@ export type NoteOutcome = HitQuality | 'miss' | null;
 
 export interface GameNoteState {
   readonly id: string;
+  readonly lane: ChartLane;
   readonly phase: GamePhase;
   readonly outcome: NoteOutcome;
 }
@@ -391,6 +392,7 @@ export function createGame(
       difficulty,
       notes: notes.map((note) => ({
         id: note.id,
+        lane: note.lane,
         phase: note.phase,
         outcome: note.outcome,
       })),
