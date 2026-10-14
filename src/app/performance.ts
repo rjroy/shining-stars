@@ -23,6 +23,8 @@ export interface PerformanceSnapshot {
   readonly error: string | null;
   readonly recoveryRequired: boolean;
   readonly disposed: boolean;
+  /** Audio-clock time for rendering scheduled count-ins; null before Play. */
+  readonly audioNow: number | null;
 }
 
 export interface PerformanceDependencies<
@@ -59,11 +61,15 @@ export interface PerformanceCoordinator {
   dispose(): Promise<void>;
 }
 
-interface ActivePerformance {
+interface ActivePerformance<
+  TBuffer extends AudioBufferPort,
+  TSource extends AudioSourcePort<TBuffer>,
+> {
   readonly generation: number;
   readonly song: SongCatalogEntry;
   readonly difficulty: Difficulty;
   readonly controller: GameController;
+  readonly context: AudioContextPort<TBuffer, TSource>;
   readonly prepareTask: Promise<void>;
   gameplayReady: boolean;
   preparationDone: boolean;
@@ -85,7 +91,7 @@ export function createPerformanceCoordinator<
 >(
   dependencies: PerformanceDependencies<TBuffer, TSource>,
 ): PerformanceCoordinator {
-  let active: ActivePerformance | null = null;
+  let active: ActivePerformance<TBuffer, TSource> | null = null;
   let generation = 0;
   let disposed = false;
   let disposePromise: Promise<void> | null = null;
@@ -107,6 +113,7 @@ export function createPerformanceCoordinator<
         setupError,
       recoveryRequired: current?.recoveryRequired ?? false,
       disposed,
+      audioNow: current?.context.currentTime ?? null,
     };
   }
 
@@ -118,11 +125,13 @@ export function createPerformanceCoordinator<
     cleanupBarrier = Promise.all([cleanupBarrier, close]).then(() => undefined);
   }
 
-  function isCurrent(record: ActivePerformance): boolean {
+  function isCurrent(record: ActivePerformance<TBuffer, TSource>): boolean {
     return !disposed && active === record && generation === record.generation;
   }
 
-  function startWhenReady(record: ActivePerformance): Promise<void> {
+  function startWhenReady(
+    record: ActivePerformance<TBuffer, TSource>,
+  ): Promise<void> {
     if (
       !isCurrent(record) ||
       !record.gameplayReady ||
@@ -205,7 +214,9 @@ export function createPerformanceCoordinator<
           dependencies.fetchAudio(url, signal ?? new AbortController().signal),
       },
     );
-    const recordRef: { current: ActivePerformance | null } = { current: null };
+    const recordRef: { current: ActivePerformance<TBuffer, TSource> | null } = {
+      current: null,
+    };
     const controller = createGameController({
       audio,
       inputOffset: dependencies.inputOffset,
@@ -253,11 +264,12 @@ export function createPerformanceCoordinator<
       currentRecord.preparationDone = true;
       await startWhenReady(currentRecord);
     })();
-    const activeRecord: ActivePerformance = {
+    const activeRecord: ActivePerformance<TBuffer, TSource> = {
       generation: requestGeneration,
       song,
       difficulty,
       controller,
+      context,
       prepareTask,
       gameplayReady: false,
       preparationDone: false,

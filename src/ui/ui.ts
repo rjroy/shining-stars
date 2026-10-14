@@ -15,11 +15,13 @@ import {
   type BrightvaleViewportRect,
 } from '../rendering/brightvale/viewport';
 import { ensureExperienceShell } from './experience-shell';
+import type { SongCatalogEntry } from '../catalog/catalog';
 
 export interface UIActions {
   readonly start: () => void;
   readonly resume: () => void;
   readonly restart: () => void;
+  readonly returnToBrowser: () => void;
   readonly onRendererRetry?: () => void;
 }
 
@@ -27,8 +29,9 @@ export interface GameUI {
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
   setRendererStatus(status: BrightvaleRendererStatus, message?: string): void;
+  setRecoveryNotice(message: string | null): void;
   getGameplayLayout(): BrightvaleViewportLayout;
-  showFatal(message: string): void;
+  showFatal(message: string | null): void;
   destroy(): void;
 }
 
@@ -71,9 +74,10 @@ function setElementText(element: HTMLElement, value: string): void {
 
 export function createGameUI(
   applicationRoot: HTMLElement,
-  chart: ChartConfig,
+  song: SongCatalogEntry,
   actions: UIActions,
 ): GameUI {
+  const chart: ChartConfig = song.chart;
   const shell = ensureExperienceShell(applicationRoot);
   const root = shell.createScreen('gameplay', 'Rhythm performance');
   root.innerHTML = `
@@ -120,20 +124,22 @@ export function createGameUI(
         </div>
 
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
-          <p class="dialog-overline">The First Shining Star · provisional excerpt</p>
+          <p class="dialog-overline" data-song-label></p>
           <h2 id="ready-title">Your voice leads. Brightvale answers.</h2>
-          <p>Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
-          <p class="chart-notice">Aubio onset chart · density configured per song</p>
-        <button class="primary-button" type="button" data-action="start" disabled>Begin performance <span aria-hidden="true">↗</span></button>
+          <p data-song-description></p>
+          <p class="chart-notice" data-chart-notice></p>
           <p class="loading-message" data-busy hidden></p>
           <p class="error-message" data-error role="alert" hidden></p>
+          <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
 
         <section class="dialog-panel pause-panel" data-panel="pause" aria-labelledby="pause-title" hidden>
           <p class="dialog-overline">The song is held</p>
           <h2 id="pause-title">Take your time.</h2>
           <p>Your place in the song is saved. The chart will wait through a short count-in.</p>
+          <p class="error-message recovery-notice" data-recovery-notice role="status" hidden></p>
           <div class="dialog-actions"><button class="primary-button" type="button" data-action="resume" disabled>Resume <span aria-hidden="true">↗</span></button><button class="secondary-button" type="button" data-action="restart" disabled>Start over</button></div>
+          <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
 
         <section class="dialog-panel result-panel" data-panel="results" aria-labelledby="result-title" hidden>
@@ -142,6 +148,7 @@ export function createGameUI(
           <p class="result-boundary">A missed note is not surrender.</p>
           <div class="result-grid" data-result-grid></div>
           <button class="primary-button" type="button" data-action="restart" disabled>Sing again <span aria-hidden="true">↗</span></button>
+          <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
 
         <section class="dialog-panel error-panel" data-panel="error" aria-labelledby="error-title" hidden>
@@ -149,11 +156,37 @@ export function createGameUI(
           <h2 id="error-title">The song is not ready.</h2>
           <p data-audio-error role="alert">Check the selected track and try again.</p>
           <button class="primary-button" type="button" data-action="start" disabled>Retry loading <span aria-hidden="true">↗</span></button>
+          <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
         <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
       </div>`;
 
   shell.activate('gameplay');
+  setText(
+    root,
+    '[data-song-label]',
+    `${song.title} · ${song.segmentKind === 'excerpt' ? 'Demo excerpt' : 'Full track'}`,
+  );
+  setText(
+    root,
+    '[data-song-description]',
+    song.segmentKind === 'excerpt'
+      ? 'This is a short demo excerpt. Follow the notes to the line; the song carries you through Audience and Twilight.'
+      : `Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender.`,
+  );
+  setText(
+    root,
+    '[data-chart-notice]',
+    song.chartStatus === 'candidate'
+      ? 'Play-test chart · still being refined'
+      : 'Verified chart',
+  );
+  setText(root, '[data-title]', song.title);
+  setText(
+    root,
+    '[data-track-state]',
+    `${song.segmentKind === 'excerpt' ? 'Demo excerpt' : 'Full track'} · ${song.chartStatus === 'candidate' ? 'play-test chart' : 'verified chart'}`,
+  );
   const playSurface = shell.surface;
   const playHeading = root.querySelector<HTMLElement>('.play-heading');
   const stageHeader = root.querySelector<HTMLElement>('.stage-topline');
@@ -295,6 +328,7 @@ export function createGameUI(
     if (action === 'start') actions.start();
     else if (action === 'resume') actions.resume();
     else if (action === 'restart') actions.restart();
+    else if (action === 'return') actions.returnToBrowser();
     else if (action === 'renderer-retry') actions.onRendererRetry?.();
   }
 
@@ -364,29 +398,21 @@ export function createGameUI(
     for (const actionButton of actionButtons) {
       const action = actionButton.dataset.action;
       const disabled =
-        action === 'renderer-retry'
-          ? rendererStatus !== 'unavailable' ||
-            actions.onRendererRetry === undefined
-          : pendingPlaybackRequests ||
-            rendererStatus !== 'rendered' ||
-            busyMessage !== null;
+        action === 'start'
+          ? !isError
+          : action === 'renderer-retry'
+            ? rendererStatus !== 'unavailable' ||
+              actions.onRendererRetry === undefined
+            : action === 'return'
+              ? false
+              : pendingPlaybackRequests ||
+                rendererStatus !== 'rendered' ||
+                busyMessage !== null;
       if (actionButton.disabled !== disabled) actionButton.disabled = disabled;
     }
     const rendererStatusNode = root.querySelector<HTMLElement>(
       '[data-renderer-status]',
     );
-    if (rendererStatusNode !== null) {
-      const activePanel = panels.find((panel) => !panel.hidden);
-      const statusContainer =
-        rendererStatus !== 'rendered' && activePanel !== undefined
-          ? activePanel
-          : playSurface;
-      if (
-        statusContainer != null &&
-        rendererStatusNode.parentElement !== statusContainer
-      )
-        statusContainer.append(rendererStatusNode);
-    }
     const statusHidden = rendererStatus === 'rendered';
     if (
       rendererStatusNode !== null &&
@@ -563,13 +589,20 @@ export function createGameUI(
             'The three-dimensional playfield could not start. Playback is locked.',
         }[status];
     },
+    setRecoveryNotice(message) {
+      const notice = root.querySelector<HTMLElement>('[data-recovery-notice]');
+      if (notice !== null) {
+        notice.textContent = message ?? '';
+        notice.hidden = message === null;
+      }
+    },
     getGameplayLayout() {
       return gameplayLayout;
     },
     showFatal(message) {
       fatalMessage = message;
-      setText(root, '[data-audio-error]', message);
-      showPanel('error');
+      if (message !== null) setText(root, '[data-audio-error]', message);
+      if (message !== null) showPanel('error');
     },
     destroy() {
       root.removeEventListener('click', onClick);

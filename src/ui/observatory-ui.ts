@@ -44,6 +44,7 @@ export interface ObservatoryUI {
   setProjectedAnchors(anchors: readonly ObservatoryAnchor[]): void;
   setRendererStatus(status: BrightvaleRendererStatus, message?: string): void;
   setPlayStatus(status: ObservatoryPlayStatus, message?: string): void;
+  focusSelectedSong(): void;
   destroy(): void;
 }
 
@@ -394,7 +395,7 @@ export function createObservatoryUI(
       );
       row.dataset.songId = song.id;
       const select = createButton(
-        song.title,
+        '',
         'select-song',
         'song-row-main',
         starGlyph(index),
@@ -426,6 +427,8 @@ export function createObservatoryUI(
         createSvgIcon('heart'),
       );
       favorite.dataset.songId = song.id;
+      const favoriteLabel = favorite.querySelector('span');
+      favoriteLabel?.classList.add('sr-only');
       favorite.setAttribute(
         'aria-pressed',
         String(favoriteStore.isFavorite(song.id)),
@@ -784,6 +787,20 @@ export function createObservatoryUI(
         message,
         status === 'preparing' || status === 'error',
       );
+    },
+    focusSelectedSong() {
+      const selected = currentSelection.selectedSongId;
+      if (screen === 'browser' && selected !== null) {
+        root
+          .querySelector<HTMLButtonElement>(
+            `button[data-action="select-song"][data-song-id="${selected}"]`,
+          )
+          ?.focus();
+      } else {
+        root
+          .querySelector<HTMLButtonElement>('[data-action="browse-collection"]')
+          ?.focus();
+      }
     },
     destroy() {
       if (disposed) return;

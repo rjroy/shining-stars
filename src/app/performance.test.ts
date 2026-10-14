@@ -116,6 +116,18 @@ function harness() {
 }
 
 describe('performance coordinator', () => {
+  it('exposes the active audio clock as a read-only rendering value', async () => {
+    const h = harness();
+    expect(h.coordinator.snapshot().audioNow).toBeNull();
+    await h.coordinator.prepare(h.song, 'normal');
+    const context = h.contexts[0];
+    if (context === undefined) throw new Error('Expected an audio context.');
+    context.currentTime = 12.5;
+    expect(h.coordinator.snapshot().audioNow).toBe(12.5);
+    await h.coordinator.returnToBrowser();
+    expect(h.coordinator.snapshot().audioNow).toBeNull();
+  });
+
   it('resumes synchronously in Play, loads only the selected song, and waits for gameplay readiness', async () => {
     const h = harness();
     const preparation = h.coordinator.prepare(h.song, 'normal');

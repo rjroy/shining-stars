@@ -8,14 +8,13 @@ import { createGame } from '../game/game';
 // Vitest currently runs without a DOM environment; these focused source checks
 // cover the UI contract while scene behavior is exercised through projection tests.
 const ui = readFileSync(resolve(process.cwd(), 'src/ui/ui.ts'), 'utf8');
+const main = readFileSync(resolve(process.cwd(), 'src/main.ts'), 'utf8');
 
 describe('difficulty presentation contract', () => {
   it('keeps gameplay feedback in a polite live region', () => {
     // Event ordering, deduplication, reset, and announcement wording are
     // behaviorally covered by ui-feedback.test.ts.
-    expect(ui).toMatch(
-      /data-gameplay-status role="status" aria-live="polite"/,
-    );
+    expect(ui).toMatch(/data-gameplay-status role="status" aria-live="polite"/);
   });
 
   it('removes difficulty selection UI but keeps the default run configuration', () => {
@@ -53,12 +52,10 @@ describe('difficulty presentation contract', () => {
     expect(scene).toMatch(
       /composition\.frontProgress = getFrontPlatformProgress\(\s*composition\.playfield,\s*composition\.profile,?\s*\)/,
     );
-    const mainInput = readFileSync(
-      resolve(process.cwd(), 'src/main-input.test.ts'),
-      'utf8',
+    expect(main).toMatch(/event\.code === 'Escape'/);
+    expect(main).toMatch(
+      /performance\?\.keyDown\(event\.code, event\.repeat\)/,
     );
-    expect(mainInput).toMatch(/Enter/);
-    expect(mainInput).toMatch(/keyDown/);
   });
 
   it('renders inset graphic resource bars with actual values and derived denominators', () => {
