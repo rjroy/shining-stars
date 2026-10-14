@@ -2,10 +2,7 @@ import type * as THREE from 'three';
 import type { BrightvaleAssets } from './assets';
 
 export type BrightvaleFrameStatus =
-  | 'loading'
-  | 'rendered'
-  | 'suspended'
-  | 'unavailable';
+  'loading' | 'rendered' | 'suspended' | 'unavailable';
 
 export interface BrightvaleShellComposition {
   readonly root: THREE.Object3D;
@@ -13,17 +10,26 @@ export interface BrightvaleShellComposition {
   dispose(): void;
 }
 
+export type BrightvaleSceneMode = 'gameplay' | 'observatory';
+
 export interface BrightvaleSceneShellDependencies {
   readonly scene: THREE.Scene;
+  readonly sceneForMode?: (mode: BrightvaleSceneMode) => THREE.Scene;
   readonly loadAssets: (signal: AbortSignal) => Promise<BrightvaleAssets>;
-  readonly createComposition: (assets: BrightvaleAssets) => BrightvaleShellComposition;
+  readonly createComposition: (
+    assets: BrightvaleAssets,
+    mode: BrightvaleSceneMode,
+  ) => BrightvaleShellComposition;
   /** A normal return represents a successful complete scene render. */
-  readonly render: () => void;
+  readonly render: (mode: BrightvaleSceneMode) => void;
   readonly onFailure: (error: unknown) => void;
 }
 
 export interface BrightvaleSceneShell {
-  updateFrame(frame: { readonly viewportUsable: boolean }): BrightvaleFrameStatus;
+  updateFrame(frame: {
+    readonly viewportUsable: boolean;
+    readonly mode?: BrightvaleSceneMode;
+  }): BrightvaleFrameStatus;
   destroy(): void;
 }
 
@@ -34,7 +40,11 @@ export function createBrightvaleSceneShell(
   const loadController = new AbortController();
   const disposedBundles = new WeakSet<BrightvaleAssets>();
   let assets: BrightvaleAssets | null = null;
-  let composition: BrightvaleShellComposition | null = null;
+  const compositions = new Map<
+    BrightvaleSceneMode,
+    BrightvaleShellComposition
+  >();
+  let activeMode: BrightvaleSceneMode | null = null;
   let terminal: 'active' | 'unavailable' | 'destroyed' = 'active';
   let failureNotified = false;
   let hasRendered = false;
@@ -59,27 +69,34 @@ export function createBrightvaleSceneShell(
     try {
       bundle.dispose();
     } catch (error) {
-      console.error('[Brightvale] scene shell bundle disposal failed', { error });
+      console.error('[Brightvale] scene shell bundle disposal failed', {
+        error,
+      });
     }
   };
 
   const cleanup = (): void => {
-    const previousComposition = composition;
-    composition = null;
-    if (previousComposition !== null) {
-      if (previousComposition.root.parent === dependencies.scene) {
+    for (const [mode, previousComposition] of compositions) {
+      const scene = dependencies.sceneForMode?.(mode) ?? dependencies.scene;
+      if (previousComposition.root.parent === scene) {
         try {
-          dependencies.scene.remove(previousComposition.root);
+          scene.remove(previousComposition.root);
         } catch (error) {
-          console.error('[Brightvale] scene shell composition detach failed', { error });
+          console.error('[Brightvale] scene shell composition detach failed', {
+            error,
+          });
         }
       }
       try {
         previousComposition.dispose();
       } catch (error) {
-        console.error('[Brightvale] scene shell composition disposal failed', { error });
+        console.error('[Brightvale] scene shell composition disposal failed', {
+          error,
+        });
       }
     }
+    compositions.clear();
+    activeMode = null;
 
     const previousAssets = assets;
     assets = null;
@@ -131,12 +148,16 @@ export function createBrightvaleSceneShell(
 
   return {
     updateFrame(frame): BrightvaleFrameStatus {
+      const mode = frame.mode ?? 'gameplay';
       if (terminal !== 'active') {
         logFrameStatus('unavailable', terminal);
         return 'unavailable';
       }
       if (!frame.viewportUsable) {
-        logFrameStatus('suspended', assets === null ? 'viewport-unusable-loading' : 'viewport-unusable');
+        logFrameStatus(
+          'suspended',
+          assets === null ? 'viewport-unusable-loading' : 'viewport-unusable',
+        );
         return 'suspended';
       }
       if (assets === null) {
@@ -145,19 +166,34 @@ export function createBrightvaleSceneShell(
       }
 
       try {
-        if (composition === null) {
-          console.info('[Brightvale] scene shell composition attempt');
-          const created = dependencies.createComposition(assets);
-          composition = created;
-          dependencies.scene.add(created.root);
-          console.info('[Brightvale] scene shell composition attached');
+        const scene = dependencies.sceneForMode?.(mode) ?? dependencies.scene;
+        if (activeMode !== mode && activeMode !== null) {
+          const previousScene =
+            dependencies.sceneForMode?.(activeMode) ?? dependencies.scene;
+          const previous = compositions.get(activeMode);
+          if (previous !== undefined && previous.root.parent === previousScene)
+            previousScene.remove(previous.root);
         }
-        dependencies.render();
+        let composition = compositions.get(mode);
+        if (composition === undefined) {
+          console.info('[Brightvale] scene shell composition attempt');
+          composition = dependencies.createComposition(assets, mode);
+          compositions.set(mode, composition);
+          scene.add(composition.root);
+          console.info('[Brightvale] scene shell composition attached');
+        } else if (composition.root.parent !== scene) {
+          scene.add(composition.root);
+        }
+        activeMode = mode;
+        dependencies.render(mode);
         if (!hasRendered) {
           hasRendered = true;
           console.info('[Brightvale] scene shell first render succeeded');
         }
-        logFrameStatus('rendered', hasRendered ? 'render-succeeded' : 'render-attempt');
+        logFrameStatus(
+          'rendered',
+          hasRendered ? 'render-succeeded' : 'render-attempt',
+        );
         return 'rendered';
       } catch (error) {
         fail(error);

@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import type { GameplayFrame } from './gameplay-frame';
 import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
 import type { BrightvaleAssets } from './brightvale/assets';
+import {
+  createObservatoryComposition,
+  type ObservatoryComposition,
+  type ObservatoryProjectedAnchor,
+} from './observatory-scene';
 import { loadBrightvaleRuntimeAssets } from './brightvale/assets-runtime';
 import {
   createBrightvaleComposition,
@@ -38,6 +43,13 @@ export interface BrightvaleScene {
     readonly city: SceneStateProjection;
     readonly gameplay: GameplayFrame;
   }): BrightvaleRendererStatus;
+  updateObservatoryFrame(frame: {
+    readonly width: number;
+    readonly height: number;
+    readonly elapsedSeconds: number;
+    readonly reducedMotion: boolean;
+  }): BrightvaleRendererStatus;
+  getObservatoryAnchors(): readonly ObservatoryProjectedAnchor[];
   destroy(): void;
 }
 
@@ -153,9 +165,15 @@ function makeJudgmentRayGeometry(): THREE.BufferGeometry {
     const px = -y * halfWidth;
     const py = x * halfWidth;
     points.push(
-      x * inner + px, y * inner + py, 0,
-      x * outer, y * outer, 0,
-      x * inner - px, y * inner - py, 0,
+      x * inner + px,
+      y * inner + py,
+      0,
+      x * outer,
+      y * outer,
+      0,
+      x * inner - px,
+      y * inner - py,
+      0,
     );
   }
   const geometry = new THREE.BufferGeometry();
@@ -290,6 +308,8 @@ export function createBrightvaleScene(
 
   const canvas = renderer.domElement;
   const worldScene = new THREE.Scene();
+  const observatoryScene = new THREE.Scene();
+  observatoryScene.background = new THREE.Color('#100d2a');
   const overlayScene = new THREE.Scene();
   const overlayCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 10);
   overlayCamera.position.set(0, 0, 5);
@@ -412,7 +432,10 @@ export function createBrightvaleScene(
       side: THREE.DoubleSide,
       toneMapped: false,
     });
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.43, 32), ringMaterial);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.26, 0.43, 32),
+      ringMaterial,
+    );
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.012;
     ring.userData.gameplayRole = 'lane-judgment-ring';
@@ -448,6 +471,10 @@ export function createBrightvaleScene(
   };
 
   let lastFrame: FrameState | null = null;
+  let observatoryFrame = { elapsedSeconds: 0, reducedMotion: false };
+  let observatoryViewport = { width: 0, height: 0 };
+  let activeMode: 'gameplay' | 'observatory' = 'gameplay';
+  let observatoryComposition: ObservatoryComposition | null = null;
   let lastProjectionKey = '';
   let disposed = false;
   let failureNotified = false;
@@ -544,7 +571,13 @@ export function createBrightvaleScene(
     try {
       setRendererPixelRatio();
       setRendererSize(layout.width, layout.height);
-      shell?.updateFrame({ viewportUsable: viewportUsable(layout) });
+      if (activeMode === 'observatory') {
+        observatoryViewport = { width: layout.width, height: layout.height };
+      }
+      shell?.updateFrame({
+        viewportUsable: viewportUsable(layout),
+        mode: activeMode,
+      });
     } catch (error) {
       console.error('[Brightvale] measured viewport update failed', {
         width: layout.width,
@@ -661,7 +694,23 @@ export function createBrightvaleScene(
     }
   };
 
-  const renderFrame = (): void => {
+  const renderFrame = (mode: 'gameplay' | 'observatory' = 'gameplay'): void => {
+    if (mode === 'observatory') {
+      if (observatoryComposition === null)
+        throw new Error('Observatory composition is not ready');
+      const layout = observatoryViewport;
+      observatoryComposition.update({
+        width: layout.width,
+        height: layout.height,
+        elapsedSeconds: observatoryFrame.elapsedSeconds,
+        reducedMotion: observatoryFrame.reducedMotion,
+      });
+      renderer.autoClear = true;
+      renderer.setViewport(0, 0, layout.width, layout.height);
+      renderer.setScissorTest(false);
+      renderer.render(observatoryScene, observatoryComposition.camera);
+      return;
+    }
     if (lastFrame === null) throw new Error('Brightvale has no gameplay frame');
     const frame = lastFrame;
     const layout = frame.gameplay.layout;
@@ -721,10 +770,7 @@ export function createBrightvaleScene(
       DEVICE_PIXEL_RATIO_CAP,
     );
     const label = (name: string) => overlayLabels.get(name)!;
-    const judgmentLabelWidth = Math.min(
-      112,
-      Math.max(72, layout.width / 10),
-    );
+    const judgmentLabelWidth = Math.min(112, Math.max(72, layout.width / 10));
     for (let lane = 0; lane < 4; lane += 1) {
       const judgmentLabel = label(`judgment-${lane}`);
       setRectLabel(
@@ -786,13 +832,24 @@ export function createBrightvaleScene(
       const materialColor = JUDGMENT_COLORS[event.quality];
       const reduced = frame.gameplay.reducedMotion;
       const startScale =
-        event.quality === 'perfect' ? 0.68 : event.quality === 'good' ? 0.58 : 0.48;
+        event.quality === 'perfect'
+          ? 0.68
+          : event.quality === 'good'
+            ? 0.58
+            : 0.48;
       const endScale =
-        event.quality === 'perfect' ? 1.62 : event.quality === 'good' ? 1.14 : 0.86;
+        event.quality === 'perfect'
+          ? 1.62
+          : event.quality === 'good'
+            ? 1.14
+            : 0.86;
       const scale = reduced
         ? startScale
         : THREE.MathUtils.lerp(startScale, endScale, progress);
-      const fade = Math.pow(1 - progress, event.quality === 'miss' ? 1.15 : 0.68);
+      const fade = Math.pow(
+        1 - progress,
+        event.quality === 'miss' ? 1.15 : 0.68,
+      );
       visual.group.visible = true;
       visual.group.position.copy(
         composition.profile === null
@@ -804,15 +861,26 @@ export function createBrightvaleScene(
       visual.ring.material.color.setHex(materialColor);
       visual.rays.material.color.setHex(materialColor);
       visual.ring.scale.setScalar(
-        event.quality === 'perfect' ? 1 : event.quality === 'good' ? 0.88 : 0.68,
+        event.quality === 'perfect'
+          ? 1
+          : event.quality === 'good'
+            ? 0.88
+            : 0.68,
       );
       visual.ring.material.opacity =
-        fade * (event.quality === 'miss' ? 0.78 : event.quality === 'good' ? 0.62 : 0.95);
+        fade *
+        (event.quality === 'miss'
+          ? 0.78
+          : event.quality === 'good'
+            ? 0.62
+            : 0.95);
       const shimmer = reduced ? 1 : 0.78 + 0.22 * Math.sin(event.age * 30);
       const rayFade =
         event.quality === 'perfect' ? Math.pow(1 - progress, 0.25) : fade;
       visual.rays.material.opacity =
-        rayFade * shimmer * (event.quality === 'perfect' ? 1 : event.quality === 'miss' ? 0.3 : 0);
+        rayFade *
+        shimmer *
+        (event.quality === 'perfect' ? 1 : event.quality === 'miss' ? 0.3 : 0);
       visual.rays.scale.setScalar(event.quality === 'miss' ? 0.45 : 1);
       visual.rays.visible = event.quality !== 'good';
 
@@ -822,7 +890,12 @@ export function createBrightvaleScene(
           ? playfield.point(lane, 1)
           : playfield.visualPoint(lane, 1),
       );
-      const text = event.quality === 'perfect' ? 'PERFECT' : event.quality === 'good' ? 'GOOD' : 'MISS';
+      const text =
+        event.quality === 'perfect'
+          ? 'PERFECT'
+          : event.quality === 'good'
+            ? 'GOOD'
+            : 'MISS';
       const textColor =
         event.quality === 'perfect'
           ? '#fff4cf'
@@ -896,7 +969,12 @@ export function createBrightvaleScene(
 
   const createShellComposition = (
     assets: BrightvaleAssets,
+    mode: 'gameplay' | 'observatory' = 'gameplay',
   ): BrightvaleShellComposition => {
+    if (mode === 'observatory') {
+      observatoryComposition = createObservatoryComposition(assets);
+      return observatoryComposition;
+    }
     const frame = lastFrame;
     if (frame === null)
       throw new Error('cannot compose without a viewport frame');
@@ -970,10 +1048,12 @@ export function createBrightvaleScene(
 
     shell = createBrightvaleSceneShell({
       scene: worldScene,
+      sceneForMode: (mode) =>
+        mode === 'observatory' ? observatoryScene : worldScene,
       loadAssets:
         dependencies?.loadAssets ??
         ((signal) => loadBrightvaleRuntimeAssets(signal)),
-      createComposition: createShellComposition,
+      createComposition: (assets, mode) => createShellComposition(assets, mode),
       render: renderFrame,
       onFailure: () => {
         releaseRenderer();
@@ -991,12 +1071,21 @@ export function createBrightvaleScene(
         height = size.height;
         setRendererPixelRatio();
         setRendererSize(width, height);
-        if (
+        if (activeMode === 'observatory') {
+          observatoryViewport = { width, height };
+          shell?.updateFrame({
+            viewportUsable: width > 0 && height > 0,
+            mode: activeMode,
+          });
+        } else if (
           lastFrame !== null &&
           lastFrame.gameplay.layout.width === width &&
           lastFrame.gameplay.layout.height === height
         )
-          shell?.updateFrame({ viewportUsable: width > 0 && height > 0 });
+          shell?.updateFrame({
+            viewportUsable: width > 0 && height > 0,
+            mode: activeMode,
+          });
       } catch (error) {
         console.error('[Brightvale] scene resize failed', {
           width,
@@ -1048,10 +1137,42 @@ export function createBrightvaleScene(
       }
       const status = shell.updateFrame({
         viewportUsable: viewportUsable(frame.gameplay.layout),
+        mode: 'gameplay',
       });
+      activeMode = 'gameplay';
       if (composition.projection !== null && !composition.projection.usable)
         return 'suspended';
       return status;
+    },
+    updateObservatoryFrame(frame): BrightvaleFrameStatus {
+      if (disposed || shell === null) return 'unavailable';
+      activeMode = 'observatory';
+      observatoryFrame = {
+        elapsedSeconds: frame.elapsedSeconds,
+        reducedMotion: frame.reducedMotion,
+      };
+      observatoryViewport = { width: frame.width, height: frame.height };
+      if (frame.width > 0 && frame.height > 0) {
+        try {
+          setRendererPixelRatio();
+          setRendererSize(frame.width, frame.height);
+        } catch (error) {
+          console.error('[Brightvale] Observatory renderer sizing failed', {
+            error,
+          });
+          shell.destroy();
+          releaseRenderer();
+          notifyUnavailable();
+          return 'unavailable';
+        }
+      }
+      return shell.updateFrame({
+        viewportUsable: frame.width > 0 && frame.height > 0,
+        mode: 'observatory',
+      });
+    },
+    getObservatoryAnchors() {
+      return observatoryComposition?.anchors() ?? [];
     },
     destroy(): void {
       cleanup();

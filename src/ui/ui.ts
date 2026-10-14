@@ -14,6 +14,7 @@ import {
   type BrightvaleViewportLayout,
   type BrightvaleViewportRect,
 } from '../rendering/brightvale/viewport';
+import { ensureExperienceShell } from './experience-shell';
 
 export interface UIActions {
   readonly start: () => void;
@@ -69,20 +70,14 @@ function setElementText(element: HTMLElement, value: string): void {
 }
 
 export function createGameUI(
-  root: HTMLElement,
+  applicationRoot: HTMLElement,
   chart: ChartConfig,
   actions: UIActions,
 ): GameUI {
+  const shell = ensureExperienceShell(applicationRoot);
+  const root = shell.createScreen('gameplay', 'Rhythm performance');
   root.innerHTML = `
-    <main class="experience" aria-label="Brightvale rhythm performance">
-      <section class="play-surface" aria-label="Rhythm performance" aria-describedby="lane-instructions">
-        <div class="scene-light" aria-hidden="true"></div>
-        <div class="scene-linework" aria-hidden="true">
-          <svg viewBox="0 0 1200 150" preserveAspectRatio="none">
-            <path d="M0 22 Q210 78 390 28 T780 35 T1200 18" />
-            <path d="M0 42 Q210 98 390 48 T780 55 T1200 38" />
-          </svg>
-        </div>
+      <div class="gameplay-screen-content" aria-describedby="lane-instructions">
         <div class="play-heading">
           <div class="resource-readout player-resource" aria-live="polite" aria-atomic="true">
             <span class="resource-name" data-audience-resource>Renown</span>
@@ -155,11 +150,11 @@ export function createGameUI(
           <p data-audio-error role="alert">Check the selected track and try again.</p>
           <button class="primary-button" type="button" data-action="start" disabled>Retry loading <span aria-hidden="true">↗</span></button>
         </section>
-      </section>
-      <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
-    </main>`;
+        <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
+      </div>`;
 
-  const playSurface = root.querySelector<HTMLElement>('.play-surface');
+  shell.activate('gameplay');
+  const playSurface = shell.surface;
   const playHeading = root.querySelector<HTMLElement>('.play-heading');
   const stageHeader = root.querySelector<HTMLElement>('.stage-topline');
   const timingLegend = root.querySelector<HTMLElement>('[data-timing-legend]');
@@ -529,7 +524,9 @@ export function createGameUI(
           ' — centered on the hit line; unresolved notes continue past it.',
       );
     }
-    const feedbackAnnouncement = feedbackAnnouncements.update(snapshot.feedback);
+    const feedbackAnnouncement = feedbackAnnouncements.update(
+      snapshot.feedback,
+    );
     const gameplayStatus = root.querySelector<HTMLElement>(
       '[data-gameplay-status]',
     );
@@ -579,7 +576,7 @@ export function createGameUI(
       layoutResizeObserver?.disconnect();
       if (layoutResizeObserver === null && typeof window !== 'undefined')
         window.removeEventListener('resize', measureGameplayLayout);
-      root.replaceChildren();
+      shell.removeScreen('gameplay');
     },
   };
 }
