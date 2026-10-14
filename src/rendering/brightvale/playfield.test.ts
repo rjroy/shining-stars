@@ -98,6 +98,40 @@ describe('Brightvale geometry-driven playfield contract', () => {
     ).toBeGreaterThan(justBefore.z);
   });
 
+  it.each(['easy', 'normal', 'hard'] as const)(
+    'keeps loaded-geometry note positions finite and continuous through the %s late cutoff',
+    (difficulty) => {
+      const contract = createBrightvalePlayfieldContract(surfaceProfile);
+      const lateCutoff =
+        1 + getDifficultyProfile(difficulty).timing.goodWindowSeconds / 2.4;
+      const samples = [
+        1,
+        1 + (lateCutoff - 1) * 0.25,
+        1 + (lateCutoff - 1) * 0.5,
+        1 + (lateCutoff - 1) * 0.75,
+        lateCutoff,
+      ];
+      if (difficulty === 'easy') {
+        samples.push(1.125);
+        samples.sort((left, right) => left - right);
+      }
+      const points = samples.map((progress) =>
+        contract.visualPoint(0, progress),
+      );
+
+      for (const point of points)
+        expect(point.toArray().every(Number.isFinite)).toBe(true);
+      for (let index = 1; index < points.length; index += 1) {
+        const previous = points[index - 1];
+        const current = points[index];
+        if (previous === undefined || current === undefined)
+          throw new Error('missing loaded-geometry sample');
+        expect(current.z).toBeGreaterThan(previous.z);
+        expect(current.distanceTo(previous)).toBeLessThan(3);
+      }
+    },
+  );
+
   it('reports actual GLB target-surface separation rather than highway seam clearance', () => {
     const targetMesh =
       platformValidation.glb.meshes['Hit bar 1 | recessed luminous center'];
