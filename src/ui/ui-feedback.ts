@@ -10,6 +10,50 @@ export interface FeedbackAnnouncementUpdate {
   readonly clear: boolean;
 }
 
+export interface GameplayStatusTextTarget {
+  textContent: string | null;
+}
+
+/** Apply announcements to the live region only when its text actually changes. */
+export function updateGameplayStatusText(
+  target: GameplayStatusTextTarget,
+  victoryAnnouncement: string | null,
+  feedback: FeedbackAnnouncementUpdate,
+): void {
+  if (feedback.announcement !== null || victoryAnnouncement !== null) {
+    setTextIfChanged(
+      target,
+      [victoryAnnouncement, feedback.announcement]
+        .filter((announcement): announcement is string => announcement !== null)
+        .join(' '),
+    );
+  } else if (feedback.clear) {
+    setTextIfChanged(target, '');
+  }
+}
+
+function setTextIfChanged(target: GameplayStatusTextTarget, text: string): void {
+  if (target.textContent !== text) target.textContent = text;
+}
+
+/** Announces the latched victory once, and rearms only after run reset. */
+export function createVictoryAnnouncementTracker(): {
+  update(victory: boolean): string | null;
+} {
+  let announced = false;
+  return {
+    update(victory) {
+      if (!victory) {
+        announced = false;
+        return null;
+      }
+      if (announced) return null;
+      announced = true;
+      return 'Twilight is defeated. Your radiant performance continues to the end of the song.';
+    },
+  };
+}
+
 /** Tracks unseen events and makes repeated identical polite announcements distinct. */
 export function createFeedbackAnnouncementTracker(): {
   update(events: readonly FeedbackAnnouncementEvent[]): FeedbackAnnouncementUpdate;
@@ -23,11 +67,6 @@ export function createFeedbackAnnouncementTracker(): {
   return {
     update(events) {
       if (events.length === 0) {
-        runId = null;
-        lastEventId = 0;
-        lastMessage = null;
-        lastAnnouncement = null;
-        consecutiveRepeatCount = 0;
         return { announcement: null, clear: true };
       }
 

@@ -93,6 +93,10 @@ a:focus-visible {
   --accent: #c6a0ff;
   --twilight-accent: #c6a0ff;
 }
+.play-surface.is-victory {
+  --accent: #fff0b9;
+  --twilight-accent: #ffe5a1;
+}
 .play-surface:not(.is-twilight) {
   --accent: var(--gold);
   --twilight-accent: #c6a0ff;
@@ -119,6 +123,15 @@ a:focus-visible {
     circle,
     rgb(99 224 190 / 15%),
     rgb(63 148 162 / 5%) 45%,
+    transparent 70%
+  );
+}
+.is-victory .scene-light {
+  opacity: 1;
+  background: radial-gradient(
+    circle,
+    rgb(255 232 164 / 30%),
+    rgb(255 188 91 / 10%) 42%,
     transparent 70%
   );
 }
@@ -288,6 +301,14 @@ h1 {
   background: linear-gradient(90deg, #8735e8, #c57bff 72%, #f0d2ff);
   box-shadow: 0 0 10px rgb(174 95 255 / 72%);
 }
+.is-victory .twilight-meter progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #cc8b36, #ffe28a 72%, #fff9d5);
+  box-shadow: 0 0 12px rgb(255 223 143 / 85%);
+}
+.is-victory .twilight-meter progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #cc8b36, #ffe28a 72%, #fff9d5);
+  box-shadow: 0 0 12px rgb(255 223 143 / 85%);
+}
 .resource-amount {
   color: #f7f3e8;
   font:
@@ -299,6 +320,9 @@ h1 {
 }
 .opponent-resource .resource-amount {
   color: #e9d5ff;
+}
+.is-victory .opponent-resource .resource-amount {
+  color: #fff0b9;
 }
 .opponent-resource strong {
   color: var(--twilight-accent);

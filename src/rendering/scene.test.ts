@@ -52,6 +52,7 @@ function productionFetch(): typeof fetch {
 
 const city: SceneStateProjection = {
   phase: 'audience',
+  victory: false,
   cityIntensity: 0.4,
   cityBrightness: 0.5,
   transitionProgress: 0,

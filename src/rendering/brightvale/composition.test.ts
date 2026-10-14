@@ -57,6 +57,7 @@ function requireAssets(): BrightvaleAssets {
 function makeState(transitionProgress: number): SceneStateProjection {
   return {
     phase: transitionProgress >= 1 ? 'twilight' : 'audience',
+    victory: false,
     cityIntensity: 0.5,
     cityBrightness: 0.61,
     transitionProgress,

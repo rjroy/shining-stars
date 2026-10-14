@@ -26,6 +26,7 @@ function projection(
 ): SceneStateProjection {
   return {
     phase: 'audience',
+    victory: false,
     cityIntensity: 0.5,
     cityBrightness: 0.61,
     transitionProgress: 0,
@@ -169,6 +170,33 @@ describe('Brightvale shared appearance', () => {
     expect(point.color.getHex()).toBe(0x966dff);
     expect(point.intensity).toBeCloseTo(96);
     expect(point.position.toArray()).toEqual([12, 24, -12]);
+    appearance.dispose();
+  });
+
+  it('switches locked victory from violet Twilight to a brighter gold-white radiance', () => {
+    const { scene, root } = makeSourceScene(sourceMaterial('body'));
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const hemisphere = sceneLight(
+      scene,
+      'Brightvale.Ambience',
+      THREE.HemisphereLight,
+    );
+    const point = sceneLight(scene, 'Brightvale.Point', THREE.PointLight);
+
+    appearance.update(projection({ phase: 'twilight', transitionProgress: 1 }));
+    const twilightPoint = point.intensity;
+    expect(point.color.getHex()).toBe(0x966dff);
+    appearance.update(
+      projection({ phase: 'twilight', victory: true, transitionProgress: 1 }),
+    );
+
+    expect(point.color.getHex()).toBe(0xffe2a0);
+    expect(point.intensity).toBeGreaterThan(twilightPoint);
+    expect(hemisphere.color.getHex()).toBe(0xffedc4);
+    expect(hemisphere.intensity).toBeGreaterThan(1.25);
+    appearance.update(projection({ phase: 'twilight', transitionProgress: 1 }));
+    expect(point.color.getHex()).toBe(0x966dff);
+    expect(point.intensity).toBeCloseTo(twilightPoint);
     appearance.dispose();
   });
 

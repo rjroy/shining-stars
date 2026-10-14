@@ -14,6 +14,8 @@ export interface SceneMotionState {
 /** Pure visual inputs for the Three.js scene; no scene clock or game rules. */
 export interface SceneStateProjection {
   readonly phase: GamePhase;
+  /** Locked victory mode remains distinct from a depleted Twilight light level. */
+  readonly victory: boolean;
   /** Active city's accompaniment strength, normalized to [0, 1]. */
   readonly cityIntensity: number;
   /** Static visibility floor so city participation remains legible at zero strength. */
@@ -37,12 +39,14 @@ export function projectSceneState(
 ): SceneStateProjection {
   const game = snapshot.game;
   const phase = game.phase;
+  const victory = game.victory;
   const profile = getDifficultyProfile(game.difficulty);
   const audiencePotential =
     chart.notes.filter((note) => note.time < chart.twilightAt).length *
     profile.audience.perfect;
-  const cityIntensity =
-    phase === 'audience'
+  const cityIntensity = victory
+    ? 1
+    : phase === 'audience'
       ? clamp01(audiencePotential === 0 ? 0 : game.renown / audiencePotential)
       : clamp01(
           (chart.twilightStrength - game.twilightStrength) /
@@ -57,6 +61,7 @@ export function projectSceneState(
 
   return {
     phase,
+    victory,
     cityIntensity,
     cityBrightness: 0.22 + cityIntensity * 0.78,
     transitionProgress,

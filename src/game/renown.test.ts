@@ -108,10 +108,14 @@ describe('Renown and Twilight Strength model', () => {
     perfect.advanceTo(5);
     perfect.press(0, 7);
     expect(perfect.snapshot()).toMatchObject({
+      victory: true,
+      status: 'playing',
       personalStrength: 3,
       twilightStrength: 0,
-      result: { outcome: 'victory' },
+      result: null,
     });
+    perfect.advanceTo(12);
+    expect(perfect.snapshot().result).toMatchObject({ outcome: 'victory' });
   });
 
   it('uses victory precedence when good hits deplete both strengths together', () => {
@@ -131,10 +135,14 @@ describe('Renown and Twilight Strength model', () => {
     game.press(0, 9.1);
 
     expect(game.snapshot()).toMatchObject({
+      victory: true,
+      status: 'playing',
       personalStrength: 0,
       twilightStrength: 0,
-      result: { outcome: 'victory' },
+      result: null,
     });
+    game.advanceTo(12);
+    expect(game.snapshot().result).toMatchObject({ outcome: 'victory' });
   });
 
   it('defeats a run with zero Renown at handoff', () => {
@@ -146,6 +154,7 @@ describe('Renown and Twilight Strength model', () => {
     expect(game.snapshot()).toMatchObject({
       phase: 'twilight',
       status: 'results',
+      victory: false,
       personalStrength: 0,
       twilightStrength: 100,
       result: { outcome: 'defeat' },
@@ -177,33 +186,72 @@ describe('Renown and Twilight Strength model', () => {
     });
   });
 
-  it('stops judging after combat victory without counting unresolved future notes', () => {
+  it('continues judging after combat victory, freezes strengths, then wins at excerpt end', () => {
     const game = createGame(
       chart(
-        [note('audience', 2), note('victory-hit', 7), note('future-note', 9)],
+        [
+          note('audience', 2),
+          note('victory-hit', 7),
+          note('post-victory-hit', 8, 1),
+          note('post-victory-miss', 9, 2),
+        ],
         { twilightStrength: 3 },
       ),
     );
+    expect(game.snapshot()).toMatchObject({
+      victory: false,
+      status: 'playing',
+    });
     game.press(0, 2);
     game.advanceTo(5);
     game.press(0, 7);
-    const terminal = game.snapshot();
+    expect(game.snapshot()).toMatchObject({
+      victory: true,
+      phase: 'twilight',
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
+      result: null,
+    });
 
-    expect(terminal).toMatchObject({
-      status: 'results',
-      result: {
-        outcome: 'victory',
-        twilight: { perfect: 1, miss: 0, accuracy: 100 },
-        overall: { perfect: 2, miss: 0, accuracy: 100 },
-      },
+    expect(game.press(1, 8.1)).toMatchObject({
+      noteId: 'post-victory-hit',
+      quality: 'good',
+    });
+    game.advanceTo(9.151);
+    const afterVictoryMiss = game.snapshot();
+    expect(afterVictoryMiss).toMatchObject({
+      victory: true,
+      phase: 'twilight',
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
       notes: [
         { id: 'audience', outcome: 'perfect' },
         { id: 'victory-hit', outcome: 'perfect' },
-        { id: 'future-note', outcome: null },
+        { id: 'post-victory-hit', outcome: 'good' },
+        { id: 'post-victory-miss', outcome: 'miss' },
       ],
+      result: null,
     });
 
-    expect(game.press(0, 9)).toBeNull();
-    expect(game.snapshot()).toEqual(terminal);
+    game.advanceTo(12);
+    const final = game.snapshot();
+    expect(final).toMatchObject({
+      victory: true,
+      phase: 'twilight',
+      status: 'results',
+      personalStrength: 3,
+      twilightStrength: 0,
+      result: {
+        outcome: 'victory',
+        personalStrength: 3,
+        twilightStrength: 0,
+        twilight: { perfect: 1, good: 1, miss: 1 },
+      },
+    });
+
+    expect(game.press(2, 12)).toBeNull();
+    expect(game.snapshot()).toEqual(final);
   });
 });
