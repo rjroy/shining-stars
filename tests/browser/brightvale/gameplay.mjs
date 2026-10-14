@@ -119,11 +119,23 @@ async function screenshot(name) {
     Buffer.from(shot.data, 'base64'),
   );
 }
-function timingLegendScreenshotProbe(name) {
+function timingLegendScreenshotProbe(name, measuredRegion) {
   const imagePath = path.join(output, `${difficulty}-${name}`);
+  const screenshotRegion = {
+    x: Math.round(measuredRegion.x),
+    y: Math.round(measuredRegion.y),
+    width: Math.round(measuredRegion.width),
+    height: Math.round(measuredRegion.height),
+  };
   const crop = spawnSync(
     'magick',
-    [imagePath, '-crop', '1470x40+65+166', '+repage', 'png:-'],
+    [
+      imagePath,
+      '-crop',
+      `${screenshotRegion.width}x${screenshotRegion.height}+${screenshotRegion.x}+${screenshotRegion.y}`,
+      '+repage',
+      'png:-',
+    ],
     { maxBuffer: 8 * 1024 * 1024 },
   );
   if (crop.status !== 0)
@@ -141,7 +153,7 @@ function timingLegendScreenshotProbe(name) {
     );
   return {
     sourceImage: `${difficulty}-${name}`,
-    screenshotRegion: { x: 65, y: 166, width: 1470, height: 40 },
+    screenshotRegion,
     recognizedText: ocr.stdout.trim(),
     expectedWords: ['Good', 'Perfect'],
     visible: /good/i.test(ocr.stdout) && /perfect/i.test(ocr.stdout),
@@ -149,12 +161,12 @@ function timingLegendScreenshotProbe(name) {
       'OCR of the actual WebGL gameplay screenshot crop, not DOM text or slot dimensions',
   };
 }
-async function resize(width, height) {
+async function resize(width, height, deviceScaleFactor = 1) {
   const expectedHostWidth = Math.min(width, height * (16 / 9));
   await command('Emulation.setDeviceMetricsOverride', {
     width,
     height,
-    deviceScaleFactor: 1,
+    deviceScaleFactor,
     mobile: false,
   });
   await waitFor(async () => {
@@ -170,8 +182,14 @@ async function resize(width, height) {
       Math.abs(measurement.height - measurement.contentHeight) <= 1 &&
       Math.abs(measurement.canvasOffsetX) <= 1 &&
       Math.abs(measurement.canvasOffsetY) <= 1 &&
-      Math.abs(measurement.bufferWidth - measurement.width) < 2 &&
-      Math.abs(measurement.bufferHeight - measurement.height) < 2
+      Math.abs(
+        measurement.bufferWidth -
+          measurement.width * Math.min(deviceScaleFactor, 1.5),
+      ) < 2 &&
+      Math.abs(
+        measurement.bufferHeight -
+          measurement.height * Math.min(deviceScaleFactor, 1.5),
+      ) < 2
     );
   }, `host ${width}x${height}`);
 }
@@ -181,6 +199,11 @@ async function inspect() {
     `(()=>{const host=document.querySelector('.play-surface');const c=host?.querySelector('canvas');if(!host||!c)return null;const r=host.getBoundingClientRect();const s=getComputedStyle(host);const n=v=>parseFloat(v)||0;const content={x:r.x+n(s.borderLeftWidth)+n(s.paddingLeft),y:r.y+n(s.borderTopWidth)+n(s.paddingTop),width:r.width-n(s.borderLeftWidth)-n(s.borderRightWidth)-n(s.paddingLeft)-n(s.paddingRight),height:r.height-n(s.borderTopWidth)-n(s.borderBottomWidth)-n(s.paddingTop)-n(s.paddingBottom)};const cr=c.getBoundingClientRect();const rect=e=>{const q=e.getBoundingClientRect();return{x:q.x,y:q.y,width:q.width,height:q.height}};return{viewport:{innerWidth,innerHeight,devicePixelRatio,visualViewport:visualViewport?{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale}:null,document:{clientWidth:document.documentElement.clientWidth,clientHeight:document.documentElement.clientHeight,scrollWidth:document.documentElement.scrollWidth,scrollHeight:document.documentElement.scrollHeight}},host:{x:r.x,y:r.y,width:r.width,height:r.height},content,canvas:{width:c.width,height:c.height,rect:{x:cr.x,y:cr.y,width:cr.width,height:cr.height},contentDelta:{x:cr.x-content.x,y:cr.y-content.y,width:cr.width-content.width,height:cr.height-content.height}},hud:[...document.querySelectorAll('.play-heading,.performance-controls,[data-time],[data-countdown],[data-timing-legend],[data-feedback]')].map(e=>({selector:e.className||e.tagName,key:e.dataset.time!==undefined?'time':e.dataset.countdown!==undefined?'countdown':e.dataset.timingLegend!==undefined?'legend':e.dataset.feedback!==undefined?'feedback':undefined,text:e.textContent.trim(),rect:rect(e)}))}})()`,
   );
   return { state, visible };
+}
+async function inspectResourceHud() {
+  return evaluate(
+    `(()=>{const read=(selector)=>{const e=document.querySelector(selector);return e?{hidden:e.hidden,text:e.textContent.trim(),rect:(()=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()}:null};return{mode:document.querySelector('[data-mode-label]')?.textContent?.trim(),renownLabel:read('[data-audience-resource]'),renown:read('[data-resource-value]'),personalLabel:read('[data-personal-label]'),personal:read('[data-personal-strength]'),twilightGroup:read('[data-opponent-resource]'),twilight:read('[data-twilight-strength]'),difficultyLabel:read('label[for=difficulty]'),difficultySelect:read('[data-difficulty-select]'),difficultyRules:read('.difficulty-details summary'),canvas:(()=>{const e=document.querySelector('.play-surface canvas');const r=e?.getBoundingClientRect();return r?{x:r.x,y:r.y,width:r.width,height:r.height}:null})()}})()`,
+  );
 }
 async function main() {
   await waitFor(async () => {
@@ -318,9 +341,27 @@ async function main() {
     if (!capturedReferenceAudience && note.time >= 9.7) {
       await waitTransport(10.2);
       reports.audienceReference = await inspect();
+      reports.audienceHud = await inspectResourceHud();
+      if (
+        reports.audienceHud.renownLabel.hidden ||
+        reports.audienceHud.renown.hidden ||
+        !reports.audienceHud.personalLabel.hidden ||
+        !reports.audienceHud.personal.hidden ||
+        !reports.audienceHud.twilightGroup.hidden ||
+        !Number.isFinite(Number(reports.audienceHud.renown.text))
+      )
+        throw new Error(
+          `Audience HUD did not show only uncapped Renown: ${JSON.stringify(reports.audienceHud)}`,
+        );
       await screenshot('audience-reference.webp');
+      const legendRegion = reports.audienceReference.visible.hud.find(
+        (entry) => entry.key === 'legend',
+      )?.rect;
+      if (legendRegion === undefined)
+        throw new Error('Could not measure the visible timing-legend region');
       reports.timingLegendScreenshotProbe = timingLegendScreenshotProbe(
         'audience-reference.webp',
+        legendRegion,
       );
       capturedReferenceAudience = true;
     }
@@ -358,11 +399,42 @@ async function main() {
     if (!capturedNarrowTwilight && note.id === 't02') {
       await waitTransport(note.time);
       reports.twilightNarrow = await inspect();
+      reports.twilightHud = await inspectResourceHud();
+      if (
+        !reports.twilightHud.renown.hidden ||
+        reports.twilightHud.personalLabel.hidden ||
+        reports.twilightHud.personal.hidden ||
+        reports.twilightHud.twilightGroup.hidden ||
+        reports.twilightHud.twilight.hidden ||
+        !Number.isFinite(Number(reports.twilightHud.personal.text)) ||
+        !Number.isFinite(Number(reports.twilightHud.twilight.text)) ||
+        reports.twilightHud.personal.text !== reports.twilightHud.renown.text
+      )
+        throw new Error(
+          `Twilight HUD did not show both strengths: ${JSON.stringify(reports.twilightHud)}`,
+        );
       reports.modeAtTransition = await evaluate(
         `document.querySelector('[data-mode-label]')?.textContent?.trim() ?? null`,
       );
       await screenshot('twilight-narrow.webp');
       capturedNarrowTwilight = true;
+      await resize(390, 844, 2);
+      reports.twilightPhoneDpr2 = await inspect();
+      reports.twilightPhoneHud = await inspectResourceHud();
+      await screenshot('twilight-phone-dpr2.webp');
+      if (reports.twilightPhoneDpr2.state.renderer !== 'rendered')
+        throw new Error(
+          'Renderer failed at constrained phone viewport / DPR 2',
+        );
+      if (
+        reports.twilightPhoneDpr2.visible.viewport.document.scrollWidth > 390 ||
+        reports.twilightPhoneHud.difficultyLabel.rect.x +
+          reports.twilightPhoneHud.difficultyLabel.rect.width >
+          reports.twilightPhoneHud.difficultySelect.rect.x + 1
+      )
+        throw new Error(
+          `Phone HUD controls overflow or overlap: ${JSON.stringify(reports.twilightPhoneHud)}`,
+        );
     }
     if (!capturedReferenceTwilight && note.id === 't02') {
       await resize(1600, 900);
@@ -549,10 +621,11 @@ async function main() {
     viewportSamples: {
       reference: { width: 1600, height: 900 },
       narrow: { width: 1120, height: 700 },
+      phoneTwilight: { width: 390, height: 844, deviceScaleFactor: 2 },
     },
     limitations: [
       'Chromium/SwiftShader; no target-device performance claim.',
-      '1120x700 is a tested sample, not a minimum supported viewport.',
+      'These viewport sizes are tested samples, not minimum supported dimensions.',
       'Song output was muted; audio audibility is not evaluated.',
       'No per-person live-occlusion pass was available from the application DOM; composition proof has the separate GLB ID-pass evidence.',
       'Easy is not enabled by the actual MVP chart; this report covers the selected Normal or Hard audio run only. Easy geometry is reported separately as fixture-only.',
@@ -577,6 +650,7 @@ async function main() {
           `${difficulty}-audience-reference.webp`,
           `${difficulty}-audience-narrow.webp`,
           `${difficulty}-twilight-narrow.webp`,
+          `${difficulty}-twilight-phone-dpr2.webp`,
           `${difficulty}-twilight-reference.webp`,
         ],
         liveMode: reports.modeAtTransition,

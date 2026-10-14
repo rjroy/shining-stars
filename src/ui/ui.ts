@@ -60,6 +60,11 @@ function setText(root: ParentNode, selector: string, value: string): void {
   if (element !== null) setElementText(element, value);
 }
 
+function setHidden(root: ParentNode, selector: string, hidden: boolean): void {
+  const element = root.querySelector<HTMLElement>(selector);
+  if (element !== null && element.hidden !== hidden) element.hidden = hidden;
+}
+
 function setElementText(element: HTMLElement, value: string): void {
   if (element.textContent !== value) element.textContent = value;
 }
@@ -81,17 +86,19 @@ export function createGameUI(
           </svg>
         </div>
         <div class="play-heading">
-          <div>
+          <div class="resource-readout player-resource" aria-live="polite" aria-atomic="true">
+            <span class="resource-name" data-audience-resource>Renown</span>
+            <strong class="audience-resource-value" data-resource-value>0</strong>
+            <span class="resource-name twilight-player-label" data-personal-label hidden>Personal Strength</span>
+            <strong class="twilight-player-value" data-personal-strength hidden>0</strong>
+          </div>
+          <div class="heading-identity">
             <p class="mode-label" data-mode-label>Audience performance</p>
             <h1 data-title>Sing with Brightvale</h1>
           </div>
-          <div class="resource-readout" aria-live="polite" aria-atomic="true">
-            <span class="resource-name" data-resource-name>Renown</span>
-            <strong data-resource-value>0</strong>
-            <div class="twilight-resources" data-twilight-resources hidden>
-              <span><span class="resource-name">Personal Strength</span> <strong data-personal-strength>0</strong></span>
-              <span><span class="resource-name">Twilight Strength</span> <strong data-twilight-strength>0</strong></span>
-            </div>
+          <div class="resource-readout opponent-resource" aria-live="polite" aria-atomic="true" data-opponent-resource hidden>
+            <span class="resource-name">Twilight Strength</span>
+            <strong data-twilight-strength>0</strong>
           </div>
           <div class="difficulty-control">
             <label class="resource-name" for="difficulty">Next run difficulty</label>
@@ -507,20 +514,13 @@ export function createGameUI(
         ? 'Sing with Brightvale'
         : 'The city sings with you',
     );
-    setText(
-      root,
-      '[data-resource-name]',
-      game.phase === 'audience' ? 'Renown' : 'Twilight combat',
-    );
     setText(root, '[data-resource-value]', String(game.renown));
-    const twilightResources = root.querySelector<HTMLElement>(
-      '[data-twilight-resources]',
-    );
-    if (twilightResources !== null) {
-      const hidden = game.phase !== 'twilight';
-      if (twilightResources.hidden !== hidden)
-        twilightResources.hidden = hidden;
-    }
+    const isTwilight = game.phase === 'twilight';
+    setHidden(root, '[data-audience-resource]', isTwilight);
+    setHidden(root, '[data-resource-value]', isTwilight);
+    setHidden(root, '[data-personal-label]', !isTwilight);
+    setHidden(root, '[data-personal-strength]', !isTwilight);
+    setHidden(root, '[data-opponent-resource]', !isTwilight);
     setText(root, '[data-personal-strength]', String(game.personalStrength));
     setText(root, '[data-twilight-strength]', String(game.twilightStrength));
     setText(

@@ -97,10 +97,12 @@ kbd {
     0 2px 0 rgb(255 255 255 / 3%) inset;
 }
 .play-surface.is-twilight {
-  --accent: var(--mint);
+  --accent: #c6a0ff;
+  --twilight-accent: #c6a0ff;
 }
 .play-surface:not(.is-twilight) {
   --accent: var(--gold);
+  --twilight-accent: #c6a0ff;
 }
 .scene-light {
   position: absolute;
@@ -161,12 +163,51 @@ kbd {
 .play-heading {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+  column-gap: clamp(12px, 3vw, 42px);
+  row-gap: 4px;
   flex: 0 0 auto;
   margin-bottom: clamp(8px, 1.4vh, 22px);
+}
+.player-resource {
+  grid-column: 1;
+  grid-row: 1;
+  justify-items: start;
+  align-self: start;
+  padding: 0;
+  border: 0;
+}
+.heading-identity {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  min-width: 0;
+  text-align: center;
+}
+.opponent-resource {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  justify-items: end;
+  padding: 0;
+  border: 0;
+  text-align: right;
+}
+.opponent-resource[hidden] {
+  display: none;
+}
+.player-resource [hidden] {
+  display: none;
+}
+.difficulty-control {
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  width: min(100%, 190px);
+  min-width: 0;
 }
 .mode-label,
 .dialog-overline {
@@ -178,6 +219,12 @@ kbd {
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
+.mode-label {
+  margin-bottom: 4px;
+  color: #d7d0bf;
+  font-size: 0.59rem;
+  letter-spacing: 0.12em;
+}
 h1,
 h2,
 p {
@@ -185,18 +232,16 @@ p {
 }
 h1 {
   margin-bottom: 0;
-  font-size: clamp(1.65rem, 4vw, 2.75rem);
+  font-size: clamp(1.1rem, 2.1vw, 1.6rem);
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1.05;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
 }
 .resource-readout {
   display: grid;
-  justify-items: end;
-  gap: 3px;
-  min-width: 100px;
-  padding: 0 0 2px 20px;
-  border-left: 1px solid var(--line);
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
 }
 .resource-name {
   color: var(--muted);
@@ -211,22 +256,11 @@ h1 {
     monospace;
   font-variant-numeric: tabular-nums;
 }
-.twilight-resources {
-  display: grid;
-  grid-template-columns: repeat(2, auto);
-  gap: 12px;
-  margin-top: 8px;
-  text-align: right;
+.opponent-resource strong {
+  color: var(--twilight-accent);
 }
-.twilight-resources[hidden] {
-  display: none;
-}
-.twilight-resources > span {
-  display: grid;
-  gap: 3px;
-}
-.twilight-resources strong {
-  font-size: 1rem;
+.player-resource [data-personal-strength] {
+  color: var(--gold);
 }
 .difficulty-control {
   position: relative;
@@ -234,7 +268,7 @@ h1 {
   align-content: end;
   justify-items: start;
   gap: 5px;
-  min-width: 145px;
+  min-width: 0;
   max-width: 220px;
 }
 .difficulty-control select {
@@ -609,25 +643,55 @@ button:disabled {
     padding: 10px 10px 8px;
   }
   .play-heading {
-    flex-wrap: wrap;
-    gap: 8px 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 12px;
+    row-gap: 7px;
     margin-bottom: 6px;
   }
-  .resource-readout {
-    min-width: 82px;
-    padding-left: 12px;
+  .player-resource {
+    grid-column: 1;
+    grid-row: 1;
   }
-  .twilight-resources {
-    grid-template-columns: 1fr;
-    gap: 6px;
-    justify-items: end;
+  .heading-identity {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left;
   }
-  .twilight-resources .resource-name {
-    font-size: 0.56rem;
+  .heading-identity h1 {
+    font-size: clamp(1.08rem, 5vw, 1.45rem);
+  }
+  .opponent-resource {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .resource-name {
+    font-size: 0.6rem;
   }
   .difficulty-control {
-    flex: 1 1 100%;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: stretch;
+    justify-items: stretch;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(130px, 1fr);
+    align-items: center;
+    column-gap: 8px;
     max-width: none;
+  }
+  .difficulty-control .resource-name {
+    white-space: nowrap;
+  }
+  .difficulty-control select {
+    grid-column: 2;
+    min-height: 34px;
+  }
+  .difficulty-control .difficulty-help {
+    display: none;
+  }
+  .difficulty-details {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .stage-frame {
     padding: 5px 4px 6px;
