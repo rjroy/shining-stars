@@ -136,7 +136,9 @@ describe('difficulty timing-window projection', () => {
       layout,
       false,
     );
-    expect(late.notes[0]?.progress).toBe(1);
+    expect(late.notes[0]?.progress).toBeCloseTo(
+      1 + 0.4 / VISIBLE_NOTE_SECONDS,
+    );
     expect(late.timingWindows.goodHalfProgress).toBeDefined();
     expect(late.timingWindows.goodHalfProgress).toBeGreaterThan(0);
     expect(

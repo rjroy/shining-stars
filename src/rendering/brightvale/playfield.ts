@@ -81,16 +81,11 @@ export function createBrightvalePlayfieldContract(
         'visualPoint requires a measured Brightvale surface profile',
       );
     let height = measuredHeight(lane, z);
-    // The target has a finite authored surface at p=1. For unbounded late
-    // timing, carry its measured local tangent forward rather than clamping.
-    if (height === null && progress >= 1) {
-      const z0 = z - 0.05;
-      const z1 = z - 0.001;
-      const h0 = measuredHeight(lane, z0);
-      const h1 = measuredHeight(lane, z1);
-      if (h0 !== null && h1 !== null)
-        height = h1 + ((h1 - h0) / (z1 - z0)) * (z - z1);
-    }
+    // Beyond the authored geometry, keep late notes moving at the measured hit
+    // surface height. This simple continuation prevents missing-surface errors;
+    // the visual path need not follow nonexistent geometry past the platform.
+    if (height === null && progress >= 1)
+      height = measuredHeight(lane, HIT_LOCAL.z);
     return height;
   }
 

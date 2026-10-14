@@ -61,6 +61,7 @@ let sequence = 0;
 const pending = new Map();
 const events = [];
 const reports = {};
+const lateTravelWrites = [];
 const base = `http://127.0.0.1:${vitePort}/`;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function waitFor(check, label, timeout = 30000) {
@@ -270,13 +271,33 @@ async function main() {
       msg.error
         ? p.reject(new Error(msg.error.message))
         : p.resolve(msg.result);
-    } else if (msg.method)
-      events.push({ method: msg.method, params: msg.params });
+    } else if (msg.method === 'Runtime.bindingCalled' && msg.params.name === '__brightvaleLateTravelSample') {
+      const sample = JSON.parse(msg.params.payload);
+      const filename = `${difficulty}-late-note-travel-${sample.name}.webp`;
+      lateTravelWrites.push(
+        command('Page.captureScreenshot', {
+          format: 'webp',
+          quality: 90,
+          fromSurface: true,
+          captureBeyondViewport: false,
+        })
+          .then((capture) =>
+            writeFile(
+              path.join(output, filename),
+              Buffer.from(capture.data, 'base64'),
+            ),
+          )
+          .then(() => {
+            sample.screenshot = filename;
+            reports.lateNoteTravel?.push(sample);
+          }),
+      );
+    } else if (msg.method) events.push({ method: msg.method, params: msg.params });
   });
   await command('Page.enable');
   await command('Runtime.enable');
   await command('Page.addScriptToEvaluateOnNewDocument', {
-    source: `(()=>{const Native=window.AudioContext;if(Native){window.__proofAudioContexts=[];window.AudioContext=function(...args){const c=new Native(...args);window.__proofAudioContexts.push(c);return c};window.AudioContext.prototype=Native.prototype}const p=window.AudioBufferSourceNode?.prototype;if(p){const start=p.start;p.start=function(when,...args){window.__proofScheduledWhen=when;return start.call(this,when,...args)}}})()`,
+    source: `(()=>{const Native=window.AudioContext;if(Native){window.__proofAudioContexts=[];window.AudioContext=function(...args){const c=new Native(...args);let prototype=Native.prototype;let descriptor;while(prototype&&!descriptor){descriptor=Object.getOwnPropertyDescriptor(prototype,'currentTime');prototype=Object.getPrototypeOf(prototype)}if(descriptor?.get){const raw=()=>descriptor.get.call(c);let rawBase=raw();let logicalBase=rawBase;let rate=1;Object.defineProperty(c,'currentTime',{configurable:true,get:()=>logicalBase+(raw()-rawBase)*rate});c.__setProofClockRate=(next)=>{const now=raw();logicalBase+=((now-rawBase)*rate);rawBase=now;rate=next}}window.__proofAudioContexts.push(c);return c};window.AudioContext.prototype=Native.prototype}const p=window.AudioBufferSourceNode?.prototype;if(p){const start=p.start;p.start=function(when,...args){window.__proofScheduledWhen=when;return start.call(this,when,...args)}}})()`,
   });
   await command('Page.navigate', { url: base });
   await resize(1600, 900);
@@ -359,6 +380,55 @@ async function main() {
     }
     throw new Error(`Timed out waiting for song time ${position}`);
   };
+  const captureLateNoteTravel = async (note, samples) => {
+    reports.lateNoteTravel = [];
+    const clockWasScaled = await evaluate(`(()=>{
+      const audio=window.__proofAudioContexts?.[0];
+      if(typeof audio?.__setProofClockRate!=='function')return false;
+      audio.__setProofClockRate(0.1);
+      return true;
+    })()`);
+    if (!clockWasScaled)
+      throw new Error('Could not slow the silent proof clock for frame sampling');
+    try {
+      await command('Runtime.addBinding', {
+        name: '__brightvaleLateTravelSample',
+      });
+      const scheduled = await evaluate(`(()=>{
+        const audio=window.__proofAudioContexts?.[0];
+        const scheduled=window.__proofScheduledWhen;
+        const report=window.__brightvaleLateTravelSample;
+        if(!audio||!Number.isFinite(scheduled)||typeof report!=='function')throw new Error('Actual gameplay clock or screencast marker binding is unavailable');
+        const samples=${JSON.stringify(samples)};
+        let index=0;
+        const sampleFrame=()=>{
+          const transportTime=audio.currentTime-scheduled;
+          if(index<samples.length&&transportTime>=samples[index].transportTime){
+            report(JSON.stringify({...samples[index],capturedTransportTime:transportTime}));
+            index+=1;
+          }
+          if(index<samples.length)requestAnimationFrame(sampleFrame);
+        };
+        requestAnimationFrame(sampleFrame);
+        return true;
+      })()`);
+      if (scheduled !== true)
+        throw new Error(`Could not schedule actual-app travel samples for ${note.id}`);
+      await waitFor(
+        async () => reports.lateNoteTravel.length === samples.length,
+        `actual-app travel frames for ${note.id}`,
+        15000,
+      );
+      await Promise.all(lateTravelWrites);
+    } finally {
+      await evaluate(
+        `window.__proofAudioContexts?.[0]?.__setProofClockRate?.(1)`,
+      );
+    }
+    return reports.lateNoteTravel.sort(
+      (left, right) => left.transportTime - right.transportTime,
+    );
+  };
   const hitNotes = [];
   const pendingPeakScreenshots = [];
   const pendingFadeScreenshots = [];
@@ -375,6 +445,25 @@ async function main() {
   let capturedReferenceTwilight = false;
   let pausedAtTwilight = false;
   for (const note of notes) {
+    if (note.id === 'a05') {
+      const positions = [
+        { name: 'before-target', transportTime: note.time - 0.05 },
+        { name: 'at-target', transportTime: note.time },
+        { name: 'late-window', transportTime: note.time + goodWindowSeconds * 0.45 },
+        { name: 'before-miss-cutoff', transportTime: note.time + goodWindowSeconds - 0.03 },
+      ].map((sample) => ({ ...sample, noteId: note.id, lane: note.lane }));
+      const captured = await captureLateNoteTravel(note, positions);
+      if (
+        captured.some(
+          (sample, index) =>
+            sample.capturedTransportTime < positions[index].transportTime ||
+            sample.capturedTransportTime - positions[index].transportTime > 0.045,
+        )
+      )
+        throw new Error(
+          `Actual-app note travel samples missed their transport instants: ${JSON.stringify(captured)}`,
+        );
+    }
     if (!capturedReferenceAudience && note.time >= 9.7) {
       await waitTransport(10.2);
       reports.audienceReference = await inspect();
@@ -772,6 +861,7 @@ async function main() {
           `${difficulty}-judgment-good-fade.webp`,
           `${difficulty}-judgment-miss-peak.webp`,
           `${difficulty}-judgment-miss-fade.webp`,
+          ...(reports.lateNoteTravel ?? []).map((sample) => sample.screenshot),
         ],
         liveMode: reports.modeAtTransition,
         initial: reports.initial.state,

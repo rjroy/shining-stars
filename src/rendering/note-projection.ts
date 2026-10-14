@@ -23,11 +23,11 @@ export function projectTimingWindowHalfProgress(
 export interface ProjectedNote {
   readonly id: string;
   readonly lane: number;
-  /** Position from the far end (0) to the hit line (1). */
+  /** Position from the far end (0) through the hit line (1), continuing past it while unresolved. */
   readonly progress: number;
 }
 
-/** Project unresolved notes in the approach runway, keeping overdue notes on the hit line until judged. */
+/** Project unresolved notes in the approach runway, including travel past the hit line until judged. */
 export function projectNotes(
   states: readonly GameNoteState[],
   chartNotes: readonly ChartNote[],
@@ -47,7 +47,7 @@ export function projectNotes(
       return [];
     }
 
-    const progress = Math.max(0, Math.min(1, 1 - remaining / visibleSeconds));
+    const progress = Math.max(0, 1 - remaining / visibleSeconds);
     return [
       {
         id: note.id,
