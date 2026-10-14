@@ -2,11 +2,8 @@ import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
 import { isFeedbackWithinVisibleAge } from '../rendering/gameplay-frame';
-import {
-  defaultDifficulty,
-  getDifficultyProfile,
-  type Difficulty,
-} from '../game/game-balance';
+import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import { getResourceBars } from './resource-bars';
 import {
   createBrightvaleViewportLayout,
   type BrightvaleRendererStatus,
@@ -16,10 +13,8 @@ import {
 
 export interface UIActions {
   readonly start: () => void;
-  readonly pause: () => void;
   readonly resume: () => void;
   readonly restart: () => void;
-  readonly selectDifficulty: (difficulty: Difficulty) => void;
   readonly onRendererRetry?: () => void;
 }
 
@@ -60,6 +55,11 @@ function setText(root: ParentNode, selector: string, value: string): void {
   if (element !== null) setElementText(element, value);
 }
 
+function setHidden(root: ParentNode, selector: string, hidden: boolean): void {
+  const element = root.querySelector<HTMLElement>(selector);
+  if (element !== null && element.hidden !== hidden) element.hidden = hidden;
+}
+
 function setElementText(element: HTMLElement, value: string): void {
   if (element.textContent !== value) element.textContent = value;
 }
@@ -69,10 +69,9 @@ export function createGameUI(
   chart: ChartConfig,
   actions: UIActions,
 ): GameUI {
-  const initialDifficulty = defaultDifficulty(chart.allowedDifficulties);
   root.innerHTML = `
     <main class="experience" aria-label="Brightvale rhythm performance">
-      <section class="play-surface" aria-label="Rhythm performance">
+      <section class="play-surface" aria-label="Rhythm performance" aria-describedby="lane-instructions">
         <div class="scene-light" aria-hidden="true"></div>
         <div class="scene-linework" aria-hidden="true">
           <svg viewBox="0 0 1200 150" preserveAspectRatio="none">
@@ -81,33 +80,28 @@ export function createGameUI(
           </svg>
         </div>
         <div class="play-heading">
-          <div>
+          <div class="resource-readout player-resource" aria-live="polite" aria-atomic="true">
+            <span class="resource-name" data-audience-resource>Renown</span>
+            <div class="resource-meter audience-meter" data-audience-meter>
+              <progress data-audience-bar max="1" value="0" aria-label="Renown"></progress>
+              <span class="resource-amount"><span data-resource-value>0</span> / <span data-audience-maximum>132</span></span>
+            </div>
+            <span class="resource-name twilight-player-label" data-personal-label hidden>Personal Strength</span>
+            <div class="resource-meter personal-meter" data-personal-meter hidden>
+              <progress data-personal-bar max="1" value="0" aria-label="Personal Strength"></progress>
+              <span class="resource-amount"><span data-personal-strength>0</span> / <span data-personal-maximum>0</span></span>
+            </div>
+          </div>
+          <div class="heading-identity">
             <p class="mode-label" data-mode-label>Audience performance</p>
             <h1 data-title>Sing with Brightvale</h1>
           </div>
-          <div class="resource-readout" aria-live="polite" aria-atomic="true">
-            <span class="resource-name" data-resource-name>Renown</span>
-            <strong data-resource-value>0</strong>
-            <div class="twilight-resources" data-twilight-resources hidden>
-              <span><span class="resource-name">Personal Strength</span> <strong data-personal-strength>0</strong></span>
-              <span><span class="resource-name">Twilight Strength</span> <strong data-twilight-strength>0</strong></span>
+          <div class="resource-readout opponent-resource" aria-live="polite" aria-atomic="true" data-opponent-resource hidden>
+            <span class="resource-name">Twilight Strength</span>
+            <div class="resource-meter twilight-meter">
+              <progress data-twilight-bar max="1" value="1" aria-label="Twilight Strength"></progress>
+              <span class="resource-amount"><span data-twilight-strength>0</span> / <span data-twilight-maximum>100</span></span>
             </div>
-          </div>
-          <div class="difficulty-control">
-            <label class="resource-name" for="difficulty">Next run difficulty</label>
-            <select id="difficulty" data-difficulty-select aria-describedby="difficulty-help">
-              ${chart.allowedDifficulties
-                .map(
-                  (difficulty) =>
-                    `<option value="${difficulty}"${difficulty === initialDifficulty ? ' selected' : ''}>${difficultyLabel(difficulty)}</option>`,
-                )
-                .join('')}
-            </select>
-            <span class="difficulty-help" id="difficulty-help">Applies to the next run.</span>
-            <details class="difficulty-details">
-              <summary>Difficulty rules</summary>
-              <p data-difficulty-rules id="difficulty-rules"></p>
-            </details>
           </div>
         </div>
         <div class="renderer-status" data-renderer-status role="status">
@@ -126,16 +120,13 @@ export function createGameUI(
             <span data-feedback></span>
             <span data-countdown aria-hidden="true"></span>
           </div>
-          <div class="performance-controls">
-            <p>Press <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> as notes reach the line</p>
-            <button class="text-button pause-button" type="button" data-action="pause" hidden>Pause <kbd>Esc</kbd></button>
-          </div>
+          <span class="sr-only" id="lane-instructions">Use the D, F, J, and K keys shown on the four lane fronts to hit notes at the line. Escape pauses the performance.</span>
         </div>
 
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
           <p class="dialog-overline">The First Shining Star · provisional excerpt</p>
           <h2 id="ready-title">Your voice leads. Brightvale answers.</h2>
-          <p>Hit <kbd>D</kbd> <kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> when notes reach the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
+          <p>Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender. Notes follow aubio-detected onsets. Detector timing and the excerpt still need play-testing.</p>
           <p class="chart-notice">Aubio onset chart · density configured per song</p>
         <button class="primary-button" type="button" data-action="start" disabled>Begin performance <span aria-hidden="true">↗</span></button>
           <p class="loading-message" data-busy hidden></p>
@@ -174,9 +165,6 @@ export function createGameUI(
   const feedbackRow = root.querySelector<HTMLElement>('.feedback-row');
   const timeSlot = root.querySelector<HTMLElement>('[data-time]');
   const countdownSlot = root.querySelector<HTMLElement>('[data-countdown]');
-  const performanceControls = root.querySelector<HTMLElement>(
-    '.performance-controls',
-  );
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
   const actionButtons = [
     ...root.querySelectorAll<HTMLButtonElement>('[data-action]'),
@@ -251,11 +239,7 @@ export function createGameUI(
             paddingBottom,
         ),
       },
-      hud: [
-        ...[...(playHeading?.children ?? [])],
-        performanceControls?.querySelector('p') ?? null,
-        performanceControls?.querySelector('[data-action="pause"]') ?? null,
-      ]
+      hud: [...[...(playHeading?.children ?? [])]]
         .filter(
           (element): element is HTMLElement => element instanceof HTMLElement,
         )
@@ -289,8 +273,6 @@ export function createGameUI(
     playHeading,
     stageHeader,
     ...[...(playHeading?.children ?? [])],
-    performanceControls?.querySelector('p') ?? null,
-    performanceControls?.querySelector('[data-action="pause"]') ?? null,
     timeSlot,
     countdownSlot,
     timingLegend,
@@ -315,25 +297,12 @@ export function createGameUI(
     )
       return;
     if (action === 'start') actions.start();
-    else if (action === 'pause') actions.pause();
     else if (action === 'resume') actions.resume();
     else if (action === 'restart') actions.restart();
     else if (action === 'renderer-retry') actions.onRendererRetry?.();
   }
 
-  function onChange(event: Event): void {
-    const target = event.target;
-    if (
-      !(target instanceof HTMLSelectElement) ||
-      !target.matches('[data-difficulty-select]')
-    )
-      return;
-    if (target.disabled || pendingPlaybackRequests) return;
-    actions.selectDifficulty(target.value as Difficulty);
-  }
-
   root.addEventListener('click', onClick);
-  root.addEventListener('change', onChange);
 
   function showPanel(name: string | null): void {
     for (const panel of panels) {
@@ -393,31 +362,6 @@ export function createGameUI(
         game.transportTime,
         judgment.onsetTransportTime,
       );
-    const difficultySelect = root.querySelector<HTMLSelectElement>(
-      '[data-difficulty-select]',
-    );
-    const nextDifficulty = snapshot.selectedDifficulty;
-    const activeDifficulty =
-      isPlaying || isStarting || isResults ? game.difficulty : nextDifficulty;
-    if (difficultySelect !== null) {
-      if (difficultySelect.value !== nextDifficulty)
-        difficultySelect.value = nextDifficulty;
-      const disabled =
-        pendingPlaybackRequests ||
-        busyMessage !== null ||
-        isStarting ||
-        isPlaying ||
-        isPaused ||
-        audio.status === 'error';
-      if (difficultySelect.disabled !== disabled)
-        difficultySelect.disabled = disabled;
-    }
-    setText(
-      root,
-      '[data-difficulty-rules]',
-      profileSummary(getDifficultyProfile(activeDifficulty)),
-    );
-
     showPanel(
       isResults
         ? 'results'
@@ -432,14 +376,12 @@ export function createGameUI(
     for (const actionButton of actionButtons) {
       const action = actionButton.dataset.action;
       const disabled =
-        action === 'pause'
-          ? false
-          : action === 'renderer-retry'
-            ? rendererStatus !== 'unavailable' ||
-              actions.onRendererRetry === undefined
-            : pendingPlaybackRequests ||
-              rendererStatus !== 'rendered' ||
-              busyMessage !== null;
+        action === 'renderer-retry'
+          ? rendererStatus !== 'unavailable' ||
+            actions.onRendererRetry === undefined
+          : pendingPlaybackRequests ||
+            rendererStatus !== 'rendered' ||
+            busyMessage !== null;
       if (actionButton.disabled !== disabled) actionButton.disabled = disabled;
     }
     const rendererStatusNode = root.querySelector<HTMLElement>(
@@ -507,20 +449,50 @@ export function createGameUI(
         ? 'Sing with Brightvale'
         : 'The city sings with you',
     );
-    setText(
-      root,
-      '[data-resource-name]',
-      game.phase === 'audience' ? 'Renown' : 'Twilight combat',
-    );
     setText(root, '[data-resource-value]', String(game.renown));
-    const twilightResources = root.querySelector<HTMLElement>(
-      '[data-twilight-resources]',
+    const bars = getResourceBars(chart, game);
+    const setBar = (
+      selector: string,
+      value: number,
+      maximum: number,
+      fraction: number,
+    ) => {
+      const progress = root.querySelector<HTMLProgressElement>(selector);
+      if (progress !== null) {
+        progress.max = 1;
+        progress.value = fraction;
+        progress.setAttribute('aria-valuetext', `${value} of ${maximum}`);
+      }
+    };
+    setBar(
+      '[data-audience-bar]',
+      bars.audience.value,
+      bars.audience.maximum,
+      bars.audience.fraction,
     );
-    if (twilightResources !== null) {
-      const hidden = game.phase !== 'twilight';
-      if (twilightResources.hidden !== hidden)
-        twilightResources.hidden = hidden;
-    }
+    setText(root, '[data-audience-maximum]', String(bars.audience.maximum));
+    setBar(
+      '[data-personal-bar]',
+      bars.personal.value,
+      bars.personal.maximum,
+      bars.personal.fraction,
+    );
+    setText(root, '[data-personal-maximum]', String(bars.personal.maximum));
+    setBar(
+      '[data-twilight-bar]',
+      bars.twilight.value,
+      bars.twilight.maximum,
+      bars.twilight.fraction,
+    );
+    setText(root, '[data-twilight-maximum]', String(bars.twilight.maximum));
+    const isTwilight = game.phase === 'twilight';
+    setHidden(root, '[data-audience-resource]', isTwilight);
+    setHidden(root, '[data-resource-value]', isTwilight);
+    setHidden(root, '[data-personal-label]', !isTwilight);
+    setHidden(root, '[data-personal-strength]', !isTwilight);
+    setHidden(root, '[data-audience-meter]', isTwilight);
+    setHidden(root, '[data-personal-meter]', !isTwilight);
+    setHidden(root, '[data-opponent-resource]', !isTwilight);
     setText(root, '[data-personal-strength]', String(game.personalStrength));
     setText(root, '[data-twilight-strength]', String(game.twilightStrength));
     setText(
@@ -545,18 +517,6 @@ export function createGameUI(
       if (countdown.getAttribute('aria-hidden') !== ariaHidden)
         countdown.setAttribute('aria-hidden', ariaHidden);
     }
-    const pauseButton = root.querySelector<HTMLElement>(
-      '[data-action="pause"]',
-    );
-    if (pauseButton !== null) {
-      const hidden =
-        !pendingPlaybackRequests &&
-        !isPlaying &&
-        !isStarting &&
-        audio.status !== 'loading';
-      if (pauseButton.hidden !== hidden) pauseButton.hidden = hidden;
-    }
-
     const timingLegend = root.querySelector<HTMLElement>(
       '[data-timing-legend]',
     );
@@ -573,7 +533,7 @@ export function createGameUI(
     setText(
       root,
       '[data-gameplay-status]',
-      `${difficultyLabel(game.difficulty)} difficulty. ${timingLegend?.textContent ?? ''} ${!isJudgmentVisible || judgment === null ? '' : judgment.quality === 'perfect' ? 'Perfect.' : 'Good.'}`,
+      `${timingLegend?.textContent ?? ''} ${!isJudgmentVisible || judgment === null ? '' : judgment.quality === 'perfect' ? 'Perfect.' : 'Good.'}`,
     );
 
     if (isResults) {
@@ -612,7 +572,6 @@ export function createGameUI(
     },
     destroy() {
       root.removeEventListener('click', onClick);
-      root.removeEventListener('change', onChange);
       layoutResizeObserver?.disconnect();
       if (layoutResizeObserver === null && typeof window !== 'undefined')
         window.removeEventListener('resize', measureGameplayLayout);

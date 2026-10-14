@@ -5,8 +5,7 @@ Run production-browser checks from the repository root:
 ```sh
 npm run test:brightvale:browser -- responsive
 npm run test:brightvale:browser -- normal
-npm run test:brightvale:browser -- hard
-# all three in sequence:
+# both supported checks in sequence:
 npm run test:brightvale:browser
 ```
 
@@ -18,8 +17,11 @@ runner first executes deterministic responsive-readiness/report-state tests.
 Responsive readiness waits for a fresh measured-layout event and matching CSS
 and DPR-scaled canvas dimensions; a timeout is recorded as `failed`, and an
 interrupted run leaves a `running` marker rather than an old pass. The
-Normal/Hard runs exercise the actual app and chart. Responsive checks exercise
-the actual app at measured layouts and DPR values, including canvas backing
+Normal run exercises the actual app and chart with the configured default
+difficulty. Hard is not currently supported by the browser CLI because the HUD
+does not expose difficulty selection; difficulty mechanics remain covered by
+controller/game tests. Responsive checks exercise the actual app at measured
+layouts and DPR values, including canvas backing
 dimensions and WebGL readback across resize cycles. They cover the checked
 samples, not a minimum supported viewport or device-performance budget.
 

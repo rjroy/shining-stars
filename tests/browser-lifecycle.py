@@ -267,12 +267,13 @@ def browser_checks(url, suppress_raf=True):
         results["normal_first_click_scheduled"] = bool(first_click["starts"])
 
         # APP02: cached audio plus one source-factory failure must remain retryable.
-        wait_for(
+        escape_was_handled = execute(
             driver,
             retry_session,
-            "!document.querySelector('[data-action=pause]').hidden",
+            "const event=new KeyboardEvent('keydown',{code:'Escape',key:'Escape',bubbles:true,cancelable:true});"
+            "window.dispatchEvent(event);return event.defaultPrevented",
         )
-        click(driver, retry_session, '[data-action="pause"]')
+        results["escape_pause_prevented_default"] = bool(escape_was_handled)
         wait_for(
             driver,
             retry_session,

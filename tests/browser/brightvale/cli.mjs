@@ -6,14 +6,13 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 const mode = process.argv[2] ?? 'all';
 const commands = {
   normal: ['gameplay.mjs', 'normal'],
-  hard: ['gameplay.mjs', 'hard'],
   responsive: ['responsive.mjs'],
 };
-const sequence = mode === 'all' ? ['normal', 'hard', 'responsive'] : [mode];
+const sequence = mode === 'all' ? ['normal', 'responsive'] : [mode];
 
 if (sequence.some((name) => !(name in commands))) {
   throw new Error(
-    'Usage: npm run test:brightvale:browser -- [normal|hard|responsive|all]',
+    'Usage: npm run test:brightvale:browser -- [normal|responsive|all] (hard is not currently supported)',
   );
 }
 

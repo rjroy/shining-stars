@@ -219,6 +219,30 @@ export function createBrightvaleSurfaceProfile(
   };
 }
 
+/** Progress coordinate at the physical player-facing edge of the loaded platform. */
+export function getFrontPlatformProgress(
+  playfield: BrightvalePlayfieldContract,
+  surface: BrightvaleMeasuredSurfaceProfile,
+): number {
+  const playfieldMatrix = new THREE.Matrix4().fromArray([
+    ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
+  ]);
+  const inversePlayfield = playfieldMatrix.clone().invert();
+  const platformFrontZ = Math.max(
+    ...surface.essentialGeometryPoints.platform.map(
+      (point) => point.clone().applyMatrix4(inversePlayfield).z,
+    ),
+  );
+  const hitZ = playfield.point(0, 1).applyMatrix4(inversePlayfield).z;
+  const nextZ = playfield.point(0, 2).applyMatrix4(inversePlayfield).z;
+  const progressDistance = nextZ - hitZ;
+  if (!(progressDistance > 0) || !Number.isFinite(platformFrontZ))
+    throw new Error(
+      'Unable to derive the platform front edge from its geometry.',
+    );
+  return 1 + (platformFrontZ - hitZ) / progressDistance;
+}
+
 /** Fit the authored perspective view around the playfield and persistent HUD. */
 export function createBrightvaleCameraProjection(
   playfield: BrightvalePlayfieldContract,
@@ -226,6 +250,8 @@ export function createBrightvaleCameraProjection(
   progress: BrightvaleProgressRange,
   surface?: BrightvaleMeasuredSurfaceProfile,
 ): BrightvaleCameraProjection {
+  const frontPlatformProgress =
+    surface === undefined ? 1 : getFrontPlatformProgress(playfield, surface);
   const authored = BRIGHTVALE_RUNTIME_LAYOUT.camera;
   const camera = new THREE.PerspectiveCamera(
     authored.verticalFovDegrees,
@@ -335,7 +361,9 @@ export function createBrightvaleCameraProjection(
     for (const worldPoint of fitPoints) {
       if (!constrainPoint(worldPoint, 0, nextLayout.height)) return null;
     }
-    const anchors = [0, 1, 2, 3].map((lane) => playfield.hitAnchor(lane));
+    const anchors = [0, 1, 2, 3].map((lane) =>
+      playfield.point(lane, frontPlatformProgress),
+    );
     for (const anchor of anchors) {
       if (!constrainPoint(anchor, -4, nextLayout.height - 28)) return null;
     }
@@ -374,7 +402,9 @@ export function createBrightvaleCameraProjection(
         height,
       };
     };
-    const anchors = [0, 1, 2, 3].map((lane) => playfield.hitAnchor(lane));
+    const anchors = [0, 1, 2, 3].map((lane) =>
+      playfield.point(lane, frontPlatformProgress),
+    );
     const laneLabels = anchors.map((worldPoint) => {
       const anchor = projectRect(worldPoint);
       return {

@@ -54,7 +54,6 @@
         restart() {
           actionCalls.push('restart');
         },
-        selectDifficulty() {},
         onRendererRetry() {
           results.push('renderer-retry');
         },
@@ -72,11 +71,7 @@
         status,
         position = 0,
         error = null,
-        {
-          loaded = status !== 'loading',
-          pendingPlaybackRequests = false,
-          selectedDifficulty = 'normal',
-        } = {},
+        { loaded = status !== 'loading', pendingPlaybackRequests = false } = {},
       ) => ({
         audio: {
           status,
@@ -91,7 +86,6 @@
         game: gameAt(position),
         inputOffset: 0,
         visualOffset: 0,
-        selectedDifficulty,
         feedback: null,
         pendingPlaybackRequests,
       });
@@ -103,10 +97,10 @@
       ui.setRendererStatus(true);
       ui.render(snapshot('ready', 0, null, { loaded: true }), 0);
       record(
-        'initial loaded renderer-ready snapshot shows Start and difficulty selection',
+        'initial loaded renderer-ready snapshot shows Start without a difficulty selector',
         visiblePanel('ready') &&
           !button('start').disabled &&
-          !document.querySelector('[data-difficulty-select]').disabled,
+          document.querySelector('[data-difficulty-select]') === null,
       );
       ui.render(snapshot('loading', 0, null, { loaded: false }), 0);
       record(
@@ -138,11 +132,10 @@
       ui.resetPlaybackAttempt();
       ui.render(canceledLoadReady, 0);
       record(
-        'late canceled load returning to ready restores Start and difficulty, not Pause',
+        'late canceled load returning to ready restores Start, not Pause',
         visiblePanel('ready') &&
           !visiblePanel('pause') &&
-          !button('start').disabled &&
-          !document.querySelector('[data-difficulty-select]').disabled,
+          !button('start').disabled,
       );
 
       ui.setBusy('Loading remains in progress…');
@@ -173,11 +166,10 @@
       });
       ui.render(pendingLoad, 0);
       record(
-        'pending audio load keeps all playback actions and difficulty locked with visible progress',
+        'pending audio load keeps playback actions locked with visible progress',
         ['start', 'resume', 'restart'].every(
           (action) => button(action).disabled,
         ) &&
-          document.querySelector('[data-difficulty-select]').disabled &&
           !button('pause').disabled &&
           !button('pause').hidden &&
           !document.querySelector('[data-pending-status]').hidden &&
@@ -209,7 +201,6 @@
           ['start', 'resume', 'restart'].every(
             (action) => button(action).disabled,
           ) &&
-          document.querySelector('[data-difficulty-select]').disabled &&
           !document.querySelector('[data-pending-status]').hidden,
       );
 
@@ -219,7 +210,6 @@
         'settled loaded request restores Start without replaying it',
         visiblePanel('ready') &&
           !button('start').disabled &&
-          !document.querySelector('[data-difficulty-select]').disabled &&
           results.length === 0,
       );
 
@@ -274,30 +264,27 @@
 
       const resultSnapshot = snapshot('results', MVP_CHART.duration, null, {
         loaded: true,
-        selectedDifficulty: 'hard',
       });
       ui.resetPlaybackAttempt();
       ui.render(resultSnapshot, 0);
       record(
-        'results allow next-run difficulty selection while showing the frozen run profile',
+        'results show the frozen run profile without a difficulty selector',
         visiblePanel('results') &&
-          !document.querySelector('[data-difficulty-select]').disabled &&
-          document.querySelector('[data-difficulty-select]').value === 'hard' &&
+          document.querySelector('[data-difficulty-select]') === null &&
           document
-            .querySelector('[data-difficulty-rules]')
-            .textContent.includes('Perfect ±75 ms'),
+            .querySelector('[data-result-grid]')
+            .textContent.includes('Difficulty: Normal'),
       );
       ui.render(
         snapshot('results', MVP_CHART.duration, null, {
           loaded: true,
           pendingPlaybackRequests: true,
-          selectedDifficulty: 'hard',
         }),
         0,
       );
       record(
-        'pending restart at results locks next-run difficulty and restart actions',
-        document.querySelector('[data-difficulty-select]').disabled &&
+        'pending restart at results locks restart actions without difficulty UI',
+        document.querySelector('[data-difficulty-select]') === null &&
           button('start').disabled &&
           button('restart').disabled &&
           !document.querySelector('[data-pending-status]').hidden,

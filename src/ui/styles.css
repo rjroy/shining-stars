@@ -58,13 +58,6 @@ a:focus-visible {
   color: var(--night);
   background: var(--gold);
 }
-kbd {
-  color: var(--cream);
-  font:
-    600 0.76rem 'DM Mono',
-    monospace;
-}
-
 .experience {
   display: flex;
   justify-content: center;
@@ -97,10 +90,12 @@ kbd {
     0 2px 0 rgb(255 255 255 / 3%) inset;
 }
 .play-surface.is-twilight {
-  --accent: var(--mint);
+  --accent: #c6a0ff;
+  --twilight-accent: #c6a0ff;
 }
 .play-surface:not(.is-twilight) {
   --accent: var(--gold);
+  --twilight-accent: #c6a0ff;
 }
 .scene-light {
   position: absolute;
@@ -161,12 +156,44 @@ kbd {
 .play-heading {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+  column-gap: clamp(12px, 3vw, 42px);
+  row-gap: 4px;
   flex: 0 0 auto;
   margin-bottom: clamp(8px, 1.4vh, 22px);
+}
+.player-resource {
+  grid-column: 1;
+  grid-row: 1;
+  justify-items: start;
+  align-self: start;
+  padding: 0;
+  border: 0;
+}
+.heading-identity {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  min-width: 0;
+  text-align: center;
+}
+.opponent-resource {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  justify-items: end;
+  padding: 0;
+  border: 0;
+  text-align: right;
+}
+.opponent-resource[hidden] {
+  display: none;
+}
+.player-resource [hidden] {
+  display: none;
 }
 .mode-label,
 .dialog-overline {
@@ -178,6 +205,12 @@ kbd {
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
+.mode-label {
+  margin-bottom: 4px;
+  color: #d7d0bf;
+  font-size: 0.59rem;
+  letter-spacing: 0.12em;
+}
 h1,
 h2,
 p {
@@ -185,18 +218,16 @@ p {
 }
 h1 {
   margin-bottom: 0;
-  font-size: clamp(1.65rem, 4vw, 2.75rem);
+  font-size: clamp(1.1rem, 2.1vw, 1.6rem);
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1.05;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
 }
 .resource-readout {
   display: grid;
-  justify-items: end;
-  gap: 3px;
-  min-width: 100px;
-  padding: 0 0 2px 20px;
-  border-left: 1px solid var(--line);
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
 }
 .resource-name {
   color: var(--muted);
@@ -211,76 +242,70 @@ h1 {
     monospace;
   font-variant-numeric: tabular-nums;
 }
-.twilight-resources {
+.resource-meter {
   display: grid;
-  grid-template-columns: repeat(2, auto);
-  gap: 12px;
-  margin-top: 8px;
-  text-align: right;
+  grid-template-columns: minmax(90px, min(19vw, 280px)) auto;
+  align-items: center;
+  gap: clamp(7px, 1vw, 14px);
+  min-width: 0;
 }
-.twilight-resources[hidden] {
+.resource-meter[hidden] {
   display: none;
 }
-.twilight-resources > span {
-  display: grid;
-  gap: 3px;
-}
-.twilight-resources strong {
-  font-size: 1rem;
-}
-.difficulty-control {
-  position: relative;
-  display: grid;
-  align-content: end;
-  justify-items: start;
-  gap: 5px;
-  min-width: 145px;
-  max-width: 220px;
-}
-.difficulty-control select {
+.resource-meter progress {
+  display: block;
   width: 100%;
-  min-height: 38px;
-  padding: 0 30px 0 10px;
-  border: 1px solid rgb(225 237 232 / 30%);
-  border-radius: 2px;
-  background: #101b2d;
-  color: var(--cream);
+  height: 12px;
+  overflow: hidden;
+  appearance: none;
+  border: 1px solid rgb(239 233 255 / 38%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #111528, #080c18);
+  box-shadow:
+    0 1px 4px rgb(0 0 0 / 58%) inset,
+    0 0 0 1px rgb(5 8 18 / 55%);
+}
+.resource-meter progress::-webkit-progress-bar {
+  border-radius: inherit;
+  background: linear-gradient(180deg, #111528, #080c18);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 58%) inset;
+}
+.resource-meter progress::-webkit-progress-value {
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb936, #ffe779 72%, #fff5b6);
+  box-shadow: 0 0 10px rgb(255 204 83 / 66%);
+}
+.resource-meter progress::-moz-progress-bar {
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb936, #ffe779 72%, #fff5b6);
+  box-shadow: 0 0 10px rgb(255 204 83 / 66%);
+}
+.twilight-meter progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #8735e8, #c57bff 72%, #f0d2ff);
+  box-shadow: 0 0 10px rgb(174 95 255 / 72%);
+}
+.twilight-meter progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #8735e8, #c57bff 72%, #f0d2ff);
+  box-shadow: 0 0 10px rgb(174 95 255 / 72%);
+}
+.resource-amount {
+  color: #f7f3e8;
   font:
-    600 0.78rem 'Manrope',
-    'Avenir Next',
-    sans-serif;
+    600 0.75rem 'DM Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1px 5px #080c18;
 }
-.difficulty-control select:disabled {
-  cursor: not-allowed;
-  color: #d1d8dc;
+.opponent-resource .resource-amount {
+  color: #e9d5ff;
 }
-.difficulty-details {
-  color: var(--muted);
-  font-size: 0.68rem;
+.opponent-resource strong {
+  color: var(--twilight-accent);
 }
-.difficulty-details summary {
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.player-resource [data-personal-strength] {
+  color: var(--gold);
 }
-.difficulty-details p {
-  position: absolute;
-  z-index: 4;
-  top: 100%;
-  right: 0;
-  width: min(360px, calc(100vw - 64px));
-  max-height: min(50dvh, 360px);
-  overflow: auto;
-  margin: 7px 0 0;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  background: #101b2d;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 35%);
-  color: var(--cream);
-  font-size: 0.72rem;
-  line-height: 1.55;
-}
-
 .stage-frame {
   position: relative;
   z-index: 1;
@@ -300,7 +325,6 @@ h1 {
   pointer-events: none;
 }
 .stage-topline,
-.performance-controls,
 .feedback-row {
   display: flex;
   align-items: center;
@@ -412,39 +436,12 @@ h1 {
     monospace;
   text-align: right;
 }
-.performance-controls {
-  flex: 0 0 auto;
-  min-height: 2.2rem;
-  padding-top: 13px;
-  color: var(--muted);
-  font-size: 0.73rem;
-}
-.performance-controls p {
-  margin: 0;
-}
-kbd {
-  display: inline-grid;
-  min-width: 1.55em;
-  min-height: 1.55em;
-  place-items: center;
-  margin: 0 2px;
-  border: 1px solid rgb(238 243 232 / 28%);
-  border-radius: 3px;
-  background: rgb(255 255 255 / 5%);
-}
 .text-button {
   padding: 4px 0 4px 10px;
   border: 0;
   background: none;
   color: var(--cream);
   cursor: pointer;
-}
-.text-button kbd {
-  margin-left: 6px;
-  color: var(--muted);
-}
-.pause-button[hidden] {
-  display: none;
 }
 button {
   cursor: pointer;
@@ -609,39 +606,46 @@ button:disabled {
     padding: 10px 10px 8px;
   }
   .play-heading {
-    flex-wrap: wrap;
-    gap: 8px 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 12px;
+    row-gap: 7px;
     margin-bottom: 6px;
   }
-  .resource-readout {
-    min-width: 82px;
-    padding-left: 12px;
+  .player-resource {
+    grid-column: 1;
+    grid-row: 1;
   }
-  .twilight-resources {
-    grid-template-columns: 1fr;
+  .heading-identity {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left;
+  }
+  .heading-identity h1 {
+    font-size: clamp(1.08rem, 5vw, 1.45rem);
+  }
+  .opponent-resource {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .resource-name {
+    font-size: 0.6rem;
+  }
+  .resource-meter {
+    grid-template-columns: minmax(72px, 1fr) auto;
     gap: 6px;
-    justify-items: end;
   }
-  .twilight-resources .resource-name {
-    font-size: 0.56rem;
+  .resource-meter progress {
+    height: 10px;
   }
-  .difficulty-control {
-    flex: 1 1 100%;
-    max-width: none;
+  .resource-amount {
+    font-size: 0.65rem;
   }
   .stage-frame {
     padding: 5px 4px 6px;
   }
   .stage-topline {
     font-size: 0.56rem;
-  }
-  .performance-controls {
-    align-items: flex-start;
-    font-size: 0.66rem;
-  }
-  .performance-controls p {
-    max-width: 70%;
-    line-height: 1.9;
   }
   .dialog-panel {
     top: 52%;
@@ -662,9 +666,6 @@ button:disabled {
   .result-line {
     min-height: 76px;
     padding: 9px;
-  }
-  .performance-controls {
-    flex: 0 0 auto;
   }
 }
 
