@@ -29,6 +29,7 @@ const snapshot: ControllerSnapshot = {
     transportTime: 10,
     phase: 'audience',
     status: 'playing',
+    victory: false,
     renown: 0,
     personalStrength: 100,
     twilightStrength: 100,

@@ -297,7 +297,7 @@ async function main() {
   await command('Page.enable');
   await command('Runtime.enable');
   await command('Page.addScriptToEvaluateOnNewDocument', {
-    source: `(()=>{const Native=window.AudioContext;if(Native){window.__proofAudioContexts=[];window.AudioContext=function(...args){const c=new Native(...args);let prototype=Native.prototype;let descriptor;while(prototype&&!descriptor){descriptor=Object.getOwnPropertyDescriptor(prototype,'currentTime');prototype=Object.getPrototypeOf(prototype)}if(descriptor?.get){const raw=()=>descriptor.get.call(c);let rawBase=raw();let logicalBase=rawBase;let rate=1;Object.defineProperty(c,'currentTime',{configurable:true,get:()=>logicalBase+(raw()-rawBase)*rate});c.__setProofClockRate=(next)=>{const now=raw();logicalBase+=((now-rawBase)*rate);rawBase=now;rate=next}}window.__proofAudioContexts.push(c);return c};window.AudioContext.prototype=Native.prototype}const p=window.AudioBufferSourceNode?.prototype;if(p){const start=p.start;p.start=function(when,...args){window.__proofScheduledWhen=when;return start.call(this,when,...args)}}})()`,
+    source: `(()=>{const Native=window.AudioContext;if(Native){window.__proofAudioContexts=[];window.AudioContext=function(...args){const c=new Native(...args);let prototype=Native.prototype;let descriptor;while(prototype&&!descriptor){descriptor=Object.getOwnPropertyDescriptor(prototype,'currentTime');prototype=Object.getPrototypeOf(prototype)}if(descriptor?.get){const raw=()=>descriptor.get.call(c);let rawBase=raw();let logicalBase=rawBase;let rate=1;Object.defineProperty(c,'currentTime',{configurable:true,get:()=>logicalBase+(raw()-rawBase)*rate});c.__setProofClockRate=(next)=>{const now=raw();logicalBase+=((now-rawBase)*rate);rawBase=now;rate=next}}window.__proofAudioContexts.push(c);return c};window.AudioContext.prototype=Native.prototype}const p=window.AudioBufferSourceNode?.prototype;if(p){const start=p.start;p.start=function(when,...args){window.__proofScheduledWhen=when;window.__proofScheduledOffset=args[0]??0;return start.call(this,when,...args)}}})()`,
   });
   await command('Page.navigate', { url: base });
   await resize(1600, 900);
@@ -346,6 +346,10 @@ async function main() {
     path.join(root, 'src/game/mvp-chart.ts'),
     'utf8',
   );
+  const chartSourceStart = Number(
+    chartSource.match(/sourceStart: ([\d.]+)/)?.[1] ?? 0,
+  );
+  const chartDuration = Number(chartSource.match(/duration: ([\d.]+)/)?.[1] ?? 0);
   const notes = [
     ...chartSource.matchAll(/\{ id: '(\w+)', time: ([\d.]+), lane: (\d) \}/g),
   ].map(([, id, time, lane]) => ({
@@ -371,6 +375,8 @@ async function main() {
   );
   const audioTime = async () =>
     evaluate('window.__proofAudioContexts?.[0]?.currentTime ?? null');
+  const currentSongTime = async () =>
+    evaluate(`(()=>{const c=window.__proofAudioContexts?.[0];const when=window.__proofScheduledWhen;return c&&Number.isFinite(when)?c.currentTime-when+(window.__proofScheduledOffset??0)-${chartSourceStart}:null})()`);
   const waitTransport = async (position) => {
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
@@ -379,6 +385,15 @@ async function main() {
       await pause(5);
     }
     throw new Error(`Timed out waiting for song time ${position}`);
+  };
+  const waitResumedTransport = async (position) => {
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      const now = await currentSongTime();
+      if (now !== null && now >= position) return now;
+      await pause(2);
+    }
+    throw new Error(`Timed out waiting for resumed song time ${position}`);
   };
   const captureLateNoteTravel = async (note, samples) => {
     reports.lateNoteTravel = [];
@@ -801,6 +816,144 @@ async function main() {
     );
     reports.contextRetry = await status();
   }
+  // Start a fresh real-app run and play the chart through Twilight's defeat to
+  // verify radiant mode and the natural song-end boundary with real input.
+  await command('Page.navigate', { url: base });
+  await waitFor(async () => {
+    const state = await status();
+    return (
+      state.renderer === 'rendered' &&
+      state.panels.includes('ready') &&
+      !state.startDisabled
+    );
+  }, 'fresh actual-app ready state', 60000);
+  await click('[data-action="start"]');
+  await waitFor(
+    async () =>
+      evaluate(
+        'Number.isFinite(window.__proofScheduledWhen) && window.__proofAudioContexts?.length > 0',
+      ),
+    'actual-app victory-run audio schedule',
+  );
+  const waitRestartTransport = async (position) => {
+    const deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      const now = await currentSongTime();
+      if (now !== null && now >= position) return now;
+      await pause(2);
+    }
+    throw new Error(`Timed out waiting for restarted song time ${position}`);
+  };
+  let victoryValues = null;
+  let victoryNoteIndex = -1;
+  const victoryInput = [];
+  for (let index = 0; index < notes.length; index += 1) {
+    const note = notes[index];
+    const reached = await waitRestartTransport(note.time);
+    const lateness = reached - note.time;
+    const keyCode = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'][note.lane];
+    if (note.id === 't36') {
+      await waitRestartTransport(note.time + goodWindowSeconds + 0.03);
+      await waitFor(
+        async () =>
+          /Lane K: Miss/i.test(
+            await evaluate(
+              `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
+            ),
+          ),
+        'post-victory final-lane miss feedback',
+      );
+      const afterMiss = await inspectResourceHud();
+      if (
+        victoryValues === null ||
+        afterMiss.personal.text !== victoryValues.personal.text ||
+        afterMiss.twilight.text !== victoryValues.twilight.text ||
+        afterMiss.personalBar.value !== victoryValues.personalBar.value ||
+        afterMiss.twilightBar.value !== victoryValues.twilightBar.value
+      )
+        throw new Error(
+          `Strength changed after the victory miss: ${JSON.stringify({ victoryValues, afterMiss, victoryInput })}`,
+        );
+      reports.victoryAfterMiss = afterMiss;
+      victoryInput.push({ id: note.id, result: 'deliberately-missed', lateness });
+      break;
+    }
+    await key(keyCode, 'down');
+    await key(keyCode, 'up');
+    victoryInput.push({ id: note.id, result: 'key-sent', lateness });
+    await pause(25);
+    if (victoryValues === null) {
+      const reachedVictory = await evaluate(
+        `document.querySelector('.play-surface')?.classList.contains('is-victory') ?? false`,
+      );
+      if (reachedVictory) {
+        victoryNoteIndex = index;
+        const hud = await inspectResourceHud();
+        const announcement = await evaluate(
+          `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
+        );
+        if (
+          hud.mode !== 'Radiant victory · the song continues' ||
+          !/Twilight is defeated/i.test(announcement)
+        )
+          throw new Error(
+            `Victory presentation or accessible announcement was missing: ${JSON.stringify({ hud, announcement })}`,
+          );
+        victoryValues = hud;
+        reports.radiantVictory = {
+          noteId: note.id,
+          transportTime: reached,
+          phase: 'Twilight',
+          playing: true,
+          announcement,
+          hud,
+          screenshot: `${difficulty}-radiant-victory.webp`,
+        };
+        await screenshot('radiant-victory.webp');
+      }
+    } else if (index > victoryNoteIndex) {
+      const hud = await inspectResourceHud();
+      if (
+        hud.personal.text !== victoryValues.personal.text ||
+        hud.twilight.text !== victoryValues.twilight.text ||
+        hud.personalBar.value !== victoryValues.personalBar.value ||
+        hud.twilightBar.value !== victoryValues.twilightBar.value
+      )
+        throw new Error(
+          `Strength changed after victory judgment ${note.id}: ${JSON.stringify({ victoryValues, hud })}`,
+        );
+    }
+  }
+  if (victoryValues === null)
+    throw new Error(
+      `The real chart did not reach victory: ${JSON.stringify(victoryInput)}`,
+    );
+  const afterVictoryMissState = await status();
+  if (afterVictoryMissState.panels.includes('results'))
+    throw new Error('Results appeared before the song reached its natural end');
+  reports.victoryContinuedPerformance = {
+    inputs: victoryInput,
+    lastGameplayTime: afterVictoryMissState.time,
+    stillPlayingBeforeNaturalEnd: true,
+  };
+  const naturalEnd = await waitFor(
+    async () => {
+      const state = await status();
+      return state.panels.includes('results') ? state : false;
+    },
+    'natural song-end results after victory',
+    20000,
+  );
+  const finalOutcome = await evaluate(
+    `document.querySelector('[data-result-title]')?.textContent?.trim()??''`,
+  );
+  if (!/victory/i.test(finalOutcome))
+    throw new Error(`Natural song end did not preserve Victory result: ${finalOutcome}`);
+  reports.naturalVictoryResults = {
+    state: naturalEnd,
+    outcome: finalOutcome,
+    songDuration: chartDuration,
+  };
   reports.webVitals = {
     userAgent: await evaluate('navigator.userAgent'),
     devicePixelRatio: await evaluate('devicePixelRatio'),
@@ -831,6 +984,7 @@ async function main() {
       'These viewport sizes are tested samples, not minimum supported dimensions.',
       'Song output was muted; audio audibility is not evaluated.',
       'No per-person live-occlusion pass was available from the application DOM; composition proof has the separate GLB ID-pass evidence.',
+      'Radiant victory proof used the actual app, production chart/assets, and CDP keyboard events; its chart time was derived from intercepted AudioBufferSource start offsets, not an independent hardware audio-sync audit.',
       'This HUD uses the default Normal run; selection of other difficulty profiles is not currently exposed.',
       'This live harness sends chart-timed keyboard inputs but does not independently inspect internal score judgments or live note mesh vertices.',
       'Per-person occlusion is not exposed by the live app DOM; no fully-visible crowd claim is made from these screenshots.',
@@ -862,8 +1016,21 @@ async function main() {
           `${difficulty}-judgment-miss-peak.webp`,
           `${difficulty}-judgment-miss-fade.webp`,
           ...(reports.lateNoteTravel ?? []).map((sample) => sample.screenshot),
+          ...(reports.radiantVictory ? [reports.radiantVictory.screenshot] : []),
         ],
         liveMode: reports.modeAtTransition,
+        radiantVictory: reports.radiantVictory
+          ? {
+              noteId: reports.radiantVictory.noteId,
+              transportTime: reports.radiantVictory.transportTime,
+              playing: reports.radiantVictory.playing,
+              mode: reports.radiantVictory.hud.mode,
+              announcement: reports.radiantVictory.announcement,
+              screenshot: reports.radiantVictory.screenshot,
+            }
+          : null,
+        victoryAfterMissMode: reports.victoryAfterMiss?.mode ?? null,
+        naturalVictoryResults: reports.naturalVictoryResults ?? null,
         initial: reports.initial.state,
         zeroSuspended: reports.zeroSuspended,
         restored: reports.restoredPaused,

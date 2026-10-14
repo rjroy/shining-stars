@@ -3,7 +3,11 @@ import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
 import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
 import { getResourceBars } from './resource-bars';
-import { createFeedbackAnnouncementTracker } from './ui-feedback';
+import {
+  createFeedbackAnnouncementTracker,
+  createVictoryAnnouncementTracker,
+  updateGameplayStatusText,
+} from './ui-feedback';
 import {
   createBrightvaleViewportLayout,
   type BrightvaleRendererStatus,
@@ -172,6 +176,7 @@ export function createGameUI(
   let pendingPlaybackRequests = false;
   let resultsRendered = false;
   const feedbackAnnouncements = createFeedbackAnnouncementTracker();
+  const victoryAnnouncements = createVictoryAnnouncementTracker();
   const emptyRect: BrightvaleViewportRect = {
     x: 0,
     y: 0,
@@ -423,19 +428,25 @@ export function createGameUI(
     );
 
     playSurface?.classList.toggle('is-twilight', game.phase === 'twilight');
+    playSurface?.classList.toggle('is-victory', game.victory);
+    const victoryAnnouncement = victoryAnnouncements.update(game.victory);
     setText(
       root,
       '[data-mode-label]',
-      game.phase === 'audience'
-        ? 'Audience performance'
-        : 'Twilight · the city answers',
+      game.victory
+        ? 'Radiant victory · the song continues'
+        : game.phase === 'audience'
+          ? 'Audience performance'
+          : 'Twilight · the city answers',
     );
     setText(
       root,
       '[data-title]',
-      game.phase === 'audience'
-        ? 'Sing with Brightvale'
-        : 'The city sings with you',
+      game.victory
+        ? 'Brightvale shines on'
+        : game.phase === 'audience'
+          ? 'Sing with Brightvale'
+          : 'The city sings with you',
     );
     setText(root, '[data-resource-value]', String(game.renown));
     const bars = getResourceBars(chart, game);
@@ -515,18 +526,19 @@ export function createGameUI(
         timingLegend,
         `Good ±${toMilliseconds(profile.timing.goodWindowSeconds)} ms · ` +
           `Perfect ±${toMilliseconds(profile.timing.perfectWindowSeconds)} ms` +
-          ' — centered on the hit line; notes stop there.',
+          ' — centered on the hit line; unresolved notes continue past it.',
       );
     }
     const feedbackAnnouncement = feedbackAnnouncements.update(snapshot.feedback);
-    if (feedbackAnnouncement.announcement !== null)
-      setText(
-        root,
-        '[data-gameplay-status]',
-        feedbackAnnouncement.announcement,
+    const gameplayStatus = root.querySelector<HTMLElement>(
+      '[data-gameplay-status]',
+    );
+    if (gameplayStatus !== null)
+      updateGameplayStatusText(
+        gameplayStatus,
+        victoryAnnouncement,
+        feedbackAnnouncement,
       );
-    else if (feedbackAnnouncement.clear)
-      setText(root, '[data-gameplay-status]', '');
 
     if (isResults) {
       if (!resultsRendered) renderResults(game);

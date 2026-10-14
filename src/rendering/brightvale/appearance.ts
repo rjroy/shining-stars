@@ -30,7 +30,7 @@ interface LightPreset {
   readonly pointPosition: THREE.Vector3;
 }
 
-const PRESETS: Readonly<Record<'audience' | 'twilight', LightPreset>> = {
+const PRESETS: Readonly<Record<'audience' | 'twilight' | 'radiant', LightPreset>> = {
   audience: {
     sky: new THREE.Color(0xffd49b),
     ground: new THREE.Color(0x27334d),
@@ -52,6 +52,17 @@ const PRESETS: Readonly<Record<'audience' | 'twilight', LightPreset>> = {
     point: new THREE.Color(0x966dff),
     pointIntensity: 96,
     pointPosition: new THREE.Vector3(12, 24, -12),
+  },
+  radiant: {
+    sky: new THREE.Color(0xffedc4),
+    ground: new THREE.Color(0x55442f),
+    hemisphereIntensity: 1.8,
+    key: new THREE.Color(0xffe7ad),
+    fill: new THREE.Color(0xffd88b),
+    rim: new THREE.Color(0xfff6d8),
+    point: new THREE.Color(0xffe2a0),
+    pointIntensity: 132,
+    pointPosition: new THREE.Vector3(0, 30, -4),
   },
 };
 
@@ -134,11 +145,12 @@ export function createBrightvaleAppearance(
 
   const update = (state: SceneStateProjection): void => {
     if (disposed) throw new Error('Brightvale appearance has been disposed');
-    const amount = Number.isFinite(state.transitionProgress)
+    const transitionAmount = Number.isFinite(state.transitionProgress)
       ? THREE.MathUtils.clamp(state.transitionProgress, 0, 1)
       : 0;
     const from = PRESETS.audience;
-    const to = PRESETS.twilight;
+    const to = state.victory ? PRESETS.radiant : PRESETS.twilight;
+    const amount = state.victory ? 1 : transitionAmount;
     lerpColor(hemisphere.color, from.sky, to.sky, amount);
     lerpColor(hemisphere.groundColor, from.ground, to.ground, amount);
     hemisphere.intensity = THREE.MathUtils.lerp(

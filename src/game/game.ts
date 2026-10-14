@@ -42,6 +42,7 @@ export interface GameSnapshot {
   readonly transportTime: number;
   readonly phase: GamePhase;
   readonly status: GameStatus;
+  readonly victory: boolean;
   readonly renown: number;
   readonly personalStrength: number;
   readonly twilightStrength: number;
@@ -240,6 +241,7 @@ export function createGame(
   let currentTransportTime = 0;
   let phase: GamePhase = 'audience';
   let status: GameStatus = 'playing';
+  let victory = false;
   let renown = 0;
   let personalStrength = 0;
   let twilightStrength = chart.twilightStrength;
@@ -276,13 +278,13 @@ export function createGame(
   }
 
   function applyTwilightOutcome(outcome: NoteOutcome): void {
-    if (outcome === null) return;
+    if (outcome === null || victory) return;
     const balance = profile.twilight[outcome];
     personalStrength = Math.max(0, personalStrength - balance.personalCost);
     twilightStrength = Math.max(0, twilightStrength - balance.damage);
 
     // When one hit exhausts both strengths, victory takes precedence.
-    if (twilightStrength === 0) finish('victory');
+    if (twilightStrength === 0) victory = true;
     else if (personalStrength === 0) finish('defeat');
   }
 
@@ -362,7 +364,7 @@ export function createGame(
           if (isFinished()) currentTransportTime = event.time;
         } else {
           currentTransportTime = chart.duration;
-          finish('survived');
+          finish(victory ? 'victory' : 'survived');
         }
       }
     }
@@ -386,6 +388,7 @@ export function createGame(
       transportTime: currentTransportTime,
       phase,
       status,
+      victory,
       renown,
       personalStrength,
       twilightStrength,

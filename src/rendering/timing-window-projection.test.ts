@@ -49,6 +49,7 @@ function makeSnapshot(
       transportTime,
       phase: 'audience',
       status: 'playing',
+      victory: false,
       renown: 0,
       personalStrength: 100,
       twilightStrength: 100,

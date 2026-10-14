@@ -26,6 +26,7 @@ function makeSnapshot(
     transportTime: 0,
     phase: 'audience',
     status: 'playing',
+    victory: false,
     renown: 0,
     personalStrength: 0,
     twilightStrength: chart.twilightStrength,
@@ -97,6 +98,26 @@ describe('projectSceneState', () => {
       chart,
     );
     expect(projected.cityIntensity).toBeCloseTo(0.75);
+    expect(projected.victory).toBe(false);
+  });
+
+  it('projects a latched Twilight victory as a distinct fully radiant state', () => {
+    const projected = projectSceneState(
+      makeSnapshot({
+        phase: 'twilight',
+        victory: true,
+        transportTime: 14,
+        personalStrength: 28,
+        twilightStrength: 0,
+      }),
+      chart,
+    );
+    expect(projected).toMatchObject({
+      phase: 'twilight',
+      victory: true,
+      cityIntensity: 1,
+      cityBrightness: 1,
+    });
   });
 
   it('keeps city presence and player defiance when notes are missed', () => {
@@ -120,6 +141,7 @@ describe('projectSceneState', () => {
     const state = projectSceneState(
       makeSnapshot({
         phase: 'twilight',
+        victory: true,
         transportTime: 12,
         personalStrength: 40,
         twilightStrength: 0,
@@ -135,5 +157,6 @@ describe('projectSceneState', () => {
       windTravel: false,
       cameraPush: 0,
     });
+    expect(state.victory).toBe(true);
   });
 });

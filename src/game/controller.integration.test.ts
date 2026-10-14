@@ -168,14 +168,17 @@ describe('audio and controller timing integration', () => {
     await controller.dispose();
   });
 
-  it('stops once on a synchronous victory press and allows a clean fresh restart', async () => {
+  it('continues playback and judging after victory until natural end, then restarts cleanly', async () => {
     const context = new TestContext();
     const { audio, controller } = createIntegrationController(
       context,
       [
         { id: 'audience', time: 1, lane: 0 },
         { id: 'victory-hit', time: 3, lane: 0 },
-        { id: 'pending', time: 4, lane: 0 },
+        { id: 'post-victory-hit', time: 4, lane: 1 },
+        { id: 'post-victory-miss', time: 5, lane: 2 },
+        { id: 'post-recovery-hit', time: 8, lane: 3 },
+        { id: 'final-miss', time: 9, lane: 0 },
       ],
       3,
     );
@@ -187,24 +190,137 @@ describe('audio and controller timing integration', () => {
     context.currentTime = 4; // Handoff at transport time 2.
     controller.update();
     context.currentTime = 5; // Victory note at transport time 3.
-    const terminal = controller.keyDown('KeyD');
+    const afterVictory = controller.keyDown('KeyD');
 
-    expect(terminal.game.result).toMatchObject({ outcome: 'victory' });
-    expect(terminal.game.notes.at(-1)?.outcome).toBeNull();
-    expect(audio.snapshot().hasActiveSource).toBe(false);
-    expect(context.sources[0]?.stopCalls).toBe(1);
-
-    context.currentTime = 7;
-    controller.update();
-    controller.keyUp('KeyD');
-    controller.keyDown('KeyD');
-    controller.pause();
-    expect(controller.snapshot().game).toEqual(terminal.game);
+    expect(afterVictory.game).toMatchObject({
+      victory: true,
+      status: 'playing',
+      phase: 'twilight',
+      personalStrength: 3,
+      twilightStrength: 0,
+      result: null,
+    });
+    expect(audio.snapshot()).toMatchObject({
+      status: 'playing',
+      hasActiveSource: true,
+    });
     expect(context.sources).toHaveLength(1);
+    expect(context.sources[0]?.stopCalls).toBe(0);
+
+    controller.keyUp('KeyD');
+    context.currentTime = 6.1; // Good post-victory judgment at position 4.1.
+    const postVictoryHit = controller.keyDown('KeyF');
+    expect(postVictoryHit.game.notes[2]?.outcome).toBe('good');
+    expect(postVictoryHit.feedback).toMatchObject([
+      { noteId: 'victory-hit', lane: 0, quality: 'perfect' },
+      { noteId: 'post-victory-hit', lane: 1, quality: 'good' },
+    ]);
+    expect(postVictoryHit.game).toMatchObject({
+      victory: true,
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
+    });
+    controller.keyUp('KeyF');
+
+    context.currentTime = 7.151; // Miss the note at position 5.
+    const postVictoryMiss = controller.update();
+    expect(postVictoryMiss.game).toMatchObject({
+      victory: true,
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
+    });
+    expect(postVictoryMiss.game.notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'post-victory-hit', outcome: 'good' }),
+        expect.objectContaining({ id: 'post-victory-miss', outcome: 'miss' }),
+      ]),
+    );
+    expect(postVictoryMiss.feedback).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          noteId: 'post-victory-hit',
+          quality: 'good',
+        }),
+        expect.objectContaining({
+          noteId: 'post-victory-miss',
+          lane: 2,
+          quality: 'miss',
+        }),
+      ]),
+    );
+    expect(audio.snapshot()).toMatchObject({
+      status: 'playing',
+      hasActiveSource: true,
+    });
+    expect(context.sources[0]?.stopCalls).toBe(0);
+
+    controller.pause();
+    expect(controller.snapshot().game).toMatchObject({
+      victory: true,
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
+    });
+    expect(audio.snapshot().status).toBe('paused');
     expect(context.sources[0]?.stopCalls).toBe(1);
+    await controller.resume();
+    const resumedSchedule = audio.snapshot().scheduledWhen;
+    if (resumedSchedule === null)
+      throw new Error('Expected a scheduled source after victory resume.');
+    context.currentTime = resumedSchedule + (8.1 - audio.snapshot().position);
+    const resumedHit = controller.keyDown('KeyK');
+    expect(resumedHit.game.notes[4]?.outcome).toBe('good');
+    expect(resumedHit.game).toMatchObject({
+      victory: true,
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
+    });
+    controller.keyUp('KeyK');
+
+    // A renderer-loss cancellation pauses without publishing; restoration can
+    // resume the victorious run and carry it to the natural audio boundary.
+    const cancelledForRecovery = cancelWithoutPublishing(controller);
+    expect(cancelledForRecovery.audio.status).toBe('paused');
+    expect(cancelledForRecovery.game).toMatchObject({
+      victory: true,
+      status: 'playing',
+      personalStrength: 3,
+      twilightStrength: 0,
+    });
+    expect(context.sources[1]?.stopCalls).toBe(1);
+    await controller.resume();
+    const recoveredSchedule = audio.snapshot().scheduledWhen;
+    if (recoveredSchedule === null)
+      throw new Error('Expected a scheduled source after renderer recovery.');
+    context.currentTime = recoveredSchedule + (10 - audio.snapshot().position);
+    const completed = controller.update();
+
+    expect(completed.game).toMatchObject({
+      victory: true,
+      phase: 'twilight',
+      status: 'results',
+      personalStrength: 3,
+      twilightStrength: 0,
+      result: {
+        outcome: 'victory',
+        personalStrength: 3,
+        twilightStrength: 0,
+        twilight: { perfect: 1, good: 2, miss: 2 },
+      },
+    });
+    expect(completed.audio).toMatchObject({
+      status: 'results',
+      hasActiveSource: false,
+    });
+    expect(context.sources).toHaveLength(3);
+    expect(context.sources[2]?.stopCalls).toBe(0);
 
     const restarted = await controller.restart();
     expect(restarted.game).toMatchObject({
+      victory: false,
       status: 'playing',
       renown: 0,
       personalStrength: 0,
@@ -212,13 +328,16 @@ describe('audio and controller timing integration', () => {
       notes: [
         { id: 'audience', outcome: null },
         { id: 'victory-hit', outcome: null },
-        { id: 'pending', outcome: null },
+        { id: 'post-victory-hit', outcome: null },
+        { id: 'post-victory-miss', outcome: null },
+        { id: 'post-recovery-hit', outcome: null },
+        { id: 'final-miss', outcome: null },
       ],
     });
     expect(restarted.audio.hasActiveSource).toBe(true);
-    expect(context.sources).toHaveLength(2);
-    expect(context.sources[1]?.startCalls).toBe(1);
-    expect(context.sources[0]?.stopCalls).toBe(1);
+    expect(context.sources).toHaveLength(4);
+    expect(context.sources[3]?.startCalls).toBe(1);
+    expect(context.sources[2]?.stopCalls).toBe(0);
 
     await controller.dispose();
   });
