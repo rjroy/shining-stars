@@ -10,6 +10,7 @@ import { BRIGHTVALE_RUNTIME_LAYOUT } from './brightvale/layout';
 import {
   createBrightvaleCameraProjection,
   createBrightvaleSurfaceProfile,
+  getFrontPlatformProgress,
   type BrightvaleCameraProjection,
   type BrightvaleMeasuredSurfaceProfile,
   type BrightvaleProgressRange,
@@ -150,8 +151,7 @@ function setRectLabel(
   mesh.position.set(rect.x + width / 2, rect.y + height / 2, 1);
   mesh.scale.set(width, height, 1);
   mesh.visible = text.length > 0 && width > 0 && height > 0 && context !== null;
-  if (context === null || canvas === null || !mesh.visible)
-    return;
+  if (context === null || canvas === null || !mesh.visible) return;
   if (label.value === text && label.width === width && label.height === height)
     return;
 
@@ -366,6 +366,7 @@ export function createBrightvaleScene(
     profile: null as BrightvaleMeasuredSurfaceProfile | null,
     playfield: createBrightvalePlayfieldContract(),
     projection: null as BrightvaleCameraProjection | null,
+    frontProgress: 1,
   };
 
   let lastFrame: FrameState | null = null;
@@ -686,8 +687,12 @@ export function createBrightvaleScene(
       ownedTextures,
     );
 
+    // Keycaps sit on each lane's projected front lip, so perspective and
+    // viewport changes move them with the loaded platform geometry.
     const anchors = [0, 1, 2, 3].map((lane) =>
-      composition.projection!.project(playfield.hitAnchor(lane)),
+      composition.projection!.project(
+        playfield.point(lane, composition.frontProgress),
+      ),
     );
     anchors.forEach((anchor, lane) => {
       const slot = {
@@ -732,6 +737,10 @@ export function createBrightvaleScene(
       throw new Error('cannot compose without a viewport frame');
     if (dependencies === undefined) {
       composition.profile = createBrightvaleSurfaceProfile(assets.roots);
+      composition.frontProgress = getFrontPlatformProgress(
+        composition.playfield,
+        composition.profile,
+      );
       composition.playfield = createBrightvalePlayfieldContract(
         composition.profile,
       );

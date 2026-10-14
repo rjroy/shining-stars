@@ -13,10 +13,8 @@ interface AppSnapshot {
 
 interface AppActions {
   readonly start: () => unknown;
-  readonly pause: () => unknown;
   readonly resume: () => unknown;
   readonly restart: () => unknown;
-  readonly selectDifficulty: (difficulty: string) => unknown;
   readonly onRendererRetry?: () => unknown;
 }
 
@@ -237,7 +235,6 @@ async function mountMain(
     start: vi.fn(async () => harness.snapshot),
     resume: vi.fn(async () => harness.snapshot),
     restart: vi.fn(async () => harness.snapshot),
-    selectDifficulty: vi.fn(),
     pause: vi.fn(),
     blur: vi.fn(),
     keyDown: vi.fn(),
@@ -294,7 +291,7 @@ function fireKey(code: string): void {
 }
 
 async function callAction(
-  name: 'start' | 'pause' | 'resume' | 'restart' | 'onRendererRetry',
+  name: 'start' | 'resume' | 'restart' | 'onRendererRetry',
 ): Promise<void> {
   const action = harness.actions?.[name];
   if (action === undefined) throw new Error(`Missing UI action ${name}.`);
@@ -365,8 +362,6 @@ describe('main renderer availability lifecycle', () => {
     expect(harness.scenes).toHaveLength(0);
     expect(harness.controller?.pauseWithoutPublishing).toHaveBeenCalledTimes(1);
 
-    harness.actions?.selectDifficulty('hard');
-    expect(harness.controller?.selectDifficulty).toHaveBeenCalledWith('hard');
     expect(harness.audioDependencies).not.toBeNull();
     expect(harness.fetchCalls).toBe(0);
 
@@ -389,7 +384,8 @@ describe('main renderer availability lifecycle', () => {
     expect(harness.controller?.keyDown).not.toHaveBeenCalled();
     expect(harness.controller?.keyUp).not.toHaveBeenCalled();
 
-    await callAction('pause');
+    harness.snapshot = makeSnapshot('playing', 'playing');
+    fireKey('Escape');
     harness.snapshot = makeSnapshot('playing', 'playing');
     fireKey('Escape');
     expect(harness.controller?.pause).toHaveBeenCalledTimes(2);

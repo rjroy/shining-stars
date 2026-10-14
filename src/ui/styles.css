@@ -58,13 +58,6 @@ a:focus-visible {
   color: var(--night);
   background: var(--gold);
 }
-kbd {
-  color: var(--cream);
-  font:
-    600 0.76rem 'DM Mono',
-    monospace;
-}
-
 .experience {
   display: flex;
   justify-content: center;
@@ -202,13 +195,6 @@ kbd {
 .player-resource [hidden] {
   display: none;
 }
-.difficulty-control {
-  grid-column: 3;
-  grid-row: 2;
-  justify-self: end;
-  width: min(100%, 190px);
-  min-width: 0;
-}
 .mode-label,
 .dialog-overline {
   margin: 0 0 9px;
@@ -256,65 +242,70 @@ h1 {
     monospace;
   font-variant-numeric: tabular-nums;
 }
+.resource-meter {
+  display: grid;
+  grid-template-columns: minmax(90px, min(19vw, 280px)) auto;
+  align-items: center;
+  gap: clamp(7px, 1vw, 14px);
+  min-width: 0;
+}
+.resource-meter[hidden] {
+  display: none;
+}
+.resource-meter progress {
+  display: block;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  appearance: none;
+  border: 1px solid rgb(239 233 255 / 38%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #111528, #080c18);
+  box-shadow:
+    0 1px 4px rgb(0 0 0 / 58%) inset,
+    0 0 0 1px rgb(5 8 18 / 55%);
+}
+.resource-meter progress::-webkit-progress-bar {
+  border-radius: inherit;
+  background: linear-gradient(180deg, #111528, #080c18);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 58%) inset;
+}
+.resource-meter progress::-webkit-progress-value {
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb936, #ffe779 72%, #fff5b6);
+  box-shadow: 0 0 10px rgb(255 204 83 / 66%);
+}
+.resource-meter progress::-moz-progress-bar {
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb936, #ffe779 72%, #fff5b6);
+  box-shadow: 0 0 10px rgb(255 204 83 / 66%);
+}
+.twilight-meter progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #8735e8, #c57bff 72%, #f0d2ff);
+  box-shadow: 0 0 10px rgb(174 95 255 / 72%);
+}
+.twilight-meter progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #8735e8, #c57bff 72%, #f0d2ff);
+  box-shadow: 0 0 10px rgb(174 95 255 / 72%);
+}
+.resource-amount {
+  color: #f7f3e8;
+  font:
+    600 0.75rem 'DM Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1px 5px #080c18;
+}
+.opponent-resource .resource-amount {
+  color: #e9d5ff;
+}
 .opponent-resource strong {
   color: var(--twilight-accent);
 }
 .player-resource [data-personal-strength] {
   color: var(--gold);
 }
-.difficulty-control {
-  position: relative;
-  display: grid;
-  align-content: end;
-  justify-items: start;
-  gap: 5px;
-  min-width: 0;
-  max-width: 220px;
-}
-.difficulty-control select {
-  width: 100%;
-  min-height: 38px;
-  padding: 0 30px 0 10px;
-  border: 1px solid rgb(225 237 232 / 30%);
-  border-radius: 2px;
-  background: #101b2d;
-  color: var(--cream);
-  font:
-    600 0.78rem 'Manrope',
-    'Avenir Next',
-    sans-serif;
-}
-.difficulty-control select:disabled {
-  cursor: not-allowed;
-  color: #d1d8dc;
-}
-.difficulty-details {
-  color: var(--muted);
-  font-size: 0.68rem;
-}
-.difficulty-details summary {
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.difficulty-details p {
-  position: absolute;
-  z-index: 4;
-  top: 100%;
-  right: 0;
-  width: min(360px, calc(100vw - 64px));
-  max-height: min(50dvh, 360px);
-  overflow: auto;
-  margin: 7px 0 0;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  background: #101b2d;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 35%);
-  color: var(--cream);
-  font-size: 0.72rem;
-  line-height: 1.55;
-}
-
 .stage-frame {
   position: relative;
   z-index: 1;
@@ -334,7 +325,6 @@ h1 {
   pointer-events: none;
 }
 .stage-topline,
-.performance-controls,
 .feedback-row {
   display: flex;
   align-items: center;
@@ -446,39 +436,12 @@ h1 {
     monospace;
   text-align: right;
 }
-.performance-controls {
-  flex: 0 0 auto;
-  min-height: 2.2rem;
-  padding-top: 13px;
-  color: var(--muted);
-  font-size: 0.73rem;
-}
-.performance-controls p {
-  margin: 0;
-}
-kbd {
-  display: inline-grid;
-  min-width: 1.55em;
-  min-height: 1.55em;
-  place-items: center;
-  margin: 0 2px;
-  border: 1px solid rgb(238 243 232 / 28%);
-  border-radius: 3px;
-  background: rgb(255 255 255 / 5%);
-}
 .text-button {
   padding: 4px 0 4px 10px;
   border: 0;
   background: none;
   color: var(--cream);
   cursor: pointer;
-}
-.text-button kbd {
-  margin-left: 6px;
-  color: var(--muted);
-}
-.pause-button[hidden] {
-  display: none;
 }
 button {
   cursor: pointer;
@@ -668,44 +631,21 @@ button:disabled {
   .resource-name {
     font-size: 0.6rem;
   }
-  .difficulty-control {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    justify-self: stretch;
-    justify-items: stretch;
-    width: 100%;
-    grid-template-columns: minmax(0, 1fr) minmax(130px, 1fr);
-    align-items: center;
-    column-gap: 8px;
-    max-width: none;
+  .resource-meter {
+    grid-template-columns: minmax(72px, 1fr) auto;
+    gap: 6px;
   }
-  .difficulty-control .resource-name {
-    white-space: nowrap;
+  .resource-meter progress {
+    height: 10px;
   }
-  .difficulty-control select {
-    grid-column: 2;
-    min-height: 34px;
-  }
-  .difficulty-control .difficulty-help {
-    display: none;
-  }
-  .difficulty-details {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .resource-amount {
+    font-size: 0.65rem;
   }
   .stage-frame {
     padding: 5px 4px 6px;
   }
   .stage-topline {
     font-size: 0.56rem;
-  }
-  .performance-controls {
-    align-items: flex-start;
-    font-size: 0.66rem;
-  }
-  .performance-controls p {
-    max-width: 70%;
-    line-height: 1.9;
   }
   .dialog-panel {
     top: 52%;
@@ -726,9 +666,6 @@ button:disabled {
   .result-line {
     min-height: 76px;
     padding: 9px;
-  }
-  .performance-controls {
-    flex: 0 0 auto;
   }
 }
 

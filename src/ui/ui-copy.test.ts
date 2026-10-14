@@ -12,7 +12,6 @@ describe('gameplay copy', () => {
     );
     expect(uiSource).toMatch(/Good \$\{profile\.audience\.good\}/i);
     expect(uiSource).toMatch(/Miss \$\{profile\.audience\.miss\}/i);
-    expect(uiSource).toMatch(/getDifficultyProfile\(activeDifficulty\)/);
   });
 
   it('explains both Twilight strengths and all combat costs and damage', () => {

@@ -237,13 +237,18 @@ describe('main keyboard routing', () => {
     expect.soft(harness.controller.keyDown).not.toHaveBeenCalled();
     expect.soft(harness.controller.keyUp).not.toHaveBeenCalled();
 
-    action.pause();
+    harness.snapshot = {
+      audio: { status: 'playing' },
+      game: { status: 'playing' },
+    };
+    const escapePreventDefault = vi.fn();
     laneKeydown?.({
       code: 'Escape',
       target: new TestHTMLElement(),
-      preventDefault: vi.fn(),
+      preventDefault: escapePreventDefault,
     });
     expect.soft(harness.controller.pause).toHaveBeenCalled();
+    expect.soft(escapePreventDefault).toHaveBeenCalledOnce();
   });
 
   afterAll(async () => {

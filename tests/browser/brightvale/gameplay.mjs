@@ -10,9 +10,11 @@ const root = path.resolve(
   '../../..',
 );
 const output = path.join(root, '.lore/local/evidence/brightvale-runtime');
-const [difficulty = 'normal'] = process.argv.slice(2);
-if (!['normal', 'hard'].includes(difficulty))
-  throw new Error('Usage: gameplay.mjs [normal|hard]');
+const difficulty = 'normal';
+if (process.argv.slice(2).some((value) => value !== 'normal'))
+  throw new Error(
+    'Only the configured default Normal run is available in this HUD.',
+  );
 await mkdir(output, { recursive: true });
 const chromium = '/usr/bin/chromium';
 const scratch = await (async () => {
@@ -101,6 +103,18 @@ async function key(code, type) {
     code,
     key: code.replace('Key', '').toLowerCase(),
   });
+}
+async function pauseWithEscape() {
+  await key('Escape', 'down');
+  await key('Escape', 'up');
+  return waitFor(
+    async () => {
+      const state = await status();
+      return state.panels.includes('pause') ? state : false;
+    },
+    'Escape pause overlay',
+    5000,
+  );
 }
 async function status() {
   return evaluate(
@@ -202,7 +216,7 @@ async function inspect() {
 }
 async function inspectResourceHud() {
   return evaluate(
-    `(()=>{const read=(selector)=>{const e=document.querySelector(selector);return e?{hidden:e.hidden,text:e.textContent.trim(),rect:(()=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()}:null};return{mode:document.querySelector('[data-mode-label]')?.textContent?.trim(),renownLabel:read('[data-audience-resource]'),renown:read('[data-resource-value]'),personalLabel:read('[data-personal-label]'),personal:read('[data-personal-strength]'),twilightGroup:read('[data-opponent-resource]'),twilight:read('[data-twilight-strength]'),difficultyLabel:read('label[for=difficulty]'),difficultySelect:read('[data-difficulty-select]'),difficultyRules:read('.difficulty-details summary'),canvas:(()=>{const e=document.querySelector('.play-surface canvas');const r=e?.getBoundingClientRect();return r?{x:r.x,y:r.y,width:r.width,height:r.height}:null})()}})()`,
+    `(()=>{const read=(selector)=>{const e=document.querySelector(selector);return e?{hidden:e.hidden,text:e.textContent.trim(),value:e instanceof HTMLProgressElement?e.value:null,max:e instanceof HTMLProgressElement?e.max:null,ariaValueText:e.getAttribute('aria-valuetext'),rect:(()=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}})()}:null};return{mode:document.querySelector('[data-mode-label]')?.textContent?.trim(),renownLabel:read('[data-audience-resource]'),renown:read('[data-resource-value]'),renownMaximum:read('[data-audience-maximum]'),renownBar:read('[data-audience-bar]'),personalLabel:read('[data-personal-label]'),personal:read('[data-personal-strength]'),personalMaximum:read('[data-personal-maximum]'),personalBar:read('[data-personal-bar]'),twilightGroup:read('[data-opponent-resource]'),twilight:read('[data-twilight-strength]'),twilightMaximum:read('[data-twilight-maximum]'),twilightBar:read('[data-twilight-bar]'),difficultySelect:read('[data-difficulty-select]'),canvas:(()=>{const e=document.querySelector('.play-surface canvas');const r=e?.getBoundingClientRect();return r?{x:r.x,y:r.y,width:r.width,height:r.height}:null})()}})()`,
   );
 }
 async function main() {
@@ -280,13 +294,17 @@ async function main() {
   if (reports.initial.state.startDisabled)
     throw new Error('Start remained disabled after rendered scene');
   await screenshot('ready-reference.webp');
-  if (difficulty !== 'normal') {
-    const selected = await evaluate(
-      `(()=>{const select=document.querySelector('[data-difficulty-select]');if(!select)return false;select.value=${JSON.stringify(difficulty)};select.dispatchEvent(new Event('change',{bubbles:true}));return select.value===${JSON.stringify(difficulty)}})()`,
+  reports.initialHud = await inspectResourceHud();
+  if (reports.initialHud.difficultySelect !== null)
+    throw new Error(
+      'Difficulty selector unexpectedly remains in the gameplay HUD.',
     );
-    if (!selected)
-      throw new Error(`Could not select actual-chart ${difficulty}`);
-  }
+  if (
+    await evaluate(`document.querySelector('[data-action="pause"]') !== null`)
+  )
+    throw new Error(
+      'Visible pause button unexpectedly remains in the gameplay HUD.',
+    );
   await click('[data-action="start"]');
   await waitFor(async () => {
     const s = await status();
@@ -348,7 +366,10 @@ async function main() {
         !reports.audienceHud.personalLabel.hidden ||
         !reports.audienceHud.personal.hidden ||
         !reports.audienceHud.twilightGroup.hidden ||
-        !Number.isFinite(Number(reports.audienceHud.renown.text))
+        !Number.isFinite(Number(reports.audienceHud.renown.text)) ||
+        reports.audienceHud.renownMaximum.text !== '132' ||
+        reports.audienceHud.renownBar.ariaValueText !==
+          `${reports.audienceHud.renown.text} of 132`
       )
         throw new Error(
           `Audience HUD did not show only uncapped Renown: ${JSON.stringify(reports.audienceHud)}`,
@@ -408,7 +429,10 @@ async function main() {
         reports.twilightHud.twilight.hidden ||
         !Number.isFinite(Number(reports.twilightHud.personal.text)) ||
         !Number.isFinite(Number(reports.twilightHud.twilight.text)) ||
-        reports.twilightHud.personal.text !== reports.twilightHud.renown.text
+        reports.twilightHud.personal.text !== reports.twilightHud.renown.text ||
+        reports.twilightHud.personalMaximum.text !==
+          reports.twilightHud.renown.text ||
+        reports.twilightHud.twilightMaximum.text !== '100'
       )
         throw new Error(
           `Twilight HUD did not show both strengths: ${JSON.stringify(reports.twilightHud)}`,
@@ -428,9 +452,7 @@ async function main() {
         );
       if (
         reports.twilightPhoneDpr2.visible.viewport.document.scrollWidth > 390 ||
-        reports.twilightPhoneHud.difficultyLabel.rect.x +
-          reports.twilightPhoneHud.difficultyLabel.rect.width >
-          reports.twilightPhoneHud.difficultySelect.rect.x + 1
+        reports.twilightPhoneHud.difficultySelect !== null
       )
         throw new Error(
           `Phone HUD controls overflow or overlap: ${JSON.stringify(reports.twilightPhoneHud)}`,
@@ -452,12 +474,7 @@ async function main() {
         throw new Error(
           `Actual chart reached Results before the Twilight pause point: ${JSON.stringify(stateBeforePause)}`,
         );
-      await click('[data-action="pause"]');
-      await waitFor(
-        async () => (await status()).panels.includes('pause'),
-        'Pause at actual Twilight frame',
-        5000,
-      );
+      reports.escapePause = await pauseWithEscape();
       pausedAtTwilight = true;
       // Once Pause is confirmed, stop scheduling chart keys. Audio clocks can
       // continue advancing while the game is paused; those keys would not be
@@ -501,7 +518,7 @@ async function main() {
       `Expected actual Twilight mode at captured transition, got ${reports.modeAtTransition}`,
     );
   // Exercise collapse/restore while paused; restoration alone must not resume playback.
-  if (!pausedAtTwilight) await click('[data-action="pause"]');
+  if (!pausedAtTwilight) reports.escapePause = await pauseWithEscape();
   const pauseOrEnd = await waitFor(
     async () => {
       const s = await status();
@@ -628,10 +645,10 @@ async function main() {
       'These viewport sizes are tested samples, not minimum supported dimensions.',
       'Song output was muted; audio audibility is not evaluated.',
       'No per-person live-occlusion pass was available from the application DOM; composition proof has the separate GLB ID-pass evidence.',
-      'Easy is not enabled by the actual MVP chart; this report covers the selected Normal or Hard audio run only. Easy geometry is reported separately as fixture-only.',
+      'This HUD uses the default Normal run; selection of other difficulty profiles is not currently exposed.',
       'This live harness sends chart-timed keyboard inputs but does not independently inspect internal score judgments or live note mesh vertices.',
       'Per-person occlusion is not exposed by the live app DOM; no fully-visible crowd claim is made from these screenshots.',
-      `This actual audio run selected ${difficulty}; other difficulty evidence is recorded in its separate run report.`,
+      `This actual audio run used the configured ${difficulty} default.`,
     ],
     ...reports,
   };

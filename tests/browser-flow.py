@@ -17,6 +17,7 @@ from pathlib import Path
 OUTPUT = Path("/tmp/opencode/brightvale-stage5")
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT_PATH = PROJECT_ROOT / "data/charts/the-first-shining-star.beats.json"
+DIFFICULTY_PROFILES_PATH = PROJECT_ROOT / "data/charts/difficulty-profiles.json"
 
 
 def load_chart_reference():
@@ -264,8 +265,7 @@ def browser_state(driver, session):
          "document.querySelector('[data-resource-name]').textContent,resourceValue:"
          "document.querySelector('[data-resource-value]').textContent,personalStrength:"
          "document.querySelector('[data-personal-strength]').textContent,twilightStrength:"
-         "document.querySelector('[data-twilight-strength]').textContent,rulesText:"
-         "document.querySelector('[data-difficulty-rules]').textContent,resultTitle:"
+         "document.querySelector('[data-twilight-strength]').textContent,resultTitle:"
          "document.querySelector('[data-result-title]').textContent,time:"
         "document.querySelector('[data-time]').textContent,panels:"
         "[...document.querySelectorAll('[data-panel]')].filter(p=>!p.hidden)"
@@ -363,37 +363,32 @@ def press_at_note(driver, session, start, note_time, key, repeat=False):
     return result
 
 
-def balance_from_ui(state):
-    audience = re.search(
-        r"Audience Renown:\s*Perfect\s+(\d+),\s*Good\s+(\d+),\s*Miss\s+(\d+)",
-        state["rulesText"],
-        re.IGNORECASE,
-    )
-    twilight = re.search(
-        r"Twilight:\s*Miss costs (\d+);\s*Good costs (\d+) and deals "
-        r"(\d+)(?:\s+damage)?;\s*Perfect costs (\d+) and deals "
-        r"(\d+)(?:\s+damage)?",
-        state["rulesText"],
-        re.IGNORECASE,
-    )
-    if audience is None or twilight is None:
-        raise AssertionError(
-            "Could not read current Audience Renown/Twilight rules: "
-            f"{state['rulesText']}"
-        )
-    miss_cost, good_cost, good_damage, perfect_cost, perfect_damage = map(
-        int, twilight.groups()
-    )
+def balance_from_config():
+    profiles = json.loads(
+        DIFFICULTY_PROFILES_PATH.read_text(encoding="utf-8")
+    )["profiles"]
+    profile = profiles["normal"]
+    audience = profile["audience"]
+    twilight = profile["twilight"]
     return {
         "audience": {
-            "perfect": int(audience.group(1)),
-            "good": int(audience.group(2)),
-            "miss": int(audience.group(3)),
+            "perfect": audience["perfect"],
+            "good": audience["good"],
+            "miss": audience["miss"],
         },
         "twilight": {
-            "miss": {"personalCost": miss_cost, "damage": 0},
-            "good": {"personalCost": good_cost, "damage": good_damage},
-            "perfect": {"personalCost": perfect_cost, "damage": perfect_damage},
+            "miss": {
+                "personalCost": twilight["miss"]["personal_cost"],
+                "damage": twilight["miss"]["damage"],
+            },
+            "good": {
+                "personalCost": twilight["good"]["personal_cost"],
+                "damage": twilight["good"]["damage"],
+            },
+            "perfect": {
+                "personalCost": twilight["perfect"]["personal_cost"],
+                "damage": twilight["perfect"]["damage"],
+            },
         },
     }
 
@@ -543,7 +538,7 @@ def strategic_run(driver, url):
         if first_start["state"] != "running":
             raise AssertionError(f"Strategic source was scheduled while {first_start['state']}")
         hits = []
-        balance = balance_from_ui(browser_state(driver, session))
+        balance = balance_from_config()
         expected_renown = 0
 
         strategic_notes = AUDIENCE_NOTES[:2]

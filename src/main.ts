@@ -43,7 +43,6 @@ let reducedMotion = reducedMotionQuery.matches;
 const ui = createGameUI(applicationRoot, MVP_CHART, {
   start: () =>
     runPlaybackAction(startOrRetry, 'Loading the selected recording…'),
-  pause: () => controller?.pause(),
   resume: () =>
     runPlaybackAction(
       () =>
@@ -55,17 +54,12 @@ const ui = createGameUI(applicationRoot, MVP_CHART, {
   restart: () =>
     runPlaybackAction(() => controller?.restart(), 'Starting the song again…'),
   onRendererRetry: retryRenderer,
-  selectDifficulty: (difficulty) => {
-    if (controller?.snapshot().pendingPlaybackRequests) return;
-    controller?.selectDifficulty(difficulty);
-  },
 });
 
 const RENDERER_UNAVAILABLE_MESSAGE =
   'The three-dimensional playfield could not start. Playback is locked.';
 const RENDERER_LOADING_MESSAGE = 'Loading Brightvale…';
-const RENDERER_SUSPENDED_MESSAGE =
-  'Resize the window to continue playing.';
+const RENDERER_SUSPENDED_MESSAGE = 'Resize the window to continue playing.';
 
 function showRendererStatus(
   status: BrightvaleRendererStatus,

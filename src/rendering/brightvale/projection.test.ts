@@ -9,6 +9,7 @@ import { loadBrightvaleProductionAssets } from './test-assets';
 import {
   createBrightvaleCameraProjection,
   createBrightvaleSurfaceProfile,
+  getFrontPlatformProgress,
 } from './projection';
 import type { BrightvaleViewportLayout } from './viewport';
 
@@ -269,6 +270,31 @@ describe('Brightvale source-geometry projection', () => {
       }
     },
   );
+
+  it.each([
+    { name: 'reference desktop', layout: viewport(1600, 900, 100, 0) },
+    { name: 'constrained desktop', layout: viewport(1120, 700, 100, 0) },
+  ])('places key labels at the measured front lip on $name', ({ layout }) => {
+    const surface = createBrightvaleSurfaceProfile(assets.roots);
+    const playfield = createBrightvalePlayfieldContract(surface);
+    const frontProgress = getFrontPlatformProgress(playfield, surface);
+    expect(frontProgress).toBeGreaterThan(1);
+    const projection = createBrightvaleCameraProjection(
+      playfield,
+      layout,
+      { minimum: 0, maximum: frontProgress },
+      surface,
+    );
+    expect(projection.usable).toBe(true);
+    for (let lane = 0; lane < 4; lane += 1) {
+      const hitLine = projection.project(playfield.hitAnchor(lane));
+      const frontLip = projection.project(playfield.point(lane, frontProgress));
+      expect(frontLip.y).toBeGreaterThan(hitLine.y + 40);
+      expect(frontLip.x).toBeGreaterThanOrEqual(0);
+      expect(frontLip.x).toBeLessThanOrEqual(layout.width);
+      expect(frontLip.y).toBeLessThanOrEqual(layout.height);
+    }
+  });
 
   it.each([
     {

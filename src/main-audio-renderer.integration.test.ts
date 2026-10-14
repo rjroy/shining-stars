@@ -24,15 +24,12 @@ interface Snapshot {
   };
   readonly game: { readonly status: string };
   readonly pendingPlaybackRequests?: boolean;
-  readonly selectedDifficulty?: string;
 }
 
 interface Actions {
   readonly start: () => unknown;
-  readonly pause: () => unknown;
   readonly resume: () => unknown;
   readonly restart: () => unknown;
-  readonly selectDifficulty: (difficulty: string) => unknown;
   readonly onRendererRetry?: () => unknown;
 }
 
@@ -277,7 +274,7 @@ function triggerRendererFailure(index = 0): void {
 }
 
 async function invoke(
-  action: 'start' | 'pause' | 'resume' | 'restart' | 'onRendererRetry',
+  action: 'start' | 'resume' | 'restart' | 'onRendererRetry',
 ): Promise<void> {
   const callback = harness.actions?.[action];
   if (callback === undefined) throw new Error(`Missing action ${action}.`);
@@ -287,6 +284,15 @@ async function invoke(
 function enter(): void {
   harness.listeners.get('keydown')?.({
     code: 'Enter',
+    target: new TestHTMLElement(),
+    repeat: false,
+    preventDefault: vi.fn(),
+  });
+}
+
+function escape(): void {
+  harness.listeners.get('keydown')?.({
+    code: 'Escape',
     target: new TestHTMLElement(),
     repeat: false,
     preventDefault: vi.fn(),
@@ -320,7 +326,7 @@ describe('main renderer failures with real audio transport and controller', () =
     await invoke('start');
     expect(context?.sources[0]?.connections).toEqual([context?.gains[0]]);
     expect(context?.gains[0]?.gain.value).toBe(0);
-    await invoke('pause');
+    escape();
     await invoke('resume');
     expect(context?.sources[1]?.connections).toEqual([context?.gains[0]]);
     await invoke('restart');
@@ -355,7 +361,7 @@ describe('main renderer failures with real audio transport and controller', () =
     expect.soft(harness.snapshots.at(-1)?.audio.status).not.toBe('error');
   });
 
-  it('keeps an unstarted game loadable after initial renderer failure and recovers difficulty selection', async () => {
+  it('keeps an unstarted game loadable after initial renderer failure', async () => {
     await mountMain(['first-frame-fails', 'success']);
     expect(harness.fetchCalls).toBe(0);
 
@@ -363,14 +369,6 @@ describe('main renderer failures with real audio transport and controller', () =
     expect.soft(harness.snapshots.at(-1)?.audio.status).toBe('loading');
     expect.soft(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
     expect.soft(harness.snapshots.at(-1)?.audio.loaded).toBe(false);
-    let selectionError: unknown;
-    try {
-      harness.actions?.selectDifficulty('hard');
-    } catch (error) {
-      selectionError = error;
-    }
-    expect.soft(selectionError).toBeUndefined();
-
     const keydown = harness.listeners.get('keydown');
     keydown?.({
       code: 'Enter',
@@ -382,7 +380,7 @@ describe('main renderer failures with real audio transport and controller', () =
     expect.soft(harness.fetchCalls).toBe(1);
   });
 
-  it('keeps Start, Enter, and difficulty selection gated while a canceled initial load is still pending', async () => {
+  it('keeps Start and Enter gated while a canceled initial load is still pending', async () => {
     await mountMain(['success', 'success']);
     const fetchGate = deferred<{
       ok: boolean;
@@ -400,13 +398,6 @@ describe('main renderer failures with real audio transport and controller', () =
 
     const repeatedStart = invoke('start');
     enter();
-    let selectionError: unknown;
-    try {
-      harness.actions?.selectDifficulty('hard');
-    } catch (error) {
-      selectionError = error;
-    }
-    expect.soft(selectionError).toBeUndefined();
     fetchGate.resolve({
       ok: true,
       arrayBuffer: async () => new ArrayBuffer(8),
@@ -421,10 +412,10 @@ describe('main renderer failures with real audio transport and controller', () =
       loaded: true,
       error: null,
     });
-    expect.soft(harness.snapshots.at(-1)?.selectedDifficulty).toBe('normal');
-
-    harness.actions?.selectDifficulty('hard');
-    expect(harness.snapshots.at(-1)?.selectedDifficulty).toBe('hard');
+    expect.soft(harness.snapshots.at(-1)?.game).toHaveProperty(
+      'difficulty',
+      'normal',
+    );
     await invoke('start');
     expect(harness.contexts[0]?.sources[0]?.startCalls).toBe(1);
   });
@@ -452,13 +443,6 @@ describe('main renderer failures with real audio transport and controller', () =
 
     const repeatedRetry = invoke('start');
     enter();
-    let selectionError: unknown;
-    try {
-      harness.actions?.selectDifficulty('hard');
-    } catch (error) {
-      selectionError = error;
-    }
-    expect.soft(selectionError).toBeUndefined();
     fetchGate.resolve({
       ok: true,
       arrayBuffer: async () => new ArrayBuffer(8),
@@ -647,7 +631,7 @@ describe('main renderer failures with real audio transport and controller', () =
     expect(harness.contexts[0]?.sources[0]?.startCalls).toBe(1);
   });
 
-  it('keeps Start and difficulty available after a pre-action renderer recovery', async () => {
+  it('keeps Start available after a pre-action renderer recovery', async () => {
     await mountMain(['pre-action-render-fails', 'success']);
 
     await invoke('start');
@@ -658,15 +642,6 @@ describe('main renderer failures with real audio transport and controller', () =
     expect(harness.uiRendererAvailable).toBe(true);
     expect(harness.snapshots.at(-1)?.pendingPlaybackRequests).toBe(false);
     expect(harness.fetchCalls).toBe(0);
-    let selectionError: unknown;
-    try {
-      harness.actions?.selectDifficulty('hard');
-    } catch (error) {
-      selectionError = error;
-    }
-    expect(selectionError).toBeUndefined();
-    expect(harness.snapshots.at(-1)?.selectedDifficulty).toBe('hard');
-
     await invoke('start');
     expect(harness.fetchCalls).toBe(1);
     expect(harness.contexts[0]?.sources[0]?.startCalls).toBe(1);
