@@ -52,6 +52,11 @@ class FakeAudio implements AudioTransport {
     return this.snapshot();
   }
 
+  cancelLoad(): AudioTransportSnapshot {
+    this.calls.push('cancelLoad');
+    return this.snapshot();
+  }
+
   async start(): Promise<AudioTransportSnapshot> {
     this.calls.push('start');
     this.state = { ...this.state, status: 'starting' };
