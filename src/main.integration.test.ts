@@ -185,7 +185,7 @@ describe('real app Observatory-to-gameplay integration', () => {
     await command('Page.enable');
     await command('Runtime.enable');
     await command('Page.addScriptToEvaluateOnNewDocument', {
-      source: `(()=>{const Native=window.AudioContext;window.__audioContextCount=0;window.__audioRequests=[];window.__holdAudio=false;if(Native)window.AudioContext=new Proxy(Native,{construct(target,args){window.__audioContextCount++;return Reflect.construct(target,args)}});const nativeFetch=window.fetch.bind(window);window.fetch=(input,init={})=>{const url=String(input);if(/\\.mp3(?:$|\\?)/i.test(url)){window.__audioRequests.push(url);if(window.__holdAudio)return new Promise((resolve,reject)=>{const signal=init.signal;if(signal?.aborted){reject(new DOMException('Aborted','AbortError'));return}signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true})})}return nativeFetch(input,init)}})()`,
+      source: `(()=>{const Native=window.AudioContext;window.__audioContextCount=0;window.__audioRequests=[];window.__holdAudio=false;window.__frameClearSamples=[];window.__frameClearCount=0;window.__insideAppFrame=false;if(Native)window.AudioContext=new Proxy(Native,{construct(target,args){window.__audioContextCount++;return Reflect.construct(target,args)}});const nativeFetch=window.fetch.bind(window);window.fetch=(input,init={})=>{const url=String(input);if(/\\.mp3(?:$|\\?)/i.test(url)){window.__audioRequests.push(url);if(window.__holdAudio)return new Promise((resolve,reject)=>{const signal=init.signal;if(signal?.aborted){reject(new DOMException('Aborted','AbortError'));return}signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true})})}return nativeFetch(input,init)};for(const proto of new Set([window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype])){if(!proto||!Object.prototype.hasOwnProperty.call(proto,'clear'))continue;const clear=proto.clear;proto.clear=function(...args){if(window.__insideAppFrame)window.__frameClearCount++;return clear.apply(this,args)}}const nativeRaf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=(callback)=>nativeRaf((now)=>{window.__insideAppFrame=true;window.__frameClearCount=0;try{callback(now)}finally{window.__insideAppFrame=false;if(document.querySelector('[data-experience-screen=gameplay]')?.hidden===false){window.__frameClearSamples.push(window.__frameClearCount);if(window.__frameClearSamples.length>40)window.__frameClearSamples.shift()}}})})()`,
     });
     await command('Emulation.setDeviceMetricsOverride', {
       width: 1440,
@@ -328,6 +328,13 @@ describe('real app Observatory-to-gameplay integration', () => {
         "document.querySelector('[data-timing-legend]')?.textContent",
       ),
     ).toContain('Good ±100 ms');
+    await waitFor(
+      async () =>
+        await evaluate(
+          'window.__frameClearSamples.length >= 8 && window.__frameClearSamples.slice(-8).every(count => count === 2)',
+        ),
+      'one gameplay paint per steady animation frame',
+    );
     await command('Input.dispatchKeyEvent', {
       type: 'keyDown',
       code: 'Escape',

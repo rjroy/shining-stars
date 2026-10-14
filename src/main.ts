@@ -107,7 +107,6 @@ function paintGameplay(
     throw new Error('The selected song or gameplay renderer is unavailable.');
   }
   const audioNow = performance?.snapshot().audioNow ?? 0;
-  gameplay.render(controllerSnapshot, audioNow);
   const status = scene.updateFrame({
     city: projectSceneState(controllerSnapshot, song.chart, reducedMotion),
     gameplay: projectGameplayFrame(
@@ -224,15 +223,6 @@ function publishPerformanceState(): void {
   } else {
     gameplay.showFatal(snapshot.error);
   }
-  if (controller !== null && sceneStatus === 'rendered') {
-    try {
-      paintGameplay(controller);
-      if (!snapshot.gameplayReady)
-        void performance.markGameplayReady().then(publishPerformanceState);
-    } catch {
-      // The coordinator records renderer exceptions and pauses the transport.
-    }
-  }
   if (controller !== null) gameplay.render(controller, snapshot.audioNow ?? 0);
   if (snapshot.recoveryRequired) {
     gameplay.setRendererStatus(
@@ -319,6 +309,8 @@ function frame(now: number): void {
       if (before.recoveryRequired || !before.gameplayReady) {
         try {
           paintGameplay(before.controller);
+          if (!before.gameplayReady)
+            void performance.markGameplayReady().then(publishPerformanceState);
           publishPerformanceState();
         } catch {
           // Surface the coordinator's failure snapshot while keeping the run
