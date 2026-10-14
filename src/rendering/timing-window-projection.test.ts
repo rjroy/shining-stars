@@ -9,7 +9,7 @@ import {
 import type { BrightvaleViewportLayout } from './brightvale/viewport';
 
 const chartNotes = [{ id: 'target', lane: 0, time: 2 }] as const;
-const states = [{ id: 'target', phase: 'audience' as const, outcome: null }];
+const states = [{ id: 'target', lane: 0 as const, phase: 'audience' as const, outcome: null }];
 const chart: ChartConfig = {
   sourceStart: 0,
   duration: 20,
@@ -59,7 +59,7 @@ function makeSnapshot(
     inputOffset: 0,
     visualOffset: 0,
     selectedDifficulty: 'normal',
-    feedback: null,
+    feedback: [],
     pendingPlaybackRequests: false,
   };
 }

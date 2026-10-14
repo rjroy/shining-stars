@@ -105,9 +105,10 @@ interface Harness {
 interface FeedbackEventContract {
   readonly eventId: number;
   readonly runId: number;
+  readonly lane: ChartLane;
   readonly noteId: string;
-  readonly quality: 'perfect' | 'good';
-  readonly timingErrorSeconds: number;
+  readonly quality: 'perfect' | 'good' | 'miss';
+  readonly timingErrorSeconds?: number;
   readonly onsetTransportTime: number;
 }
 
@@ -127,7 +128,7 @@ function cancelWithoutPublishing(
 }
 
 function feedbackEvent(snapshot: ControllerSnapshot): FeedbackEventContract {
-  return snapshot.feedback as unknown as FeedbackEventContract;
+  return snapshot.feedback[0] as unknown as FeedbackEventContract;
 }
 
 function createHarness(audio = new FakeAudio()): Harness {
@@ -551,7 +552,7 @@ describe('game controller', () => {
     };
     mutableCopy.noteId = 'mutated';
     mutableCopy.onsetTransportTime = 99;
-    expect(harness.controller.snapshot().feedback).toMatchObject({
+    expect(harness.controller.snapshot().feedback[0]).toMatchObject({
       noteId: 'a1',
       onsetTransportTime: 0.61,
     });
@@ -586,44 +587,70 @@ describe('game controller', () => {
     expect(nextRun.onsetTransportTime).toBe(first.onsetTransportTime);
   });
 
+  it('keeps rapid judgments from separate lanes independent and replaces repeat judgments only on that lane', () => {
+    const harness = createHarness();
+    setPlaying(harness.audio, 0.61);
+    harness.controller.keyDown('KeyD');
+    const firstD = feedbackEvent(harness.controller.snapshot());
+    harness.controller.keyUp('KeyD');
+    setPlaying(harness.audio, 0.91);
+    harness.controller.keyDown('KeyF');
+    const twoLanes = harness.controller.snapshot().feedback;
+
+    expect(twoLanes).toMatchObject([
+      { noteId: 'a1', lane: 0, quality: 'perfect' },
+      { noteId: 'a3', lane: 1, quality: 'good' },
+    ]);
+
+    harness.controller.keyUp('KeyD');
+    setPlaying(harness.audio, 1.11);
+    harness.controller.keyDown('KeyD');
+    const repeated = harness.controller.snapshot().feedback;
+    expect(repeated).toHaveLength(2);
+    expect(repeated.find(({ lane }) => lane === 0)?.eventId).toBeGreaterThan(
+      firstD.eventId,
+    );
+    expect(repeated.find(({ lane }) => lane === 1)?.noteId).toBe('a3');
+  });
+
   it('clears feedback through start/count-in, pause/resume, restart, results, and disposal', async () => {
     const harness = createHarness();
     setPlaying(harness.audio, 0.61);
     harness.controller.keyDown('KeyD');
-    expect(harness.controller.snapshot().feedback).not.toBeNull();
+    expect(harness.controller.snapshot().feedback).toHaveLength(1);
 
     // A new start enters the transport's starting/count-in state.
     harness.audio.state = { ...harness.audio.state, status: 'ready' };
     const starting = harness.controller.start();
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
     expect((await starting).audio.status).toBe('starting');
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
 
     harness.controller.pause();
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
     await harness.controller.resume();
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
 
     setPlaying(harness.audio, 1.11);
     harness.controller.keyDown('KeyD');
-    expect(harness.controller.snapshot().feedback).not.toBeNull();
+    expect(harness.controller.snapshot().feedback).toHaveLength(1);
     harness.audio.state = { ...harness.audio.state, status: 'error' };
     harness.controller.update();
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
 
     // Restore a synthetic playing point and judge in the restarted run.
     await harness.controller.restart();
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
     setPlaying(harness.audio, 0.61);
     harness.controller.keyDown('KeyD');
-    expect(harness.controller.snapshot().feedback).not.toBeNull();
+    expect(harness.controller.snapshot().feedback).toHaveLength(1);
 
     setPlaying(harness.audio, 4);
     expect(harness.controller.update().game.status).toBe('results');
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
 
     await harness.controller.dispose();
-    expect(harness.controller.snapshot().feedback).toBeNull();
+    expect(harness.controller.snapshot().feedback).toEqual([]);
   });
 
   it('does not create a press-feedback event for an overdue miss or unmatched lane', () => {
@@ -637,7 +664,38 @@ describe('game controller', () => {
       id: 'a1',
       outcome: 'miss',
     });
-    expect(snapshot.feedback).toBeNull();
+    expect(snapshot.feedback).toMatchObject([
+      { noteId: 'a1', lane: 0, quality: 'miss' },
+    ]);
+  });
+
+  it('publishes separate misses for every lane advanced past in one transport update', () => {
+    const audio = new FakeAudio();
+    const games: GameSession[] = [];
+    const missChart: ChartConfig = {
+      ...chart,
+      notes: [
+        { id: 'lane-d', time: 0.5, lane: 0 },
+        { id: 'lane-f', time: 0.9, lane: 1 },
+      ],
+    };
+    const controller = createGameController({
+      audio,
+      createGame: () => {
+        const game = createGame(missChart);
+        games.push(game);
+        return game;
+      },
+    });
+    setPlaying(audio, 1.2);
+
+    const events = controller.update().feedback;
+
+    expect(games).toHaveLength(1);
+    expect(events).toMatchObject([
+      { noteId: 'lane-d', lane: 0, quality: 'miss' },
+      { noteId: 'lane-f', lane: 1, quality: 'miss' },
+    ]);
   });
 
   it('silently cancels playback, catches up to audio time, clears feedback, and does not publish', () => {
@@ -652,7 +710,7 @@ describe('game controller', () => {
     expect(harness.audio.calls).toContain('pause');
     expect(cancelled.audio.status).toBe('paused');
     expect(cancelled.game.transportTime).toBe(0.9);
-    expect(cancelled.feedback).toBeNull();
+    expect(cancelled.feedback).toEqual([]);
     expect(harness.render).toHaveBeenCalledTimes(rendersBeforeCancel);
 
     // The key held before cancellation must not remain latched.

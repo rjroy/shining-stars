@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { GameplayFrame } from './gameplay-frame';
+import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
 import type { BrightvaleAssets } from './brightvale/assets';
 import { loadBrightvaleRuntimeAssets } from './brightvale/assets-runtime';
 import {
@@ -93,6 +94,12 @@ interface NoteVisual {
   readonly bar: THREE.Mesh<THREE.BoxGeometry, THREE.Material>;
 }
 
+interface JudgmentVisual {
+  readonly group: THREE.Group;
+  readonly ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  readonly rays: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+}
+
 const LANE_COLORS = [0x65d8ff, 0xe98bc8, 0xffd475, 0x91e6b0] as const;
 const LANE_WIDTH = 2.35;
 const NOTE_THICKNESS = 0.08;
@@ -100,6 +107,11 @@ const NOTE_LENGTH = 0.3;
 const WINDOW_WIDTH = 2.55;
 const WINDOW_SEGMENTS = 12;
 const DEVICE_PIXEL_RATIO_CAP = 1.5;
+const JUDGMENT_COLORS = {
+  perfect: 0xffe596,
+  good: 0xa8eedb,
+  miss: 0xd8bfd8,
+} as const;
 
 function timingProgress(frame: GameplayFrame): BrightvaleProgressRange {
   const half = frame.timingWindows.goodHalfProgress;
@@ -126,6 +138,32 @@ function makeEnvelopeGeometry(): THREE.BufferGeometry {
   }
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   geometry.setIndex(indices);
+  return geometry;
+}
+
+function makeJudgmentRayGeometry(): THREE.BufferGeometry {
+  const points: number[] = [];
+  for (let index = 0; index < 8; index += 1) {
+    const angle = (index / 8) * Math.PI * 2;
+    const inner = index % 2 === 0 ? 0.2 : 0.29;
+    const outer = index % 2 === 0 ? 1.15 : 0.88;
+    const halfWidth = index % 2 === 0 ? 0.12 : 0.075;
+    const x = Math.cos(angle);
+    const y = Math.sin(angle);
+    const px = -y * halfWidth;
+    const py = x * halfWidth;
+    points.push(
+      x * inner + px, y * inner + py, 0,
+      x * outer, y * outer, 0,
+      x * inner - px, y * inner - py, 0,
+    );
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(points, 3),
+  );
+  geometry.computeVertexNormals();
   return geometry;
 }
 
@@ -224,7 +262,6 @@ function normalizedLayoutKey(
     layout.labels.time,
     layout.labels.countdown,
     layout.labels.legend,
-    layout.labels.feedback,
     range.minimum,
     range.maximum,
   ]);
@@ -262,6 +299,7 @@ export function createBrightvaleScene(
   const ownedTextures = new Set<THREE.Texture>();
   const overlayLabels = new Map<string, OverlayLabel>();
   const noteVisuals: NoteVisual[] = [];
+  const judgmentVisuals: JudgmentVisual[] = [];
   const barGeometry = new THREE.BoxGeometry(
     LANE_WIDTH,
     NOTE_THICKNESS,
@@ -347,13 +385,53 @@ export function createBrightvaleScene(
     'time',
     'countdown',
     'legend',
-    'feedback',
     'lane-0',
     'lane-1',
     'lane-2',
     'lane-3',
   ])
     createLabel(name);
+
+  for (let lane = 0; lane < 4; lane += 1) {
+    const group = new THREE.Group();
+    group.name = `Brightvale.Judgment.${lane}`;
+    group.userData.gameplayRole = 'lane-judgment-effect';
+    const ringMaterial = new THREE.MeshBasicMaterial({
+      color: JUDGMENT_COLORS.perfect,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const rayMaterial = new THREE.MeshBasicMaterial({
+      color: JUDGMENT_COLORS.perfect,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+    });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.43, 32), ringMaterial);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.012;
+    ring.userData.gameplayRole = 'lane-judgment-ring';
+    ring.renderOrder = 20;
+    const rays = new THREE.Mesh(makeJudgmentRayGeometry(), rayMaterial);
+    rays.rotation.x = Math.PI / 2;
+    rays.position.y = 0.018;
+    rays.userData.gameplayRole = 'lane-judgment-rays';
+    rays.renderOrder = 21;
+    group.add(ring, rays);
+    group.visible = false;
+    worldScene.add(group);
+    ownedGeometries.add(ring.geometry);
+    ownedGeometries.add(rays.geometry);
+    ownedMaterials.add(ringMaterial);
+    ownedMaterials.add(rayMaterial);
+    judgmentVisuals.push({ group, ring, rays });
+    createLabel(`judgment-${lane}`);
+  }
 
   const playfieldMatrix = new THREE.Matrix4().fromArray([
     ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
@@ -643,6 +721,29 @@ export function createBrightvaleScene(
       DEVICE_PIXEL_RATIO_CAP,
     );
     const label = (name: string) => overlayLabels.get(name)!;
+    const judgmentLabelWidth = Math.min(
+      112,
+      Math.max(72, layout.width / 10),
+    );
+    for (let lane = 0; lane < 4; lane += 1) {
+      const judgmentLabel = label(`judgment-${lane}`);
+      setRectLabel(
+        judgmentLabel,
+        'PERFECT',
+        { x: 0, y: 0, width: judgmentLabelWidth, height: 30 },
+        {
+          color: '#fff4cf',
+          align: 'center',
+          fontScale: 0.66,
+          fontWeight: 800,
+          outlineColor: '#17131f',
+          outlineWidth: 3 * pixelRatio,
+        },
+        pixelRatio,
+        ownedTextures,
+      );
+      judgmentLabel.mesh.visible = false;
+    }
     setRectLabel(
       label('time'),
       frame.gameplay.timeLabel,
@@ -670,22 +771,86 @@ export function createBrightvaleScene(
       pixelRatio,
       ownedTextures,
     );
-    setRectLabel(
-      label('feedback'),
-      frame.gameplay.feedbackLabel,
-      layout.labels.feedback,
-      {
-        color:
-          frame.gameplay.feedback?.quality === 'perfect'
-            ? '#ffd475'
-            : frame.gameplay.feedback?.quality === 'good'
-              ? '#9de7d0'
-              : '#bbc6d3',
-        align: 'center',
-      },
-      pixelRatio,
-      ownedTextures,
-    );
+
+    for (const [lane, visual] of judgmentVisuals.entries()) {
+      const event = frame.gameplay.feedback.find((item) => item.lane === lane);
+      const labelName = `judgment-${lane}`;
+      const judgmentLabel = label(labelName);
+      if (event === undefined) {
+        visual.group.visible = false;
+        judgmentLabel.mesh.visible = false;
+        continue;
+      }
+
+      const progress = Math.min(1, event.age / FEEDBACK_VISIBLE_SECONDS);
+      const materialColor = JUDGMENT_COLORS[event.quality];
+      const reduced = frame.gameplay.reducedMotion;
+      const startScale =
+        event.quality === 'perfect' ? 0.68 : event.quality === 'good' ? 0.58 : 0.48;
+      const endScale =
+        event.quality === 'perfect' ? 1.62 : event.quality === 'good' ? 1.14 : 0.86;
+      const scale = reduced
+        ? startScale
+        : THREE.MathUtils.lerp(startScale, endScale, progress);
+      const fade = Math.pow(1 - progress, event.quality === 'miss' ? 1.15 : 0.68);
+      visual.group.visible = true;
+      visual.group.position.copy(
+        composition.profile === null
+          ? playfield.point(lane, 1)
+          : playfield.visualPoint(lane, 1),
+      );
+      visual.group.quaternion.copy(playfieldRotation);
+      visual.group.scale.setScalar(scale);
+      visual.ring.material.color.setHex(materialColor);
+      visual.rays.material.color.setHex(materialColor);
+      visual.ring.scale.setScalar(
+        event.quality === 'perfect' ? 1 : event.quality === 'good' ? 0.88 : 0.68,
+      );
+      visual.ring.material.opacity =
+        fade * (event.quality === 'miss' ? 0.78 : event.quality === 'good' ? 0.62 : 0.95);
+      const shimmer = reduced ? 1 : 0.78 + 0.22 * Math.sin(event.age * 30);
+      const rayFade =
+        event.quality === 'perfect' ? Math.pow(1 - progress, 0.25) : fade;
+      visual.rays.material.opacity =
+        rayFade * shimmer * (event.quality === 'perfect' ? 1 : event.quality === 'miss' ? 0.3 : 0);
+      visual.rays.scale.setScalar(event.quality === 'miss' ? 0.45 : 1);
+      visual.rays.visible = event.quality !== 'good';
+
+      const labelWidth = judgmentLabelWidth;
+      const projected = composition.projection.project(
+        composition.profile === null
+          ? playfield.point(lane, 1)
+          : playfield.visualPoint(lane, 1),
+      );
+      const text = event.quality === 'perfect' ? 'PERFECT' : event.quality === 'good' ? 'GOOD' : 'MISS';
+      const textColor =
+        event.quality === 'perfect'
+          ? '#fff4cf'
+          : event.quality === 'good'
+            ? '#e5fff5'
+            : '#d1bfd0';
+      setRectLabel(
+        judgmentLabel,
+        text,
+        {
+          x: projected.x - labelWidth / 2,
+          y: projected.y - 41,
+          width: labelWidth,
+          height: 30,
+        },
+        {
+          color: textColor,
+          align: 'center',
+          fontScale: 0.66,
+          fontWeight: 800,
+          outlineColor: '#17131f',
+          outlineWidth: 3 * pixelRatio,
+        },
+        pixelRatio,
+        ownedTextures,
+      );
+      judgmentLabel.mesh.material.opacity = fade;
+    }
 
     // Keycaps sit on each lane's projected front lip, so perspective and
     // viewport changes move them with the loaded platform geometry.

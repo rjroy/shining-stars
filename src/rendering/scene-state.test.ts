@@ -49,7 +49,7 @@ function makeSnapshot(
     inputOffset: 0,
     visualOffset: 0,
     selectedDifficulty: 'normal',
-    feedback: null,
+    feedback: [],
     pendingPlaybackRequests: false,
   };
 }
@@ -106,7 +106,7 @@ describe('projectSceneState', () => {
         transportTime: 12,
         personalStrength: 40,
         twilightStrength: 100,
-        notes: [{ id: 'missed', phase: 'twilight', outcome: 'miss' }],
+        notes: [{ id: 'missed', lane: 1, phase: 'twilight', outcome: 'miss' }],
       }),
       chart,
     );

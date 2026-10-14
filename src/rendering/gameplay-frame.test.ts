@@ -42,7 +42,7 @@ function snapshot(
     personalStrength: 100,
     twilightStrength: 100,
     difficulty: 'hard' as const,
-    notes: [{ id: 'n-1', phase: 'audience' as const, outcome: null }],
+    notes: [{ id: 'n-1', lane: 2 as const, phase: 'audience' as const, outcome: null }],
     result: null,
   };
   return {
@@ -60,14 +60,15 @@ function snapshot(
     inputOffset: 0,
     visualOffset: 0,
     selectedDifficulty: 'normal',
-    feedback: {
+    feedback: [{
       noteId: 'n-1',
+      lane: 2,
       quality: 'perfect',
       timingErrorSeconds: 0.01,
       eventId: 4,
       runId: 3,
       onsetTransportTime: 12,
-    },
+    }],
     pendingPlaybackRequests: false,
     ...overrides,
   };
@@ -116,24 +117,23 @@ describe('shared gameplay timing geometry', () => {
 
   it('uses immutable run feedback and expires or clears it without wall-clock time', () => {
     const initial = projectGameplayFrame(snapshot(), chart, layout, false);
-    expect(initial.feedback).toMatchObject({ eventId: 4, runId: 3 });
-    expect(initial.feedbackLabel).toBe('Perfect');
+    expect(initial.feedback).toMatchObject([{ eventId: 4, runId: 3, lane: 2 }]);
 
     const nearExpiry = projectGameplayFrame(
-      snapshot({ game: { ...snapshot().game, transportTime: 12.649 } }),
+      snapshot({ game: { ...snapshot().game, transportTime: 13.099 } }),
       chart,
       layout,
       false,
     );
-    expect(nearExpiry.feedback).not.toBeNull();
+    expect(nearExpiry.feedback).toHaveLength(1);
 
     const expired = projectGameplayFrame(
-      snapshot({ game: { ...snapshot().game, transportTime: 12.65 } }),
+      snapshot({ game: { ...snapshot().game, transportTime: 13.101 } }),
       chart,
       layout,
       false,
     );
-    expect(expired.feedback).toBeNull();
+    expect(expired.feedback).toEqual([]);
 
     const paused = projectGameplayFrame(
       snapshot({
@@ -144,7 +144,7 @@ describe('shared gameplay timing geometry', () => {
       layout,
       false,
     );
-    expect(paused.feedback).toBeNull();
+    expect(paused.feedback).toEqual([]);
     expect(paused.notes).toEqual([]);
 
     const result = projectGameplayFrame(
@@ -156,14 +156,14 @@ describe('shared gameplay timing geometry', () => {
       layout,
       false,
     );
-    expect(result.feedback).toBeNull();
+    expect(result.feedback).toEqual([]);
     expect(result.notes).toEqual([]);
   });
 
   it('keeps frame feedback boundaries and count-in/run identity guards', () => {
     expect(isFeedbackWithinVisibleAge(0.999, 1)).toBe(false);
     expect(isFeedbackWithinVisibleAge(1, 1)).toBe(true);
-    expect(isFeedbackWithinVisibleAge(1.649, 1)).toBe(true);
+    expect(isFeedbackWithinVisibleAge(2.099, 1)).toBe(true);
     expect(isFeedbackWithinVisibleAge(FEEDBACK_VISIBLE_SECONDS, 0)).toBe(false);
 
     const atTransportTime = (
@@ -180,28 +180,60 @@ describe('shared gameplay timing geometry', () => {
         false,
       );
 
-    expect(atTransportTime(11.999).feedback).toBeNull();
-    expect(atTransportTime(12).feedback).toMatchObject({ runId: 3 });
-    expect(atTransportTime(12.649).feedback).toMatchObject({ runId: 3 });
+    expect(atTransportTime(11.999).feedback).toEqual([]);
+    expect(atTransportTime(12).feedback).toMatchObject([{ runId: 3 }]);
+    expect(atTransportTime(13.099).feedback).toMatchObject([{ runId: 3 }]);
     expect(
       atTransportTime(FEEDBACK_VISIBLE_SECONDS, {
-        feedback: {
-          ...snapshot().feedback!,
+        feedback: [{
+          ...snapshot().feedback[0]!,
           onsetTransportTime: 0,
-        },
+        }],
         game: { ...snapshot().game, transportTime: FEEDBACK_VISIBLE_SECONDS },
       }).feedback,
-    ).toBeNull();
+    ).toEqual([]);
 
     const countIn = atTransportTime(12, {
       audio: { ...snapshot().audio, status: 'starting' },
     });
     expect(countIn.playing).toBe(true);
-    expect(countIn.feedback).toMatchObject({ runId: 3 });
+    expect(countIn.feedback).toMatchObject([{ runId: 3 }]);
 
     const invalidRun = atTransportTime(12, {
-      feedback: { ...snapshot().feedback!, runId: 0 },
+      feedback: [{ ...snapshot().feedback[0]!, runId: 0 }],
     });
-    expect(invalidRun.feedback).toBeNull();
+    expect(invalidRun.feedback).toEqual([]);
+  });
+
+  it('projects simultaneous lane judgments independently and omits expired or future events', () => {
+    const base = snapshot();
+    const projected = projectGameplayFrame(
+      snapshot({
+        feedback: [
+          { ...base.feedback[0]!, lane: 0, eventId: 10, quality: 'good' },
+          { ...base.feedback[0]!, lane: 3, eventId: 11, quality: 'miss' },
+          {
+            ...base.feedback[0]!,
+            lane: 1,
+            eventId: 12,
+        onsetTransportTime: 10.8,
+          },
+          {
+            ...base.feedback[0]!,
+            lane: 2,
+            eventId: 13,
+            onsetTransportTime: 12.1,
+          },
+        ],
+      }),
+      chart,
+      layout,
+      false,
+    );
+
+    expect(projected.feedback).toMatchObject([
+      { eventId: 10, lane: 0, quality: 'good' },
+      { eventId: 11, lane: 3, quality: 'miss' },
+    ]);
   });
 });

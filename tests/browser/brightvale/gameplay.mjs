@@ -299,6 +299,17 @@ async function main() {
     throw new Error(
       'Difficulty selector unexpectedly remains in the gameplay HUD.',
     );
+  reports.judgmentHudContract = await evaluate(
+    `(()=>({legacyFeedback:document.querySelector('[data-feedback]')!==null,sharedLabel:document.body.innerText.includes('Notes meet the line here'),accessibleStatus:!!document.querySelector('[data-gameplay-status][aria-live="polite"]'),instructions:document.querySelector('#lane-instructions')?.textContent?.trim()??''}))()`,
+  );
+  if (
+    reports.judgmentHudContract.legacyFeedback ||
+    reports.judgmentHudContract.sharedLabel ||
+    !reports.judgmentHudContract.accessibleStatus
+  )
+    throw new Error(
+      `Shared judgment HUD remains or accessible status is missing: ${JSON.stringify(reports.judgmentHudContract)}`,
+    );
   if (
     await evaluate(`document.querySelector('[data-action="pause"]') !== null`)
   )
@@ -349,6 +360,14 @@ async function main() {
     throw new Error(`Timed out waiting for song time ${position}`);
   };
   const hitNotes = [];
+  const pendingPeakScreenshots = [];
+  const pendingFadeScreenshots = [];
+  const captureFadeAfter = (name, delayMs) =>
+    pendingFadeScreenshots.push(
+      new Promise((resolve, reject) => {
+        setTimeout(() => screenshot(name).then(resolve, reject), delayMs);
+      }),
+    );
   let capturedReferenceAudience = false;
   let resizedNarrow = false;
   let capturedNarrowAudience = false;
@@ -481,18 +500,96 @@ async function main() {
       // gameplay inputs and must not be counted as such.
       break;
     }
-    await waitTransport(note.time);
+    const effectDelay =
+      note.id === 'a02' ? 0.085 : note.id === 'a05' ? goodWindowSeconds + 0.03 : 0;
+    await waitTransport(note.time + effectDelay);
+    if (note.id === 'a05') {
+      await pause(110);
+      const missedLane = ['D', 'F', 'J', 'K'][note.lane];
+      const accessibleText = await waitFor(async () => {
+        const text = await evaluate(
+          `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
+        );
+        return new RegExp(`Lane ${missedLane}: Miss`, 'i').test(text)
+          ? text
+          : false;
+      }, `the deliberately missed ${note.id} lane`);
+      await screenshot('judgment-miss-peak.webp');
+      await pause(450);
+      await screenshot('judgment-miss-fade.webp');
+      reports.judgmentEffects ??= [];
+      reports.judgmentEffects.push({
+        noteId: note.id,
+        outcome: 'miss',
+        accessibleText,
+        screenshots: [
+          'normal-judgment-miss-peak.webp',
+          'normal-judgment-miss-fade.webp',
+        ],
+        source: 'actual chart note left unplayed until its model miss deadline',
+      });
+      hitNotes.push({ id: note.id, result: 'deliberately-missed' });
+      continue;
+    }
     const keyCode = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'][note.lane];
     const now = await audioTime();
     const lateness = now - scheduledWhen - note.time;
-    if (lateness > sendCutoffSeconds) {
+    if (
+      note.id === 'a02' &&
+      (lateness < 0.075 || lateness > 0.145)
+    )
+      throw new Error(
+        `The real-app Good probe missed the Normal Good window: ${lateness}s`,
+      );
+    if (lateness > sendCutoffSeconds && note.id !== 'a02') {
       hitNotes.push({ id: note.id, result: 'not-sent-late', lateness });
       continue;
     }
     await key(keyCode, 'down');
+    if (note.id === 'a01' || note.id === 'a02' || note.id === 'a04') {
+      const expected = note.id === 'a02' ? 'good' : 'perfect';
+      if (note.id === 'a01')
+        await screenshot(`judgment-${expected}-peak.webp`);
+      else if (note.id === 'a02')
+        pendingPeakScreenshots.push(screenshot(`judgment-${expected}-peak.webp`));
+      if (note.id === 'a01' || note.id === 'a02')
+        captureFadeAfter(`judgment-${expected}-fade.webp`, 400);
+      const accessibleText = await evaluate(
+        `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
+      );
+      if (!new RegExp(expected, 'i').test(accessibleText))
+        throw new Error(
+          `Expected actual ${expected} feedback for ${note.id}, got: ${accessibleText}`,
+        );
+      reports.judgmentEffects ??= [];
+      reports.judgmentEffects.push({
+        noteId: note.id,
+        outcome: expected,
+        lateness,
+        accessibleText,
+        screenshots: [
+          `normal-judgment-${expected}-peak.webp`,
+          `normal-judgment-${expected}-fade.webp`,
+        ],
+        source: 'actual chart note, CDP D/F/J/K keyboard input and rendered WebGL app',
+      });
+      await key(keyCode, 'up');
+      hitNotes.push({ id: note.id, result: 'key-sent', lateness });
+      continue;
+    }
     await key(keyCode, 'up');
     hitNotes.push({ id: note.id, result: 'key-sent', lateness });
   }
+  await Promise.all(pendingPeakScreenshots);
+  await Promise.all(pendingFadeScreenshots);
+  if (
+    !['perfect', 'good', 'miss'].every((outcome) =>
+      reports.judgmentEffects?.some((event) => event.outcome === outcome),
+    )
+  )
+    throw new Error(
+      `Expected actual Perfect, Good, and Miss visual probes; captured ${JSON.stringify(reports.judgmentEffects)}`,
+    );
   reports.chartInput = {
     method:
       'CDP keyDown/keyUp on D/F/J/K at actual Web Audio transport time; no controller or scoring hooks',
@@ -669,6 +766,12 @@ async function main() {
           `${difficulty}-twilight-narrow.webp`,
           `${difficulty}-twilight-phone-dpr2.webp`,
           `${difficulty}-twilight-reference.webp`,
+          `${difficulty}-judgment-perfect-peak.webp`,
+          `${difficulty}-judgment-perfect-fade.webp`,
+          `${difficulty}-judgment-good-peak.webp`,
+          `${difficulty}-judgment-good-fade.webp`,
+          `${difficulty}-judgment-miss-peak.webp`,
+          `${difficulty}-judgment-miss-fade.webp`,
         ],
         liveMode: reports.modeAtTransition,
         initial: reports.initial.state,

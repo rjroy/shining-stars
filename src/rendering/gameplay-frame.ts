@@ -25,21 +25,22 @@ export interface GameplayFrame {
   /** Worst-case safe pool size derived from this chart, not a fixed peak. */
   readonly noteCapacity: number;
   readonly timingWindows: TimingWindowProgress;
-  readonly feedback: {
+  readonly feedback: readonly {
     readonly eventId: number;
     readonly runId: number;
     readonly noteId: string;
-    readonly quality: 'good' | 'perfect';
+    readonly lane: 0 | 1 | 2 | 3;
+    readonly quality: 'good' | 'perfect' | 'miss';
     readonly onsetTransportTime: number;
-  } | null;
+    readonly age: number;
+  }[];
   readonly timeLabel: string;
   readonly legendLabel: string;
-  readonly feedbackLabel: string;
   readonly countdownLabel: string;
 }
 
 export { VISIBLE_NOTE_SECONDS } from './note-projection';
-export const FEEDBACK_VISIBLE_SECONDS = 0.65;
+export const FEEDBACK_VISIBLE_SECONDS = 1.1;
 
 /** Whether a transport-clock feedback event is inside its visible age window. */
 export function isFeedbackWithinVisibleAge(
@@ -81,20 +82,26 @@ export function projectGameplayFrame(
         VISIBLE_NOTE_SECONDS,
       )
     : [];
-  const event = snapshot.feedback;
-  const feedback =
-    playing &&
-    event !== null &&
-    event.runId > 0 &&
-    isFeedbackWithinVisibleAge(game.transportTime, event.onsetTransportTime)
-      ? {
+  const feedback = playing
+    ? snapshot.feedback
+        .filter(
+          (event) =>
+            event.runId > 0 &&
+            isFeedbackWithinVisibleAge(
+              game.transportTime,
+              event.onsetTransportTime,
+            ),
+        )
+        .map((event) => ({
           eventId: event.eventId,
           runId: event.runId,
           noteId: event.noteId,
+          lane: event.lane,
           quality: event.quality,
           onsetTransportTime: event.onsetTransportTime,
-        }
-      : null;
+          age: game.transportTime - event.onsetTransportTime,
+        }))
+    : [];
   const milliseconds = (seconds: number) => Math.round(seconds * 1000);
 
   return {
@@ -114,12 +121,6 @@ export function projectGameplayFrame(
     legendLabel:
       `Good ±${milliseconds(profile.timing.goodWindowSeconds)} ms · ` +
       `Perfect ±${milliseconds(profile.timing.perfectWindowSeconds)} ms`,
-    feedbackLabel:
-      feedback === null
-        ? 'Notes meet the line here'
-        : feedback.quality === 'perfect'
-          ? 'Perfect'
-          : 'Good',
     countdownLabel:
       audio.status === 'starting'
         ? `Starting in ${Math.max(

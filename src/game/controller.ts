@@ -1,6 +1,6 @@
 import type { AudioTransport, AudioTransportSnapshot } from '../audio/audio';
 import { isDifficulty, type Difficulty } from './game-balance';
-import type { GameSession, GameSnapshot, PressResult } from './game';
+import type { GameSession, GameSnapshot } from './game';
 
 export interface ControllerSnapshot {
   readonly audio: AudioTransportSnapshot;
@@ -9,13 +9,17 @@ export interface ControllerSnapshot {
   readonly visualOffset: number;
   /** Profile chosen for the next fresh run; a finished run keeps its own profile. */
   readonly selectedDifficulty: Difficulty;
-  readonly feedback: ControllerFeedbackEvent | null;
+  readonly feedback: readonly ControllerFeedbackEvent[];
   /** Pending public Start/Resume/Restart operations, including canceled ones. */
   readonly pendingPlaybackRequests: boolean;
 }
 
 /** Immutable judgment identity plus the original game press result. */
-export interface ControllerFeedbackEvent extends PressResult {
+export interface ControllerFeedbackEvent {
+  readonly noteId: string;
+  readonly lane: 0 | 1 | 2 | 3;
+  readonly quality: 'good' | 'perfect' | 'miss';
+  readonly timingErrorSeconds?: number;
   readonly eventId: number;
   readonly runId: number;
   readonly onsetTransportTime: number;
@@ -62,7 +66,7 @@ export function createGameController(
   const visualOffset = dependencies.visualOffset ?? 0;
   let game = dependencies.createGame(inputOffset);
   let selectedDifficulty = game.snapshot().difficulty;
-  let feedback: ControllerFeedbackEvent | null = null;
+  const feedback = new Map<number, ControllerFeedbackEvent>();
   let eventId = 0;
   let runId = 1;
   const pressedKeys = new Set<string>();
@@ -81,7 +85,7 @@ export function createGameController(
       inputOffset,
       visualOffset,
       selectedDifficulty,
-      feedback: feedback === null ? null : { ...feedback },
+      feedback: [...feedback.values()].map((event) => ({ ...event })),
       pendingPlaybackRequests: pendingTransportRequests > 0,
     };
   }
@@ -113,7 +117,7 @@ export function createGameController(
   function stopAudioForTerminalGame(): void {
     if (game.snapshot().status !== 'results') return;
 
-    feedback = null;
+    feedback.clear();
     pressedKeys.clear();
     if (terminalAudioStopHandled) return;
     terminalAudioStopHandled = true;
@@ -124,7 +128,7 @@ export function createGameController(
 
   function advanceGame(audioSnapshot: AudioTransportSnapshot): void {
     if (audioSnapshot.status === 'error') {
-      feedback = null;
+      feedback.clear();
     }
     if (
       game.snapshot().status === 'playing' &&
@@ -132,7 +136,22 @@ export function createGameController(
         audioSnapshot.status === 'results' ||
         audioSnapshot.status === 'paused')
     ) {
-      game.advanceTo(currentGameTime(audioSnapshot));
+      const before = game.snapshot();
+      const transportTime = currentGameTime(audioSnapshot);
+      const after = game.advanceTo(transportTime);
+      for (const note of after.notes) {
+        const previous = before.notes.find((candidate) => candidate.id === note.id);
+        if (previous?.outcome === null && note.outcome === 'miss') {
+          feedback.set(note.lane, Object.freeze({
+            noteId: note.id,
+            lane: note.lane,
+            quality: 'miss',
+            eventId: ++eventId,
+            runId,
+            onsetTransportTime: transportTime,
+          }));
+        }
+      }
     }
     stopAudioForTerminalGame();
   }
@@ -159,7 +178,7 @@ export function createGameController(
     hasTransportRequestBeenMade = true;
     pendingTransportRequests += 1;
     pressedKeys.clear();
-    feedback = null;
+    feedback.clear();
     try {
       const loaded = await dependencies.audio.load();
       if (isCurrentAction(requestEpoch) && loaded.status === 'ready') {
@@ -186,7 +205,7 @@ export function createGameController(
     hasTransportRequestBeenMade = true;
     pendingTransportRequests += 1;
     pressedKeys.clear();
-    feedback = null;
+    feedback.clear();
     try {
       await dependencies.audio.resume();
     } finally {
@@ -207,7 +226,7 @@ export function createGameController(
     pendingTransportRequests += 1;
     pendingRestartEpoch = requestEpoch;
     pressedKeys.clear();
-    feedback = null;
+    feedback.clear();
     game = dependencies.createGame(inputOffset, selectedDifficulty);
     runId += 1;
     terminalAudioStopHandled = false;
@@ -253,7 +272,7 @@ export function createGameController(
       game = nextGame;
       runId += 1;
       pressedKeys.clear();
-      feedback = null;
+      feedback.clear();
     }
     return publish();
   }
@@ -270,7 +289,7 @@ export function createGameController(
 
     beginControlAction();
     pressedKeys.clear();
-    feedback = null;
+    feedback.clear();
     const pausedAudio = dependencies.audio.pause();
     advanceGame(pausedAudio);
     return publish();
@@ -283,7 +302,7 @@ export function createGameController(
 
     beginControlAction();
     pressedKeys.clear();
-    feedback = null;
+    feedback.clear();
     const audioSnapshot = dependencies.audio.snapshot();
     const pausedAudio =
       audioSnapshot.status === 'starting' ||
@@ -320,15 +339,18 @@ export function createGameController(
     advanceGame(audioSnapshot);
     if (game.snapshot().status === 'playing') {
       const result = game.press(lane, transportTime);
-      feedback =
-        result === null
-          ? null
-          : Object.freeze({
-              ...result,
-              eventId: ++eventId,
-              runId,
-              onsetTransportTime: transportTime,
-            });
+      if (result !== null) {
+        feedback.set(
+          lane,
+          Object.freeze({
+            ...result,
+            lane,
+            eventId: ++eventId,
+            runId,
+            onsetTransportTime: transportTime,
+          }),
+        );
+      }
       stopAudioForTerminalGame();
     }
     return publish();
@@ -364,7 +386,7 @@ export function createGameController(
     disposed = true;
     beginControlAction();
     pressedKeys.clear();
-    feedback = null;
+    feedback.clear();
     disposePromise = dependencies.audio.dispose();
     return disposePromise;
   }

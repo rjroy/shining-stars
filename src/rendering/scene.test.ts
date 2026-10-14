@@ -18,7 +18,10 @@ import type {
   BrightvaleViewportLayout,
 } from './brightvale/viewport';
 import { createBrightvaleScene, type SceneRenderer } from './scene';
-import type { GameplayFrame } from './gameplay-frame';
+import {
+  FEEDBACK_VISIBLE_SECONDS,
+  type GameplayFrame,
+} from './gameplay-frame';
 import type { SceneStateProjection } from './scene-state';
 import { projectTimingWindowHalfProgress } from './note-projection';
 
@@ -125,10 +128,9 @@ function makeFrame(
       notes,
       noteCapacity: notes.length,
       timingWindows,
-      feedback: null,
+      feedback: [],
       timeLabel: '00:01',
       legendLabel: 'Good ±500 ms · Perfect ±250 ms',
-      feedbackLabel: 'Notes meet the line here',
       countdownLabel: '',
     },
   };
@@ -644,7 +646,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         throw new Error('first production overlay pass was not captured');
       const layout = rendered.frame.gameplay.layout;
       rendered.overlayCamera.updateMatrixWorld(true);
-      for (const name of ['time', 'countdown', 'legend', 'feedback'] as const) {
+      for (const name of ['time', 'countdown', 'legend'] as const) {
         const label = rendered.overlay.children.find(
           (object) => object.name === `Brightvale.Label.${name}`,
         );
@@ -663,6 +665,194 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         expect(screenX).toBeCloseTo(rect.x + rect.width / 2, 5);
         expect(screenY).toBeCloseTo(rect.y + rect.height / 2, 5);
       }
+    } finally {
+      rendered.scene.destroy();
+      rendered.assets.dispose();
+    }
+  });
+
+  it('renders lane-local impact rings and readable judgments, reusing the bounded pool through expiry and reduced motion', async () => {
+    const context = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      strokeText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+    vi.stubGlobal('document', {
+      createElement: () => ({ width: 1, height: 1, getContext: () => context }),
+    });
+    const rendered = await renderWithProductionAssets();
+    try {
+      const canvasTextureFor = (overlay: THREE.Scene | undefined, lane: number) => {
+        const judgmentLabel = overlay?.children.find(
+          (object) => object.name === `Brightvale.Label.judgment-${lane}`,
+        ) as THREE.Mesh | undefined;
+        return (judgmentLabel?.material as THREE.MeshBasicMaterial | undefined)
+          ?.map;
+      };
+      const initialTextures = [0, 2, 3].map((lane) =>
+        canvasTextureFor(rendered.renderer.calls.at(-1)?.scene, lane),
+      );
+      expect(initialTextures.every((texture) => texture instanceof THREE.CanvasTexture)).toBe(true);
+      const activeFrame: SceneFrame = {
+        ...rendered.frame,
+        gameplay: {
+          ...rendered.frame.gameplay,
+          feedback: [
+            {
+              eventId: 1,
+              runId: 1,
+              noteId: 'perfect-note',
+              lane: 0,
+              quality: 'perfect',
+              onsetTransportTime: 1,
+              age: 0,
+            },
+            {
+              eventId: 2,
+              runId: 1,
+              noteId: 'good-note',
+              lane: 2,
+              quality: 'good',
+              onsetTransportTime: 1,
+              age: 0,
+            },
+            {
+              eventId: 3,
+              runId: 1,
+              noteId: 'miss-note',
+              lane: 3,
+              quality: 'miss',
+              onsetTransportTime: 1,
+              age: 0,
+            },
+          ],
+        },
+      };
+      expect(rendered.scene.updateFrame(activeFrame)).toBe('rendered');
+      const world = rendered.renderer.calls.at(-2)?.scene;
+      const overlay = rendered.renderer.calls.at(-1)?.scene;
+      expect([0, 2, 3].map((lane) => canvasTextureFor(overlay, lane))).toEqual(
+        initialTextures,
+      );
+      const impacts = world?.children.filter(
+        (object) => object.userData.gameplayRole === 'lane-judgment-effect',
+      ) as THREE.Group[] | undefined;
+      expect(impacts).toHaveLength(4);
+      expect(impacts?.map((impact) => impact.visible)).toEqual([
+        true,
+        false,
+        true,
+        true,
+      ]);
+      for (const [lane, text] of [
+        [0, 'PERFECT'],
+        [2, 'GOOD'],
+        [3, 'MISS'],
+      ] as const) {
+        const labelMesh = overlay?.children.find(
+          (object) => object.name === `Brightvale.Label.judgment-${lane}`,
+        );
+        expect(labelMesh).toBeInstanceOf(THREE.Mesh);
+        expect(labelMesh?.visible).toBe(true);
+        expect(labelMesh?.userData.gameplayRole).toBe('screen-label');
+        expect(context.fillText).toHaveBeenCalledWith(
+          text,
+          expect.any(Number),
+          expect.any(Number),
+          expect.any(Number),
+        );
+      }
+      const rayMaterial = impacts?.[0]?.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-rays',
+      ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+      expect(rayMaterial.visible).toBe(true);
+      expect(rayMaterial.geometry.getAttribute('position').count).toBe(24);
+      expect(rayMaterial.material.opacity).toBeGreaterThan(0);
+      expect(rayMaterial.material.depthTest).toBe(true);
+      const missRays = impacts?.[3]?.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-rays',
+      ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+      expect(missRays.visible).toBe(true);
+      expect(missRays.material.opacity).toBeLessThan(rayMaterial.material.opacity);
+      expect(missRays.scale.x).toBeLessThan(1);
+
+      const ring = impacts?.[0]?.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-ring',
+      ) as THREE.Mesh;
+      const initialGeometry = ring.geometry;
+      const initialScale = impacts?.[0]?.scale.x ?? 0;
+      const initialOpacity = (ring.material as THREE.MeshBasicMaterial).opacity;
+      const nextFrame: SceneFrame = {
+        ...activeFrame,
+        gameplay: {
+          ...activeFrame.gameplay,
+          reducedMotion: true,
+          feedback: activeFrame.gameplay.feedback.map((event) => ({
+            ...event,
+            age: 0.3,
+          })),
+        },
+      };
+      expect(rendered.scene.updateFrame(nextFrame)).toBe('rendered');
+      const nextWorld = rendered.renderer.calls.at(-2)?.scene;
+      expect([0, 2, 3].map((lane) => canvasTextureFor(
+        rendered.renderer.calls.at(-1)?.scene,
+        lane,
+      ))).toEqual(initialTextures);
+      const nextImpact = nextWorld?.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-effect' && object.name.endsWith('.0'),
+      ) as THREE.Group;
+      const nextRing = nextImpact.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-ring',
+      ) as THREE.Mesh;
+      const nextRays = nextImpact.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-rays',
+      ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+      expect(nextRing.geometry).toBe(initialGeometry);
+      expect(nextImpact.scale.x).toBe(initialScale);
+      expect((nextRing.material as THREE.MeshBasicMaterial).opacity).toBeLessThan(initialOpacity);
+      expect(nextRays.material.opacity).toBeCloseTo(
+        Math.pow(1 - 0.3 / FEEDBACK_VISIBLE_SECONDS, 0.25),
+      );
+      const nextReducedOpacity = nextRays.material.opacity;
+
+      const laterReducedFrame: SceneFrame = {
+        ...nextFrame,
+        gameplay: {
+          ...nextFrame.gameplay,
+          feedback: nextFrame.gameplay.feedback.map((event) => ({
+            ...event,
+            age: 0.6,
+          })),
+        },
+      };
+      expect(rendered.scene.updateFrame(laterReducedFrame)).toBe('rendered');
+      const laterWorld = rendered.renderer.calls.at(-2)?.scene;
+      const laterImpact = laterWorld?.children.find(
+        (object) =>
+          object.userData.gameplayRole === 'lane-judgment-effect' &&
+          object.name.endsWith('.0'),
+      ) as THREE.Group;
+      const laterRays = laterImpact.children.find(
+        (object) => object.userData.gameplayRole === 'lane-judgment-rays',
+      ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+      expect(laterRays.material.opacity).toBeCloseTo(
+        Math.pow(1 - 0.6 / FEEDBACK_VISIBLE_SECONDS, 0.25),
+      );
+      expect(laterRays.material.opacity).toBeLessThan(nextReducedOpacity);
+
+      const expired: SceneFrame = {
+        ...laterReducedFrame,
+        gameplay: { ...laterReducedFrame.gameplay, feedback: [] },
+      };
+      expect(rendered.scene.updateFrame(expired)).toBe('rendered');
+      const expiredWorld = rendered.renderer.calls.at(-2)?.scene;
+      expect(
+        expiredWorld?.children
+          .filter((object) => object.userData.gameplayRole === 'lane-judgment-effect')
+          .every((object) => !object.visible),
+      ).toBe(true);
     } finally {
       rendered.scene.destroy();
       rendered.assets.dispose();
@@ -688,7 +878,10 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           'time',
           'countdown',
           'legend',
-          'feedback',
+          'judgment-0',
+          'judgment-1',
+          'judgment-2',
+          'judgment-3',
           'lane-0',
           'lane-1',
           'lane-2',

@@ -1,9 +1,9 @@
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
-import { isFeedbackWithinVisibleAge } from '../rendering/gameplay-frame';
 import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
 import { getResourceBars } from './resource-bars';
+import { createFeedbackAnnouncementTracker } from './ui-feedback';
 import {
   createBrightvaleViewportLayout,
   type BrightvaleRendererStatus,
@@ -116,10 +116,7 @@ export function createGameUI(
             <span class="stage-time" data-time>00:00</span>
           </div>
           <p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>
-          <div class="feedback-row" aria-hidden="true">
-            <span data-feedback></span>
-            <span data-countdown aria-hidden="true"></span>
-          </div>
+          <div class="countdown-row" aria-hidden="true"><span data-countdown></span></div>
           <span class="sr-only" id="lane-instructions">Use the D, F, J, and K keys shown on the four lane fronts to hit notes at the line. Escape pauses the performance.</span>
         </div>
 
@@ -162,7 +159,6 @@ export function createGameUI(
   const playHeading = root.querySelector<HTMLElement>('.play-heading');
   const stageHeader = root.querySelector<HTMLElement>('.stage-topline');
   const timingLegend = root.querySelector<HTMLElement>('[data-timing-legend]');
-  const feedbackRow = root.querySelector<HTMLElement>('.feedback-row');
   const timeSlot = root.querySelector<HTMLElement>('[data-time]');
   const countdownSlot = root.querySelector<HTMLElement>('[data-countdown]');
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
@@ -175,6 +171,7 @@ export function createGameUI(
   let rendererMessage = 'Loading Brightvale…';
   let pendingPlaybackRequests = false;
   let resultsRendered = false;
+  const feedbackAnnouncements = createFeedbackAnnouncementTracker();
   const emptyRect: BrightvaleViewportRect = {
     x: 0,
     y: 0,
@@ -252,7 +249,7 @@ export function createGameUI(
         time: readRect(timeSlot),
         countdown: readRect(countdownSlot),
         legend: readRect(timingLegend),
-        feedback: readRect(feedbackRow),
+        feedback: readRect(null),
       },
     });
     if (JSON.stringify(nextLayout) !== JSON.stringify(gameplayLayout)) {
@@ -276,7 +273,6 @@ export function createGameUI(
     timeSlot,
     countdownSlot,
     timingLegend,
-    feedbackRow,
   ];
   layoutElements.forEach((element) => {
     if (element !== null) layoutResizeObserver?.observe(element);
@@ -354,14 +350,6 @@ export function createGameUI(
     const isReady =
       !isPaused && !isPlaying && !isStarting && !isError && !isResults;
     playSurface?.setAttribute('aria-busy', String(pendingPlaybackRequests));
-    const judgment = snapshot.feedback;
-    const isJudgmentVisible =
-      judgment !== null &&
-      isPlaying &&
-      isFeedbackWithinVisibleAge(
-        game.transportTime,
-        judgment.onsetTransportTime,
-      );
     showPanel(
       isResults
         ? 'results'
@@ -530,11 +518,15 @@ export function createGameUI(
           ' — centered on the hit line; notes stop there.',
       );
     }
-    setText(
-      root,
-      '[data-gameplay-status]',
-      `${timingLegend?.textContent ?? ''} ${!isJudgmentVisible || judgment === null ? '' : judgment.quality === 'perfect' ? 'Perfect.' : 'Good.'}`,
-    );
+    const feedbackAnnouncement = feedbackAnnouncements.update(snapshot.feedback);
+    if (feedbackAnnouncement.announcement !== null)
+      setText(
+        root,
+        '[data-gameplay-status]',
+        feedbackAnnouncement.announcement,
+      );
+    else if (feedbackAnnouncement.clear)
+      setText(root, '[data-gameplay-status]', '');
 
     if (isResults) {
       if (!resultsRendered) renderResults(game);

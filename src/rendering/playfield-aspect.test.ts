@@ -33,13 +33,13 @@ const snapshot: ControllerSnapshot = {
     personalStrength: 100,
     twilightStrength: 100,
     difficulty: 'easy',
-    notes: [{ id: 'wide-note', phase: 'audience', outcome: null }],
+    notes: [{ id: 'wide-note', lane: 3, phase: 'audience', outcome: null }],
     result: null,
   },
   inputOffset: 0,
   visualOffset: 0,
   selectedDifficulty: 'easy',
-  feedback: null,
+  feedback: [],
   pendingPlaybackRequests: false,
 };
 

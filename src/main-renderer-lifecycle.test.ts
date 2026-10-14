@@ -157,7 +157,7 @@ function makeSnapshot(
       loaded: !['loading', 'error'].includes(audioStatus),
     },
     game: { status: gameStatus },
-    feedback: null,
+    feedback: [],
     pendingPlaybackRequests: false,
   };
 }
@@ -250,10 +250,10 @@ async function mountMain(
         harness.snapshot = {
           ...current,
           audio: { ...current.audio, status: 'paused', error: null },
-          feedback: null,
+          feedback: [],
         };
       } else {
-        harness.snapshot = { ...current, feedback: null };
+        harness.snapshot = { ...current, feedback: [] };
       }
       return harness.snapshot;
     }),
@@ -460,11 +460,14 @@ describe('main renderer availability lifecycle', () => {
     await mountMain(['success']);
     const playingSnapshot: AppSnapshot = {
       ...makeSnapshot('playing', 'playing'),
-      feedback: {
+      feedback: [{
+        noteId: 'event-note',
+        lane: 0,
+        quality: 'perfect',
         eventId: 7,
         runId: 2,
         onsetTransportTime: 4.2,
-      },
+      }],
     };
     harness.snapshot = playingSnapshot;
     harness.ui?.render.mockClear();
@@ -478,7 +481,7 @@ describe('main renderer availability lifecycle', () => {
     expect(lastUiSnapshot).toMatchObject({
       audio: { status: 'paused' },
       game: { status: 'playing' },
-      feedback: null,
+      feedback: [],
     });
     expect(harness.ui?.render).toHaveBeenCalledTimes(2);
     expect(harness.uiRenderedDuringSceneUpdate).toBe(false);
