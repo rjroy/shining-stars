@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BrightvaleAssets } from './assets';
 import { createBrightvaleAppearance } from './appearance';
+import { fitDirectionalShadowCamera, setShadowParticipation } from './shadows';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleRuntimeLayout } from './layout';
@@ -134,6 +135,7 @@ export function createBrightvaleComposition(
       const source = assets.roots[name];
       const clone = source.clone(true);
       copyAppearanceMaterials(source, clone, appearance!.materialFor);
+      setShadowParticipation(clone, { cast: true, receive: true });
       wrapper.add(clone);
       playfield.add(wrapper);
     };
@@ -180,6 +182,7 @@ export function createBrightvaleComposition(
       mesh.matrix.copy(matrix(surface.matrixColumnMajor));
       groundGroup.add(mesh);
     }
+    setShadowParticipation(groundGroup, { cast: false, receive: true });
 
     const batchSources = new Map<
       THREE.Object3D,
@@ -278,6 +281,18 @@ export function createBrightvaleComposition(
         }
       }
     }
+
+    setShadowParticipation(cityGroup, { cast: true, receive: true });
+    setShadowParticipation(framingGroup, { cast: true, receive: true });
+    setShadowParticipation(crowdGroup, { cast: true, receive: true });
+    const key = scene.getObjectByName('Brightvale.Key');
+    if (!(key instanceof THREE.DirectionalLight))
+      throw new Error('Brightvale key light is required for scene shadows');
+    fitDirectionalShadowCamera(
+      key,
+      [cityGroup, playfield, framingGroup, crowdGroup],
+      groundGroup.children,
+    );
 
     let appearanceState: SceneStateProjection | undefined;
     return {

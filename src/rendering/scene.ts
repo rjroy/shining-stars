@@ -61,6 +61,7 @@ export interface SceneRenderer {
   outputColorSpace: THREE.WebGLRenderer['outputColorSpace'];
   toneMapping: THREE.ToneMapping;
   toneMappingExposure: number;
+  shadowMap: THREE.WebGLRenderer['shadowMap'];
   setClearColor(color: THREE.ColorRepresentation, alpha?: number): void;
   setPixelRatio(value: number): void;
   setSize(width: number, height: number, updateStyle?: boolean): void;
@@ -486,6 +487,7 @@ export function createBrightvaleScene(
   let rendererWidth = -1;
   let rendererHeight = -1;
   let rendererPixelRatio = -1;
+  let shadowScene: THREE.Scene | null = null;
 
   const setRendererPixelRatio = (): void => {
     const pixelRatio = Math.min(
@@ -710,6 +712,10 @@ export function createBrightvaleScene(
       renderer.autoClear = true;
       renderer.setViewport(0, 0, layout.width, layout.height);
       renderer.setScissorTest(false);
+      if (shadowScene !== observatoryScene) {
+        renderer.shadowMap.needsUpdate = true;
+        shadowScene = observatoryScene;
+      }
       renderer.render(observatoryScene, observatoryComposition.camera);
       return;
     }
@@ -958,6 +964,10 @@ export function createBrightvaleScene(
       renderer.setViewport(0, 0, width, height);
       renderer.setScissorTest(false);
       renderer.clear(true, true, true);
+      if (shadowScene !== worldScene) {
+        renderer.shadowMap.needsUpdate = true;
+        shadowScene = worldScene;
+      }
       renderer.render(worldScene, composition.projection.camera);
       renderer.clearDepth();
       renderer.render(overlayScene, overlayCamera);
@@ -1046,6 +1056,10 @@ export function createBrightvaleScene(
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
     setRendererPixelRatio();
     const initialSize = readHostContentSize();
     setRendererSize(initialSize.width, initialSize.height);

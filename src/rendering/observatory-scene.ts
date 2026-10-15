@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import type { BrightvaleAssets } from './brightvale/assets';
 import type { BrightvaleShellComposition } from './brightvale/scene-shell';
 import type { SongCollection } from '../catalog/catalog';
+import {
+  fitDirectionalShadowCamera,
+  setShadowParticipation,
+} from './brightvale/shadows';
 
 export interface ObservatorySceneFrame {
   readonly width: number;
@@ -35,7 +39,16 @@ export function createObservatoryComposition(
   city.name = 'Observatory.BrightvaleCity';
   city.scale.setScalar(0.18);
   city.position.set(0, -2.85, -7);
+  setShadowParticipation(city, { cast: true, receive: true });
   root.add(city);
+
+  const cityKey = new THREE.DirectionalLight(0xffd49b, 0.72);
+  cityKey.name = 'Observatory.CityKey';
+  cityKey.position.set(-14, 18, 11);
+  cityKey.target.position.copy(city.position);
+  cityKey.castShadow = true;
+  root.add(cityKey, cityKey.target);
+  fitDirectionalShadowCamera(cityKey, [city]);
 
   const camera = new THREE.OrthographicCamera(-8, 8, 5, -5, 0.1, 80);
   camera.position.set(0, 0, 16);
@@ -155,6 +168,7 @@ export function createObservatoryComposition(
     dispose() {
       if (destroyed) return;
       destroyed = true;
+      cityKey.shadow.dispose();
       for (const geometry of ownedGeometries) geometry.dispose();
       for (const material of ownedMaterials) material.dispose();
     },

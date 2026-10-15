@@ -156,6 +156,12 @@ function makeAssets(dispose = vi.fn()): BrightvaleAssets {
   const roots = Object.fromEntries(
     BRIGHTVALE_ASSET_NAMES.map((name) => [name, new THREE.Group()]),
   ) as unknown as BrightvaleAssets['roots'];
+  roots.city.add(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 2),
+      new THREE.MeshBasicMaterial(),
+    ),
+  );
   for (const name of ['highway', 'platform'] as const) {
     const road = new THREE.Mesh(
       new THREE.PlaneGeometry(20, 100),
@@ -217,6 +223,12 @@ function makeRenderer(order?: string[]): RendererHarness {
     outputColorSpace: THREE.SRGBColorSpace,
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1,
+    shadowMap: {
+      enabled: false,
+      type: THREE.BasicShadowMap,
+      autoUpdate: true,
+      needsUpdate: false,
+    } as THREE.WebGLRenderer['shadowMap'],
     setClearColor: vi.fn(),
     setPixelRatio: (value: number) => harness.pixelRatios.push(value),
     setSize: (width: number, height: number, updateStyle?: boolean) => {
@@ -481,6 +493,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect.soft(renderer.calls[0]?.scene).not.toBe(renderer.calls[1]?.scene);
     expect.soft(renderer.setSizes).toContainEqual([1600, 900, false]);
     expect.soft(renderer.pixelRatios).toContain(1.5);
+    expect(renderer.renderer.shadowMap.enabled).toBe(true);
+    expect(renderer.renderer.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
+    expect(renderer.renderer.shadowMap.autoUpdate).toBe(false);
     expect.soft(unavailable).not.toHaveBeenCalled();
 
     scene.destroy();

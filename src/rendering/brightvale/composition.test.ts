@@ -298,7 +298,10 @@ describe('Brightvale production composition', () => {
         expect(faceNormal.length()).toBeGreaterThan(0);
         faceNormal.normalize();
         for (const vertex of vertexIndices) {
-          const normal = new THREE.Vector3().fromBufferAttribute(normals, vertex);
+          const normal = new THREE.Vector3().fromBufferAttribute(
+            normals,
+            vertex,
+          );
           expect(normal.dot(faceNormal)).toBeGreaterThan(0.999);
         }
       }
@@ -317,6 +320,17 @@ describe('Brightvale production composition', () => {
     expect(crowdBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(350);
 
     const allBatches = [...cityBatches, ...framingBatches, ...crowdBatches];
+    expect(allBatches.every((batch) => batch.castShadow)).toBe(true);
+    expect(allBatches.every((batch) => batch.receiveShadow)).toBe(true);
+    const ground = composition.root.getObjectByName('Review.Ground') as
+      THREE.Mesh | undefined;
+    expect(ground).toBeInstanceOf(THREE.Mesh);
+    expect(ground?.castShadow).toBe(false);
+    expect(ground?.receiveShadow).toBe(true);
+    const key = scene.getObjectByName('Brightvale.Key') as
+      THREE.DirectionalLight | undefined;
+    expect(key?.castShadow).toBe(true);
+    expect(key?.shadow.mapSize.toArray()).toEqual([2048, 2048]);
     const geometryMaterialPairs = new Set<string>();
     for (const batch of allBatches) {
       expect(Array.isArray(batch.material)).toBe(false);

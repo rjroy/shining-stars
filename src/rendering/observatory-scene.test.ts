@@ -131,6 +131,20 @@ describe('Observatory scene composition', () => {
     expect(
       composition.root.getObjectByName('Observatory.BrightvaleCity'),
     ).toBeDefined();
+    const cityKey = composition.root.getObjectByName('Observatory.CityKey') as
+      THREE.DirectionalLight | undefined;
+    if (!cityKey) throw new Error('Observatory city key light is missing');
+    const shadowTarget = new THREE.WebGLRenderTarget(16, 16);
+    cityKey.shadow.map = shadowTarget;
+    const shadowDispose = vi.spyOn(cityKey.shadow, 'dispose');
+    const shadowTargetDispose = vi.spyOn(shadowTarget, 'dispose');
+    expect(cityKey?.castShadow).toBe(true);
+    expect(cityKey?.shadow.mapSize.toArray()).toEqual([2048, 2048]);
+    const cityMesh = composition.root.getObjectByName(
+      'Observatory.BrightvaleCity',
+    )?.children[0] as THREE.Mesh | undefined;
+    expect(cityMesh?.castShadow).toBe(true);
+    expect(cityMesh?.receiveShadow).toBe(true);
     expect(
       composition.root.children.some(
         (object) => object instanceof THREE.Points,
@@ -149,6 +163,9 @@ describe('Observatory scene composition', () => {
     ).toBe(false);
     collectionAnchor.dispose();
     composition.dispose();
+    composition.dispose();
+    expect(shadowDispose).toHaveBeenCalledTimes(1);
+    expect(shadowTargetDispose).toHaveBeenCalledTimes(1);
     expect(disposeGeometry).not.toHaveBeenCalled();
     expect(assets.dispose).not.toHaveBeenCalled();
   });

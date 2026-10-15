@@ -30,7 +30,9 @@ interface LightPreset {
   readonly pointPosition: THREE.Vector3;
 }
 
-const PRESETS: Readonly<Record<'audience' | 'twilight' | 'radiant', LightPreset>> = {
+const PRESETS: Readonly<
+  Record<'audience' | 'twilight' | 'radiant', LightPreset>
+> = {
   audience: {
     sky: new THREE.Color(0xffd49b),
     ground: new THREE.Color(0x27334d),
@@ -128,6 +130,7 @@ export function createBrightvaleAppearance(
   hemisphere.name = 'Brightvale.Ambience';
   const key = new THREE.DirectionalLight(0xffc982, 2.15);
   key.name = 'Brightvale.Key';
+  key.castShadow = true;
   key.position.set(-12, 32, 18);
   const fill = new THREE.DirectionalLight(0x6685c4, 1.15);
   fill.name = 'Brightvale.Fill';
@@ -242,6 +245,7 @@ export function createBrightvaleAppearance(
       disposed = true;
       for (const light of [hemisphere, key, fill, rim, point])
         if (light.parent === scene) scene.remove(light);
+      key.shadow.dispose();
       for (const material of ownedMaterials) material.dispose();
       ramp.dispose();
     },

@@ -273,6 +273,11 @@ describe('Brightvale shared appearance', () => {
     const appearance = createBrightvaleAppearance(scene, [root]);
     const toon = appearance.materialFor(source);
     const generatedMaterialDispose = vi.spyOn(toon, 'dispose');
+    const key = sceneLight(scene, 'Brightvale.Key', THREE.DirectionalLight);
+    const shadowTarget = new THREE.WebGLRenderTarget(16, 16);
+    key.shadow.map = shadowTarget;
+    const shadowDispose = vi.spyOn(key.shadow, 'dispose');
+    const shadowTargetDispose = vi.spyOn(shadowTarget, 'dispose');
     const ramp = toon.gradientMap;
     expect(ramp).toBeInstanceOf(THREE.DataTexture);
     const rampDispose = vi.spyOn(ramp as THREE.DataTexture, 'dispose');
@@ -281,6 +286,8 @@ describe('Brightvale shared appearance', () => {
     appearance.dispose();
 
     expect(generatedMaterialDispose).toHaveBeenCalledTimes(1);
+    expect(shadowDispose).toHaveBeenCalledTimes(1);
+    expect(shadowTargetDispose).toHaveBeenCalledTimes(1);
     expect(rampDispose).toHaveBeenCalledTimes(1);
     expect(sourceDispose).not.toHaveBeenCalled();
     expect(mapDispose).not.toHaveBeenCalled();
