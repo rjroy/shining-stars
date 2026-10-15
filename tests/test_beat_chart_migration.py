@@ -34,15 +34,26 @@ class V2AuthoringTests(unittest.TestCase):
         for song_id, settings in songs.items():
             envelope = json.loads((beat_chart.DEFAULT_GENERATED_DIR / f"{song_id}.charts.json").read_text())
             onset_doc = json.loads((beat_chart.DEFAULT_ONSETS_DIR / f"{song_id}.beats.json").read_text())
+            pitch_key = onset_doc["pitch_analysis_key"]
+            pitch_cache = json.loads(
+                (beat_chart.DEFAULT_PITCH_CACHE_DIR / f"{song_id}.{pitch_key}.json").read_text()
+            )
+            report = json.loads(
+                (beat_chart.DEFAULT_REPORTS_DIR / f"{song_id}.lanes.json").read_text()
+            )
             self.assertIsInstance(envelope["source"], str)
             self.assertEqual(envelope["source"], settings["source"])
+            self.assertEqual(report["pitch_analysis_key"], pitch_key)
             expected_difficulties = {}
             for difficulty in beat_chart.DIFFICULTIES:
-                chart, notes, twilight_count = beat_chart._difficulty_chart(
+                chart, notes, twilight_count, analysis = beat_chart._difficulty_chart(
                     onset_doc["onsets"], settings, onset_doc["source_duration_seconds"],
                     profiles[difficulty], difficulty, song_id, onset_doc["source"]["sha256"],
+                    pitch_cache["frames"], with_analysis=True,
                 )
                 self.assertEqual(envelope["charts"][difficulty], chart)
+                self.assertEqual(report["controls"][difficulty], analysis["controls"])
+                self.assertEqual(report["metrics"][difficulty], analysis["metrics"])
                 self.assertEqual(
                     chart["twilightStrength"],
                     math.ceil(
@@ -252,6 +263,17 @@ class V2WorkflowTests(unittest.TestCase):
                         sources[1].write_bytes(b"changed while generating")
                         changed_during_processing = True
                     return subprocess.CompletedProcess(command, 0, "100\n", "")
+                if executable == "ffmpeg":
+                    with wave.open(command[-1], "wb") as wav:
+                        wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(22050)
+                        wav.writeframes(b"\0\0" * 4410)
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if executable == "aubiopitch":
+                    return subprocess.CompletedProcess(
+                        command, 0,
+                        "".join(f"{index / 100:.2f} {48 + index % 12}\n" for index in range(10001)),
+                        "",
+                    )
                 raise AssertionError(command)
 
             original_hash = beat_chart._sha256_file
@@ -266,13 +288,20 @@ class V2WorkflowTests(unittest.TestCase):
             with (
                 patch.object(beat_chart, "DEFAULT_GENERATED_DIR", generated),
                 patch.object(beat_chart, "DEFAULT_ONSETS_DIR", onsets),
+                patch.object(beat_chart, "DEFAULT_PITCH_CACHE_DIR", root / "pitch-cache"),
+                patch.object(beat_chart, "DEFAULT_REPORTS_DIR", root / "reports"),
+                patch.object(beat_chart, "_pitch_tool_identity", return_value={
+                    "ffmpeg_version": "fake ffmpeg", "ffmpeg_sha256": "f" * 64,
+                    "aubiopitch_sha256": "a" * 64,
+                }),
                 patch.object(beat_chart, "_sha256_file", side_effect=tracking_hash),
                 contextlib.redirect_stderr(stderr),
             ):
                 result = beat_chart.main(["--all", "--song-config", str(config)], runner=runner)
             self.assertEqual(result, 1)
             self.assertTrue(changed_during_processing, "later-song processing must mutate the selected source")
-            self.assertEqual(calls, ["ffprobe", "ffprobe"], "valid onset caches must avoid re-extraction")
+            self.assertEqual(calls.count("aubioonset"), 0, "valid onset caches must avoid re-extraction")
+            self.assertEqual(calls.count("aubiopitch"), 2, "pitch extraction runs once per source")
             self.assertEqual(
                 hash_calls[-2:], [source.resolve() for source in sources],
                 "the publication guard must rehash every selected source before writing",
@@ -311,9 +340,15 @@ class V2WorkflowTests(unittest.TestCase):
                     return subprocess.CompletedProcess(command, 0, "", "")
                 if command[0] == "aubioonset":
                     return subprocess.CompletedProcess(command, 0, "".join(f"{i * .5}\n" for i in range(200)), "")
+                if command[0] == "aubiopitch":
+                    return subprocess.CompletedProcess(
+                        command, 0,
+                        "".join(f"{index / 100:.2f} {48 + index % 12}\n" for index in range(10001)),
+                        "",
+                    )
                 raise AssertionError(command)
 
-            with patch.object(beat_chart, "DEFAULT_GENERATED_DIR", out), patch.object(beat_chart, "DEFAULT_ONSETS_DIR", onset_dir), patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", profile_path):
+            with patch.object(beat_chart, "DEFAULT_GENERATED_DIR", out), patch.object(beat_chart, "DEFAULT_ONSETS_DIR", onset_dir), patch.object(beat_chart, "DEFAULT_PITCH_CACHE_DIR", root / "pitch-cache"), patch.object(beat_chart, "DEFAULT_REPORTS_DIR", root / "reports"), patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", profile_path), patch.object(beat_chart, "_pitch_tool_identity", return_value={"ffmpeg_version": "fake ffmpeg", "ffmpeg_sha256": "f" * 64, "aubiopitch_sha256": "a" * 64}):
                 args = ["--song-config", str(config), "--song", "test-song"]
                 self.assertEqual(beat_chart.main(args, runner=runner), 0)
                 self.assertEqual(calls.count("aubioonset"), 1)

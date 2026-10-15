@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.44776119402985076,
+      "baselineHandCounts": [
+        107,
+        107
+      ],
+      "baselineLaneCounts": [
+        54,
+        53,
+        54,
+        53
+      ],
+      "baselineLaneShares": [
+        0.2523364485981308,
+        0.24766355140186916,
+        0.2523364485981308,
+        0.24766355140186916
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.8507462686567164,
+      "candidateHandCounts": [
+        109,
+        105
+      ],
+      "candidateLaneCounts": [
+        54,
+        55,
+        54,
+        51
+      ],
+      "candidateLaneShares": [
+        0.2523364485981308,
+        0.2570093457943925,
+        0.2523364485981308,
+        0.2383177570093458
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 214,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 177,
+      "stablePitchCoverage": 0.8271028037383178,
+      "stableUnequalPitchAdjacentPairs": 134,
+      "unknownPitchCount": 37
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.5013698630136987,
+      "baselineHandCounts": [
+        325,
+        325
+      ],
+      "baselineLaneCounts": [
+        163,
+        162,
+        163,
+        162
+      ],
+      "baselineLaneShares": [
+        0.25076923076923074,
+        0.24923076923076923,
+        0.25076923076923074,
+        0.24923076923076923
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7890410958904109,
+      "candidateHandCounts": [
+        326,
+        324
+      ],
+      "candidateLaneCounts": [
+        163,
+        163,
+        163,
+        161
+      ],
+      "candidateLaneShares": [
+        0.25076923076923074,
+        0.25076923076923074,
+        0.25076923076923074,
+        0.24769230769230768
+      ],
+      "candidateLongestLaneRun": 4,
+      "candidateWorstRolling32Concentration": 0.34375,
+      "noteCount": 650,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 544,
+      "stablePitchCoverage": 0.8369230769230769,
+      "stableUnequalPitchAdjacentPairs": 365,
+      "unknownPitchCount": 106
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.5606060606060606,
+      "baselineHandCounts": [
+        161,
+        160
+      ],
+      "baselineLaneCounts": [
+        81,
+        80,
+        80,
+        80
+      ],
+      "baselineLaneShares": [
+        0.2523364485981308,
+        0.24922118380062305,
+        0.24922118380062305,
+        0.24922118380062305
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7676767676767676,
+      "candidateHandCounts": [
+        161,
+        160
+      ],
+      "candidateLaneCounts": [
+        79,
+        82,
+        81,
+        79
+      ],
+      "candidateLaneShares": [
+        0.24610591900311526,
+        0.2554517133956386,
+        0.2523364485981308,
+        0.24610591900311526
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 321,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 270,
+      "stablePitchCoverage": 0.8411214953271028,
+      "stableUnequalPitchAdjacentPairs": 198,
+      "unknownPitchCount": 51
+    }
+  },
+  "pitch_analysis_key": "1e7720527de25ff14988eb49977b848d1db5980a9608918ee3e68f61be9f3223",
+  "schema_version": 1,
+  "song_id": "the-abandoned-child",
+  "source_sha256": "a33cafd713ecccae2dca983be94661b12b037660d7e32ebf99cece40726f51ee"
+}

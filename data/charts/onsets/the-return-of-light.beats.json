@@ -707,8 +707,9 @@
     385.871643,
     386.817688
   ],
+  "pitch_analysis_key": "616882c43ca197b91d686378424eea39debb39cac1aa9b7e8ecbd6d430c5e29c",
   "projection": {
-    "profile_sha256": "40f40ff5531355093465e619259fb1a6548c4b27a5dd0379fc66f26862f4b9bb",
+    "profile_sha256": "de552b8009f7a8b6e856d3e270bd560e54242b20f534f15ef640bec11041adef",
     "song": {
       "difficulties": {
         "easy": {

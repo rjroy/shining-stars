@@ -1,10 +1,11 @@
 # Offline onset-chart authoring
 
 Chart generation is an offline workflow using the already-installed Python
-standard library, FFmpeg, and `aubioonset`. It never changes source MP3s and
-adds no browser runtime dependency. Generated onset timestamps are transient
-observations, not a human-approved beat grid, downbeat, meter, melody, or
-playability assessment.
+standard library, FFmpeg/FFprobe, `aubioonset`, and `aubiopitch`. It never
+changes source MP3s and adds no browser runtime dependency. Generated onset
+timestamps and full-mix F0 estimates are observations, not a human-approved
+beat grid, downbeat, meter, melody, or playability assessment. The workflow
+does not install tools.
 
 ## Authoring data and IDs
 
@@ -67,15 +68,16 @@ These scripts pass `--all` to the v2 CLI. To explicitly select one configured
 song instead:
 
 ```sh
-python3 scripts/beat_chart.py --song never-again
-python3 scripts/beat_chart.py --check --song never-again
+python3 -m scripts.beat_chart --song never-again
+python3 -m scripts.beat_chart --check --song never-again
 ```
 
 The `--all` generation/check reads the full recording's cached or newly
-detected onsets, then creates three difficulty projections per song. It uses
-the source duration, percent-based excerpt and Twilight positions, difficulty
-specific minimum-delta/stride settings, and profile values. It does not accept
-legacy per-chart output paths for schema v2.
+detected onsets and full-source pitch frames, then creates three independent
+difficulty charts per song. Each chart uses that difficulty's own
+minimum-delta, stride, and lane-mapping controls, along with the source
+duration, percent-based excerpt and Twilight positions, and profile values. It
+does not accept legacy per-chart output paths for schema v2.
 
 The generated outputs are:
 
@@ -87,6 +89,14 @@ The generated outputs are:
   Every chart is a runtime `ChartConfig` with its own singleton
   `allowedDifficulties`, seconds-based timing, notes, and derived final
   `twilightStrength`.
+- `data/charts/pitch-cache/<song-id>.<analysis-key>.json`: extracted
+  full-source F0 frames, source SHA-256, extraction recipe and tool identity,
+  analysis key, and payload digest. Older content-addressed pitch caches may
+  remain; they are not part of the generated-output inventory.
+- `data/charts/reports/<song-id>.lanes.json`: per-difficulty resolved controls
+  and diagnostics, including lane counts/shares, hand counts, longest run,
+  rolling-32 concentration, stable/unknown pitch counts, and baseline/candidate
+  extracted-F0 direction agreement.
 
 Vite eagerly imports these JSON bundles and audio URLs. Browsing creates no
 audio context and performs no audio fetch/decode. Exact source spelling in the
@@ -94,18 +104,93 @@ chart bundle must match an imported MP3 asset. Do not introduce a fallback
 chart, Normal alias, or runtime-generated default when a bundle is missing or
 malformed.
 
-Generation caches onset detections in `data/charts/onsets/`; changing source
-audio invalidates its source hash. Changing authoring settings or the shared
-difficulty profiles invalidates the cached projection (including its profile
-hash) and generated charts. Regenerate all outputs after either change. Check
-mode runs no FFmpeg or aubio command; it compares source, settings, profile
-freshness, and generated projection, and rejects missing, extra, or stale
-outputs. It also requires exactly the expected output set for `--all`.
+Generation caches onset detections in `data/charts/onsets/`. Changing source
+audio requires source-hash-matching onset and pitch analysis; old
+content-addressed pitch caches may remain. The pitch-cache key includes the
+full-source audio SHA-256, normalized extraction recipe/version, and tool
+identity. Changes to lane controls, difficulty stride/minimum delta, excerpt
+projection, or gameplay profiles reuse extracted F0 and recompute the affected
+charts/reports. Regenerate after authoring or profile changes.
 
-The default generator may invoke the installed FFmpeg/aubio tools when an
-onset cache is missing. It performs no installation. Do not treat generated
-charts or onset candidates as human-approved; musical review and playability
-approval remain separate work.
+`chart:check` runs no FFmpeg or aubio command and does not resolve the currently
+installed pitch-tool identity. It verifies the current source hash, validates
+the recorded onset and pitch-cache provenance/payload, and recomputes expected
+charts and reports from those recorded inputs. For `--all`, it rejects missing,
+extra, or stale onset, generated-chart, and lane-report outputs. Historical
+content-addressed pitch-cache files are allowed.
+
+Generation uses FFprobe to measure source duration, FFmpeg and `aubioonset`
+when onset analysis is missing, and FFmpeg plus `aubiopitch` when pitch
+analysis is missing. These tools must already be installed; the workflow does
+not install them. Do not treat generated charts or analysis candidates as
+human-approved; musical review and playability approval remain separate work.
+
+## Lane-mapping controls
+
+Pitch-informed mapping runs by default for each difficulty. The optional
+`lane_mapping` object supplies per-difficulty overrides; omit it, or any
+individual control, to use the shared defaults. Configure it inside each song
+difficulty in `data/charts/song-authoring.json`. For example, this overrides
+Normal's `pitch_following` default while Easy, Hard, and the other Normal
+controls retain their defaults:
+
+```json
+"normal": {
+  "twilight_strength": 80,
+  "minimum_delta": 64,
+  "stride": 2,
+  "lane_mapping": {
+    "pitch_following": 2
+  }
+}
+```
+
+The four cost-scaling controls are numbers from 0 through 4 and default to 1.
+They scale the mapper's soft costs:
+
+- `pitch_following` scales the 0.15 relative-preferred-lane cost and the 0.8
+  opposite-contour cost.
+- `lane_balance` scales both the existing 0.08 shared-deviation cost and the
+  0.03 squared-count balancing cost.
+- `repetition_avoidance` scales the 0.55 cost for each same-lane continuation
+  beyond three notes.
+- `wide_jump_avoidance` scales the 0.35 cost for a jump between the two
+  outermost lanes.
+- `adaptation_block_notes` is an integer from 8 through 128, default 32. It
+  sets the note-count blocks in that difficulty's selected note sequence used
+  to adapt pitch-to-lane preferences; blocks are not detected phrases or keys.
+
+Zero disables that preference cost, not the lane mapper. These are soft
+preferences, not lane limits or quotas: a stationary lane has no contour
+penalty, although it still counts as a contour disagreement, and there is no
+enforced hand balance. Repetition and wide-jump costs are independent of
+elapsed time. `minimum_delta` and `stride` continue to control timing density
+independently for each difficulty.
+
+Each difficulty's optional `lane_mapping` is a partial override. Omit the
+object, or omit any individual control, and the mapper resolves the shared
+defaults for that difficulty; pitch mapping itself still runs. Pitch analysis
+is shared across all three difficulties for a song, while each difficulty maps
+its own filtered note sequence independently.
+
+The production lane workflow caches extracted full-source F0 by audio hash,
+tool identity, and extraction recipe. Edits to lane controls, adaptation block
+size, stride, or minimum delta reuse cached pitch; regenerate and check the
+chart outputs:
+
+```sh
+npm run chart:generate
+npm run chart:check
+```
+
+The checked per-song report is
+`data/charts/reports/<song-id>.lanes.json`. It records lane counts,
+rolling-32 concentration, longest run, unknown-pitch count, and F0 direction
+agreement. `chart:check` is read-only: it validates the recorded provenance
+and recomputes expected outputs without requiring installed analysis tools. It
+does not check the currently installed tool version. Production integration
+is implemented; the full 29-song regeneration and check are being handled
+separately and are not claimed as complete here.
 
 ## Browser validation
 

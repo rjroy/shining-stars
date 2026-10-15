@@ -1,13 +1,33 @@
 ---
 title: Music-informed chart generation
 date: 2026-10-14
-status: draft
+status: superseded
 tags: [charts, music-analysis, generation]
 ---
 
 # Music-informed chart generation
 
-## Decision
+## Status and superseding production decision
+
+This document records an older proposal and is not the production design or
+implementation contract. The user authorized production integration after
+playing The Rising Star Normal candidate and saying it feels good. That feedback
+is limited to that candidate and does not approve every generated chart.
+
+Production retains the existing aubio onset pipeline and adds full-source
+`aubiopitch` YINFFT F0 extraction, cached by source hash, tool identity, and
+extraction recipe. `lane_mapping` is optional and difficulty-scoped in
+`data/charts/song-authoring.json`; Easy, Normal, and Hard select their own notes
+using their own timing-density settings and map those sequences independently
+with soft pitch-following, balance, repetition, and wide-jump costs. The
+full-collection generation and check are being handled separately and are not
+claimed complete here.
+
+The older librosa/spectral-band focus/density/movement design below is
+superseded. Its spectral-band lane assignment, canonical hardest chart, and
+nested Easy/Normal thinning are not part of the approved production workflow.
+
+## Historical proposal (superseded)
 
 Propose an opt-in, local CPU workflow that analyzes audio with librosa and
 converts measured musical evidence into deterministic lane choreography. Keep
@@ -17,18 +37,19 @@ Easy, Normal, and Hard charts for all 29 genre-diverse MP3 songs, without a
 human having to author every note. “Draft”
 does not mean musically verified or automatically approved for runtime.
 
-The proposed per-song controls are only `focus` (`balanced`, `percussive`, or
+The proposed per-song controls were `focus` (`balanced`, `percussive`, or
 `harmonic`), `density`, and `movement`. Existing excerpt and Twilight positions
-remain in place. This is a design proposal, not implementation authorization;
-neither its schema nor generated output is currently supported.
+were to remain in place. At the time, this proposal had no implementation
+authorization; its schema and output were not adopted. The later approved
+production design is described above.
 
 ## Motivation and constraints
 
-Current charts are derived from detected onset timestamps and a repeating lane
-pattern. This is inexpensive and reproducible, but it does not use timbral or
-spectral differences to vary the note stream. A local feature-analysis stage
-could provide more meaningful event selection and lane changes across varied
-recordings while retaining an understandable, auditable pipeline.
+When this proposal was drafted, charts were derived from detected onset
+timestamps and a repeating lane pattern. This was inexpensive and reproducible,
+but did not use timbral or spectral differences to vary the note stream. The
+proposal considered a local feature-analysis stage for varying events across
+recordings.
 
 Requirements:
 
@@ -44,7 +65,7 @@ Requirements:
 - Never imply that features are melody transcription, instrument recognition,
   verified beat grids, or a judgment of playability.
 
-## Current behavior (source-grounded)
+## Behavior at the time of the proposal
 
 `scripts/beat_chart.py` converts audio through FFmpeg to mono, 44.1 kHz,
 16-bit PCM, then runs `aubioonset` with HFC, threshold 0.3, minimum inter-onset
@@ -178,16 +199,13 @@ structured per-song failures, and return a nonzero overall result with the
 failure report. Promote only complete validated Easy/Normal/Hard triples; do
 not leave a partial replacement.
 
-Artifacts should distinguish analysis observations (feature summaries,
-candidate timestamps, confidence/evidence, and ambiguity) from chart
-projections. Keep the original input immutable, verify its hash before writing,
-and write outputs atomically. Never replace the existing onset artifact or
-generated chart as a side effect. A future explicit mode/schema could opt a
-song into the proposed analyzer; until separately implemented and approved,
-legacy mode remains the default and its outputs stay unchanged. No automatic
-migration of the current config or activation in `src/catalog/catalog.ts` is
-proposed. Candidate outputs stay in an isolated sandbox until separately
-reviewed and approved.
+This proposal recommended distinct feature-analysis and candidate namespaces,
+with no automatic migration of the then-current config or activation in
+`src/catalog/catalog.ts`. That isolation recommendation applied only to the
+superseded librosa proposal. The approved aubio-F0 workflow instead generates
+the production onset, pitch-cache, chart, and lane-report artifacts through
+`chart:generate`; it does not use the proposed spectral mode or its opt-in
+schema.
 
 ## Non-goals and limits
 
@@ -201,10 +219,11 @@ reviewed and approved.
   quality checks. The goal is to remove the need for ongoing manual note-by-note
   authoring, not to remove review of candidate quality.
 
-## Validation evidence required before adoption
+## Validation plan for the superseded proposal
 
-Validation is future work; no tests, benchmarks, listening, or successful
-generation runs are claimed here.
+The following was a validation plan for the proposed librosa pipeline only. It
+does not describe current production validation or claim that the full
+collection has completed generation and checking.
 
 - Unit-test synthetic silence, isolated impulses/percussion, sustained tones,
   mixed transient-plus-tone signals, and ambiguous/free-time patterns. Check
@@ -254,8 +273,8 @@ maintenance, and reproducibility trade-offs.
 Reference for the multi-band onset-strength API: librosa
 [`onset_strength_multi`](https://librosa.org/doc/latest/generated/librosa.onset.onset_strength_multi.html).
 
-**Decision recap:** pursue an opt-in CPU/librosa feature-analysis proposal,
-keep aubio as the unchanged baseline, and generate only isolated draft
-candidates until evidence and explicit approval justify adoption. Open tuning
-questions are empirical (focus weighting, budgets, thresholds, and lane
-behavior). This document alone authorizes no implementation or runtime change.
+**Historical proposal recap (superseded):** this document once proposed an
+opt-in CPU/librosa feature-analysis path with aubio as an unchanged baseline.
+That is not the current production decision. The approved production path is
+the aubio F0 lane mapper described at the top of this document and in
+`docs/beat-chart-workflow.md`.

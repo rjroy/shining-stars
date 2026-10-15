@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.5352112676056338,
+      "baselineHandCounts": [
+        57,
+        57
+      ],
+      "baselineLaneCounts": [
+        29,
+        28,
+        29,
+        28
+      ],
+      "baselineLaneShares": [
+        0.2543859649122807,
+        0.24561403508771928,
+        0.2543859649122807,
+        0.24561403508771928
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7605633802816901,
+      "candidateHandCounts": [
+        57,
+        57
+      ],
+      "candidateLaneCounts": [
+        28,
+        29,
+        29,
+        28
+      ],
+      "candidateLaneShares": [
+        0.24561403508771928,
+        0.2543859649122807,
+        0.2543859649122807,
+        0.24561403508771928
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.34375,
+      "noteCount": 114,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 93,
+      "stablePitchCoverage": 0.8157894736842105,
+      "stableUnequalPitchAdjacentPairs": 71,
+      "unknownPitchCount": 21
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.5654450261780105,
+      "baselineHandCounts": [
+        171,
+        171
+      ],
+      "baselineLaneCounts": [
+        86,
+        85,
+        86,
+        85
+      ],
+      "baselineLaneShares": [
+        0.25146198830409355,
+        0.24853801169590642,
+        0.25146198830409355,
+        0.24853801169590642
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7801047120418848,
+      "candidateHandCounts": [
+        172,
+        170
+      ],
+      "candidateLaneCounts": [
+        86,
+        86,
+        86,
+        84
+      ],
+      "candidateLaneShares": [
+        0.25146198830409355,
+        0.25146198830409355,
+        0.25146198830409355,
+        0.24561403508771928
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 342,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 280,
+      "stablePitchCoverage": 0.8187134502923976,
+      "stableUnequalPitchAdjacentPairs": 191,
+      "unknownPitchCount": 62
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.47572815533980584,
+      "baselineHandCounts": [
+        85,
+        85
+      ],
+      "baselineLaneCounts": [
+        43,
+        42,
+        43,
+        42
+      ],
+      "baselineLaneShares": [
+        0.2529411764705882,
+        0.24705882352941178,
+        0.2529411764705882,
+        0.24705882352941178
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7961165048543689,
+      "candidateHandCounts": [
+        87,
+        83
+      ],
+      "candidateLaneCounts": [
+        43,
+        44,
+        43,
+        40
+      ],
+      "candidateLaneShares": [
+        0.2529411764705882,
+        0.25882352941176473,
+        0.2529411764705882,
+        0.23529411764705882
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 170,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 140,
+      "stablePitchCoverage": 0.8235294117647058,
+      "stableUnequalPitchAdjacentPairs": 103,
+      "unknownPitchCount": 30
+    }
+  },
+  "pitch_analysis_key": "3d90f74dedeadd512549c611a3aea2dd68236e23da25ea1ef9e156b63a512176",
+  "schema_version": 1,
+  "song_id": "the-star-that-followed-us",
+  "source_sha256": "8eb576a411def42a1a17bd01272a04e939c958c3b0eec034b3d126cd06614f5d"
+}

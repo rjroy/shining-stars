@@ -893,8 +893,9 @@
     312.105621,
     312.354431
   ],
+  "pitch_analysis_key": "9a586f0c90f8f4a83a317d924d0a9dae39388863ffd728c2a3dec5717768222f",
   "projection": {
-    "profile_sha256": "40f40ff5531355093465e619259fb1a6548c4b27a5dd0379fc66f26862f4b9bb",
+    "profile_sha256": "de552b8009f7a8b6e856d3e270bd560e54242b20f534f15ef640bec11041adef",
     "song": {
       "difficulties": {
         "easy": {

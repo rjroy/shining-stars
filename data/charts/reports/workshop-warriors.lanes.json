@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.4375,
+      "baselineHandCounts": [
+        92,
+        92
+      ],
+      "baselineLaneCounts": [
+        46,
+        46,
+        46,
+        46
+      ],
+      "baselineLaneShares": [
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7,
+      "candidateHandCounts": [
+        93,
+        91
+      ],
+      "candidateLaneCounts": [
+        46,
+        47,
+        46,
+        45
+      ],
+      "candidateLaneShares": [
+        0.25,
+        0.2554347826086957,
+        0.25,
+        0.24456521739130435
+      ],
+      "candidateLongestLaneRun": 4,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 184,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 131,
+      "stablePitchCoverage": 0.7119565217391305,
+      "stableUnequalPitchAdjacentPairs": 80,
+      "unknownPitchCount": 53
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.4626865671641791,
+      "baselineHandCounts": [
+        277,
+        276
+      ],
+      "baselineLaneCounts": [
+        139,
+        138,
+        138,
+        138
+      ],
+      "baselineLaneShares": [
+        0.2513562386980108,
+        0.24954792043399637,
+        0.24954792043399637,
+        0.24954792043399637
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7611940298507462,
+      "candidateHandCounts": [
+        278,
+        275
+      ],
+      "candidateLaneCounts": [
+        140,
+        138,
+        138,
+        137
+      ],
+      "candidateLaneShares": [
+        0.25316455696202533,
+        0.24954792043399637,
+        0.24954792043399637,
+        0.24773960216998192
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 553,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 376,
+      "stablePitchCoverage": 0.6799276672694394,
+      "stableUnequalPitchAdjacentPairs": 201,
+      "unknownPitchCount": 177
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.5391304347826087,
+      "baselineHandCounts": [
+        138,
+        137
+      ],
+      "baselineLaneCounts": [
+        69,
+        69,
+        69,
+        68
+      ],
+      "baselineLaneShares": [
+        0.2509090909090909,
+        0.2509090909090909,
+        0.2509090909090909,
+        0.24727272727272728
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.8,
+      "candidateHandCounts": [
+        139,
+        136
+      ],
+      "candidateLaneCounts": [
+        69,
+        70,
+        69,
+        67
+      ],
+      "candidateLaneShares": [
+        0.2509090909090909,
+        0.2545454545454545,
+        0.2509090909090909,
+        0.24363636363636362
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.34375,
+      "noteCount": 275,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 192,
+      "stablePitchCoverage": 0.6981818181818182,
+      "stableUnequalPitchAdjacentPairs": 115,
+      "unknownPitchCount": 83
+    }
+  },
+  "pitch_analysis_key": "92568a2441da105ca8b75765e334c0c679b858359f8bbd1714c1f5e941be2f2a",
+  "schema_version": 1,
+  "song_id": "workshop-warriors",
+  "source_sha256": "4694678e77e42c8b7dac05412d2d9653b743e53a87254490995b9e5d44fb8f9f"
+}

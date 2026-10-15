@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.48,
+      "baselineHandCounts": [
+        121,
+        120
+      ],
+      "baselineLaneCounts": [
+        61,
+        60,
+        60,
+        60
+      ],
+      "baselineLaneShares": [
+        0.25311203319502074,
+        0.24896265560165975,
+        0.24896265560165975,
+        0.24896265560165975
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.808,
+      "candidateHandCounts": [
+        123,
+        118
+      ],
+      "candidateLaneCounts": [
+        62,
+        61,
+        60,
+        58
+      ],
+      "candidateLaneShares": [
+        0.2572614107883817,
+        0.25311203319502074,
+        0.24896265560165975,
+        0.24066390041493776
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.34375,
+      "noteCount": 241,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 185,
+      "stablePitchCoverage": 0.7676348547717843,
+      "stableUnequalPitchAdjacentPairs": 125,
+      "unknownPitchCount": 56
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.4575757575757576,
+      "baselineHandCounts": [
+        367,
+        367
+      ],
+      "baselineLaneCounts": [
+        184,
+        183,
+        184,
+        183
+      ],
+      "baselineLaneShares": [
+        0.2506811989100817,
+        0.24931880108991825,
+        0.2506811989100817,
+        0.24931880108991825
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.8181818181818182,
+      "candidateHandCounts": [
+        367,
+        367
+      ],
+      "candidateLaneCounts": [
+        183,
+        184,
+        184,
+        183
+      ],
+      "candidateLaneShares": [
+        0.24931880108991825,
+        0.2506811989100817,
+        0.2506811989100817,
+        0.24931880108991825
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 734,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 569,
+      "stablePitchCoverage": 0.7752043596730245,
+      "stableUnequalPitchAdjacentPairs": 330,
+      "unknownPitchCount": 165
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.520618556701031,
+      "baselineHandCounts": [
+        181,
+        181
+      ],
+      "baselineLaneCounts": [
+        91,
+        90,
+        91,
+        90
+      ],
+      "baselineLaneShares": [
+        0.2513812154696133,
+        0.24861878453038674,
+        0.2513812154696133,
+        0.24861878453038674
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7577319587628866,
+      "candidateHandCounts": [
+        182,
+        180
+      ],
+      "candidateLaneCounts": [
+        90,
+        92,
+        92,
+        88
+      ],
+      "candidateLaneShares": [
+        0.24861878453038674,
+        0.2541436464088398,
+        0.2541436464088398,
+        0.2430939226519337
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 362,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 293,
+      "stablePitchCoverage": 0.8093922651933702,
+      "stableUnequalPitchAdjacentPairs": 194,
+      "unknownPitchCount": 69
+    }
+  },
+  "pitch_analysis_key": "d3d004fc02372356355446c576e1ab46e2b4e4802355e31f603bf3f3552ca571",
+  "schema_version": 1,
+  "song_id": "everythings-different-this-year",
+  "source_sha256": "3345fbd981662403474902ebfb0e87d9995c4d25c5ed6280d1d8a00aea4eaba8"
+}

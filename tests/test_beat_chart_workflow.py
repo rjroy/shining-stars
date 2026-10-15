@@ -555,6 +555,158 @@ class BeatChartWorkflowTests(unittest.TestCase):
 
 
 class SongAuthoringConfigTests(unittest.TestCase):
+    def test_difficulty_lane_mapping_overrides_are_independent_and_defaulted(self):
+        source_path = beat_chart.PROJECT_ROOT / "data/charts/song-authoring.json"
+        document = json.loads(source_path.read_text(encoding="utf-8"))
+        song = document["songs"]["the-rising-star"]
+        normal_mapping = {"pitch_following": 0}
+        hard_mapping = {"lane_balance": 2.5}
+        song["difficulties"]["normal"]["lane_mapping"] = normal_mapping
+        song["difficulties"]["hard"]["lane_mapping"] = hard_mapping
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "song-authoring.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            collection_song = beat_chart.load_authoring_collection(path)[
+                "the-rising-star"
+            ]
+            compatibility_song = beat_chart.load_song_config(
+                path, "the-rising-star"
+            )
+
+            for loaded_song in (collection_song, compatibility_song):
+                self.assertEqual(
+                    loaded_song["difficulties"]["normal"]["lane_mapping"],
+                    normal_mapping,
+                )
+                self.assertEqual(
+                    loaded_song["difficulties"]["hard"]["lane_mapping"],
+                    hard_mapping,
+                )
+                self.assertNotIn(
+                    "lane_mapping", loaded_song["difficulties"]["easy"]
+                )
+            self.assertEqual(
+                beat_chart.validate_lane_mapping(normal_mapping),
+                {
+                    "pitch_following": 0,
+                    "lane_balance": 1,
+                    "repetition_avoidance": 1,
+                    "wide_jump_avoidance": 1,
+                    "adaptation_block_notes": 32,
+                },
+            )
+            self.assertEqual(
+                beat_chart.validate_lane_mapping(hard_mapping),
+                {
+                    "pitch_following": 1,
+                    "lane_balance": 2.5,
+                    "repetition_avoidance": 1,
+                    "wide_jump_avoidance": 1,
+                    "adaptation_block_notes": 32,
+                },
+            )
+
+            for difficulty in ("easy", "normal", "hard"):
+                song["difficulties"][difficulty].pop("lane_mapping", None)
+            path.write_text(json.dumps(document), encoding="utf-8")
+            for loaded_song in (
+                beat_chart.load_authoring_collection(path)["the-rising-star"],
+                beat_chart.load_song_config(path, "the-rising-star"),
+            ):
+                for difficulty in ("easy", "normal", "hard"):
+                    self.assertNotIn(
+                        "lane_mapping", loaded_song["difficulties"][difficulty]
+                    )
+                    self.assertEqual(
+                        beat_chart.validate_lane_mapping(),
+                        {
+                            "pitch_following": 1,
+                            "lane_balance": 1,
+                            "repetition_avoidance": 1,
+                            "wide_jump_avoidance": 1,
+                            "adaptation_block_notes": 32,
+                        },
+                    )
+
+    def test_difficulty_lane_mapping_override_is_strict_and_bounded(self):
+        source_path = beat_chart.PROJECT_ROOT / "data/charts/song-authoring.json"
+        document = json.loads(source_path.read_text(encoding="utf-8"))
+        valid = {
+            "pitch_following": 0,
+            "lane_balance": 4,
+            "repetition_avoidance": 1.5,
+            "wide_jump_avoidance": 2,
+            "adaptation_block_notes": 64,
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "song-authoring.json"
+
+            def load_with(loader, mapping):
+                document["songs"]["the-rising-star"]["difficulties"]["normal"][
+                    "lane_mapping"
+                ] = mapping
+                path.write_text(json.dumps(document), encoding="utf-8")
+                if loader == "collection":
+                    return beat_chart.load_authoring_collection(path)["the-rising-star"]
+                return beat_chart.load_song_config(path, "the-rising-star")
+
+            valid_edges = [
+                {
+                    **valid,
+                    **{name: edge for name in (
+                        "pitch_following",
+                        "lane_balance",
+                        "repetition_avoidance",
+                        "wide_jump_avoidance",
+                    )},
+                    "adaptation_block_notes": block_size,
+                }
+                for edge, block_size in ((0, 8), (4, 128))
+            ]
+            for index, mapping in enumerate(valid_edges):
+                with self.subTest(valid_edge=index):
+                    self.assertEqual(
+                        load_with("collection", mapping)["difficulties"]["normal"][
+                            "lane_mapping"
+                        ],
+                        mapping,
+                    )
+                    self.assertEqual(
+                        load_with("compatibility", mapping)["difficulties"][
+                            "normal"
+                        ]["lane_mapping"],
+                        mapping,
+                    )
+
+            invalid_mappings = [None, [], {**valid, "unexpected": 1}]
+            for name in (
+                "pitch_following",
+                "lane_balance",
+                "repetition_avoidance",
+                "wide_jump_avoidance",
+            ):
+                for value in (
+                    True,
+                    float("nan"),
+                    float("inf"),
+                    float("-inf"),
+                    -0.01,
+                    4.01,
+                    "1",
+                ):
+                    invalid_mappings.append({**valid, name: value})
+            invalid_mappings.extend(
+                {**valid, "adaptation_block_notes": value}
+                for value in (True, 8.0, 7, 129, 32.5, "32")
+            )
+            for index, mapping in enumerate(invalid_mappings):
+                for loader in ("collection", "compatibility"):
+                    with self.subTest(index=index, mapping=mapping, loader=loader):
+                        with self.assertRaises(ValueError):
+                            load_with(loader, mapping)
+
     def test_shared_difficulty_profiles_define_all_runtime_values(self):
         profile_path = beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json"
         profile_document = json.loads(profile_path.read_text(encoding="utf-8"))
@@ -569,7 +721,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         "twilight": {
                             "perfect": {"personal_cost": 0, "damage": 2},
                             "good": {"personal_cost": 0, "damage": 1},
-                            "miss": {"personal_cost": 2, "damage": 0},
+                            "miss": {"personal_cost": 3, "damage": 0},
                         },
                     },
                     "normal": {
@@ -577,8 +729,8 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         "audience": {"perfect": 3, "good": 2, "miss": 0},
                         "twilight": {
                             "perfect": {"personal_cost": 0, "damage": 3},
-                            "good": {"personal_cost": 1, "damage": 2},
-                            "miss": {"personal_cost": 3, "damage": 0},
+                            "good": {"personal_cost": 3, "damage": 2},
+                            "miss": {"personal_cost": 4, "damage": 0},
                         },
                     },
                     "hard": {
@@ -586,8 +738,8 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         "audience": {"perfect": 5, "good": 3, "miss": 0},
                         "twilight": {
                             "perfect": {"personal_cost": 0, "damage": 5},
-                            "good": {"personal_cost": 2, "damage": 3},
-                            "miss": {"personal_cost": 3, "damage": 0},
+                            "good": {"personal_cost": 5, "damage": 3},
+                            "miss": {"personal_cost": 7, "damage": 0},
                         },
                     },
                 }
