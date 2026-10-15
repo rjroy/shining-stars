@@ -1,14 +1,17 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, statfs, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  createJudgmentReceiptCollector,
   goodJudgmentTargetSeconds,
   recordJudgmentReceipt,
-  scheduleJudgmentVisualCapture,
 } from './judgment-receipt.mjs';
+import { createCdpCommandChannel } from './cdp-command.mjs';
+import { stopOwnedChildren } from './child-process-cleanup.mjs';
+import { createBackgroundTaskTracker } from './background-task-tracker.mjs';
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -86,9 +89,12 @@ await mkdir(output, { recursive: true });
 const chromium = '/usr/bin/chromium';
 const scratch = await (async () => {
   const parent = '/tmp/opencode';
-  const name = `brightvale-gameplay-${process.pid}`;
-  const dir = path.join(parent, name);
-  await mkdir(dir, { recursive: true });
+  await mkdir(parent, { recursive: true });
+  const space = await statfs(parent);
+  const availableBytes = Number(space.bavail) * Number(space.bsize);
+  if (availableBytes < 1024 ** 3)
+    throw new Error(`Browser proof requires at least 1 GiB free in ${parent}; found ${Math.floor(availableBytes / 1024 ** 2)} MiB.`);
+  const dir = await mkdtemp(path.join(parent, `brightvale-gameplay-${process.pid}-`));
   return dir;
 })();
 const freePort = () =>
@@ -124,11 +130,10 @@ server.stderr.setEncoding('utf8').on('data', (value) => {
 });
 let browser;
 let cdp;
-let sequence = 0;
-const pending = new Map();
+let cdpChannel;
 const events = [];
 const reports = {};
-const lateTravelWrites = [];
+const lateTravelTasks = createBackgroundTaskTracker();
 let lateTravelBindingInstalled = false;
 const base = `http://127.0.0.1:${vitePort}/`;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -142,9 +147,8 @@ async function waitFor(check, label, timeout = 30000) {
   throw new Error(`Timed out waiting for ${label}`);
 }
 async function command(method, params = {}) {
-  const id = ++sequence;
-  cdp.send(JSON.stringify({ id, method, params }));
-  return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+  if (!cdpChannel) throw new Error(`CDP command ${method} issued before connection setup`);
+  return cdpChannel.command(method, params);
 }
 async function evaluate(expression, awaitPromise = true) {
   const result = await command('Runtime.evaluate', {
@@ -432,7 +436,7 @@ async function pauseWithEscape() {
 }
 async function status() {
   return evaluate(
-    `(()=>{const node=document.querySelector('[data-renderer-status]');const message=document.querySelector('[data-renderer-message]')?.textContent?.trim()??'';const retry=document.querySelector('[data-action=renderer-retry]');const renderer=node?.hidden?'rendered':retry&&!retry.disabled?'unavailable':/resize/i.test(message)?'suspended':/loading/i.test(message)?'loading':'unavailable';return{renderer,text:message,panels:[...document.querySelectorAll('[data-panel]')].filter(e=>!e.hidden).map(e=>e.dataset.panel),host:(()=>{const r=document.querySelector('.play-surface')?.getBoundingClientRect();return r?{width:r.width,height:r.height}:null})(),time:document.querySelector('[data-time]')?.textContent?.trim(),startDisabled:document.querySelector('[data-action=start]')?.disabled,retryHidden:retry?.hidden,retryDisabled:retry?.disabled}})()`,
+    `(()=>{const gameplay=document.querySelector('[data-experience-screen="gameplay"]');const node=gameplay?.querySelector('[data-renderer-status]');const message=gameplay?.querySelector('[data-renderer-message]')?.textContent?.trim()??'';const retry=gameplay?.querySelector('[data-action=renderer-retry]');const renderer=node?.hidden?'rendered':retry&&!retry.disabled?'unavailable':/resize/i.test(message)?'suspended':/loading/i.test(message)?'loading':'unavailable';return{renderer,text:message,panels:[...document.querySelectorAll('[data-panel]')].filter(e=>!e.hidden).map(e=>e.dataset.panel),host:(()=>{const r=document.querySelector('[data-experience-surface]')?.getBoundingClientRect();return r?{width:r.width,height:r.height}:null})(),time:gameplay?.querySelector('[data-time]')?.textContent?.trim(),startDisabled:gameplay?.querySelector('[data-action=start]')?.disabled,retryHidden:retry?.hidden,retryDisabled:retry?.disabled}})()`,
   );
 }
 async function screenshot(name) {
@@ -446,41 +450,6 @@ async function screenshot(name) {
     path.join(output, `${runPrefix}-${name}`),
     Buffer.from(shot.data, 'base64'),
   );
-}
-function queueJudgmentVisualCapture(receipt, pendingCaptures) {
-  const filename = `${runPrefix}-judgment-${receipt.outcome}-capture-${receipt.noteId}.webp`;
-  const capture = scheduleJudgmentVisualCapture(
-    receipt,
-    async () => {
-      const stateAtCaptureRequest = await evaluate(`(()=>({
-        liveRegionText:document.querySelector('[data-gameplay-status]')?.textContent?.trim()??'',
-        performanceTime:performance.now(),
-        audioTime:window.__proofAudioContexts?.[0]?.currentTime??null,
-        scheduledWhen:window.__proofScheduledWhen??null
-      }))()`);
-      await screenshot(filename);
-      const expectedStillVisible = new RegExp(
-        `Lane ${receipt.lane}: ${receipt.outcome}`,
-        'i',
-      ).test(stateAtCaptureRequest.liveRegionText);
-      if (!expectedStillVisible) {
-        throw new Error(
-          `Visual capture for ${receipt.noteId} was requested after its feedback changed: ${JSON.stringify(stateAtCaptureRequest)}`,
-        );
-      }
-      return {
-        filename,
-        captureState: stateAtCaptureRequest,
-        stateVerifiedAtCaptureRequest: expectedStillVisible,
-        screenshotRole: 'captured after receipt; not labeled as a peak frame',
-      };
-    },
-    (result) => {
-      reports.judgmentVisualCaptures ??= [];
-      reports.judgmentVisualCaptures.push(result);
-    },
-  );
-  pendingCaptures.push(capture);
 }
 function timingLegendScreenshotProbe(name, measuredRegion) {
   const imagePath = path.join(output, `${runPrefix}-${name}`);
@@ -610,51 +579,55 @@ async function main() {
   }, 'Chromium target');
   cdp = new WebSocket(target.webSocketDebuggerUrl);
   await once(cdp, 'open');
+  cdpChannel = createCdpCommandChannel(cdp, { timeoutMs: 5000 });
   cdp.addEventListener('message', (event) => {
     const msg = JSON.parse(event.data);
-    if (msg.id && pending.has(msg.id)) {
-      const p = pending.get(msg.id);
-      pending.delete(msg.id);
-      msg.error
-        ? p.reject(new Error(msg.error.message))
-        : p.resolve(msg.result);
-    } else if (
+    if (cdpChannel.handleMessage(msg)) return;
+    if (
       msg.method === 'Runtime.bindingCalled' &&
       msg.params.name === '__brightvaleLateTravelSample'
     ) {
       const sample = JSON.parse(msg.params.payload);
       const filename = `${runPrefix}-late-note-travel-${sample.name}.webp`;
-      lateTravelWrites.push(
-        command('Page.captureScreenshot', {
+      lateTravelTasks.track(async () => {
+        const capture = await command('Page.captureScreenshot', {
           format: 'webp',
           quality: 90,
           fromSurface: true,
           captureBeyondViewport: false,
-        })
-          .then((capture) =>
-            writeFile(
-              path.join(output, filename),
-              Buffer.from(capture.data, 'base64'),
-            ),
-          )
-          .then(() => {
-            sample.screenshot = filename;
-            reports.lateNoteTravel?.push(sample);
-          }),
-      );
-    } else if (msg.method)
-      events.push({ method: msg.method, params: msg.params });
+        });
+        await writeFile(
+          path.join(output, filename),
+          Buffer.from(capture.data, 'base64'),
+        );
+        sample.screenshot = filename;
+        reports.lateNoteTravel?.push(sample);
+      }, `Late-travel screenshot ${filename}`);
+    } else if (['Runtime.exceptionThrown', 'Runtime.consoleAPICalled', 'Network.loadingFailed', 'Network.requestWillBeSent'].includes(msg.method)) {
+      const params = msg.params;
+      const detail = msg.method === 'Network.requestWillBeSent'
+        ? { requestId: params.requestId, url: params.request.url.slice(0, 500), method: params.request.method, type: params.type }
+        : msg.method === 'Network.loadingFailed'
+          ? { requestId: params.requestId, errorText: params.errorText, canceled: params.canceled, blockedReason: params.blockedReason }
+          : msg.method === 'Runtime.consoleAPICalled'
+            ? { type: params.type, text: (params.args ?? []).map((arg) => arg.value ?? arg.description ?? '').join(' ').slice(0, 1000), url: params.stackTrace?.callFrames?.[0]?.url }
+            : { text: params.exceptionDetails?.text, exception: params.exceptionDetails?.exception?.description?.slice(0, 2000), url: params.exceptionDetails?.url, lineNumber: params.exceptionDetails?.lineNumber };
+      events.push({ method: msg.method, params: detail });
+      if (events.length > 200) events.shift();
+    }
   });
   await command('Page.enable');
   await command('Runtime.enable');
+  await command('Network.enable');
   await command('Page.addScriptToEvaluateOnNewDocument', {
     source: `(()=>{
       window.__proofTrustedClicks=[];
       window.__proofLastTrustedClick=null;
-      window.__proofJudgmentReceipts=[];
-      window.__proofKeydownReceipts=[];
+      const makeCollector=${createJudgmentReceiptCollector.toString()};
+      window.__proofReceiptCollector=makeCollector();
+      window.__proofJudgmentReceipts=window.__proofReceiptCollector.judgments;
+      window.__proofKeydownReceipts=window.__proofReceiptCollector.keydowns;
       window.__proofStatusMutations=[];
-      window.__proofActiveJudgment=null;
       document.addEventListener('click',event=>{
         const button=event.target instanceof Element?event.target.closest('button[data-action]'):null;
         if(!button)return;
@@ -663,32 +636,16 @@ async function main() {
         window.__proofLastTrustedClick=record;
       },true);
       const observeJudgment=(mutations)=>{
-        const active=window.__proofActiveJudgment;
         const status=document.querySelector('[data-gameplay-status]');
         const text=status?.textContent?.trim()??'';
         if(status&&mutations.some(mutation=>mutation.target===status||status.contains(mutation.target)))
           window.__proofStatusMutations.push({text,performanceTime:performance.now(),audioTime:window.__proofAudioContexts?.[0]?.currentTime??null});
-        if(!active||!text||text===active.baselineText)return;
-        const match=text.match(new RegExp('Lane '+active.lane+': (Perfect|Good|Miss)','i'));
-        if(!match)return;
-        window.__proofJudgmentReceipts.push({
-          ...active,
-          outcome:match[1].toLowerCase(),
-          liveRegionText:text,
-          performanceTime:performance.now(),
-          audioTime:window.__proofAudioContexts?.[0]?.currentTime??null,
-          scheduledWhen:window.__proofScheduledWhen??null
-        });
-        window.__proofActiveJudgment=null;
+        window.__proofReceiptCollector.observeStatus(text,performance.now(),window.__proofAudioContexts?.[0]?.currentTime??null,window.__proofScheduledWhen??null);
       };
       new MutationObserver(observeJudgment).observe(document,{subtree:true,childList:true,characterData:true});
       document.addEventListener('keydown',event=>{
-        const active=window.__proofActiveJudgment;
-        if(!active||event.code!==active.keyCode||event.repeat)return;
         const context=window.__proofAudioContexts?.[0];
-        const receipt={...active,trusted:event.isTrusted,code:event.code,
-          performanceTime:performance.now(),audioTime:context?.currentTime??null};
-        window.__proofKeydownReceipts.push(receipt);
+        window.__proofReceiptCollector.observeKeydown(event,performance.now(),context?.currentTime??null);
       },true);
       const Native=window.AudioContext;
       if(Native){
@@ -720,7 +677,81 @@ async function main() {
   reports.startupGesture = await selectAndStartSong('initial run');
   reports.gameplayInitialScreenshot = `${runPrefix}-gameplay-initial.webp`;
   await screenshot('gameplay-initial.webp');
+  const profileFile = JSON.parse(
+    await readFile(path.join(root, 'data/charts/difficulty-profiles.json'), 'utf8'),
+  );
+  const profile = profileFile.profiles[difficulty];
+  const audienceMaximum =
+    notes.filter((note) => note.time < chart.twilightAt).length *
+    profile.audience.perfect;
+  const initialSchedule = reports.startupGesture.scheduled.scheduledWhen;
+  const waitVisualTransport = async (position) => {
+    const deadline = Date.now() + 60000;
+    while (Date.now() < deadline) {
+      const reached = await evaluate(
+        `(()=>{const context=window.__proofAudioContexts?.[0];return context&&context.currentTime-${JSON.stringify(initialSchedule)}>=${JSON.stringify(position)}})()`,
+      );
+      if (reached) return;
+      await pause(5);
+    }
+    throw new Error(`Timed out waiting for visual-pass song time ${position}`);
+  };
+  // This independent run owns all screenshots, viewport changes, and OCR.
+  // The later native-clock receipt run performs no visual capture work.
+  await waitVisualTransport(10.2);
+  reports.audienceReference = await inspect();
+  reports.audienceHud = await inspectResourceHud();
+  if (
+    reports.audienceHud.renownLabel.hidden ||
+    reports.audienceHud.renown.hidden ||
+    !reports.audienceHud.personalLabel.hidden ||
+    !reports.audienceHud.personal.hidden ||
+    !reports.audienceHud.twilightGroup.hidden ||
+    !Number.isFinite(Number(reports.audienceHud.renown.text)) ||
+    reports.audienceHud.renownMaximum.text !== String(audienceMaximum) ||
+    reports.audienceHud.renownBar.ariaValueText !==
+      `${reports.audienceHud.renown.text} of ${audienceMaximum}`
+  )
+    throw new Error(
+      `Audience HUD did not show only uncapped Renown: ${JSON.stringify(reports.audienceHud)}`,
+    );
+  await screenshot('audience-reference.webp');
+  const legendRegion = reports.audienceReference.visible.hud.find(
+    (entry) => entry.key === 'legend',
+  )?.rect;
+  if (legendRegion === undefined)
+    throw new Error('Could not measure the visible timing-legend region');
+  reports.timingLegendScreenshotProbe = timingLegendScreenshotProbe(
+    'audience-reference.webp',
+    legendRegion,
+  );
+  await waitVisualTransport(19.0);
+  await resize(1120, 700);
+  await waitFor(async () => {
+    const canvas = await evaluate(
+      `(()=>{const c=document.querySelector('.play-surface canvas');const r=c?.getBoundingClientRect();return r?{cw:c.width,ch:c.height,w:r.width,h:r.height}:null})()`,
+    );
+    return canvas?.cw > 0 && canvas?.ch > 0 && canvas?.w > 0 && canvas?.h > 0;
+  }, 'visual-pass narrow canvas resize');
+  reports.audienceNarrow = await inspect();
   reports.initialPause = await pauseWithEscape();
+  await screenshot('audience-narrow.webp');
+  reports.activeResponsiveFrames = [];
+  for (const [width, height, name] of [
+    [1920, 600, 'wide-short'],
+    [1366, 768, 'laptop'],
+    [1280, 720, 'compact-laptop'],
+  ]) {
+    await resize(width, height);
+    const capture = await inspect();
+    reports.activeResponsiveFrames.push({ width, height, capture });
+    if (capture.state.renderer !== 'rendered')
+      throw new Error(
+        `Active renderer not rendered at ${width}x${height}: ${JSON.stringify(capture.state)}`,
+      );
+    await screenshot(`audience-${name}.webp`);
+  }
+  await resize(1120, 700);
   await resize(1600, 900);
   await waitFor(
     async () => {
@@ -776,26 +807,16 @@ async function main() {
       `Play scheduled a different chart interval: ${JSON.stringify({ startup: reports.startupGesture, chartSourceStart, chartDuration })}`,
     );
   }
-  const profileFile = JSON.parse(
-    await readFile(
-      path.join(root, 'data/charts/difficulty-profiles.json'),
-      'utf8',
-    ),
-  );
-  const goodWindowSeconds =
-    profileFile.profiles[difficulty].timing.good_ms / 1000;
+  const goodWindowSeconds = profile.timing.good_ms / 1000;
   const sendCutoffSeconds = goodWindowSeconds * 0.75;
   const perfectWindowSeconds =
-    profileFile.profiles[difficulty].timing.perfect_ms / 1000;
+    profile.timing.perfect_ms / 1000;
   const goodOffsetSeconds = goodJudgmentTargetSeconds(
-    profileFile.profiles[difficulty].timing.perfect_ms,
-    profileFile.profiles[difficulty].timing.good_ms,
+    profile.timing.perfect_ms,
+    profile.timing.good_ms,
   );
   const perfectLeadSeconds = Math.min(0.02, perfectWindowSeconds * 0.4);
   const inputDispatchLeadSeconds = Math.min(0.03, goodWindowSeconds * 0.3);
-  const audienceMaximum =
-    notes.filter((note) => note.time < chart.twilightAt).length *
-    profileFile.profiles[difficulty].audience.perfect;
   let scheduledWhen = await waitFor(
     async () =>
       evaluate(
@@ -837,7 +858,7 @@ async function main() {
         expected:${JSON.stringify(expected)},
         baselineText:document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''
       };
-      window.__proofActiveJudgment=active;
+      window.__proofReceiptCollector.begin(active);
       return active;
     })()`);
   const waitForKeydownReceipt = async (note) =>
@@ -913,11 +934,14 @@ async function main() {
           `Could not schedule actual-app travel samples for ${note.id}`,
         );
       await waitFor(
-        async () => reports.lateNoteTravel.length === samples.length,
+        async () => {
+          lateTravelTasks.throwIfFailed();
+          return reports.lateNoteTravel.length === samples.length;
+        },
         `actual-app travel frames for ${note.id}`,
         15000,
       );
-      await Promise.all(lateTravelWrites);
+      await lateTravelTasks.drain();
     } finally {
       await evaluate(
         `window.__proofAudioContexts?.[0]?.__setProofClockRate?.(1)`,
@@ -928,7 +952,6 @@ async function main() {
     );
   };
   const hitNotes = [];
-  const pendingPeakScreenshots = [];
   if (!reports.initialPause.panels.includes('pause'))
     throw new Error(
       `Expected the initial performance to be paused during chart-proof setup: ${JSON.stringify(reports.initialPause)}`,
@@ -968,78 +991,12 @@ async function main() {
     scheduled: restartedSchedule,
     clockModified: false,
   };
-  let capturedReferenceAudience = false;
-  let resizedNarrow = false;
-  let capturedNarrowAudience = false;
-  let capturedNarrowTwilight = false;
-  let capturedReferenceTwilight = false;
   let pausedAtTwilight = false;
   for (const note of notes) {
     const expectedJudgment = judgmentExpectedById.get(note.id);
     if (expectedJudgment !== undefined)
       await armJudgmentReceipt(note, expectedJudgment);
-    if (!capturedReferenceAudience && note.time >= 9.7) {
-      await waitTransport(10.2);
-      reports.audienceReference = await inspect();
-      reports.audienceHud = await inspectResourceHud();
-      if (
-        reports.audienceHud.renownLabel.hidden ||
-        reports.audienceHud.renown.hidden ||
-        !reports.audienceHud.personalLabel.hidden ||
-        !reports.audienceHud.personal.hidden ||
-        !reports.audienceHud.twilightGroup.hidden ||
-        !Number.isFinite(Number(reports.audienceHud.renown.text)) ||
-        reports.audienceHud.renownMaximum.text !== String(audienceMaximum) ||
-        reports.audienceHud.renownBar.ariaValueText !==
-          `${reports.audienceHud.renown.text} of ${audienceMaximum}`
-      )
-        throw new Error(
-          `Audience HUD did not show only uncapped Renown: ${JSON.stringify(reports.audienceHud)}`,
-        );
-      await screenshot('audience-reference.webp');
-      const legendRegion = reports.audienceReference.visible.hud.find(
-        (entry) => entry.key === 'legend',
-      )?.rect;
-      if (legendRegion === undefined)
-        throw new Error('Could not measure the visible timing-legend region');
-      reports.timingLegendScreenshotProbe = timingLegendScreenshotProbe(
-        'audience-reference.webp',
-        legendRegion,
-      );
-      capturedReferenceAudience = true;
-    }
-    if (!resizedNarrow && note.time >= 18.8) {
-      await waitTransport(19.0);
-      await resize(1120, 700);
-      await waitFor(async () => {
-        const r = await evaluate(
-          `(()=>{const c=document.querySelector('.play-surface canvas');const r=c?.getBoundingClientRect();return r?{cw:c.width,ch:c.height,w:r.width,h:r.height}:null})()`,
-        );
-        return r?.cw > 0 && r?.ch > 0 && r?.w > 0 && r?.h > 0;
-      }, 'narrow canvas resize');
-      reports.audienceNarrow = await inspect();
-      await screenshot('audience-narrow.webp');
-      resizedNarrow = true;
-      capturedNarrowAudience = true;
-
-      reports.activeResponsiveFrames = [];
-      for (const [width, height, name] of [
-        [1920, 600, 'wide-short'],
-        [1366, 768, 'laptop'],
-        [1280, 720, 'compact-laptop'],
-      ]) {
-        await resize(width, height);
-        const capture = await inspect();
-        reports.activeResponsiveFrames.push({ width, height, capture });
-        if (capture.state.renderer !== 'rendered')
-          throw new Error(
-            `Active renderer not rendered at ${width}x${height}: ${JSON.stringify(capture.state)}`,
-          );
-        await screenshot(`audience-${name}.webp`);
-      }
-      await resize(1120, 700);
-    }
-    if (!capturedNarrowTwilight && note.id === 't02') {
+    if (note.id === 't02') {
       await waitTransport(note.time);
       reports.twilightNarrow = await inspect();
       reports.twilightHud = await inspectResourceHud();
@@ -1052,10 +1009,8 @@ async function main() {
         !Number.isFinite(Number(reports.twilightHud.personal.text)) ||
         !Number.isFinite(Number(reports.twilightHud.twilight.text)) ||
         reports.twilightHud.personal.text !== reports.twilightHud.renown.text ||
-        reports.twilightHud.personalMaximum.text !==
-          reports.twilightHud.renown.text ||
-        reports.twilightHud.twilightMaximum.text !==
-          String(chart.twilightStrength)
+        reports.twilightHud.personalMaximum.text !== reports.twilightHud.renown.text ||
+        reports.twilightHud.twilightMaximum.text !== String(chart.twilightStrength)
       )
         throw new Error(
           `Twilight HUD did not show both strengths: ${JSON.stringify(reports.twilightHud)}`,
@@ -1063,35 +1018,6 @@ async function main() {
       reports.modeAtTransition = await evaluate(
         `document.querySelector('[data-mode-label]')?.textContent?.trim() ?? null`,
       );
-      await screenshot('twilight-narrow.webp');
-      capturedNarrowTwilight = true;
-      await resize(390, 844, 2);
-      reports.twilightPhoneDpr2 = await inspect();
-      reports.twilightPhoneHud = await inspectResourceHud();
-      await screenshot('twilight-phone-dpr2.webp');
-      if (reports.twilightPhoneDpr2.state.renderer !== 'rendered')
-        throw new Error(
-          'Renderer failed at constrained phone viewport / DPR 2',
-        );
-      if (
-        reports.twilightPhoneDpr2.visible.viewport.document.scrollWidth > 390 ||
-        reports.twilightPhoneHud.difficultySelect !== null
-      )
-        throw new Error(
-          `Phone HUD controls overflow or overlap: ${JSON.stringify(reports.twilightPhoneHud)}`,
-        );
-    }
-    if (!capturedReferenceTwilight && note.id === 't02') {
-      await resize(1600, 900);
-      await waitFor(async () => {
-        const r = await evaluate(
-          `(()=>{const c=document.querySelector('.play-surface canvas');const r=c?.getBoundingClientRect();return r?{cw:c.width,ch:c.height,w:r.width,h:r.height}:null})()`,
-        );
-        return r?.cw > 0 && r?.ch > 0 && r?.w > 0 && r?.h > 0;
-      }, 'reference canvas resize');
-      reports.twilightReference = await inspect();
-      await screenshot('twilight-reference.webp');
-      capturedReferenceTwilight = true;
       const stateBeforePause = await status();
       if (stateBeforePause.panels.includes('results'))
         throw new Error(
@@ -1099,9 +1025,7 @@ async function main() {
         );
       reports.escapePause = await pauseWithEscape();
       pausedAtTwilight = true;
-      // Once Pause is confirmed, stop scheduling chart keys. Audio clocks can
-      // continue advancing while the game is paused; those keys would not be
-      // gameplay inputs and must not be counted as such.
+      // This run has no capture work; stop at the transition boundary.
       break;
     }
     const effectDelay =
@@ -1126,13 +1050,12 @@ async function main() {
         liveRegionText: liveRegion.liveRegionText,
         receivedAt: liveRegion.performanceTime,
       });
-      queueJudgmentVisualCapture(receipt, pendingPeakScreenshots);
+      await evaluate(`window.__proofReceiptCollector.finish(${JSON.stringify(note.id)})`);
       reports.judgmentEffects ??= [];
       reports.judgmentEffects.push({
         ...receipt,
         receiptAudioTime: liveRegion.audioTime,
         receiptScheduledWhen: liveRegion.scheduledWhen,
-        screenshots: [`${runPrefix}-judgment-miss-capture-${note.id}.webp`],
         source: 'actual chart note left unplayed until its model miss deadline',
       });
       hitNotes.push({ id: note.id, result: 'deliberately-missed' });
@@ -1161,7 +1084,7 @@ async function main() {
         receiptAudioTime: liveRegion.audioTime,
         receiptPerformanceTime: liveRegion.performanceTime,
       });
-      queueJudgmentVisualCapture(receipt, pendingPeakScreenshots);
+      await evaluate(`window.__proofReceiptCollector.finish(${JSON.stringify(note.id)})`);
       reports.judgmentEffects ??= [];
       reports.judgmentEffects.push({
         ...receipt,
@@ -1171,9 +1094,6 @@ async function main() {
         inputPerformanceTime: inputReceipt.performanceTime,
         receiptDelayAudioSeconds: receipt.receiptDelayAudioSeconds,
         receiptDelayPerformanceMs: receipt.receiptDelayPerformanceMs,
-        screenshots: [
-          `${runPrefix}-judgment-${expected}-capture-${note.id}.webp`,
-        ],
         source:
           'actual chart note, CDP D/F/J/K keyboard input and rendered WebGL app',
       });
@@ -1184,7 +1104,27 @@ async function main() {
     await key(keyCode, 'up');
     hitNotes.push({ id: note.id, result: 'key-sent', lateness });
   }
-  await Promise.all(pendingPeakScreenshots);
+  // The native-clock pass has stopped at Pause; Twilight screenshots and
+  // viewport probes now run without any scheduled gameplay inputs.
+  await resize(1120, 700);
+  reports.twilightNarrow = await inspect();
+  await screenshot('twilight-narrow.webp');
+  await resize(390, 844, 2);
+  reports.twilightPhoneDpr2 = await inspect();
+  reports.twilightPhoneHud = await inspectResourceHud();
+  await screenshot('twilight-phone-dpr2.webp');
+  if (reports.twilightPhoneDpr2.state.renderer !== 'rendered')
+    throw new Error('Renderer failed at constrained phone viewport / DPR 2');
+  if (
+    reports.twilightPhoneDpr2.visible.viewport.document.scrollWidth > 390 ||
+    reports.twilightPhoneHud.difficultySelect !== null
+  )
+    throw new Error(
+      `Phone HUD controls overflow or overlap: ${JSON.stringify(reports.twilightPhoneHud)}`,
+    );
+  await resize(1600, 900);
+  reports.twilightReference = await inspect();
+  await screenshot('twilight-reference.webp');
   if (
     !['perfect', 'good', 'miss'].every((outcome) =>
       reports.judgmentEffects?.some((event) => event.outcome === outcome),
@@ -1350,7 +1290,7 @@ async function main() {
       15000,
     );
     reports.contextUnavailable = await status();
-    await click('[data-action="renderer-retry"]');
+    await click('[data-experience-screen="gameplay"] [data-action="renderer-retry"]');
     await waitFor(
       async () => {
         const s = await status();
@@ -1503,16 +1443,7 @@ async function main() {
           announcement,
           announcementReceipt,
           hud,
-          screenshot: `${runPrefix}-radiant-victory.webp`,
         };
-        await screenshot('radiant-victory.webp');
-        await resize(390, 844);
-        reports.radiantVictoryNarrow = await inspect();
-        if (reports.radiantVictoryNarrow.state.renderer !== 'rendered')
-          throw new Error('Radiant sky did not render at the narrow viewport');
-        await screenshot('radiant-victory-narrow.webp');
-        reports.radiantVictory.narrowScreenshot = `${runPrefix}-radiant-victory-narrow.webp`;
-        await resize(1600, 900);
       }
     } else if (index > victoryNoteIndex) {
       const hud = await inspectResourceHud();
@@ -1543,6 +1474,15 @@ async function main() {
     lastGameplayTime: afterVictoryMissState.time,
     stillPlayingBeforeNaturalEnd: true,
   };
+  // Freeze and inspect the Victory scene after the final time-sensitive
+  // post-victory probe. Screenshot/layout samples belong to the earlier visual
+  // pass; retain the Victory HUD and scene geometry checks in the report.
+  reports.radiantVisualPause = await pauseWithEscape();
+  reports.radiantVictoryScene = await inspect();
+  if (reports.radiantVictoryScene.state.renderer !== 'rendered')
+    throw new Error('Radiant Victory scene was not rendered after Pause');
+  await click('[data-action="resume"]');
+  await waitFor(async () => !(await status()).panels.includes('pause'), 'resume after visual-only Victory capture');
   const naturalEnd = await waitFor(
     async () => {
       const state = await status();
@@ -1649,7 +1589,7 @@ async function main() {
       'Both gameplay runs begin through a trusted mouse click on the actual Observatory Play button; no AudioContext exists before Play, and the context is created in that trusted event without an autoplay-policy override or a modified startup clock.',
       `Three selected ${difficulty} variant judgments (Perfect/Good/Perfect) are captured from the live region with browser-side receipt time and note/lane association before any scaled-clock visual probe.`,
       'The late-note screenshot-positioning probe runs separately after native gameplay results; only that run wraps/scales the clock, and it is explicitly not native-clock synchronization evidence.',
-      'Judgment screenshots are separate visual captures. Reports include each capture request state/time and do not label them as peak frames.',
+      'The native-clock receipt run performs no screenshots, image processing, or viewport changes; audience/Twilight visuals are captured in a separate pass and Victory is checked through its live HUD and scene geometry.',
       `This actual audio run used ${songId}/${difficulty}.`,
     ],
     ...reports,
@@ -1672,13 +1612,7 @@ async function main() {
           `${runPrefix}-twilight-narrow.webp`,
           `${runPrefix}-twilight-phone-dpr2.webp`,
           `${runPrefix}-twilight-reference.webp`,
-          ...(reports.judgmentVisualCaptures ?? []).map(
-            (capture) => capture.filename,
-          ),
           ...(reports.lateNoteTravel ?? []).map((sample) => sample.screenshot),
-          ...(reports.radiantVictory
-            ? [reports.radiantVictory.screenshot]
-            : []),
         ],
         liveMode: reports.modeAtTransition,
         radiantVictory: reports.radiantVictory
@@ -1705,60 +1639,106 @@ async function main() {
   );
 }
 let failure;
+function recordSecondaryFailure(error, context) {
+  if (!failure) {
+    failure = error;
+    return;
+  }
+  const message = `${context}: ${String(error?.stack || error)}`;
+  failure.secondaryErrors ??= [];
+  failure.secondaryErrors.push(message);
+  console.error(message);
+}
+async function cleanupStep(context, action) {
+  try {
+    await action();
+  } catch (error) {
+    recordSecondaryFailure(error, context);
+  }
+}
 try {
   await main();
 } catch (error) {
   failure = error;
   console.error(error.stack ?? error);
   console.error(`Proof scratch: ${scratch}`);
-  await writeFile(
-    path.join(output, `${runPrefix}-report.json`),
-    JSON.stringify(
-      {
-        proof: 'Brightvale actual gameplay browser proof',
-        status: 'proof-incomplete',
-        difficulty,
-        error: String(error?.stack || error),
-        partialEvidence: reports,
-      },
-      null,
-      2,
-    ) + '\n',
-  );
+  const diagnostics = {
+    capturedAt: new Date().toISOString(),
+    browserEvents: events.slice(-100),
+    dom: null,
+  };
+  if (cdp?.readyState === WebSocket.OPEN) {
+    try {
+      diagnostics.dom = await evaluate(`(()=>({url:location.href,title:document.title,body:(document.body?.innerText??'').slice(0,12000),screens:[...document.querySelectorAll('[data-experience-screen]')].map(e=>({screen:e.dataset.experienceScreen,hidden:e.hidden,text:(e.innerText??'').slice(0,2000)})),gameplayStatus:document.querySelector('[data-gameplay-status]')?.textContent?.trim()??null,rendererStatus:document.querySelector('[data-experience-screen="gameplay"] [data-renderer-status]')?.innerText?.slice(0,2000)??null,resources:performance.getEntriesByType('resource').slice(-40).map(e=>({name:e.name.slice(0,500),duration:e.duration,transferSize:e.transferSize}))}))()`);
+    } catch (diagnosticError) {
+      diagnostics.domError = String(diagnosticError?.stack || diagnosticError).slice(0, 2000);
+    }
+  }
+  reports.failureDiagnostics = diagnostics;
+  try {
+    await writeFile(
+      path.join(output, `${runPrefix}-report.json`),
+      JSON.stringify(
+        {
+          proof: 'Brightvale actual gameplay browser proof',
+          status: 'proof-incomplete',
+          difficulty,
+          error: String(error?.stack || error),
+          failureDiagnostics: diagnostics,
+          partialEvidence: reports,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+  } catch (writeError) {
+    recordSecondaryFailure(writeError, 'Could not write failure report');
+  }
 } finally {
   try {
     cdp?.close();
-  } catch {}
-  if (browser && browser.exitCode === null) {
-    browser.kill('SIGTERM');
-    await Promise.race([once(browser, 'exit'), pause(5000)]);
-    if (browser.exitCode === null) {
-      browser.kill('SIGKILL');
-      await once(browser, 'exit');
+  } catch (error) {
+    recordSecondaryFailure(error, 'Could not close CDP connection');
+  }
+  await cleanupStep('Could not stop owned Chromium/Vite processes', async () => {
+    const failures = await stopOwnedChildren(
+      [['Chromium', browser], ['Vite', server]],
+    );
+    for (const { name, error } of failures)
+      recordSecondaryFailure(error, `Could not stop owned ${name}`);
+  });
+  await cleanupStep('Could not remove stale result screenshots', async () => {
+    for (const file of await readdir(output)) {
+      if (file.startsWith('results-') && file.endsWith('.webp'))
+        await (await import('node:fs/promises')).unlink(path.join(output, file));
     }
-  }
-  if (server.exitCode === null) {
-    server.kill('SIGTERM');
-    await Promise.race([once(server, 'exit'), pause(5000)]);
-    if (server.exitCode === null) {
-      server.kill('SIGKILL');
-      await once(server, 'exit');
-    }
-  }
-  for (const file of await readdir(output)) {
-    if (file.startsWith('results-') && file.endsWith('.webp'))
-      await (await import('node:fs/promises')).unlink(path.join(output, file));
-  }
+  });
   for (const port of [vitePort, debugPort]) {
-    const open = await new Promise((resolve) => {
-      const s = net.connect(port, '127.0.0.1');
-      s.once('connect', () => {
-        s.destroy();
-        resolve(true);
+    await cleanupStep(`Could not verify owned listener on ${port}`, async () => {
+      const open = await new Promise((resolve, reject) => {
+        const socket = net.connect(port, '127.0.0.1');
+        socket.once('connect', () => {
+          socket.destroy();
+          resolve(true);
+        });
+        socket.once('error', (error) => {
+          if (error.code === 'ECONNREFUSED') resolve(false);
+          else reject(error);
+        });
       });
-      s.once('error', () => resolve(false));
+      if (open) throw new Error(`Owned listener remains on ${port}`);
     });
-    if (open) failure ??= new Error(`Owned listener remains on ${port}`);
   }
+  await cleanupStep('Could not remove owned browser profile directory', () =>
+    rm(scratch, { recursive: true, force: true }),
+  );
+  await cleanupStep('Could not verify owned browser profile cleanup', async () => {
+    try {
+      await access(scratch);
+      throw new Error(`Owned browser profile directory remains: ${scratch}`);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  });
 }
 if (failure) process.exitCode = 1;

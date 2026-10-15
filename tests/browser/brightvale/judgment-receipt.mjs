@@ -1,5 +1,47 @@
 const OUTCOMES = new Set(['perfect', 'good', 'miss']);
 
+// This is the same collector serialized into the browser preload and used in
+// unit tests, so event-order regressions exercise the actual receipt logic.
+export function createJudgmentReceiptCollector() {
+  const pendingInputs = new Map();
+  let activeJudgment = null;
+  const judgments = [];
+  const keydowns = [];
+  return {
+    begin(active) {
+      if (activeJudgment || pendingInputs.size > 0) {
+        throw new Error('Cannot begin a judgment before the previous note is finished.');
+      }
+      const note = { ...active };
+      activeJudgment = note;
+      pendingInputs.set(note.noteId, note);
+    },
+    observeStatus(text, performanceTime, audioTime, scheduledWhen) {
+      const active = activeJudgment;
+      if (!active || !text || text === active.baselineText) return;
+      const match = text.match(new RegExp(`Lane ${active.lane}: (Perfect|Good|Miss)`, 'i'));
+      if (!match) return;
+      judgments.push({ ...active, outcome: match[1].toLowerCase(), liveRegionText: text, performanceTime, audioTime, scheduledWhen });
+      // A judgment ends status attribution, but a trusted keydown may still
+      // arrive late. Keep only that note's input receipt pending until finish.
+      activeJudgment = null;
+    },
+    observeKeydown(event, performanceTime, audioTime) {
+      if (event.repeat) return;
+      const active = [...pendingInputs.values()].find((item) => item.keyCode === event.code);
+      if (!active || keydowns.some((receipt) => receipt.noteId === active.noteId)) return;
+      keydowns.push({ ...active, trusted: event.isTrusted, code: event.code, performanceTime, audioTime });
+    },
+    finish(noteId) {
+      if (!pendingInputs.has(noteId)) throw new Error(`Cannot finish unknown judgment note ${noteId}.`);
+      pendingInputs.delete(noteId);
+      if (activeJudgment?.noteId === noteId) activeJudgment = null;
+    },
+    judgments,
+    keydowns,
+  };
+}
+
 export function goodJudgmentTargetSeconds(perfectMs, goodMs) {
   if (
     !Number.isFinite(perfectMs) ||

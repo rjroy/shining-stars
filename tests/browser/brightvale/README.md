@@ -16,6 +16,20 @@ below for full tracks. Gameplay output is muted, the Play action is trusted,
 and the run uses the native `AudioContext.currentTime` clock. A separate
 post-judgment screenshot probe is explicitly labeled as clock-scaled visual
 evidence and is not native-clock judgment evidence.
+The no-key visual pass owns the audience screenshots/OCR and audience viewport
+samples. The native-clock receipt replay performs no captures or viewport
+changes; Twilight responsive screenshots run after it pauses at the transition.
+The Victory outcome is checked from its live HUD and scene geometry after the
+final time-sensitive input probe; it does not add a late-run screenshot.
+The browser preload keeps per-note judgment and trusted-keydown receipts
+independent and explicitly retires each note after its judgment/input window,
+so a Miss notification cannot erase a late keydown or let stale same-lane
+notes claim later events.
+Gameplay renderer state/retry checks are scoped to the gameplay experience
+screen. On failure, the report includes bounded CDP exception/console/request
+events and a compact DOM/resource snapshot; the original failure remains the
+reported cause. Each run preflights its single owned temporary root and removes
+its browser profile during cleanup.
 
 The responsive runner uses the installed Chromium, Vite, and production
 runtime. Each runner owns its loopback Vite/Chromium processes and fails if its
