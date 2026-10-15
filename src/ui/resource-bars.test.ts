@@ -31,14 +31,20 @@ describe('resource bar display ranges', () => {
   });
 
   it('uses carried Renown and configured Twilight strength as run-relative ranges', () => {
-    const game = createGame(CHART);
+    const runChart: ChartConfig = {
+      ...CHART,
+      notes: CHART.notes.filter((note) =>
+        ['audience-one', 'audience-two', 'twilight-one'].includes(note.id),
+      ),
+    };
+    const game = createGame(runChart);
     game.press(0, 1.214102);
     game.press(2, 3.198477);
-    const beforeHandoff = getResourceBars(CHART, game.snapshot());
+    const beforeHandoff = getResourceBars(runChart, game.snapshot());
     expect(beforeHandoff.audience.value).toBe(6);
 
-    game.advanceTo(CHART.twilightAt);
-    const twilight = getResourceBars(CHART, game.snapshot());
+    game.advanceTo(runChart.twilightAt);
+    const twilight = getResourceBars(runChart, game.snapshot());
     expect(twilight.personal).toEqual({ value: 6, maximum: 6, fraction: 1 });
     expect(twilight.twilight).toEqual({
       value: 100,
@@ -47,7 +53,7 @@ describe('resource bar display ranges', () => {
     });
 
     game.press(0, 40.534079);
-    const afterHit = getResourceBars(CHART, game.snapshot());
+    const afterHit = getResourceBars(runChart, game.snapshot());
     expect(afterHit.personal).toEqual({ value: 6, maximum: 6, fraction: 1 });
     expect(afterHit.twilight).toEqual({
       value: 97,

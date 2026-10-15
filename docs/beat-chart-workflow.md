@@ -44,6 +44,23 @@ side effect of chart work. Both authoring and runtime validate its Easy,
 Normal, and Hard profile values. The widest selected Good timing window plus
 the existing 200 ms input-offset limit determines chart edge/handoff safety.
 
+### Profile outcome signs
+
+Timing windows must remain finite, positive, and ordered. Audience Perfect and
+Good rewards and Twilight Perfect/Good costs and damage remain finite and
+non-negative. Miss outcomes are signed finite deltas: a negative
+`audience.miss` reduces Renown, floored at zero; a negative Twilight
+`personal_cost` grants Personal Strength, while negative Twilight `damage`
+restores Twilight Strength. Twilight resource arithmetic retains its existing
+zero floor and has no upper cap, so these negative deltas can raise a resource
+above its starting value. They are not clamped to the original Renown or
+Twilight Strength.
+
+Generated chart `twilightStrength` is still derived from the number of Twilight
+notes, the profile's Perfect damage, and the authored percentage. Signed miss
+outcomes do not alter that initial-strength calculation. Do not reinterpret a
+negative personal cost as damage or a negative damage delta as a personal cost.
+
 Runtime catalog metadata lives separately in `data/catalog.json` (schema
 version 1). Add or edit a record there using the stable generated song ID,
 preserving existing IDs, titles, order, and collection membership. Set the

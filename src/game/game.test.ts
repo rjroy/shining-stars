@@ -261,7 +261,10 @@ describe('game model', () => {
     expect(game.snapshot().result).toMatchObject({
       renown: 3,
       personalStrength: 0,
-      twilightStrength: 100,
+      twilightStrength: Math.max(
+        0,
+        100 - getDifficultyProfile('normal').twilight.miss.damage,
+      ),
       outcome: 'defeat',
     });
   });
@@ -293,7 +296,10 @@ describe('game model', () => {
       result: {
         renown: 3,
         personalStrength: 0,
-        twilightStrength: 100,
+        twilightStrength: Math.max(
+          0,
+          100 - getDifficultyProfile('normal').twilight.miss.damage,
+        ),
         outcome: 'defeat',
       },
     });
@@ -505,7 +511,10 @@ describe('game model', () => {
       const missCost = profile.twilight.miss.personalCost;
       const goodDamage = profile.twilight.good.damage;
       const perfectDamage = profile.twilight.perfect.damage;
-      const expectedRenown = audiencePerfect + audienceGood;
+      const expectedRenown = Math.max(
+        0,
+        audiencePerfect + audienceGood + profile.audience.miss,
+      );
       const goodOffset = (perfectWindowSeconds + goodWindowSeconds) / 2;
       const game = makeDifficultyGame(
         [
@@ -525,7 +534,7 @@ describe('game model', () => {
       game.advanceTo(3 + goodWindow + 0.001);
       const audienceSnapshot = game.snapshot();
       expect(audienceSnapshot).toMatchObject({
-        renown: audiencePerfect + audienceGood,
+        renown: expectedRenown,
       });
       expect(
         audienceSnapshot.notes
@@ -545,7 +554,10 @@ describe('game model', () => {
       expect(game.snapshot()).toMatchObject({
         renown: expectedRenown,
         personalStrength: Math.max(0, expectedRenown - goodCost - missCost),
-        twilightStrength: 100 - goodDamage - perfectDamage,
+        twilightStrength: Math.max(
+          0,
+          100 - goodDamage - perfectDamage - profile.twilight.miss.damage,
+        ),
         notes: [
           { id: 'audience-perfect', outcome: 'perfect' },
           { id: 'audience-good', outcome: 'good' },

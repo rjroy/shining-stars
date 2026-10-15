@@ -117,7 +117,7 @@ def load_difficulty_profiles(path=None):
         parsed_audience = {}
         for quality in ("perfect", "good", "miss"):
             value = _finite_number(audience.get(quality), f"audience.{quality}")
-            if value < 0:
+            if quality != "miss" and value < 0:
                 raise ValueError(f"audience.{quality} must be non-negative")
             parsed_audience[quality] = value
         parsed_twilight = {}
@@ -127,7 +127,7 @@ def load_difficulty_profiles(path=None):
                 raise ValueError(f"twilight.{quality} must be an object")
             cost = _finite_number(outcome.get("personal_cost"), f"twilight.{quality}.personal_cost")
             damage = _finite_number(outcome.get("damage"), f"twilight.{quality}.damage")
-            if cost < 0 or damage < 0:
+            if quality != "miss" and (cost < 0 or damage < 0):
                 raise ValueError(f"twilight.{quality} values must be non-negative")
             parsed_twilight[quality] = {
                 "personal_cost": cost,

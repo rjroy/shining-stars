@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import math
 import subprocess
 import tempfile
 import unittest
@@ -710,41 +711,22 @@ class SongAuthoringConfigTests(unittest.TestCase):
     def test_shared_difficulty_profiles_define_all_runtime_values(self):
         profile_path = beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json"
         profile_document = json.loads(profile_path.read_text(encoding="utf-8"))
+        self.assertEqual(set(profile_document), {"profiles"})
+        self.assertEqual(set(profile_document["profiles"]), set(beat_chart.DIFFICULTIES))
+        loaded = beat_chart.load_difficulty_profiles(profile_path)
 
-        self.assertEqual(
-            profile_document,
-            {
-                "profiles": {
-                    "easy": {
-                        "timing": {"perfect_ms": 75, "good_ms": 150},
-                        "audience": {"perfect": 2, "good": 1, "miss": 0},
-                        "twilight": {
-                            "perfect": {"personal_cost": 0, "damage": 2},
-                            "good": {"personal_cost": 0, "damage": 1},
-                            "miss": {"personal_cost": 3, "damage": 0},
-                        },
-                    },
-                    "normal": {
-                        "timing": {"perfect_ms": 65, "good_ms": 125},
-                        "audience": {"perfect": 3, "good": 2, "miss": 0},
-                        "twilight": {
-                            "perfect": {"personal_cost": 0, "damage": 3},
-                            "good": {"personal_cost": 3, "damage": 2},
-                            "miss": {"personal_cost": 4, "damage": 0},
-                        },
-                    },
-                    "hard": {
-                        "timing": {"perfect_ms": 50, "good_ms": 100},
-                        "audience": {"perfect": 5, "good": 3, "miss": 0},
-                        "twilight": {
-                            "perfect": {"personal_cost": 0, "damage": 5},
-                            "good": {"personal_cost": 5, "damage": 3},
-                            "miss": {"personal_cost": 7, "damage": 0},
-                        },
-                    },
-                }
-            },
-        )
+        for difficulty in beat_chart.DIFFICULTIES:
+            with self.subTest(difficulty=difficulty):
+                raw = profile_document["profiles"][difficulty]
+                runtime = loaded[difficulty]
+                self.assertEqual(set(raw), {"timing", "audience", "twilight"})
+                self.assertEqual(set(raw["timing"]), {"perfect_ms", "good_ms"})
+                self.assertEqual(set(raw["audience"]), {"perfect", "good", "miss"})
+                self.assertEqual(set(raw["twilight"]), {"perfect", "good", "miss"})
+                self.assertEqual(runtime["timing"]["perfect_ms"], raw["timing"]["perfect_ms"])
+                self.assertEqual(runtime["timing"]["good_ms"], raw["timing"]["good_ms"])
+                self.assertEqual(runtime["audience"], raw["audience"])
+                self.assertEqual(runtime["twilight"], raw["twilight"])
 
     def test_shared_profile_loader_rejects_invalid_timing_and_balance_values(self):
         original = json.loads(
@@ -761,6 +743,10 @@ class SongAuthoringConfigTests(unittest.TestCase):
         invalid_window["profiles"]["easy"]["timing"]["good_ms"] = 50
         malformed_profiles.append(invalid_window)
 
+        negative_timing = json.loads(json.dumps(original))
+        negative_timing["profiles"]["easy"]["timing"]["perfect_ms"] = -1
+        malformed_profiles.append(negative_timing)
+
         negative_reward = json.loads(json.dumps(original))
         negative_reward["profiles"]["normal"]["audience"]["good"] = -1
         malformed_profiles.append(negative_reward)
@@ -769,6 +755,14 @@ class SongAuthoringConfigTests(unittest.TestCase):
         del missing_combat_value["profiles"]["hard"]["twilight"]["miss"]["damage"]
         malformed_profiles.append(missing_combat_value)
 
+        negative_perfect_damage = json.loads(json.dumps(original))
+        negative_perfect_damage["profiles"]["normal"]["twilight"]["perfect"]["damage"] = -1
+        malformed_profiles.append(negative_perfect_damage)
+
+        nonfinite_miss_cost = json.loads(json.dumps(original))
+        nonfinite_miss_cost["profiles"]["normal"]["twilight"]["miss"]["personal_cost"] = float("nan")
+        malformed_profiles.append(nonfinite_miss_cost)
+
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "difficulty-profiles.json"
             for index, document in enumerate(malformed_profiles):
@@ -776,6 +770,48 @@ class SongAuthoringConfigTests(unittest.TestCase):
                     path.write_text(json.dumps(document), encoding="utf-8")
                     with self.assertRaises(ValueError):
                         beat_chart.load_difficulty_profiles(path)
+
+    def test_profile_pipeline_accepts_signed_miss_outcomes_and_chart_strength_uses_perfect_damage(self):
+        original = json.loads(
+            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
+            .read_text(encoding="utf-8")
+        )
+        original["profiles"]["normal"]["audience"]["miss"] = -2
+        original["profiles"]["normal"]["twilight"]["miss"] = {
+            "personal_cost": -3,
+            "damage": -4,
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "difficulty-profiles.json"
+            path.write_text(json.dumps(original), encoding="utf-8")
+            profiles = beat_chart.load_difficulty_profiles(path)
+
+        profile = profiles["normal"]
+        self.assertEqual(profile["audience"]["miss"], -2)
+        self.assertEqual(profile["twilight"]["miss"], {"personal_cost": -3.0, "damage": -4.0})
+        settings = {
+            "start_time": 0,
+            "duration": 100,
+            "twilight_time": 50,
+            "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
+            "difficulties": {
+                "normal": {"twilight_strength": 80, "minimum_delta": 0, "stride": 1}
+            },
+        }
+        chart, _, count = beat_chart._difficulty_chart(
+            [index * 0.5 for index in range(200)],
+            settings,
+            100,
+            profile,
+            "normal",
+            "signed-miss-fixture",
+            "a" * 64,
+        )
+        self.assertEqual(
+            chart["twilightStrength"],
+            math.ceil(count * profile["twilight"]["perfect"]["damage"] * 0.8),
+        )
 
     def test_loads_selected_song_from_collection_with_requested_settings(self):
         with tempfile.TemporaryDirectory() as directory:

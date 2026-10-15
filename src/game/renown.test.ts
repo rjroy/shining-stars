@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartConfig, ChartLane, ChartNote } from './chart';
 import { createGame } from './game';
+import { getDifficultyProfile } from './game-balance';
 
 interface RenownChartOptions {
   readonly duration?: number;
@@ -81,7 +82,10 @@ describe('Renown and Twilight Strength model', () => {
     missed.advanceTo(7.151);
     expect(missed.snapshot()).toMatchObject({
       personalStrength: 0,
-      twilightStrength: 5,
+      twilightStrength: Math.max(
+        0,
+        5 - getDifficultyProfile('normal').twilight.miss.damage,
+      ),
       result: { outcome: 'defeat' },
     });
 
