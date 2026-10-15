@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { createAcceptancePlan } from './acceptance-plan.mjs';
 
 const repositoryRoot = process.cwd();
 const scratchParent = '/tmp/opencode';
@@ -15,19 +16,26 @@ const evidenceDirectory = path.join(
   '.lore/local/evidence/observatory-acceptance',
 );
 const chromiumBinary = process.env.CHROMIUM_BIN ?? '/usr/bin/chromium';
+const mode = process.argv[2] ?? 'smoke';
+if (mode !== 'smoke' && mode !== 'exhaustive')
+  throw new Error('Usage: observatory-acceptance.mjs [smoke|exhaustive]');
 const runStartedAt = new Date();
 const report = {
   title: 'Observatory technical acceptance evidence',
+  mode,
   startedAt: runStartedAt.toISOString(),
   branchCommit: null,
   runtimeWorkingTreePaths: [],
   browser: null,
   volume: 0,
-  clockMethod: 'Native AudioContext.currentTime; no clock overrides or fake timers.',
+  clockMethod:
+    'Native AudioContext.currentTime; no clock overrides or fake timers.',
   reducedMotion: true,
   browsingAudioRequestsBeforePlay: null,
   favoritesStorageFailure: null,
   realCatalog: [],
+  staticChartValidation: null,
+  plannedRunCount: null,
   playbackRuns: [],
   scaleFixture: null,
   cleanup: {},
@@ -42,6 +50,7 @@ let pageTargetId;
 let vitePort;
 let debugPort;
 let failure;
+let difficultyProfiles;
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -191,7 +200,10 @@ async function chooseDifficulty(value, expectedOptions) {
     return {value:select.value,options:[...select.options].map(option=>option.value)};
   })()`);
   assert.deepEqual(current?.options, expectedOptions);
-  assert.ok(expectedOptions.includes(value), `Unsupported UI difficulty ${value}`);
+  assert.ok(
+    expectedOptions.includes(value),
+    `Unsupported UI difficulty ${value}`,
+  );
 
   await cdp.evaluate(`(()=>{
     window.__lastDifficultyChangeTrusted=null;
@@ -205,15 +217,12 @@ async function chooseDifficulty(value, expectedOptions) {
     await pressKey('ArrowDown', 40);
   await pressKey('Enter', 13);
 
-  const selectedValue = await waitFor(
-    async () => {
-      const state = await cdp.evaluate(
-        `document.querySelector(${JSON.stringify(selector)})?.value ?? null`,
-      );
-      return state === value ? state : false;
-    },
-    `keyboard difficulty selection ${value}`,
-  );
+  const selectedValue = await waitFor(async () => {
+    const state = await cdp.evaluate(
+      `document.querySelector(${JSON.stringify(selector)})?.value ?? null`,
+    );
+    return state === value ? state : false;
+  }, `keyboard difficulty selection ${value}`);
   return {
     value: selectedValue,
     trustedChange: await cdp.evaluate('window.__lastDifficultyChangeTrusted'),
@@ -221,9 +230,13 @@ async function chooseDifficulty(value, expectedOptions) {
 }
 
 function frameStatistics(samples) {
-  if (samples.length === 0) return { count: 0, medianMs: null, p95Ms: null, maxMs: null };
-  const values = samples.map((sample) => sample.elapsedMs).sort((a, b) => a - b);
-  const percentile = (fraction) => values[Math.ceil(values.length * fraction) - 1];
+  if (samples.length === 0)
+    return { count: 0, medianMs: null, p95Ms: null, maxMs: null };
+  const values = samples
+    .map((sample) => sample.elapsedMs)
+    .sort((a, b) => a - b);
+  const percentile = (fraction) =>
+    values[Math.ceil(values.length * fraction) - 1];
   return {
     count: values.length,
     medianMs: Number(percentile(0.5).toFixed(3)),
@@ -233,8 +246,9 @@ function frameStatistics(samples) {
 }
 
 async function waitForGameplayStart(song, difficulty) {
-  const state = await waitFor(async () => {
-    const current = await cdp.evaluate(`(()=>{
+  const state = await waitFor(
+    async () => {
+      const current = await cdp.evaluate(`(()=>{
       const root=document.querySelector('[data-experience-screen="gameplay"]');
       if(!root || root.hidden) return null;
       const error=root.querySelector('[data-panel="error"]');
@@ -250,24 +264,43 @@ async function waitForGameplayStart(song, difficulty) {
         error:error?.hidden===false ? root.querySelector('[data-audio-error]')?.textContent : null,
       };
     })()`);
-    if (current === null) return false;
-    if (current.error !== null) return { error: current.error };
-    if (current.countdown.startsWith('Starting in') || current.time !== '00:00')
-      return current;
-    return false;
-  }, `audio-ready start for ${song.title} (${difficulty})`, 120_000);
+      if (current === null) return false;
+      if (current.error !== null) return { error: current.error };
+      if (
+        current.countdown.startsWith('Starting in') ||
+        current.time !== '00:00'
+      )
+        return current;
+      return false;
+    },
+    `audio-ready start for ${song.title} (${difficulty})`,
+    120_000,
+  );
   assert.equal(state.error, null, `${song.title}: ${state.error}`);
-  assert.ok(state.label.includes(song.title), `Gameplay title mismatch: ${state.label}`);
+  assert.ok(
+    state.label.includes(song.title),
+    `Gameplay title mismatch: ${state.label}`,
+  );
   if (song.segmentKind === 'excerpt')
-    assert.match(state.label, /Demo excerpt/i, 'The excerpt must stay explicitly labeled.');
+    assert.match(
+      state.label,
+      /Demo excerpt/i,
+      'The excerpt must stay explicitly labeled.',
+    );
 
-  const cue = {
-    easy: ['Good ±500 ms', 'Perfect ±250 ms'],
-    normal: ['Good ±150 ms', 'Perfect ±75 ms'],
-    hard: ['Good ±100 ms', 'Perfect ±50 ms'],
-  }[difficulty];
-  assert.ok(state.legend.includes(cue[0]), `Expected ${difficulty} timing cue: ${state.legend}`);
-  assert.ok(state.legend.includes(cue[1]), `Expected ${difficulty} timing cue: ${state.legend}`);
+  const profile = difficultyProfiles.profiles[difficulty];
+  const cue = [
+    `Good ±${profile.timing.good_ms} ms`,
+    `Perfect ±${profile.timing.perfect_ms} ms`,
+  ];
+  assert.ok(
+    state.legend.includes(cue[0]),
+    `Expected ${difficulty} timing cue: ${state.legend}`,
+  );
+  assert.ok(
+    state.legend.includes(cue[1]),
+    `Expected ${difficulty} timing cue: ${state.legend}`,
+  );
   return state;
 }
 
@@ -281,9 +314,8 @@ async function returnFromGameplay(baselineCanvasCount, song) {
     'paused gameplay return control',
   );
   await click('[data-panel="pause"] [data-action="return"]');
-  const returned = await waitFor(
-    async () => {
-      const current = await cdp.evaluate(`(()=>{
+  const returned = await waitFor(async () => {
+    const current = await cdp.evaluate(`(()=>{
         const browser=document.querySelector('[data-observatory-page="browser"]');
         const gameplay=document.querySelector('[data-experience-screen="gameplay"]');
         return browser && !browser.hidden && gameplay===null ? {
@@ -294,28 +326,60 @@ async function returnFromGameplay(baselineCanvasCount, song) {
           selectedRow:document.querySelector('.song-row-main[aria-pressed="true"]')?.dataset.songId,
         } : null;
       })()`);
-      return current !== null && current.activeContexts === 0 && current.activeSources === 0
-        ? current
-        : false;
-    },
-    'return to the retained song browser',
+    return current !== null &&
+      current.activeContexts === 0 &&
+      current.activeSources === 0
+      ? current
+      : false;
+  }, 'return to the retained song browser');
+  assert.equal(
+    returned.canvasCount,
+    baselineCanvasCount,
+    'Gameplay must not add or leak canvases.',
   );
-  assert.equal(returned.canvasCount, baselineCanvasCount, 'Gameplay must not add or leak canvases.');
-  assert.equal(returned.detailTitle, song.title, 'Return must restore the selected song detail.');
-  assert.equal(returned.selectedRow, song.id, 'Return must restore selection by stable song ID.');
+  assert.equal(
+    returned.detailTitle,
+    song.title,
+    'Return must restore the selected song detail.',
+  );
+  assert.equal(
+    returned.selectedRow,
+    song.id,
+    'Return must restore selection by stable song ID.',
+  );
   assert.equal(await cdp.evaluate('window.__activeAudioContexts'), 0);
   assert.equal(await cdp.evaluate('window.__activeAudioSources'), 0);
   return returned;
 }
 
 async function runAcceptance() {
+  difficultyProfiles = JSON.parse(
+    await readFile(
+      path.join(repositoryRoot, 'data/charts/difficulty-profiles.json'),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(Object.keys(difficultyProfiles.profiles).sort(), [
+    'easy',
+    'hard',
+    'normal',
+  ]);
   report.branchCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
   }).trim();
   report.runtimeWorkingTreePaths = execFileSync(
     'git',
-    ['status', '--short', '--', 'src/main.ts', 'src/app', 'src/audio', 'src/game/controller.ts', 'src/ui'],
+    [
+      'status',
+      '--short',
+      '--',
+      'src/main.ts',
+      'src/app',
+      'src/audio',
+      'src/game/controller.ts',
+      'src/ui',
+    ],
     { cwd: repositoryRoot, encoding: 'utf8' },
   )
     .trim()
@@ -333,7 +397,9 @@ async function runAcceptance() {
   await new Promise((resolve, reject) => {
     chromiumVersion.once('error', reject);
     chromiumVersion.once('exit', (code) =>
-      code === 0 ? resolve() : reject(new Error('Unable to read Chromium version.')),
+      code === 0
+        ? resolve()
+        : reject(new Error('Unable to read Chromium version.')),
     );
   });
   report.browser = Buffer.concat(versionChunks).toString().trim();
@@ -479,18 +545,15 @@ async function runAcceptance() {
     url: `http://127.0.0.1:${vitePort}/`,
   });
 
-  await waitFor(
-    async () => {
-      try {
-        return await cdp.evaluate(
-          "document.querySelector('.observatory-app')?.isConnected",
-        );
-      } catch {
-        return false;
-      }
-    },
-    'Observatory application mount',
-  );
+  await waitFor(async () => {
+    try {
+      return await cdp.evaluate(
+        "document.querySelector('.observatory-app')?.isConnected",
+      );
+    } catch {
+      return false;
+    }
+  }, 'Observatory application mount');
   await waitFor(
     () =>
       cdp.evaluate(
@@ -499,7 +562,12 @@ async function runAcceptance() {
     'WebGL Observatory renderer readiness',
     60_000,
   );
-  assert.equal(await cdp.evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"), true);
+  assert.equal(
+    await cdp.evaluate(
+      "matchMedia('(prefers-reduced-motion: reduce)').matches",
+    ),
+    true,
+  );
   assert.equal(await cdp.evaluate('window.__audioContextCount'), 0);
   assert.deepEqual(await cdp.evaluate('window.__audioRequests'), []);
   report.browsingAudioRequestsBeforePlay = 0;
@@ -511,47 +579,114 @@ async function runAcceptance() {
   }))()`);
   assert.deepEqual(overview, {
     title: 'All Songs',
-    count: '7 songs',
-    story: '7 songs in the current collection.',
+    count: '29 songs',
+    story: '29 songs in the current collection.',
   });
   await click('[data-action="browse-collection"]');
   assert.equal(
-    await cdp.evaluate("document.querySelector('[data-breadcrumb]')?.textContent"),
+    await cdp.evaluate(
+      "document.querySelector('[data-breadcrumb]')?.textContent",
+    ),
     'All Songs',
   );
-  assert.equal(await cdp.evaluate("document.querySelectorAll('.song-row').length"), 7);
+  assert.equal(
+    await cdp.evaluate("document.querySelectorAll('.song-row').length"),
+    29,
+  );
   await click('[data-action="back-overview"]');
   await click('[data-action="all-songs"]');
 
-  const catalogRows = await cdp.evaluate(`(async()=>{
-    const {SONG_CATALOG}=await import('/src/catalog/catalog.ts');
+  const catalogState = await cdp.evaluate(`(async()=>{
+    const {SONG_CATALOG,getSongChart,getSongDifficulties}=await import('/src/catalog/catalog.ts');
     return SONG_CATALOG.songs.map(song=>({
       id:song.id,title:song.title,audioUrl:new URL(song.audioUrl,location.href).href,
       audioPath:new URL(song.audioUrl,location.href).pathname,
       segmentKind:song.segmentKind,chartStatus:song.chartStatus,
-      sourceStart:song.chart.sourceStart,duration:song.chart.duration,
-      twilightAt:song.chart.twilightAt,difficulties:[...song.chart.allowedDifficulties],
+      source:song.source,difficulties:[...getSongDifficulties(song)],
+      charts:Object.fromEntries(getSongDifficulties(song).map(difficulty=>[difficulty,getSongChart(song,difficulty)])),
+      chartIssues:Object.fromEntries(getSongDifficulties(song).map(difficulty=>[difficulty,SONG_CATALOG.chartIssues.get(song.id)?.[difficulty]??null])),
     }));
   })()`);
-  assert.equal(catalogRows.length, 7);
-  report.realCatalog = catalogRows;
+  const catalogRows = catalogState;
+  assert.equal(catalogRows.length, 29);
+  const staticVariants = catalogRows.reduce(
+    (sum, song) => sum + song.difficulties.length,
+    0,
+  );
+  const invalidVariants = catalogRows.flatMap((song) =>
+    song.difficulties
+      .filter(
+        (difficulty) =>
+          (song.chartIssues[difficulty] ?? ['missing chart validation'])
+            .length > 0,
+      )
+      .map((difficulty) => `${song.id}/${difficulty}`),
+  );
+  assert.equal(
+    staticVariants,
+    87,
+    'All 29 catalog songs must have three generated difficulty variants.',
+  );
+  assert.deepEqual(
+    invalidVariants,
+    [],
+    'Every generated chart variant must pass runtime validation.',
+  );
+  report.staticChartValidation = {
+    songs: catalogRows.length,
+    variants: staticVariants,
+    invalidVariants,
+  };
+  report.realCatalog = catalogRows.map((song) => ({
+    id: song.id,
+    title: song.title,
+    source: song.source,
+    segmentKind: song.segmentKind,
+    difficulties: song.difficulties,
+    chartVariants: Object.fromEntries(
+      song.difficulties.map((difficulty) => {
+        const chart = song.charts[difficulty];
+        return [
+          difficulty,
+          {
+            sourceStart: chart.sourceStart,
+            duration: chart.duration,
+            twilightAt: chart.twilightAt,
+            twilightStrength: chart.twilightStrength,
+            noteCount: chart.notes.length,
+          },
+        ];
+      }),
+    ),
+  }));
 
   const storageState = await cdp.evaluate(`(()=>({
     noticeVisible:document.querySelector('[data-storage-notice]')?.hidden===false,
     notice:document.querySelector('[data-storage-notice]')?.textContent,
     failures:window.__storageFailures,
   }))()`);
-  assert.equal(storageState.noticeVisible, true, 'Unavailable favorites storage should show a fallback notice.');
+  assert.equal(
+    storageState.noticeVisible,
+    true,
+    'Unavailable favorites storage should show a fallback notice.',
+  );
   assert.match(storageState.notice, /session only/i);
   assert.ok(storageState.failures > 0);
   const favoriteId = catalogRows[0].id;
-  await click(`button[data-action="toggle-favorite"][data-song-id="${favoriteId}"]`);
+  await click(
+    `button[data-action="toggle-favorite"][data-song-id="${favoriteId}"]`,
+  );
   assert.match(
-    await cdp.evaluate("document.querySelector('[data-storage-notice]')?.textContent"),
+    await cdp.evaluate(
+      "document.querySelector('[data-storage-notice]')?.textContent",
+    ),
     /session only/i,
   );
   await click('[data-action="favorites"]');
-  assert.equal(await cdp.evaluate("document.querySelectorAll('.song-row').length"), 1);
+  assert.equal(
+    await cdp.evaluate("document.querySelectorAll('.song-row').length"),
+    1,
+  );
   assert.equal(
     await cdp.evaluate("document.querySelector('.song-row')?.dataset.songId"),
     favoriteId,
@@ -562,7 +697,10 @@ async function runAcceptance() {
     favoriteVisibleInFavoritesRoute: true,
   };
   await click('[data-action="all-songs"]');
-  assert.equal(await cdp.evaluate("document.querySelectorAll('.song-row').length"), 7);
+  assert.equal(
+    await cdp.evaluate("document.querySelectorAll('.song-row').length"),
+    29,
+  );
   assert.equal(await cdp.evaluate('window.__audioContextCount'), 0);
   assert.deepEqual(await cdp.evaluate('window.__audioRequests'), []);
 
@@ -576,11 +714,14 @@ async function runAcceptance() {
     const songs=songIds.map((id,index)=>({
       ...source,id,title:'Synthetic scale record '+String(index).padStart(3,'0'),
       sortOrder:index,availability:index%2===0?'available':'unavailable',
-      collections:[collectionId],
     }));
-    const fixture=createSongCatalog(songs,[{
+    const generated=Object.fromEntries(songs.map(song=>[song.id+'.charts.json',{
+      schemaVersion:1,songId:song.id,source:'data/music/'+song.id+'.mp3',charts:source.charts,
+    }]));
+    const audio=Object.fromEntries(songs.map(song=>['../../data/music/'+song.id+'.mp3','/'+song.id+'.mp3']));
+    const fixture=createSongCatalog({schemaVersion:1,songs,collections:[{
       id:collectionId,title:'Synthetic scale-only fixture',sortOrder:0,songIds,
-    }]);
+    }]},generated,audio);
     const filters={query:'synthetic scale record',availability:'available',supportsDifficulty:'hard'};
     const expected=selectSongs(fixture,filters).length;
     const iterations=400;
@@ -600,16 +741,13 @@ async function runAcceptance() {
   assert.equal(report.scaleFixture.expectedMatchesPerQuery, 60);
   assert.equal(
     report.scaleFixture.totalMatches,
-    report.scaleFixture.expectedMatchesPerQuery * report.scaleFixture.iterations,
+    report.scaleFixture.expectedMatchesPerQuery *
+      report.scaleFixture.iterations,
   );
 
-  const baselineCanvasCount = await cdp.evaluate('document.querySelectorAll("canvas").length');
-  const difficultyProfileCue = {
-    easy: ['Good ±500 ms', 'Perfect ±250 ms'],
-    normal: ['Good ±150 ms', 'Perfect ±75 ms'],
-    hard: ['Good ±100 ms', 'Perfect ±50 ms'],
-  };
-
+  const baselineCanvasCount = await cdp.evaluate(
+    'document.querySelectorAll("canvas").length',
+  );
   for (const song of catalogRows) {
     await click(`button[data-action="select-song"][data-song-id="${song.id}"]`);
     const details = await cdp.evaluate(`(()=>({
@@ -621,11 +759,16 @@ async function runAcceptance() {
     }))()`);
     assert.equal(details.title, song.title);
     assert.deepEqual(details.options, song.difficulties);
+    const browseChart = song.charts.normal;
     const expectedDuration = (() => {
-      const seconds = Math.round(song.duration);
+      const seconds = Math.round(browseChart.duration);
       return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
     })();
-    assert.equal(details.duration, `${expectedDuration} playable`, 'Details must show the playable chart duration.');
+    assert.equal(
+      details.duration,
+      `${expectedDuration} playable`,
+      'Details must show the playable chart duration.',
+    );
     assert.ok(
       details.rowStatus.endsWith(expectedDuration),
       'Each song row must show its playable duration.',
@@ -633,129 +776,165 @@ async function runAcceptance() {
     if (song.segmentKind === 'excerpt') {
       assert.match(details.excerpt, /Demo excerpt/i);
       assert.match(details.rowStatus, /Demo excerpt/i);
-      assert.equal(
-        expectedDuration,
-        '1:06',
-        'The demo duration is its 65.8-second playable excerpt, not the source file length.',
+      const sample = 1 / 48_000;
+      assert.ok(
+        Math.abs(browseChart.duration - 65.8) <= sample,
+        'Demo duration should match its authored interval within one sample.',
       );
-      assert.deepEqual(
-        { sourceStart: song.sourceStart, duration: song.duration, twilightAt: song.twilightAt },
-        { sourceStart: 107.1, duration: 65.8, twilightAt: 39.2 },
+      assert.ok(
+        Math.abs(browseChart.sourceStart - 107.1) <= sample,
+        'Demo source offset should match its authored interval within one sample.',
       );
     }
+  }
 
-    for (const difficulty of song.difficulties) {
-      const difficultySelection = await chooseDifficulty(
-        difficulty,
-        song.difficulties,
-      );
-      assert.equal(difficultySelection.value, difficulty);
-      assert.equal(
-        await cdp.evaluate("document.querySelector('[data-song-detail] h2')?.textContent"),
-        song.title,
-      );
-      assert.equal(await cdp.evaluate('window.__audioContextCount'), report.playbackRuns.length);
-      assert.equal(await cdp.evaluate('window.__audioRequests.length'), report.playbackRuns.length);
+  const plan = createAcceptancePlan(catalogRows, mode);
+  report.plannedRunCount = plan.runs.length;
+  for (const { songId, difficulty } of plan.runs) {
+    const song = catalogRows.find((candidate) => candidate.id === songId);
+    assert.ok(song, `Planned song is present in runtime catalog: ${songId}`);
+    const runChart = song.charts[difficulty];
+    await click(`button[data-action="select-song"][data-song-id="${song.id}"]`);
+    const difficultySelection = await chooseDifficulty(
+      difficulty,
+      song.difficulties,
+    );
+    assert.equal(difficultySelection.value, difficulty);
+    assert.equal(
+      await cdp.evaluate(
+        "document.querySelector('[data-song-detail] h2')?.textContent",
+      ),
+      song.title,
+    );
+    assert.equal(
+      await cdp.evaluate('window.__audioContextCount'),
+      report.playbackRuns.length,
+    );
+    assert.equal(
+      await cdp.evaluate('window.__audioRequests.length'),
+      report.playbackRuns.length,
+    );
 
-      await cdp.evaluate(`(()=>{
+    await cdp.evaluate(`(()=>{
         window.__frameLabel=${JSON.stringify(`${song.id}:${difficulty}`)};
         const button=document.querySelector('[data-song-detail] [data-action="play"]');
         if(!button || button.disabled) throw new Error('Selected song Play control is unavailable.');
         button.addEventListener('click',event=>window.__lastPlayTrusted=event.isTrusted,{once:true});
       })()`);
-      const previousRequestCount = report.playbackRuns.length;
-      const previousContextCount = await cdp.evaluate('window.__audioContextCount');
-      await click('[data-song-detail] [data-action="play"]');
-      await waitFor(
-        async () =>
-          (await cdp.evaluate('window.__audioContextCount')) ===
-          previousContextCount + 1,
-        `trusted AudioContext construction for ${song.id}/${difficulty}`,
-      );
-      const trustedPlay = await cdp.evaluate('window.__lastPlayTrusted');
-      assert.equal(trustedPlay, true, 'Playback must begin from a trusted user click.');
+    const previousRequestCount = report.playbackRuns.length;
+    const previousContextCount = await cdp.evaluate(
+      'window.__audioContextCount',
+    );
+    await click('[data-song-detail] [data-action="play"]');
+    await waitFor(
+      async () =>
+        (await cdp.evaluate('window.__audioContextCount')) ===
+        previousContextCount + 1,
+      `trusted AudioContext construction for ${song.id}/${difficulty}`,
+    );
+    const trustedPlay = await cdp.evaluate('window.__lastPlayTrusted');
+    assert.equal(
+      trustedPlay,
+      true,
+      'Playback must begin from a trusted user click.',
+    );
 
-      await waitFor(
-        async () =>
-          (await cdp.evaluate('window.__audioRequests.length')) ===
-          previousRequestCount + 1,
-        `selected audio request for ${song.id}/${difficulty}`,
-        30_000,
-      );
-      const requestedUrl = await cdp.evaluate(
-        `window.__audioRequests[${previousRequestCount}]`,
-      );
-      assert.equal(
-        new URL(requestedUrl, `http://127.0.0.1:${vitePort}/`).pathname,
-        song.audioPath,
-        `Audio URL must pair with ${song.id}.`,
-      );
+    await waitFor(
+      async () =>
+        (await cdp.evaluate('window.__audioRequests.length')) ===
+        previousRequestCount + 1,
+      `selected audio request for ${song.id}/${difficulty}`,
+      30_000,
+    );
+    const requestedUrl = await cdp.evaluate(
+      `window.__audioRequests[${previousRequestCount}]`,
+    );
+    assert.equal(
+      new URL(requestedUrl, `http://127.0.0.1:${vitePort}/`).pathname,
+      song.audioPath,
+      `Audio URL must pair with ${song.id}.`,
+    );
 
-      const startView = await waitForGameplayStart(song, difficulty);
-      const startedFrameCount = await waitFor(
-        async () => {
-          const count = await cdp.evaluate(
-            `window.__frameSamples.filter(sample=>sample.run===${JSON.stringify(`${song.id}:${difficulty}`)}).length`,
-          );
-          return count >= 60 ? count : false;
-        },
-        `60 live gameplay frame measurements for ${song.id}/${difficulty}`,
-        30_000,
-      );
-      const frameSamples = await cdp.evaluate(
-        `window.__frameSamples.filter(sample=>sample.run===${JSON.stringify(`${song.id}:${difficulty}`)})`,
-      );
-      assert.ok(startedFrameCount >= 60);
-      const runFrameStats = frameStatistics(frameSamples);
-      assert.ok(runFrameStats.count >= 60);
-      const beforeReturn = {
-        audioContextCount: await cdp.evaluate('window.__audioContextCount'),
-        activeContexts: await cdp.evaluate('window.__activeAudioContexts'),
-        activeSources: await cdp.evaluate('window.__activeAudioSources'),
-        canvasCount: await cdp.evaluate('document.querySelectorAll("canvas").length'),
-      };
-      assert.ok(beforeReturn.activeContexts > 0);
-      assert.ok(beforeReturn.activeSources > 0);
-      const returned = await returnFromGameplay(baselineCanvasCount, song);
-      const contextCountAfterReturn = await cdp.evaluate('window.__audioContextCount');
-      assert.equal(contextCountAfterReturn, previousContextCount + 1);
-      assert.equal(await cdp.evaluate('window.__audioRequests.length'), previousRequestCount + 1);
-      assert.equal(await cdp.evaluate('window.__audioContextCount'), contextCountAfterReturn);
-      assert.equal(await cdp.evaluate('window.__activeAudioContexts'), 0);
-      assert.equal(await cdp.evaluate('window.__activeAudioSources'), 0);
+    const startView = await waitForGameplayStart(song, difficulty);
+    const startedFrameCount = await waitFor(
+      async () => {
+        const count = await cdp.evaluate(
+          `window.__frameSamples.filter(sample=>sample.run===${JSON.stringify(`${song.id}:${difficulty}`)}).length`,
+        );
+        return count >= 60 ? count : false;
+      },
+      `60 live gameplay frame measurements for ${song.id}/${difficulty}`,
+      30_000,
+    );
+    const frameSamples = await cdp.evaluate(
+      `window.__frameSamples.filter(sample=>sample.run===${JSON.stringify(`${song.id}:${difficulty}`)})`,
+    );
+    assert.ok(startedFrameCount >= 60);
+    const runFrameStats = frameStatistics(frameSamples);
+    assert.ok(runFrameStats.count >= 60);
+    const beforeReturn = {
+      audioContextCount: await cdp.evaluate('window.__audioContextCount'),
+      activeContexts: await cdp.evaluate('window.__activeAudioContexts'),
+      activeSources: await cdp.evaluate('window.__activeAudioSources'),
+      canvasCount: await cdp.evaluate(
+        'document.querySelectorAll("canvas").length',
+      ),
+    };
+    assert.ok(beforeReturn.activeContexts > 0);
+    assert.ok(beforeReturn.activeSources > 0);
+    const returned = await returnFromGameplay(baselineCanvasCount, song);
+    const contextCountAfterReturn = await cdp.evaluate(
+      'window.__audioContextCount',
+    );
+    assert.equal(contextCountAfterReturn, previousContextCount + 1);
+    assert.equal(
+      await cdp.evaluate('window.__audioRequests.length'),
+      previousRequestCount + 1,
+    );
+    assert.equal(
+      await cdp.evaluate('window.__audioContextCount'),
+      contextCountAfterReturn,
+    );
+    assert.equal(await cdp.evaluate('window.__activeAudioContexts'), 0);
+    assert.equal(await cdp.evaluate('window.__activeAudioSources'), 0);
 
-      report.playbackRuns.push({
-        songId: song.id,
-        title: song.title,
-        segmentKind: song.segmentKind,
-        difficulty,
-        trustedPlay,
-        selectedAudioUrl: song.audioUrl,
-        requestedUrl,
-        gameplayLabel: startView.label,
-        timingLegend: startView.legend,
-        chartTiming: {
-          sourceStart: song.sourceStart,
-          duration: song.duration,
-          twilightAt: song.twilightAt,
-        },
-        frameCostMilliseconds: runFrameStats,
-        resourceStateBeforeReturn: beforeReturn,
-        resourceStateAfterReturn: returned,
-      });
-      assert.equal(await cdp.evaluate('window.__appErrors.length'), 0, 'No page errors should occur.');
-      process.stdout.write(
-        `Accepted ${song.id} (${difficulty}); ${runFrameStats.count} frame samples, p95 ${runFrameStats.p95Ms} ms.\n`,
-      );
-    }
+    report.playbackRuns.push({
+      songId: song.id,
+      title: song.title,
+      segmentKind: song.segmentKind,
+      difficulty,
+      trustedPlay,
+      selectedAudioUrl: song.audioUrl,
+      requestedUrl,
+      gameplayLabel: startView.label,
+      timingLegend: startView.legend,
+      chartTiming: {
+        sourceStart: runChart.sourceStart,
+        duration: runChart.duration,
+        twilightAt: runChart.twilightAt,
+      },
+      frameCostMilliseconds: runFrameStats,
+      resourceStateBeforeReturn: beforeReturn,
+      resourceStateAfterReturn: returned,
+    });
+    assert.equal(
+      await cdp.evaluate('window.__appErrors.length'),
+      0,
+      'No page errors should occur.',
+    );
+    process.stdout.write(
+      `Accepted ${song.id} (${difficulty}); ${runFrameStats.count} frame samples, p95 ${runFrameStats.p95Ms} ms.\n`,
+    );
   }
 
-  assert.equal(report.playbackRuns.length, catalogRows.reduce((sum, song) => sum + song.difficulties.length, 0));
+  assert.equal(report.playbackRuns.length, plan.runs.length);
   assert.deepEqual(await cdp.evaluate('window.__audioRequests.slice(0,0)'), []);
   report.fullTrackFrameCost = frameStatistics(
     (await cdp.evaluate('window.__frameSamples')).filter((sample) => {
       const [songId] = sample.run.split(':');
-      return catalogRows.find((song) => song.id === songId)?.segmentKind === 'full';
+      return (
+        catalogRows.find((song) => song.id === songId)?.segmentKind === 'full'
+      );
     }),
   );
   report.fullTrackFrameCostMethod =
@@ -783,13 +962,19 @@ async function cleanup() {
 
   if (cdp !== undefined && debugPort !== undefined) {
     try {
-      await waitFor(async () => {
-        const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
-        const targets = response.ok ? await response.json() : [];
-        return targets.some((target) => target.id === pageTargetId)
-          ? false
-          : true;
-      }, 'page target destruction and listener teardown', 10_000);
+      await waitFor(
+        async () => {
+          const response = await fetch(
+            `http://127.0.0.1:${debugPort}/json/list`,
+          );
+          const targets = response.ok ? await response.json() : [];
+          return targets.some((target) => target.id === pageTargetId)
+            ? false
+            : true;
+        },
+        'page target destruction and listener teardown',
+        10_000,
+      );
       report.cleanup.pageTargetDestroyed = true;
     } catch (error) {
       report.cleanup.pageTargetDestroyed = false;
@@ -835,7 +1020,8 @@ try {
   await runAcceptance();
 } catch (error) {
   failure = error;
-  report.failure = error instanceof Error ? error.stack ?? error.message : String(error);
+  report.failure =
+    error instanceof Error ? (error.stack ?? error.message) : String(error);
 } finally {
   try {
     await cleanup();
@@ -866,8 +1052,12 @@ try {
 }
 
 if (failure !== undefined) {
-  process.stderr.write(`${failure instanceof Error ? failure.stack : String(failure)}\n`);
+  process.stderr.write(
+    `${failure instanceof Error ? failure.stack : String(failure)}\n`,
+  );
   process.exitCode = 1;
 } else {
-  process.stdout.write('Page target, DevTools connection, browser, Vite server and profile were cleaned up.\n');
+  process.stdout.write(
+    'Page target, DevTools connection, browser, Vite server and profile were cleaned up.\n',
+  );
 }

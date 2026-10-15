@@ -75,9 +75,9 @@ function setElementText(element: HTMLElement, value: string): void {
 export function createGameUI(
   applicationRoot: HTMLElement,
   song: SongCatalogEntry,
+  chart: ChartConfig,
   actions: UIActions,
 ): GameUI {
-  const chart: ChartConfig = song.chart;
   const shell = ensureExperienceShell(applicationRoot);
   const root = shell.createScreen('gameplay', 'Rhythm performance');
   root.innerHTML = `

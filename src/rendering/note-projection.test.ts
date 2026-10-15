@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
 import { createGame } from '../game/game';
 import { getDifficultyProfile } from '../game/game-balance';
-import { projectNotes } from './note-projection';
+import { projectNotes, VISIBLE_NOTE_SECONDS } from './note-projection';
 
 const easyChart: ChartConfig = {
   sourceStart: 0,
@@ -53,7 +53,10 @@ describe('projectNotes', () => {
   it('keeps an Easy note moving past the hit line while its expanded Good window is still active', () => {
     const inputOffset = 0.2;
     const game = createGame(easyChart, inputOffset, 'easy');
-    const snapshot = game.advanceTo(2.4);
+    const goodWindow = getDifficultyProfile('easy').timing.goodWindowSeconds;
+    const snapshot = game.advanceTo(
+      easyChart.notes[0]!.time + goodWindow + inputOffset - 0.01,
+    );
 
     expect(snapshot.notes[0]?.outcome).toBeNull();
     expect(
@@ -61,9 +64,11 @@ describe('projectNotes', () => {
         snapshot.notes,
         easyChart.notes,
         snapshot.transportTime,
-        2.4,
+        VISIBLE_NOTE_SECONDS,
       )[0]?.progress,
-    ).toBeCloseTo(1 + 0.4 / 2.4);
+    ).toBeCloseTo(
+      1 + (goodWindow + inputOffset - 0.01) / VISIBLE_NOTE_SECONDS,
+    );
   });
 
   it('moves unresolved notes beyond the hit line through the late window, then removes them on miss or hit', () => {
@@ -75,13 +80,20 @@ describe('projectNotes', () => {
     const atMissCutoff = lateGame.advanceTo(2 + goodWindow);
 
     const progressAt = (snapshot: ReturnType<typeof lateGame.snapshot>) =>
-      projectNotes(snapshot.notes, easyChart.notes, snapshot.transportTime, 2.4)[0]
+      projectNotes(
+        snapshot.notes,
+        easyChart.notes,
+        snapshot.transportTime,
+        VISIBLE_NOTE_SECONDS,
+      )[0]
         ?.progress;
 
     expect(progressAt(beforeIdeal)).toBeLessThan(1);
     expect(progressAt(atIdeal)).toBe(1);
     expect(progressAt(afterIdeal)).toBeGreaterThan(1);
-    expect(progressAt(atMissCutoff)).toBeCloseTo(1 + goodWindow / 2.4);
+    expect(progressAt(atMissCutoff)).toBeCloseTo(
+      1 + goodWindow / VISIBLE_NOTE_SECONDS,
+    );
     expect(atMissCutoff.notes[0]?.outcome).toBeNull();
 
     const afterMiss = lateGame.advanceTo(2 + goodWindow + 0.001);
@@ -96,7 +108,7 @@ describe('projectNotes', () => {
         lateHitGame.snapshot().notes,
         easyChart.notes,
         lateHitGame.snapshot().transportTime,
-        2.4,
+        VISIBLE_NOTE_SECONDS,
       ),
     ).toEqual([]);
   });
@@ -112,11 +124,18 @@ describe('projectNotes', () => {
       const visualClock = atDeadline.transportTime + visualOffset;
 
       expect(atDeadline.notes[0]?.outcome).toBeNull();
-      expect(visualClock - easyChart.notes[0]!.time).toBeGreaterThan(0.35);
+      expect(visualClock - easyChart.notes[0]!.time).toBeGreaterThan(0);
       expect(
-        projectNotes(atDeadline.notes, easyChart.notes, visualClock, 2.4)[0]
-          ?.progress,
-      ).toBeCloseTo(1 + (goodWindow + inputOffset + visualOffset) / 2.4);
+        projectNotes(
+          atDeadline.notes,
+          easyChart.notes,
+          visualClock,
+          VISIBLE_NOTE_SECONDS,
+        )[0]?.progress,
+      ).toBeCloseTo(
+        1 +
+          (goodWindow + inputOffset + visualOffset) / VISIBLE_NOTE_SECONDS,
+      );
 
       const afterDeadline = game.advanceTo(deadline + 0.001);
       expect(afterDeadline.notes[0]?.outcome).toBe('miss');
@@ -125,7 +144,7 @@ describe('projectNotes', () => {
           afterDeadline.notes,
           easyChart.notes,
           afterDeadline.transportTime,
-          2.4,
+          VISIBLE_NOTE_SECONDS,
         ),
       ).toEqual([]);
     },

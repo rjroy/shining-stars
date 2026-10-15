@@ -1,7 +1,7 @@
 {
   "profiles": {
     "easy": {
-      "timing": { "perfect_ms": 250, "good_ms": 500 },
+      "timing": { "perfect_ms": 75, "good_ms": 150 },
       "audience": { "perfect": 2, "good": 1, "miss": 0 },
       "twilight": {
         "perfect": { "personal_cost": 0, "damage": 2 },
@@ -10,7 +10,7 @@
       }
     },
     "normal": {
-      "timing": { "perfect_ms": 75, "good_ms": 150 },
+      "timing": { "perfect_ms": 65, "good_ms": 125 },
       "audience": { "perfect": 3, "good": 2, "miss": 0 },
       "twilight": {
         "perfect": { "personal_cost": 0, "damage": 3 },

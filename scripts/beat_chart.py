@@ -26,6 +26,14 @@ DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
 DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
+DEFAULT_GENERATED_DIR = PROJECT_ROOT / "data/charts/generated"
+DEFAULT_ONSETS_DIR = PROJECT_ROOT / "data/charts/onsets"
+DIFFICULTIES = ("easy", "normal", "hard")
+DIFFICULTY_AUTHORING = {
+    "easy": {"twilight_strength": 70, "minimum_delta": 64, "stride": 3},
+    "normal": {"twilight_strength": 80, "minimum_delta": 64, "stride": 2},
+    "hard": {"twilight_strength": 90, "minimum_delta": 50, "stride": 1},
+}
 MAX_INPUT_OFFSET_SECONDS = 0.2
 
 
@@ -420,7 +428,250 @@ def load_song_config(path=DEFAULT_SONG_CONFIG, song_id=DEFAULT_SONG_ID):
         raise ValueError("song authoring config must contain a songs object")
     if song_id not in document["songs"]:
         raise ValueError(f"unknown song ID: {song_id}")
+    if document.get("schema_version") == 2:
+        settings = document["songs"][song_id]
+        return {
+            **settings,
+            "allowed_difficulties": ["normal", "hard"],
+            "twilight_strength": 100,
+            "minimum_delta": settings["difficulties"]["normal"]["minimum_delta"],
+            "stride": settings["difficulties"]["normal"]["stride"],
+        }
     return _validate_song_settings(song_id, document["songs"][song_id])
+
+
+def _profile_file_hash(path=None):
+    return _sha256_file(path or DEFAULT_DIFFICULTY_PROFILES)
+
+
+def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
+    """Read the percent-based v2 authoring contract without applying defaults."""
+    document = json.loads(Path(path).read_text(encoding="utf-8"))
+    songs = document.get("songs") if isinstance(document, dict) else None
+    if document.get("schema_version") != 2 or not isinstance(songs, dict) or not songs:
+        raise ValueError("song authoring config must be schema_version 2 with a songs object")
+    for song_id, settings in songs.items():
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", song_id):
+            raise ValueError(f"invalid ASCII song ID: {song_id!r}")
+        if not isinstance(settings, dict) or not isinstance(settings.get("source"), str):
+            raise ValueError(f"song {song_id!r} must specify a source path")
+        for name in ("start_time", "duration", "twilight_time"):
+            value = _finite_number(settings.get(name), name)
+            if value < 0 or (name != "start_time" and value <= 0) or value > 100:
+                raise ValueError(f"song {song_id!r} {name} must be a percentage in [0, 100]")
+        if settings["start_time"] + settings["duration"] > 100 + 1e-12:
+            raise ValueError(f"song {song_id!r} excerpt exceeds source duration")
+        if settings["twilight_time"] >= 100:
+            raise ValueError(f"song {song_id!r} twilight_time must be below 100 percent")
+        if not isinstance(settings.get("lane_rules"), dict) or settings["lane_rules"].get("type") != "pattern":
+            raise ValueError(f"song {song_id!r} has invalid lane_rules")
+        _validate_config(0, 1, 0.5, 1, settings["lane_rules"].get("data"))
+        choices = settings.get("difficulties")
+        if not isinstance(choices, dict) or set(choices) != set(DIFFICULTIES):
+            raise ValueError(f"song {song_id!r} must author easy, normal, and hard difficulties")
+        for difficulty in DIFFICULTIES:
+            choice = choices[difficulty]
+            if not isinstance(choice, dict) or set(choice) != set(DIFFICULTY_AUTHORING[difficulty]):
+                raise ValueError(f"song {song_id!r} has invalid {difficulty} settings")
+            strength = _finite_number(choice["twilight_strength"], "twilight_strength")
+            delta = _finite_number(choice["minimum_delta"], "minimum_delta")
+            stride = choice["stride"]
+            if not 0 < strength <= 100 or delta < 0 or isinstance(stride, bool) or not isinstance(stride, int) or stride <= 0:
+                raise ValueError(f"song {song_id!r} has invalid {difficulty} difficulty values")
+    return songs
+
+
+def _source_path(settings):
+    source = Path(settings["source"])
+    return (source if source.is_absolute() else PROJECT_ROOT / source).resolve()
+
+
+def _source_duration(source, runner):
+    result = _run_process(runner, ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(source)], "FFprobe duration read")
+    duration = _finite_number(float((result.stdout or "").strip()), "source duration")
+    if duration <= 0:
+        raise ValueError(f"source duration must be positive: {source}")
+    return duration
+
+
+def _validate_onset_values(onsets, song_id):
+    if not isinstance(onsets, list):
+        raise ValueError(f"onset cache for {song_id} must contain an onset array")
+    validated = []
+    previous = -1.0
+    for index, value in enumerate(onsets):
+        onset = _finite_number(value, f"onsets[{index}]")
+        if onset < 0 or onset <= previous:
+            raise ValueError(f"onset cache for {song_id} must be non-negative, strictly increasing, and unique")
+        validated.append(onset)
+        previous = onset
+    return validated
+
+
+def _validate_analysis_commands(commands, song_id, field_name):
+    if commands != _recorded_commands():
+        raise ValueError(f"{field_name} for {song_id} is not the supported full-source analysis")
+
+
+def _validate_cache_provenance(cache, song_id, source, digest, *, legacy=False):
+    if not isinstance(cache, dict):
+        raise ValueError(f"onset cache for {song_id} must be a JSON object")
+    if legacy:
+        if type(cache.get("schema_version")) is not int or cache["schema_version"] != 1:
+            raise ValueError(f"legacy beat artifact for {song_id} has an unsupported schema")
+        actual_source = cache.get("source")
+        cached_hash = cache.get("source_sha256")
+        commands = cache.get("commands")
+        tools = cache.get("tools")
+    else:
+        if type(cache.get("schemaVersion")) is not int or cache["schemaVersion"] != 1:
+            raise ValueError(f"onset cache for {song_id} has an unsupported schema")
+        actual_source = cache.get("source")
+        cached_hash = cache.get("source_sha256")
+        commands = cache.get("analysis")
+        tools = cache.get("tools")
+    expected_path = _project_relative_source(source)
+    if not isinstance(actual_source, dict):
+        raise ValueError(f"onset cache for {song_id} has invalid source provenance")
+    source_hash = actual_source.get("sha256")
+    if (
+        actual_source.get("path") != expected_path
+        or not isinstance(source_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", source_hash)
+        or source_hash != digest
+        or cached_hash != source_hash
+    ):
+        raise ValueError(f"cached onset source mismatch for {song_id}")
+    _validate_analysis_commands(commands, song_id, "analysis commands" if not legacy else "legacy commands")
+    if tools != {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"}:
+        raise ValueError(f"onset cache for {song_id} has unsupported analysis tools")
+    _validate_onset_values(cache.get("onsets"), song_id)
+    if not legacy:
+        duration = _finite_number(cache.get("source_duration_seconds"), "source_duration_seconds")
+        if duration <= 0:
+            raise ValueError(f"onset cache for {song_id} has invalid source duration")
+        projection = cache.get("projection")
+        if (
+            not isinstance(projection, dict)
+            or not isinstance(projection.get("song"), dict)
+            or not isinstance(projection.get("profile_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", projection["profile_sha256"])
+        ):
+            raise ValueError(f"onset cache for {song_id} has invalid projection provenance")
+
+
+def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, song_id, source_hash):
+    excerpt_start = duration_seconds * settings["start_time"] / 100
+    excerpt_duration = duration_seconds * settings["duration"] / 100
+    twilight_at = excerpt_duration * settings["twilight_time"] / 100
+    if not 0 < twilight_at < excerpt_duration:
+        raise ValueError(f"song {song_id} has invalid computed twilight boundary")
+    choice = settings["difficulties"][difficulty]
+    notes = select_notes(onsets, excerpt_start, excerpt_duration, twilight_at,
+                         stride=choice["stride"], lane_pattern=settings["lane_rules"]["data"],
+                         minimum_delta_ms=choice["minimum_delta"],
+                         allowed_difficulties=[difficulty])
+    count = sum(note["relative_time"] > twilight_at for note in notes)
+    if count == 0:
+        raise ValueError(f"zeroTwilight: {song_id}/{difficulty} has no twilight notes")
+    strength = math.ceil(count * profile["twilight"]["perfect"]["damage"] * choice["twilight_strength"] / 100)
+    if strength <= 0:
+        raise ValueError(f"zeroTwilight: {song_id}/{difficulty} computes zero twilight strength")
+    # Construct the runtime ChartConfig shape directly; percentages and provenance
+    # remain in authoring/onset data, never in runtime chart values.
+    counters = {"a": 0, "t": 0}
+    chart_notes = []
+    for note in notes:
+        kind = "a" if note["relative_time"] < twilight_at else "t"
+        counters[kind] += 1
+        chart_notes.append({"id": f"{kind}{counters[kind]:02d}", "time": note["relative_time"], "lane": note["lane"]})
+    chart = {
+        "sourceStart": excerpt_start, "duration": excerpt_duration,
+        "twilightAt": twilight_at, "twilightStrength": strength,
+        "allowedDifficulties": [difficulty],
+        "notes": chart_notes,
+    }
+    return chart, notes, count
+
+
+def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_path):
+    if onset_path.exists():
+        cached = json.loads(onset_path.read_text(encoding="utf-8"))
+        _validate_cache_provenance(cached, song_id, source, digest)
+        return cached
+    if check:
+        raise ValueError(f"missing cached onset artifact for {song_id}")
+    legacy_candidates = [PROJECT_ROOT / "data/charts" / f"{song_id}.beats.json",
+                         PROJECT_ROOT / "data/charts/candidates" / f"{song_id}.beats.json"]
+    for legacy in legacy_candidates:
+        if legacy.exists():
+            old = json.loads(legacy.read_text(encoding="utf-8"))
+            _validate_cache_provenance(old, song_id, source, digest, legacy=True)
+            return {"schemaVersion": 1, "source": {"path": _project_relative_source(source), "sha256": digest},
+                    "source_sha256": digest, "onsets": _validate_onset_values(old["onsets"], song_id),
+                    "analysis": old["commands"], "tools": old["tools"]}
+    with tempfile.TemporaryDirectory(prefix="beat-chart-") as temp_dir:
+        wav = Path(temp_dir) / "analysis.wav"
+        ffmpeg, aubio = _build_commands(source, wav)
+        _run_process(runner, ffmpeg, "FFmpeg audio conversion")
+        result = _run_process(runner, aubio, "aubio onset detection")
+    return {"schemaVersion": 1, "source": {"path": _project_relative_source(source), "sha256": digest},
+            "source_sha256": digest, "onsets": parse_onsets(result.stdout or ""),
+            "analysis": _recorded_commands(), "tools": {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"}}
+
+
+def _bulk_run(args, runner):
+    songs = load_authoring_collection(args.song_config)
+    selected = songs if args.all else {args.song: songs[args.song]}
+    profiles = load_difficulty_profiles()
+    profile_hash = _profile_file_hash()
+    built = []
+    source_snapshots = {}
+    for song_id, settings in selected.items():
+        source = _source_path(settings).resolve(strict=True)
+        digest = _sha256_file(source)
+        source_snapshots[song_id] = (source, digest)
+        onset_path = DEFAULT_ONSETS_DIR / f"{song_id}.beats.json"
+        cache = _analysis_for_song(song_id, settings, source, digest, runner, args.check, onset_path)
+        if args.check:
+            audio_duration = cache.get("source_duration_seconds")
+            if not audio_duration:
+                raise ValueError(f"onset artifact lacks source duration for {song_id}")
+        else:
+            audio_duration = _source_duration(source, runner)
+        charts = {}
+        for difficulty in DIFFICULTIES:
+            chart, notes, count = _difficulty_chart(cache["onsets"], settings, audio_duration,
+                                                    profiles[difficulty], difficulty, song_id, digest)
+            charts[difficulty] = chart
+        projection = {"song": settings, "profile_sha256": profile_hash}
+        cache.update({"source_duration_seconds": audio_duration, "projection": projection})
+        onset_text = json.dumps(cache, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        envelope = {"schemaVersion": 1, "songId": song_id, "source": settings["source"], "charts": charts}
+        generated_path = DEFAULT_GENERATED_DIR / f"{song_id}.charts.json"
+        if args.check:
+            actual_onsets = onset_path.read_text(encoding="utf-8")
+            if actual_onsets != onset_text:
+                raise ValueError(f"onset projection or profile cache is stale for {song_id}")
+            if not generated_path.exists() or json.loads(generated_path.read_text(encoding="utf-8")) != envelope:
+                raise ValueError(f"generated chart is stale for {song_id}")
+        else:
+            built.extend(((onset_path, onset_text), (generated_path, json.dumps(envelope, indent=2, sort_keys=True, allow_nan=False) + "\n")))
+    if args.all:
+        expected_generated = {f"{song_id}.charts.json" for song_id in songs}
+        expected_onsets = {f"{song_id}.beats.json" for song_id in songs}
+        for directory, expected, label in ((DEFAULT_GENERATED_DIR, expected_generated, "generated chart"), (DEFAULT_ONSETS_DIR, expected_onsets, "onset artifact")):
+            stale = {path.name for path in directory.glob("*") if path.is_file()} - expected if directory.exists() else set()
+            if stale:
+                raise ValueError(f"stale {label} outputs: {sorted(stale)}")
+    if not args.check:
+        for song_id, (source, expected_digest) in source_snapshots.items():
+            if _sha256_file(source) != expected_digest:
+                raise RuntimeError(
+                    f"source audio changed during chart generation for {song_id}; outputs were not written"
+                )
+    for path, content in built:
+        _atomic_write(path, content)
 
 
 def _chart_config(args, song_id, settings):
@@ -649,6 +900,7 @@ def _argument_parser():
     parser.add_argument("--stride", type=int)
     parser.add_argument("--minimum-delta", type=float, help="minimum onset spacing in milliseconds")
     parser.add_argument("--check", action="store_true", help="validate cached provenance and chart")
+    parser.add_argument("--all", action="store_true", help="generate or check every v2 song")
     return parser
 
 
@@ -657,6 +909,28 @@ def main(argv=None, runner=None):
     parser = _argument_parser()
     args = parser.parse_args(argv)
     try:
+        config_document = json.loads(Path(args.song_config).read_text(encoding="utf-8"))
+        is_v2 = isinstance(config_document, dict) and config_document.get("schema_version") == 2
+        if is_v2:
+            unsupported_overrides = {
+                "source positional argument": args.source,
+                "--source": args.source_option,
+                "--artifact": args.artifact,
+                "--chart": args.chart,
+                "--source-start": args.source_start,
+                "--duration": args.duration,
+                "--boundary": args.boundary,
+                "--stride": args.stride,
+                "--minimum-delta": args.minimum_delta,
+            }
+            supplied = [name for name, value in unsupported_overrides.items() if value is not None]
+            if supplied:
+                raise ValueError(
+                    "v2 authoring does not support CLI overrides: " + ", ".join(supplied)
+                )
+        if args.all or is_v2:
+            _bulk_run(args, runner or subprocess.run)
+            return 0
         settings = load_song_config(args.song_config, args.song)
         config = _chart_config(args, args.song, settings)
         source_override = args.source_option or args.source

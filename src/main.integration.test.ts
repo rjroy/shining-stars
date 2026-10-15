@@ -235,12 +235,12 @@ describe('real app Observatory-to-gameplay integration', () => {
       await evaluate(
         "document.querySelector('[data-result-count]')?.textContent",
       ),
-    ).toBe('7 songs');
+    ).toBe('29 songs');
 
     await click('[data-action="all-songs"]');
     expect(
       await evaluate("document.querySelectorAll('.song-row').length"),
-    ).toBe(7);
+    ).toBe(29);
     await click(
       'button[data-action="select-song"][data-song-id="never-again"]',
     );

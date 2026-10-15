@@ -35,6 +35,11 @@ class ParseOnsetsTests(unittest.TestCase):
 
 
 class SelectNotesTests(unittest.TestCase):
+    @staticmethod
+    def envelope_for(difficulties):
+        profiles = beat_chart.load_difficulty_profiles()
+        return max(profiles[name]["timing"]["good_ms"] for name in difficulties) / 1000 + beat_chart.MAX_INPUT_OFFSET_SECONDS
+
     def test_minimum_delta_is_greedy_before_stride_and_keeps_raw_provenance(self):
         source_start = 107.1
         offsets_ms = [0, 12, 64, 128, 200, 300, 315, 400]
@@ -78,13 +83,14 @@ class SelectNotesTests(unittest.TestCase):
 
     def test_timing_guards_run_after_minimum_delta_and_stride_without_reanchoring(self):
         source_start = 107.1
-        beats = [source_start + offset for offset in (0.2, 0.264, 0.328, 0.392)]
+        edge = self.envelope_for(["normal"])
+        beats = [source_start + offset for offset in (0.2, 0.264, edge - 0.001)]
         notes = beat_chart.select_notes(
             beats, source_start=source_start, stride=2, minimum_delta_ms=64
         )
-        # The onset sequence is filtered/strided before the 0.35-second edge
-        # guard. The guard must not cause stride to restart at the first valid
-        # chart center (which would incorrectly retain index 1 or 3).
+        # Minimum-delta retention and stride happen before the timing-envelope
+        # edge guard. Applying the edge guard first would shift the stride and
+        # retain the otherwise out-of-slot index 1.
         self.assertEqual(notes, [])
 
     def test_minimum_delta_and_stride_do_not_reset_at_twilight(self):
@@ -131,17 +137,25 @@ class SelectNotesTests(unittest.TestCase):
                 beat_chart.select_notes([110.0], lane_pattern=pattern)
 
     def test_excludes_excerpt_edges_and_strict_boundary_guard_edges(self):
-        # Centers at 0.35 and duration-0.85 are inclusive; boundary +/- 0.85
-        # are strictly excluded. Other centers just outside are not shifted.
+        # Centers at the timing envelope and duration-envelope-minus-0.5 are
+        # inclusive; boundary +/- envelope+0.5 are strictly excluded.
         source_start, duration, boundary = 10.0, 10.0, 5.0
-        rels = [0.349999, 0.35, 4.149999, 4.15, 5.85, 5.850001, 9.15, 9.150001]
+        envelope = self.envelope_for(["normal"])
+        handoff = envelope + 0.5
+        rels = [
+            envelope - 1e-6, envelope,
+            boundary - handoff - 1e-6, boundary - handoff,
+            boundary + handoff, boundary + handoff + 1e-6,
+            duration - handoff, duration - handoff + 1e-6,
+        ]
         notes = beat_chart.select_notes(
             [source_start + rel for rel in rels], source_start, duration, boundary,
             stride=1, minimum_delta_ms=0,
         )
         self.assertEqual(
             [round(n["relative_time"], 6) for n in notes],
-            [0.35, 4.149999, 5.850001, 9.15],
+            [round(envelope, 6), round(boundary - handoff - 1e-6, 6),
+             round(boundary + handoff + 1e-6, 6), round(duration - handoff, 6)],
         )
 
     def test_does_not_reset_stride_at_boundary(self):
@@ -154,22 +168,24 @@ class SelectNotesTests(unittest.TestCase):
         self.assertTrue(all(n["source_onset_index"] % 4 == 0 for n in before + after))
 
     def test_no_rounding_before_filtering_can_leak_across_guard(self):
-        notes = beat_chart.select_notes([14.1499999], 10.0, 10.0, 5.0, stride=1)
+        edge = self.envelope_for(["normal"]) + 0.5
+        notes = beat_chart.select_notes([10.0 + 5.0 - edge - 1e-7], 10.0, 10.0, 5.0, stride=1)
         self.assertEqual(notes, [])
 
     def test_default_handoff_guard_matches_chart_timing_envelope(self):
-        notes = beat_chart.select_notes([145.4499999], stride=1)
+        edge = self.envelope_for(["normal"]) + 0.5
+        notes = beat_chart.select_notes([107.1 + 39.2 - edge], stride=1)
         self.assertEqual(notes, [])
 
     def test_generator_guards_use_maximum_allowed_good_window_and_input_offset(self):
         source_start, duration, boundary = 10.0, 10.0, 5.0
+        envelope = self.envelope_for(["easy", "hard"])
+        handoff = envelope + 0.5
         cases = (
-            (0.69, False),
-            (0.7, True),
-            (4.1, False),
-            (6.19, False),
-            (8.8, True),
-            (8.9, False),
+            (envelope - 1e-6, False), (envelope, True),
+            (boundary - handoff, False), (boundary - handoff - 1e-6, True),
+            (boundary + handoff, False), (boundary + handoff + 1e-6, True),
+            (duration - handoff, True), (duration - handoff + 1e-6, False),
         )
 
         for relative_time, expected_to_keep in cases:

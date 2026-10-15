@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "songs": [
+    {
+      "id": "the-first-shining-star",
+      "title": "The First Shining Star (Demo Excerpt)",
+      "sortOrder": 10,
+      "segmentKind": "excerpt",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "never-again",
+      "title": "Never Again",
+      "sortOrder": 20,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-abandoned-child",
+      "title": "The Abandoned Child",
+      "sortOrder": 30,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-commodity",
+      "title": "The Commodity",
+      "sortOrder": 40,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-game",
+      "title": "The Game",
+      "sortOrder": 50,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-last-true-performer",
+      "title": "The Last True Performer",
+      "sortOrder": 60,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-rising-star",
+      "title": "The Rising Star",
+      "sortOrder": 70,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "beautiful-disaster",
+      "title": "Beautiful Disaster",
+      "sortOrder": 80,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "coal-makers-mistake",
+      "title": "Coal Maker's Mistake",
+      "sortOrder": 90,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "december-light",
+      "title": "December Light",
+      "sortOrder": 100,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "everythings-different-this-year",
+      "title": "Everything's Different This Year",
+      "sortOrder": 110,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "first-light-of-december",
+      "title": "First Light of December",
+      "sortOrder": 120,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "glitch-in-the-bell",
+      "title": "Glitch in the Bell",
+      "sortOrder": 130,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "grylas-lullaby",
+      "title": "Grýla's Lullaby",
+      "sortOrder": 140,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "hope-came-down",
+      "title": "Hope Came Down",
+      "sortOrder": 150,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "hymn-of-the-breathing-rebellion",
+      "title": "Hymn of the Breathing Rebellion",
+      "sortOrder": 160,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-eternal-march",
+      "title": "The Eternal March",
+      "sortOrder": 170,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-ferrymans-coin",
+      "title": "The Ferryman’s Coin",
+      "sortOrder": 180,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-gravediggers-warning",
+      "title": "The Gravedigger’s Warning",
+      "sortOrder": 190,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-midnight-bells",
+      "title": "The Midnight Bells",
+      "sortOrder": 200,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-necromancers-duet",
+      "title": "The Necromancer’s Duet",
+      "sortOrder": 210,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-prophets-transmission",
+      "title": "The Prophet's Transmission",
+      "sortOrder": 220,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-return-of-light",
+      "title": "The Return of Light",
+      "sortOrder": 230,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-smallest-light",
+      "title": "The Smallest Light",
+      "sortOrder": 240,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-star-that-followed-us",
+      "title": "The Star That Followed Us",
+      "sortOrder": 250,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-year-we-knew",
+      "title": "The Year We Knew",
+      "sortOrder": 260,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "twenty-seven-times",
+      "title": "Twenty Seven Times",
+      "sortOrder": 270,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "where-candles-meet-the-dark",
+      "title": "Where Candles Meet the Dark",
+      "sortOrder": 280,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "workshop-warriors",
+      "title": "Workshop Warriors",
+      "sortOrder": 290,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    }
+  ],
+  "collections": [
+    {
+      "id": "all-songs",
+      "title": "All Songs",
+      "sortOrder": 0,
+      "songIds": [
+        "the-first-shining-star",
+        "never-again",
+        "the-abandoned-child",
+        "the-commodity",
+        "the-game",
+        "the-last-true-performer",
+        "the-rising-star",
+        "beautiful-disaster",
+        "coal-makers-mistake",
+        "december-light",
+        "everythings-different-this-year",
+        "first-light-of-december",
+        "glitch-in-the-bell",
+        "grylas-lullaby",
+        "hope-came-down",
+        "hymn-of-the-breathing-rebellion",
+        "the-eternal-march",
+        "the-ferrymans-coin",
+        "the-gravediggers-warning",
+        "the-midnight-bells",
+        "the-necromancers-duet",
+        "the-prophets-transmission",
+        "the-return-of-light",
+        "the-smallest-light",
+        "the-star-that-followed-us",
+        "the-year-we-knew",
+        "twenty-seven-times",
+        "where-candles-meet-the-dark",
+        "workshop-warriors"
+      ]
+    }
+  ]
+}

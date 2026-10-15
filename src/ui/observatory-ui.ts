@@ -1,5 +1,10 @@
-import type { Difficulty } from '../game/game-balance';
-import type { SongCatalog } from '../catalog/catalog';
+import { defaultDifficulty, type Difficulty } from '../game/game-balance';
+import {
+  getSongChart,
+  getSongDifficulties,
+  type SongCatalog,
+  type SongCatalogEntry,
+} from '../catalog/catalog';
 import {
   canStartSong,
   reconcileSongSelection,
@@ -60,11 +65,11 @@ export function chooseObservatorySong(
     selectedSongId: song.id,
     runDifficulty:
       selection.runDifficulty !== null &&
-      song.chart.allowedDifficulties.includes(selection.runDifficulty)
+      getSongDifficulties(song).includes(selection.runDifficulty)
         ? selection.runDifficulty
-        : song.chart.allowedDifficulties.includes('normal')
+        : getSongDifficulties(song).includes('normal')
           ? 'normal'
-          : (song.chart.allowedDifficulties[0] ?? null),
+          : (getSongDifficulties(song)[0] ?? null),
   };
 }
 
@@ -86,6 +91,10 @@ export function formatSongDuration(seconds: number): string {
   const totalSeconds = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(totalSeconds / 60);
   return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+function browseChart(song: SongCatalogEntry) {
+  return getSongChart(song, defaultDifficulty(getSongDifficulties(song)));
 }
 
 const escapeKey = 'Escape';
@@ -260,11 +269,9 @@ export function createObservatoryUI(
       ? { selectedSongId: null, runDifficulty: null }
       : {
           selectedSongId: initialSong.id,
-          runDifficulty: initialSong.chart.allowedDifficulties.includes(
-            'normal',
-          )
+          runDifficulty: getSongDifficulties(initialSong).includes('normal')
             ? 'normal'
-            : (initialSong.chart.allowedDifficulties[0] ?? null),
+            : (getSongDifficulties(initialSong)[0] ?? null),
         };
   let currentSelection = selection;
   let screen: 'overview' | 'browser' = 'overview';
@@ -419,10 +426,10 @@ export function createObservatoryUI(
       const status = document.createElement('small');
       status.textContent =
         song.segmentKind === 'excerpt'
-          ? `Demo excerpt · play-test chart · ${formatSongDuration(song.chart.duration)}`
+          ? `Demo excerpt · play-test chart · ${formatSongDuration(browseChart(song).duration)}`
           : song.availability === 'unavailable'
-            ? `Unavailable · ${formatSongDuration(song.chart.duration)}`
-            : `Play-test chart · ${formatSongDuration(song.chart.duration)}`;
+            ? `Unavailable · ${formatSongDuration(browseChart(song).duration)}`
+            : `Play-test chart · ${formatSongDuration(browseChart(song).duration)}`;
       text.append(title, status);
       select.append(text);
       const favorite = createButton(
@@ -479,7 +486,7 @@ export function createObservatoryUI(
       song.segmentKind === 'excerpt' ? 'Demo excerpt' : 'Full track';
     const duration = document.createElement('p');
     duration.className = 'song-detail-duration';
-    duration.textContent = `${formatSongDuration(song.chart.duration)} playable`;
+    duration.textContent = `${formatSongDuration(browseChart(song).duration)} playable`;
     heading.append(art, eyebrow, title, duration);
 
     const status = document.createElement('p');
@@ -500,13 +507,13 @@ export function createObservatoryUI(
     difficulty.setAttribute('aria-label', `Difficulty for ${song.title}`);
     appendOptions(
       difficulty,
-      song.chart.allowedDifficulties.map((value) => ({
+      getSongDifficulties(song).map((value) => ({
         value,
         label: value[0]!.toUpperCase() + value.slice(1),
       })),
     );
     difficulty.value = currentSelection.runDifficulty ?? '';
-    difficulty.disabled = song.chart.allowedDifficulties.length < 2;
+    difficulty.disabled = getSongDifficulties(song).length < 2;
     difficultyLabel.append(difficulty);
 
     const play = createButton(
@@ -722,7 +729,8 @@ export function createObservatoryUI(
       const difficulty = normalizeDifficulty(target.value);
       if (
         difficulty !== null &&
-        currentSong()?.chart.allowedDifficulties.includes(difficulty)
+        currentSong() !== null &&
+        getSongDifficulties(currentSong()!).includes(difficulty)
       ) {
         currentSelection = { ...currentSelection, runDifficulty: difficulty };
         playStatus = 'idle';

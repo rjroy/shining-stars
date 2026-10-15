@@ -1,68 +1,180 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
-import { createSongCatalog, type SongCatalogEntry, type SongCollection } from './catalog';
-import { normalizeSongSearch, reconcileSongSelection, selectSongs } from './selectors';
+import {
+  createSongCatalog,
+  type GeneratedSongCharts,
+  type SongCollection,
+} from './catalog';
+import {
+  normalizeSongSearch,
+  reconcileSongSelection,
+  selectSongs,
+} from './selectors';
 
 const collection: SongCollection = {
-  id: 'all-songs', title: 'All Songs', sortOrder: 0, songIds: ['mixed', 'easy-only', 'unavailable'],
+  id: 'all-songs',
+  title: 'All Songs',
+  sortOrder: 0,
+  songIds: ['mixed', 'easy-only', 'unavailable'],
 };
 
-function chart(allowedDifficulties: ChartConfig['allowedDifficulties']): ChartConfig {
+function chart(
+  allowedDifficulties: ChartConfig['allowedDifficulties'],
+): ChartConfig {
   return {
-    sourceStart: 0, duration: 10, twilightAt: 5, twilightStrength: 100,
-    allowedDifficulties, notes: [],
+    sourceStart: 0,
+    duration: 10,
+    twilightAt: 5,
+    twilightStrength: 100,
+    allowedDifficulties,
+    notes: [],
   };
 }
 
-const songs: readonly SongCatalogEntry[] = [
+const metadataSongs = [
   {
-    id: 'mixed', title: 'Café Night', sortOrder: 1, audioUrl: '/cafe.mp3',
-    chart: chart(['normal', 'hard']), segmentKind: 'full', availability: 'available',
-    chartStatus: 'candidate', collections: ['all-songs'],
+    id: 'mixed',
+    title: 'Café Night',
+    sortOrder: 1,
+    segmentKind: 'full',
+    availability: 'available',
+    chartStatus: 'candidate',
   },
   {
-    id: 'easy-only', title: 'Quiet Song', sortOrder: 2, audioUrl: '/quiet.mp3',
-    chart: chart(['easy']), segmentKind: 'full', availability: 'available',
-    chartStatus: 'candidate', collections: ['all-songs'],
+    id: 'easy-only',
+    title: 'Quiet Song',
+    sortOrder: 2,
+    segmentKind: 'full',
+    availability: 'available',
+    chartStatus: 'candidate',
   },
   {
-    id: 'unavailable', title: 'Unavailable Song', sortOrder: 3, audioUrl: '/unavailable.mp3',
-    chart: chart(['normal']), segmentKind: 'full', availability: 'unavailable',
-    chartStatus: 'candidate', collections: ['all-songs'],
+    id: 'unavailable',
+    title: 'Unavailable Song',
+    sortOrder: 3,
+    segmentKind: 'full',
+    availability: 'unavailable',
+    chartStatus: 'candidate',
   },
-];
-const catalog = createSongCatalog(songs, [collection]);
+] as const;
+const chartBundle = (
+  id: string,
+  charts: GeneratedSongCharts['charts'],
+): GeneratedSongCharts => ({
+  schemaVersion: 1,
+  songId: id,
+  source: `data/music/${id}.mp3`,
+  charts,
+});
+const chartFiles = {
+  'mixed.charts.json': chartBundle('mixed', {
+    normal: chart(['normal']),
+    hard: chart(['hard']),
+  }),
+  'easy-only.charts.json': chartBundle('easy-only', { easy: chart(['easy']) }),
+  'unavailable.charts.json': chartBundle('unavailable', {
+    normal: chart(['normal']),
+  }),
+};
+const audioFiles = Object.fromEntries(
+  ['mixed', 'easy-only', 'unavailable'].map((id) => [
+    `../../data/music/${id}.mp3`,
+    `/${id}.mp3`,
+  ]),
+);
+const catalog = createSongCatalog(
+  { schemaVersion: 1, songs: metadataSongs, collections: [collection] },
+  chartFiles,
+  audioFiles,
+);
 
 describe('catalog browsing selectors', () => {
   it('normalizes Unicode accents and case for title search only', () => {
     expect(normalizeSongSearch('  CAFÉ  ')).toBe('cafe');
-    expect(selectSongs(catalog, { query: 'cafe' }).map((song) => song.id)).toEqual(['mixed']);
+    expect(
+      selectSongs(catalog, { query: 'cafe' }).map((song) => song.id),
+    ).toEqual(['mixed']);
     expect(selectSongs(catalog, { query: 'audio' })).toEqual([]);
   });
 
   it('intersects favorites, availability and supports-difficulty filters independently', () => {
-    expect(selectSongs(catalog, { favoritesOnly: true, availability: 'available', supportsDifficulty: 'hard' }, new Set(['mixed', 'easy-only'])).map((song) => song.id)).toEqual(['mixed']);
-    expect(selectSongs(catalog, { availability: 'unavailable' }).map((song) => song.id)).toEqual(['unavailable']);
-    expect(selectSongs(catalog, { supportsDifficulty: 'easy' }).map((song) => song.id)).toEqual(['easy-only']);
+    expect(
+      selectSongs(
+        catalog,
+        {
+          favoritesOnly: true,
+          availability: 'available',
+          supportsDifficulty: 'hard',
+        },
+        new Set(['mixed', 'easy-only']),
+      ).map((song) => song.id),
+    ).toEqual(['mixed']);
+    expect(
+      selectSongs(catalog, { availability: 'unavailable' }).map(
+        (song) => song.id,
+      ),
+    ).toEqual(['unavailable']);
+    expect(
+      selectSongs(catalog, { supportsDifficulty: 'easy' }).map(
+        (song) => song.id,
+      ),
+    ).toEqual(['easy-only']);
   });
 
   it('keeps run difficulty independent of a supports-difficulty filter and reconciles selection by stable ID', () => {
-    const initiallySelected = { selectedSongId: 'mixed', runDifficulty: 'hard' as const };
-    expect(reconcileSongSelection(catalog, { supportsDifficulty: 'hard' }, initiallySelected)).toEqual(initiallySelected);
-    expect(reconcileSongSelection(catalog, { supportsDifficulty: 'easy' }, initiallySelected)).toEqual({
-      selectedSongId: 'easy-only', runDifficulty: 'easy',
+    const initiallySelected = {
+      selectedSongId: 'mixed',
+      runDifficulty: 'hard' as const,
+    };
+    expect(
+      reconcileSongSelection(
+        catalog,
+        { supportsDifficulty: 'hard' },
+        initiallySelected,
+      ),
+    ).toEqual(initiallySelected);
+    expect(
+      reconcileSongSelection(
+        catalog,
+        { supportsDifficulty: 'easy' },
+        initiallySelected,
+      ),
+    ).toEqual({
+      selectedSongId: 'easy-only',
+      runDifficulty: 'easy',
     });
-    expect(reconcileSongSelection(catalog, { availability: 'unavailable' }, initiallySelected)).toEqual({
-      selectedSongId: null, runDifficulty: null,
+    expect(
+      reconcileSongSelection(
+        catalog,
+        { availability: 'unavailable' },
+        initiallySelected,
+      ),
+    ).toEqual({
+      selectedSongId: null,
+      runDifficulty: null,
     });
   });
 
   it('retains a supported run difficulty, otherwise uses default, then clears when there are no results', () => {
-    expect(reconcileSongSelection(catalog, {}, { selectedSongId: 'mixed', runDifficulty: 'normal' })).toEqual({
-      selectedSongId: 'mixed', runDifficulty: 'normal',
+    expect(
+      reconcileSongSelection(
+        catalog,
+        {},
+        { selectedSongId: 'mixed', runDifficulty: 'normal' },
+      ),
+    ).toEqual({
+      selectedSongId: 'mixed',
+      runDifficulty: 'normal',
     });
-    expect(reconcileSongSelection(catalog, { query: 'nothing' }, { selectedSongId: 'mixed', runDifficulty: 'hard' })).toEqual({
-      selectedSongId: null, runDifficulty: null,
+    expect(
+      reconcileSongSelection(
+        catalog,
+        { query: 'nothing' },
+        { selectedSongId: 'mixed', runDifficulty: 'hard' },
+      ),
+    ).toEqual({
+      selectedSongId: null,
+      runDifficulty: null,
     });
   });
 });

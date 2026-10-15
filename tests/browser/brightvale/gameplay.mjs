@@ -5,6 +5,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  goodJudgmentTargetSeconds,
   recordJudgmentReceipt,
   scheduleJudgmentVisualCapture,
 } from './judgment-receipt.mjs';
@@ -14,11 +15,73 @@ const root = path.resolve(
   '../../..',
 );
 const output = path.join(root, '.lore/local/evidence/brightvale-runtime');
-const difficulty = 'normal';
-if (process.argv.slice(2).some((value) => value !== 'normal'))
+const [songId = 'the-first-shining-star', difficulty = 'normal', ...extraArgs] =
+  process.argv.slice(2);
+if (extraArgs.length > 0 || !['easy', 'normal', 'hard'].includes(difficulty))
+  throw new Error('Usage: gameplay.mjs [song-id] [easy|normal|hard]');
+const catalogDocument = JSON.parse(
+  await readFile(path.join(root, 'data/catalog.json'), 'utf8'),
+);
+const authoringDocument = JSON.parse(
+  await readFile(path.join(root, 'data/charts/song-authoring.json'), 'utf8'),
+);
+const selectedSong = catalogDocument.songs.find((song) => song.id === songId);
+if (selectedSong === undefined)
+  throw new Error(`Song '${songId}' is not in data/catalog.json.`);
+if (selectedSong.segmentKind !== 'excerpt')
   throw new Error(
-    'Only the configured default Normal run is available in this HUD.',
+    'This bounded native-judgment harness requires the demo excerpt; use acceptance smoke/exhaustive for full-track playback.',
   );
+const chartBundle = JSON.parse(
+  await readFile(
+    path.join(root, `data/charts/generated/${songId}.charts.json`),
+    'utf8',
+  ),
+);
+if (
+  chartBundle.songId !== songId ||
+  chartBundle.schemaVersion !== 1 ||
+  chartBundle.source !== authoringDocument.songs[songId]?.source
+)
+  throw new Error(
+    `Generated chart bundle for '${songId}' does not match catalog metadata.`,
+  );
+const chart = chartBundle.charts?.[difficulty];
+if (
+  chart === undefined ||
+  chart.allowedDifficulties?.length !== 1 ||
+  chart.allowedDifficulties[0] !== difficulty
+)
+  throw new Error(
+    `Generated chart variant is unavailable: ${songId}/${difficulty}.`,
+  );
+const chartSourceStart = chart.sourceStart;
+const chartDuration = chart.duration;
+const notes = chart.notes;
+const judgmentCandidates = notes.filter(
+  (note) => note.time >= 12 && note.time < chart.twilightAt - 4,
+);
+const judgmentNotes = judgmentCandidates.reduce((selected, note) => {
+  if (
+    selected.length < 4 &&
+    (selected.length === 0 || note.time - selected.at(-1).time >= 0.75)
+  )
+    selected.push(note);
+  return selected;
+}, []);
+if (judgmentNotes.length < 4)
+  throw new Error(
+    `Generated ${songId}/${difficulty} chart lacks four safe audience judgment notes.`,
+  );
+const judgmentExpectedById = new Map([
+  [judgmentNotes[0].id, 'perfect'],
+  [judgmentNotes[1].id, 'good'],
+  [judgmentNotes[2].id, 'perfect'],
+  [judgmentNotes[3].id, 'miss'],
+]);
+const missedJudgmentNote = judgmentNotes[3];
+const runId = `${songId}-${difficulty}-native-restart`;
+const runPrefix = `${songId}-${difficulty}`;
 await mkdir(output, { recursive: true });
 const chromium = '/usr/bin/chromium';
 const scratch = await (async () => {
@@ -129,18 +192,18 @@ async function click(selector) {
   });
   const event = await waitFor(
     () =>
-      evaluate(
-        `window.__proofTrustedClicks.slice(${before}).at(-1) ?? null`,
-      ),
+      evaluate(`window.__proofTrustedClicks.slice(${before}).at(-1) ?? null`),
     `trusted click on ${selector}`,
     5000,
   );
   if (!event?.trusted)
-    throw new Error(`Click was not trusted for ${selector}: ${JSON.stringify(event)}`);
+    throw new Error(
+      `Click was not trusted for ${selector}: ${JSON.stringify(event)}`,
+    );
   return event;
 }
 
-async function selectAndStartFirstDemo(
+async function selectAndStartSong(
   runLabel,
   selectedScreenshot = 'observatory-selected-song.webp',
 ) {
@@ -158,11 +221,14 @@ async function selectAndStartFirstDemo(
   );
   const allSongsClick = await click('[data-action="overview-all"]');
   await waitFor(
-    () => evaluate(`!document.querySelector('[data-observatory-page="browser"]')?.hidden`),
+    () =>
+      evaluate(
+        `!document.querySelector('[data-observatory-page="browser"]')?.hidden`,
+      ),
     `${runLabel} All Songs browser`,
   );
   const rowClick = await click(
-    'button[data-action="select-song"][data-song-id="the-first-shining-star"]',
+    `button[data-action="select-song"][data-song-id="${songId}"]`,
   );
   const selected = await waitFor(
     () =>
@@ -172,10 +238,80 @@ async function selectAndStartFirstDemo(
         const play=detail?.querySelector('[data-action="play"]');
         return title && play ? {title,chartNotice:detail.querySelector('.song-chart-status')?.textContent?.trim(),playDisabled:play.disabled} : null;
       })()`),
-    `${runLabel} selected First Shining Star detail`,
+    `${runLabel} selected ${selectedSong.title} detail`,
   );
-  if (!/The First Shining Star/.test(selected.title) || selected.playDisabled)
-    throw new Error(`Demo selection is not Play-ready: ${JSON.stringify(selected)}`);
+  if (
+    !selected.title.includes(
+      selectedSong.title.replace(' (Demo Excerpt)', ''),
+    ) ||
+    selected.playDisabled
+  )
+    throw new Error(
+      `Selected chart is not Play-ready: ${JSON.stringify(selected)}`,
+    );
+  const difficultySelector = '[data-song-detail] [data-run-difficulty]';
+  const difficultyOptions = await evaluate(`(() => {
+    const select=document.querySelector(${JSON.stringify(difficultySelector)});
+    return select ? [...select.options].map(option=>option.value) : null;
+  })()`);
+  if (
+    !Array.isArray(difficultyOptions) ||
+    !difficultyOptions.includes(difficulty)
+  )
+    throw new Error(
+      `Selected song does not offer ${difficulty}: ${JSON.stringify(difficultyOptions)}`,
+    );
+  await evaluate(`(() => {
+    const select=document.querySelector(${JSON.stringify(difficultySelector)});
+    select.focus();
+  })()`);
+  const difficultyTarget = await evaluate(`(() => {
+    const select=document.querySelector(${JSON.stringify(difficultySelector)});
+    const rect=select?.getBoundingClientRect();
+    return rect && rect.width>0 && rect.height>0
+      ? {x:rect.left+rect.width/2,y:rect.top+rect.height/2} : null;
+  })()`);
+  if (!difficultyTarget)
+    throw new Error(
+      `Missing visible difficulty selector ${difficultySelector}`,
+    );
+  await command('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: difficultyTarget.x,
+    y: difficultyTarget.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  await command('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: difficultyTarget.x,
+    y: difficultyTarget.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  const pressSelectionKey = async (key, virtualKeyCode) => {
+    const parameters = {
+      key,
+      code: key,
+      windowsVirtualKeyCode: virtualKeyCode,
+      nativeVirtualKeyCode: virtualKeyCode,
+    };
+    await command('Input.dispatchKeyEvent', { ...parameters, type: 'keyDown' });
+    await command('Input.dispatchKeyEvent', { ...parameters, type: 'keyUp' });
+  };
+  await pressSelectionKey('Home', 36);
+  for (let index = 0; index < difficultyOptions.indexOf(difficulty); index += 1)
+    await pressSelectionKey('ArrowDown', 40);
+  await pressSelectionKey('Enter', 13);
+  const chosenDifficulty = await waitFor(
+    () =>
+      evaluate(
+        `document.querySelector(${JSON.stringify(difficultySelector)})?.value ?? null`,
+      ),
+    `${runLabel} ${difficulty} difficulty selection`,
+  );
+  if (chosenDifficulty !== difficulty)
+    throw new Error(`UI selected ${chosenDifficulty}, expected ${difficulty}.`);
   const audioContextsBeforePlay = await evaluate(
     'window.__proofAudioContexts.length',
   );
@@ -186,7 +322,9 @@ async function selectAndStartFirstDemo(
   await screenshot(selectedScreenshot);
   const playClick = await click('[data-action="play"]');
   if (playClick.action !== 'play' || playClick.trusted !== true)
-    throw new Error(`Play did not receive a genuine click: ${JSON.stringify(playClick)}`);
+    throw new Error(
+      `Play did not receive a genuine click: ${JSON.stringify(playClick)}`,
+    );
   const scheduled = await waitFor(
     () =>
       evaluate(`(() => {
@@ -233,11 +371,15 @@ async function selectAndStartFirstDemo(
   }
   return {
     selected,
+    difficultySelection: {
+      value: chosenDifficulty,
+      options: difficultyOptions,
+    },
     audioContextsBeforePlay,
     allSongsClick,
     rowClick,
     playClick,
-    selectionScreenshot: `${difficulty}-${selectedScreenshot}`,
+    selectionScreenshot: `${runPrefix}-${selectedScreenshot}`,
     scheduled,
     playing,
     startupClockModified: false,
@@ -264,7 +406,9 @@ async function installPostStartupClockProbe() {
     return{installedAfterPlaybackStart:true,nativeAtInstall:rawBase,reportedAfterInstall,nativeBefore,nativeAfter,initialRate:rate,unchangedAtInstall:rate===1&&reportedAfterInstall>=nativeBefore&&reportedAfterInstall<=nativeAfter};
   })()`);
   if (!result?.unchangedAtInstall)
-    throw new Error(`Could not install a neutral post-start clock probe: ${JSON.stringify(result)}`);
+    throw new Error(
+      `Could not install a neutral post-start clock probe: ${JSON.stringify(result)}`,
+    );
   return result;
 }
 async function key(code, type) {
@@ -299,12 +443,12 @@ async function screenshot(name) {
     captureBeyondViewport: false,
   });
   await writeFile(
-    path.join(output, `${difficulty}-${name}`),
+    path.join(output, `${runPrefix}-${name}`),
     Buffer.from(shot.data, 'base64'),
   );
 }
 function queueJudgmentVisualCapture(receipt, pendingCaptures) {
-  const filename = `${difficulty}-judgment-${receipt.outcome}-capture-${receipt.noteId}.webp`;
+  const filename = `${runPrefix}-judgment-${receipt.outcome}-capture-${receipt.noteId}.webp`;
   const capture = scheduleJudgmentVisualCapture(
     receipt,
     async () => {
@@ -316,7 +460,8 @@ function queueJudgmentVisualCapture(receipt, pendingCaptures) {
       }))()`);
       await screenshot(filename);
       const expectedStillVisible = new RegExp(
-        `Lane ${receipt.lane}: ${receipt.outcome}`, 'i',
+        `Lane ${receipt.lane}: ${receipt.outcome}`,
+        'i',
       ).test(stateAtCaptureRequest.liveRegionText);
       if (!expectedStillVisible) {
         throw new Error(
@@ -338,7 +483,7 @@ function queueJudgmentVisualCapture(receipt, pendingCaptures) {
   pendingCaptures.push(capture);
 }
 function timingLegendScreenshotProbe(name, measuredRegion) {
-  const imagePath = path.join(output, `${difficulty}-${name}`);
+  const imagePath = path.join(output, `${runPrefix}-${name}`);
   const screenshotRegion = {
     x: Math.round(measuredRegion.x),
     y: Math.round(measuredRegion.y),
@@ -370,7 +515,7 @@ function timingLegendScreenshotProbe(name, measuredRegion) {
       `Could not read timing legend from ${imagePath}: ${ocr.stderr}`,
     );
   return {
-    sourceImage: `${difficulty}-${name}`,
+    sourceImage: `${runPrefix}-${name}`,
     screenshotRegion,
     recognizedText: ocr.stdout.trim(),
     expectedWords: ['Good', 'Perfect'],
@@ -473,9 +618,12 @@ async function main() {
       msg.error
         ? p.reject(new Error(msg.error.message))
         : p.resolve(msg.result);
-    } else if (msg.method === 'Runtime.bindingCalled' && msg.params.name === '__brightvaleLateTravelSample') {
+    } else if (
+      msg.method === 'Runtime.bindingCalled' &&
+      msg.params.name === '__brightvaleLateTravelSample'
+    ) {
       const sample = JSON.parse(msg.params.payload);
-      const filename = `${difficulty}-late-note-travel-${sample.name}.webp`;
+      const filename = `${runPrefix}-late-note-travel-${sample.name}.webp`;
       lateTravelWrites.push(
         command('Page.captureScreenshot', {
           format: 'webp',
@@ -494,7 +642,8 @@ async function main() {
             reports.lateNoteTravel?.push(sample);
           }),
       );
-    } else if (msg.method) events.push({ method: msg.method, params: msg.params });
+    } else if (msg.method)
+      events.push({ method: msg.method, params: msg.params });
   });
   await command('Page.enable');
   await command('Runtime.enable');
@@ -503,6 +652,8 @@ async function main() {
       window.__proofTrustedClicks=[];
       window.__proofLastTrustedClick=null;
       window.__proofJudgmentReceipts=[];
+      window.__proofKeydownReceipts=[];
+      window.__proofStatusMutations=[];
       window.__proofActiveJudgment=null;
       document.addEventListener('click',event=>{
         const button=event.target instanceof Element?event.target.closest('button[data-action]'):null;
@@ -511,12 +662,15 @@ async function main() {
         window.__proofTrustedClicks.push(record);
         window.__proofLastTrustedClick=record;
       },true);
-      const observeJudgment=()=>{
+      const observeJudgment=(mutations)=>{
         const active=window.__proofActiveJudgment;
-        const text=document.querySelector('[data-gameplay-status]')?.textContent?.trim()??'';
+        const status=document.querySelector('[data-gameplay-status]');
+        const text=status?.textContent?.trim()??'';
+        if(status&&mutations.some(mutation=>mutation.target===status||status.contains(mutation.target)))
+          window.__proofStatusMutations.push({text,performanceTime:performance.now(),audioTime:window.__proofAudioContexts?.[0]?.currentTime??null});
         if(!active||!text||text===active.baselineText)return;
         const match=text.match(new RegExp('Lane '+active.lane+': (Perfect|Good|Miss)','i'));
-        if(match?.[1]?.toLowerCase()!==active.expected)return;
+        if(!match)return;
         window.__proofJudgmentReceipts.push({
           ...active,
           outcome:match[1].toLowerCase(),
@@ -528,6 +682,14 @@ async function main() {
         window.__proofActiveJudgment=null;
       };
       new MutationObserver(observeJudgment).observe(document,{subtree:true,childList:true,characterData:true});
+      document.addEventListener('keydown',event=>{
+        const active=window.__proofActiveJudgment;
+        if(!active||event.code!==active.keyCode||event.repeat)return;
+        const context=window.__proofAudioContexts?.[0];
+        const receipt={...active,trusted:event.isTrusted,code:event.code,
+          performanceTime:performance.now(),audioTime:context?.currentTime??null};
+        window.__proofKeydownReceipts.push(receipt);
+      },true);
       const Native=window.AudioContext;
       if(Native){
         window.__proofAudioContexts=[];
@@ -555,8 +717,8 @@ async function main() {
     })()`,
   });
   await command('Page.navigate', { url: base });
-  reports.startupGesture = await selectAndStartFirstDemo('initial run');
-  reports.gameplayInitialScreenshot = `${difficulty}-gameplay-initial.webp`;
+  reports.startupGesture = await selectAndStartSong('initial run');
+  reports.gameplayInitialScreenshot = `${runPrefix}-gameplay-initial.webp`;
   await screenshot('gameplay-initial.webp');
   reports.initialPause = await pauseWithEscape();
   await resize(1600, 900);
@@ -566,7 +728,12 @@ async function main() {
       const gameplayVisible = await evaluate(
         `document.querySelector('[data-experience-screen="gameplay"]')?.hidden===false`,
       );
-      return s.host && s.host.width > 0 && s.renderer === 'rendered' && gameplayVisible;
+      return (
+        s.host &&
+        s.host.width > 0 &&
+        s.renderer === 'rendered' &&
+        gameplayVisible
+      );
     },
     'actual gameplay after Observatory Play',
     60000,
@@ -601,14 +768,6 @@ async function main() {
     throw new Error(
       'Visible pause button unexpectedly remains in the gameplay HUD.',
     );
-  const chartSource = await readFile(
-    path.join(root, 'src/game/mvp-chart.ts'),
-    'utf8',
-  );
-  const chartSourceStart = Number(
-    chartSource.match(/sourceStart: ([\d.]+)/)?.[1] ?? 0,
-  );
-  const chartDuration = Number(chartSource.match(/duration: ([\d.]+)/)?.[1] ?? 0);
   if (
     reports.startupGesture.scheduled.sourceOffset !== chartSourceStart ||
     reports.startupGesture.scheduled.sourceDuration !== chartDuration
@@ -617,13 +776,6 @@ async function main() {
       `Play scheduled a different chart interval: ${JSON.stringify({ startup: reports.startupGesture, chartSourceStart, chartDuration })}`,
     );
   }
-  const notes = [
-    ...chartSource.matchAll(/\{ id: '(\w+)', time: ([\d.]+), lane: (\d) \}/g),
-  ].map(([, id, time, lane]) => ({
-    id,
-    time: Number(time),
-    lane: Number(lane),
-  }));
   const profileFile = JSON.parse(
     await readFile(
       path.join(root, 'data/charts/difficulty-profiles.json'),
@@ -633,6 +785,17 @@ async function main() {
   const goodWindowSeconds =
     profileFile.profiles[difficulty].timing.good_ms / 1000;
   const sendCutoffSeconds = goodWindowSeconds * 0.75;
+  const perfectWindowSeconds =
+    profileFile.profiles[difficulty].timing.perfect_ms / 1000;
+  const goodOffsetSeconds = goodJudgmentTargetSeconds(
+    profileFile.profiles[difficulty].timing.perfect_ms,
+    profileFile.profiles[difficulty].timing.good_ms,
+  );
+  const perfectLeadSeconds = Math.min(0.02, perfectWindowSeconds * 0.4);
+  const inputDispatchLeadSeconds = Math.min(0.03, goodWindowSeconds * 0.3);
+  const audienceMaximum =
+    notes.filter((note) => note.time < chart.twilightAt).length *
+    profileFile.profiles[difficulty].audience.perfect;
   let scheduledWhen = await waitFor(
     async () =>
       evaluate(
@@ -643,7 +806,9 @@ async function main() {
   const audioTime = async () =>
     evaluate('window.__proofAudioContexts?.[0]?.currentTime ?? null');
   const currentSongTime = async () =>
-    evaluate(`(()=>{const c=window.__proofAudioContexts?.[0];const when=window.__proofScheduledWhen;return c&&Number.isFinite(when)?c.currentTime-when+(window.__proofScheduledOffset??0)-${chartSourceStart}:null})()`);
+    evaluate(
+      `(()=>{const c=window.__proofAudioContexts?.[0];const when=window.__proofScheduledWhen;return c&&Number.isFinite(when)?c.currentTime-when+(window.__proofScheduledOffset??0)-${chartSourceStart}:null})()`,
+    );
   const waitTransport = async (position) => {
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
@@ -665,26 +830,47 @@ async function main() {
   const armJudgmentReceipt = async (note, expected) =>
     evaluate(`(()=>{
       const active={
-        runId:'normal-native-restart',
+        runId:${JSON.stringify(runId)},
         noteId:${JSON.stringify(note.id)},
         lane:${JSON.stringify(['D', 'F', 'J', 'K'][note.lane])},
+        keyCode:${JSON.stringify(['KeyD', 'KeyF', 'KeyJ', 'KeyK'][note.lane])},
         expected:${JSON.stringify(expected)},
         baselineText:document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''
       };
       window.__proofActiveJudgment=active;
       return active;
     })()`);
-  const waitForJudgmentReceipt = async (note, expected) =>
+  const waitForKeydownReceipt = async (note) =>
     waitFor(
       () =>
-        evaluate(`window.__proofJudgmentReceipts.find(receipt=>
-          receipt.runId==='normal-native-restart'&&
-          receipt.noteId===${JSON.stringify(note.id)}&&
-          receipt.expected===${JSON.stringify(expected)}
+        evaluate(`window.__proofKeydownReceipts.find(receipt=>
+          receipt.runId===${JSON.stringify(runId)}&&
+          receipt.noteId===${JSON.stringify(note.id)}
         )??null`),
-      `browser-side ${expected} receipt for ${note.id}`,
-      5000,
+      `browser keydown receipt for ${note.id}`,
+      1000,
     );
+  const waitForJudgmentReceipt = async (note, expected, inputReceipt) => {
+    try {
+      return await waitFor(
+        () =>
+          evaluate(`window.__proofJudgmentReceipts.find(receipt=>
+          receipt.runId===${JSON.stringify(runId)}&&
+          receipt.noteId===${JSON.stringify(note.id)}
+        )??null`),
+        `browser-side ${expected} receipt for ${note.id}`,
+        5000,
+      );
+    } catch (error) {
+      const latest = await evaluate(
+        `window.__proofJudgmentReceipts.filter(receipt=>receipt.runId===${JSON.stringify(runId)}&&receipt.noteId===${JSON.stringify(note.id)}).at(-1)??null`,
+      );
+      throw new Error(
+        `Missing ${expected} DOM receipt for ${note.id}; input keydown=${JSON.stringify(inputReceipt)}; latest DOM receipt=${JSON.stringify(latest)}; ${error.message}`,
+        { cause: error },
+      );
+    }
+  };
   const captureLateNoteTravel = async (note, samples) => {
     reports.lateNoteTravel = [];
     const clockWasScaled = await evaluate(`(()=>{
@@ -694,7 +880,9 @@ async function main() {
       return true;
     })()`);
     if (!clockWasScaled)
-      throw new Error('Could not slow the silent proof clock for frame sampling');
+      throw new Error(
+        'Could not slow the silent proof clock for frame sampling',
+      );
     try {
       if (!lateTravelBindingInstalled) {
         await command('Runtime.addBinding', {
@@ -721,7 +909,9 @@ async function main() {
         return true;
       })()`);
       if (scheduled !== true)
-        throw new Error(`Could not schedule actual-app travel samples for ${note.id}`);
+        throw new Error(
+          `Could not schedule actual-app travel samples for ${note.id}`,
+        );
       await waitFor(
         async () => reports.lateNoteTravel.length === samples.length,
         `actual-app travel frames for ${note.id}`,
@@ -785,10 +975,9 @@ async function main() {
   let capturedReferenceTwilight = false;
   let pausedAtTwilight = false;
   for (const note of notes) {
-    if (['a01', 'a02', 'a04'].includes(note.id))
-      await armJudgmentReceipt(note, note.id === 'a02' ? 'good' : 'perfect');
-    else if (note.id === 'a05')
-      await armJudgmentReceipt(note, 'miss');
+    const expectedJudgment = judgmentExpectedById.get(note.id);
+    if (expectedJudgment !== undefined)
+      await armJudgmentReceipt(note, expectedJudgment);
     if (!capturedReferenceAudience && note.time >= 9.7) {
       await waitTransport(10.2);
       reports.audienceReference = await inspect();
@@ -800,9 +989,9 @@ async function main() {
         !reports.audienceHud.personal.hidden ||
         !reports.audienceHud.twilightGroup.hidden ||
         !Number.isFinite(Number(reports.audienceHud.renown.text)) ||
-        reports.audienceHud.renownMaximum.text !== '132' ||
+        reports.audienceHud.renownMaximum.text !== String(audienceMaximum) ||
         reports.audienceHud.renownBar.ariaValueText !==
-          `${reports.audienceHud.renown.text} of 132`
+          `${reports.audienceHud.renown.text} of ${audienceMaximum}`
       )
         throw new Error(
           `Audience HUD did not show only uncapped Renown: ${JSON.stringify(reports.audienceHud)}`,
@@ -865,7 +1054,8 @@ async function main() {
         reports.twilightHud.personal.text !== reports.twilightHud.renown.text ||
         reports.twilightHud.personalMaximum.text !==
           reports.twilightHud.renown.text ||
-        reports.twilightHud.twilightMaximum.text !== '100'
+        reports.twilightHud.twilightMaximum.text !==
+          String(chart.twilightStrength)
       )
         throw new Error(
           `Twilight HUD did not show both strengths: ${JSON.stringify(reports.twilightHud)}`,
@@ -915,13 +1105,21 @@ async function main() {
       break;
     }
     const effectDelay =
-      note.id === 'a02' ? 0.085 : note.id === 'a05' ? goodWindowSeconds + 0.03 : 0;
-    await waitTransport(note.time + effectDelay);
-    if (note.id === 'a05') {
+      expectedJudgment === 'good'
+        ? goodOffsetSeconds
+        : expectedJudgment === 'miss'
+          ? goodWindowSeconds + 0.03
+          : expectedJudgment === 'perfect'
+            ? -perfectLeadSeconds
+            : 0;
+    const inputTargetTime =
+      note.time + effectDelay - (expectedJudgment === 'good' ? 0 : inputDispatchLeadSeconds);
+    await waitTransport(inputTargetTime);
+    if (note.id === missedJudgmentNote.id) {
       const missedLane = ['D', 'F', 'J', 'K'][note.lane];
       const liveRegion = await waitForJudgmentReceipt(note, 'miss');
       const receipt = recordJudgmentReceipt({
-        runId: 'normal-native-restart',
+        runId,
         noteId: note.id,
         lane: missedLane,
         expected: 'miss',
@@ -934,7 +1132,7 @@ async function main() {
         ...receipt,
         receiptAudioTime: liveRegion.audioTime,
         receiptScheduledWhen: liveRegion.scheduledWhen,
-        screenshots: [`normal-judgment-miss-capture-${note.id}.webp`],
+        screenshots: [`${runPrefix}-judgment-miss-capture-${note.id}.webp`],
         source: 'actual chart note left unplayed until its model miss deadline',
       });
       hitNotes.push({ id: note.id, result: 'deliberately-missed' });
@@ -943,21 +1141,25 @@ async function main() {
     const keyCode = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'][note.lane];
     const now = await audioTime();
     const lateness = now - scheduledWhen - note.time;
-    if (lateness > sendCutoffSeconds && note.id !== 'a02') {
+    if (lateness > sendCutoffSeconds && expectedJudgment === undefined) {
       hitNotes.push({ id: note.id, result: 'not-sent-late', lateness });
       continue;
     }
     await key(keyCode, 'down');
-    if (note.id === 'a01' || note.id === 'a02' || note.id === 'a04') {
-      const expected = note.id === 'a02' ? 'good' : 'perfect';
-      const liveRegion = await waitForJudgmentReceipt(note, expected);
+    if (expectedJudgment !== undefined) {
+      const expected = expectedJudgment;
+      const inputReceipt = await waitForKeydownReceipt(note);
+      const liveRegion = await waitForJudgmentReceipt(note, expected, inputReceipt);
       const receipt = recordJudgmentReceipt({
-        runId: 'normal-native-restart',
+        runId,
         noteId: note.id,
         lane: ['D', 'F', 'J', 'K'][note.lane],
         expected,
         liveRegionText: liveRegion.liveRegionText,
         receivedAt: liveRegion.performanceTime,
+        inputReceipt,
+        receiptAudioTime: liveRegion.audioTime,
+        receiptPerformanceTime: liveRegion.performanceTime,
       });
       queueJudgmentVisualCapture(receipt, pendingPeakScreenshots);
       reports.judgmentEffects ??= [];
@@ -965,8 +1167,15 @@ async function main() {
         ...receipt,
         receiptAudioTime: liveRegion.audioTime,
         receiptScheduledWhen: liveRegion.scheduledWhen,
-        screenshots: [`normal-judgment-${expected}-capture-${note.id}.webp`],
-        source: 'actual chart note, CDP D/F/J/K keyboard input and rendered WebGL app',
+        inputAudioTime: inputReceipt.audioTime,
+        inputPerformanceTime: inputReceipt.performanceTime,
+        receiptDelayAudioSeconds: receipt.receiptDelayAudioSeconds,
+        receiptDelayPerformanceMs: receipt.receiptDelayPerformanceMs,
+        screenshots: [
+          `${runPrefix}-judgment-${expected}-capture-${note.id}.webp`,
+        ],
+        source:
+          'actual chart note, CDP D/F/J/K keyboard input and rendered WebGL app',
       });
       await key(keyCode, 'up');
       hitNotes.push({ id: note.id, result: 'key-sent', lateness });
@@ -985,20 +1194,44 @@ async function main() {
       `Expected actual Perfect, Good, and Miss judgment receipts; captured ${JSON.stringify(reports.judgmentEffects)}`,
     );
   reports.nativeClockJudgmentReceipts = reports.judgmentEffects
-    .filter((event) => ['a01', 'a02', 'a04'].includes(event.noteId))
-    .map(({ runId, noteId, lane, outcome, expected, receivedAt, receiptAudioTime, receiptScheduledWhen }) => ({
-      runId,
-      noteId,
-      lane,
-      outcome,
-      expected,
-      receivedAt,
-      receiptAudioTime,
-      receiptScheduledWhen,
-    }));
+    .filter((event) =>
+      judgmentNotes.slice(0, 3).some((note) => note.id === event.noteId),
+    )
+    .map(
+      ({
+        runId,
+        noteId,
+        lane,
+        outcome,
+         expected,
+         receivedAt,
+         inputReceipt,
+         inputAudioTime,
+         inputPerformanceTime,
+         receiptAudioTime,
+         receiptScheduledWhen,
+         receiptDelayAudioSeconds,
+         receiptDelayPerformanceMs,
+      }) => ({
+        runId,
+        noteId,
+        lane,
+        outcome,
+         expected,
+         receivedAt,
+         inputReceipt,
+         inputAudioTime,
+         inputPerformanceTime,
+         receiptAudioTime,
+         receiptScheduledWhen,
+         receiptDelayAudioSeconds,
+         receiptDelayPerformanceMs,
+      }),
+    );
   if (
-    reports.nativeClockJudgmentReceipts.map((event) => event.outcome).join(',') !==
-    'perfect,good,perfect'
+    reports.nativeClockJudgmentReceipts
+      .map((event) => event.outcome)
+      .join(',') !== 'perfect,good,perfect'
   )
     throw new Error(
       `Native-clock trusted judgments were not Perfect/Good/Perfect: ${JSON.stringify(reports.nativeClockJudgmentReceipts)}`,
@@ -1006,7 +1239,7 @@ async function main() {
   reports.chartInput = {
     method:
       'CDP keyDown/keyUp on D/F/J/K; immediate browser-side live-region receipt associated to run/note/lane; no controller or scoring hooks',
-    nativeClockJudgmentNotes: ['a01', 'a02', 'a04'],
+    nativeClockJudgmentNotes: judgmentNotes.slice(0, 3).map((note) => note.id),
     nativeClockPlaythroughContinuesUntil: 't02 (Escape Pause)',
     controlledVisualProbeRun: 'controlled-visual-probe-run',
     controlledVisualClockIsNotNativeSyncEvidence: true,
@@ -1131,10 +1364,11 @@ async function main() {
   // Start a fresh real-app run and play the chart through Twilight's defeat to
   // verify radiant mode and the natural song-end boundary with real input.
   await command('Page.navigate', { url: `${base}?browser-proof=victory` });
-  reports.victoryRunStartup = await selectAndStartFirstDemo(
+  reports.victoryRunStartup = await selectAndStartSong(
     'victory run',
     'victory-observatory-selected-song.webp',
   );
+  scheduledWhen = reports.victoryRunStartup.scheduled.scheduledWhen;
   if (
     reports.victoryRunStartup.scheduled.sourceOffset !== chartSourceStart ||
     reports.victoryRunStartup.scheduled.sourceDuration !== chartDuration
@@ -1153,20 +1387,40 @@ async function main() {
   };
   let victoryValues = null;
   let victoryNoteIndex = -1;
+  let victoryProbeNote = null;
   const victoryInput = [];
   for (let index = 0; index < notes.length; index += 1) {
     const note = notes[index];
     const reached = await waitRestartTransport(note.time);
     const lateness = reached - note.time;
     const keyCode = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'][note.lane];
-    if (note.id === 't36') {
+    if (victoryValues !== null && note.id !== victoryProbeNote?.id) {
+      const hud = await inspectResourceHud();
+      if (
+        hud.personal.text !== victoryValues.personal.text ||
+        hud.twilight.text !== victoryValues.twilight.text ||
+        hud.personalBar.value !== victoryValues.personalBar.value ||
+        hud.twilightBar.value !== victoryValues.twilightBar.value
+      )
+        throw new Error(
+          `Strength changed during post-victory playback at ${note.id}: ${JSON.stringify({ victoryValues, hud })}`,
+        );
+      victoryInput.push({ id: note.id, result: 'left-unplayed-after-victory', lateness });
+      continue;
+    }
+    if (victoryValues !== null && note.id === victoryProbeNote?.id) {
+      const probeLane = ['D', 'F', 'J', 'K'][note.lane];
+      const missDeadline = note.time + goodWindowSeconds + 0.03;
+      if (note.time <= victoryValues.transportTime || missDeadline <= victoryValues.transportTime)
+        throw new Error(
+          `Chosen post-victory probe ${note.id} does not occur after observed victory: ${JSON.stringify({ note, missDeadline, victoryValues })}`,
+        );
+      const mutationCount = await evaluate('window.__proofStatusMutations.length');
       await waitRestartTransport(note.time + goodWindowSeconds + 0.03);
-      await waitFor(
-        async () =>
-          /Lane K: Miss/i.test(
-            await evaluate(
-              `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
-            ),
+      reports.victoryProbeDomReceipt = await waitFor(
+        () =>
+          evaluate(
+            `window.__proofStatusMutations.slice(${mutationCount}).find(receipt=>new RegExp(${JSON.stringify(`Lane ${probeLane}: Miss`)},'i').test(receipt.text))??null`,
           ),
         'post-victory final-lane miss feedback',
       );
@@ -1182,7 +1436,23 @@ async function main() {
           `Strength changed after the victory miss: ${JSON.stringify({ victoryValues, afterMiss, victoryInput })}`,
         );
       reports.victoryAfterMiss = afterMiss;
-      victoryInput.push({ id: note.id, result: 'deliberately-missed', lateness });
+      victoryInput.push({
+        id: note.id,
+        lane: probeLane,
+        result: 'deliberately-missed',
+        lateness,
+        noteTime: note.time,
+        missDeadline,
+        observedVictoryTime: victoryValues.transportTime,
+      });
+      reports.victoryProbe = {
+        noteId: note.id,
+        lane: probeLane,
+        noteTime: note.time,
+        missDeadline,
+        observedVictoryTime: victoryValues.transportTime,
+        selectedOnlyAfterVictoryObserved: true,
+      };
       break;
     }
     await key(keyCode, 'down');
@@ -1195,8 +1465,12 @@ async function main() {
       );
       if (reachedVictory) {
         victoryNoteIndex = index;
+        const victoryObservedTransportTime = await currentSongTime();
         const hud = await inspectResourceHud();
-        const announcement = await evaluate(
+        const announcementReceipt = await evaluate(
+          `window.__proofStatusMutations.findLast(receipt=>/Twilight is defeated/i.test(receipt.text))??null`,
+        );
+        const announcement = announcementReceipt?.text ?? await evaluate(
           `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
         );
         if (
@@ -1207,14 +1481,29 @@ async function main() {
             `Victory presentation or accessible announcement was missing: ${JSON.stringify({ hud, announcement })}`,
           );
         victoryValues = hud;
+        victoryProbeNote = notes
+          .slice(index + 1)
+          .find((candidate) => candidate.time > victoryObservedTransportTime + 0.25);
+        if (victoryProbeNote === undefined)
+          throw new Error(
+            `Victory at ${victoryObservedTransportTime}s has no later chart note for a post-victory probe.`,
+          );
+        reports.victoryProbeSelection = {
+          noteId: victoryProbeNote.id,
+          lane: ['D', 'F', 'J', 'K'][victoryProbeNote.lane],
+          noteTime: victoryProbeNote.time,
+          observedVictoryTime: victoryObservedTransportTime,
+          selectedAfterVictoryObserved: true,
+        };
         reports.radiantVictory = {
           noteId: note.id,
-          transportTime: reached,
+          transportTime: victoryObservedTransportTime,
           phase: 'Twilight',
           playing: true,
           announcement,
+          announcementReceipt,
           hud,
-          screenshot: `${difficulty}-radiant-victory.webp`,
+          screenshot: `${runPrefix}-radiant-victory.webp`,
         };
         await screenshot('radiant-victory.webp');
       }
@@ -1234,6 +1523,10 @@ async function main() {
   if (victoryValues === null)
     throw new Error(
       `The real chart did not reach victory: ${JSON.stringify(victoryInput)}`,
+    );
+  if (reports.victoryProbe === undefined)
+    throw new Error(
+      `Victory was observed but no post-victory miss probe completed: ${JSON.stringify({ victoryValues, victoryProbeNote, victoryInput })}`,
     );
   const afterVictoryMissState = await status();
   if (afterVictoryMissState.panels.includes('results'))
@@ -1255,7 +1548,9 @@ async function main() {
     `document.querySelector('[data-result-title]')?.textContent?.trim()??''`,
   );
   if (!/victory/i.test(finalOutcome))
-    throw new Error(`Natural song end did not preserve Victory result: ${finalOutcome}`);
+    throw new Error(
+      `Natural song end did not preserve Victory result: ${finalOutcome}`,
+    );
   reports.naturalVictoryResults = {
     state: naturalEnd,
     outcome: finalOutcome,
@@ -1263,17 +1558,19 @@ async function main() {
   };
   // Keep the native-clock gameplay/judgment runs uninterrupted. Run the scaled
   // late-note frame-positioning probe separately after the outcome is recorded.
-  await command('Page.navigate', { url: `${base}?browser-proof=controlled-visual` });
-  reports.controlledVisualRunStartup = await selectAndStartFirstDemo(
+  await command('Page.navigate', {
+    url: `${base}?browser-proof=controlled-visual`,
+  });
+  reports.controlledVisualRunStartup = await selectAndStartSong(
     'controlled visual probe run',
     'controlled-visual-observatory-selected-song.webp',
   );
   reports.controlledVisualClockProbe = await installPostStartupClockProbe();
-  const controlledVisualSchedule =
-    reports.controlledVisualRunStartup.scheduled;
+  const controlledVisualSchedule = reports.controlledVisualRunStartup.scheduled;
   scheduledWhen = controlledVisualSchedule.scheduledWhen;
-  const lateNote = notes.find((note) => note.id === 'a05');
-  if (!lateNote) throw new Error('Chart has no a05 visual probe note');
+  const lateNote = missedJudgmentNote;
+  if (!lateNote)
+    throw new Error('Chart has no selected miss note for the visual probe.');
   await waitTransport(lateNote.time - 0.08);
   const visualSamples = [
     { name: 'before-target', transportTime: lateNote.time - 0.05 },
@@ -1295,7 +1592,8 @@ async function main() {
     capturedVisualSamples.some(
       (sample, index) =>
         sample.capturedTransportTime < visualSamples[index].transportTime ||
-        sample.capturedTransportTime - visualSamples[index].transportTime > 0.045,
+        sample.capturedTransportTime - visualSamples[index].transportTime >
+          0.045,
     )
   )
     throw new Error(
@@ -1325,9 +1623,8 @@ async function main() {
       ? 'partial'
       : 'visual-blocker',
     harnessChecks: 'passed',
-    command: `npm run test:brightvale:browser -- ${difficulty}`,
-    runtime:
-      'actual src/main.ts app; production chart/audio and GLB-backed scene',
+    command: `npm run test:brightvale:browser -- gameplay ${songId} ${difficulty}`,
+    runtime: `actual src/main.ts app; selected generated ${songId}/${difficulty} chart, production audio and GLB-backed scene`,
     viewportSamples: {
       reference: { width: 1600, height: 900 },
       narrow: { width: 1120, height: 700 },
@@ -1339,19 +1636,19 @@ async function main() {
       'Song output was muted; audio audibility is not evaluated.',
       'No per-person live-occlusion pass was available from the application DOM; composition proof has the separate GLB ID-pass evidence.',
       'Radiant victory proof used the actual app, production chart/assets, and CDP keyboard events; its chart time was derived from intercepted AudioBufferSource start offsets, not an independent hardware audio-sync audit.',
-      'This HUD uses the default Normal run; selection of other difficulty profiles is not currently exposed.',
+      'The browser harness selected the requested generated song/difficulty variant through the actual Observatory controls.',
       'This live harness sends chart-timed keyboard inputs but does not independently inspect internal score judgments or live note mesh vertices.',
       'Per-person occlusion is not exposed by the live app DOM; no fully-visible crowd claim is made from these screenshots.',
       'Both gameplay runs begin through a trusted mouse click on the actual Observatory Play button; no AudioContext exists before Play, and the context is created in that trusted event without an autoplay-policy override or a modified startup clock.',
-      'The initial a01 Perfect, a02 Good, and a04 Perfect judgments are captured immediately from the live region with browser-side receipt time, run, note, and lane association before any scaled-clock visual probe.',
+      `Three selected ${difficulty} variant judgments (Perfect/Good/Perfect) are captured from the live region with browser-side receipt time and note/lane association before any scaled-clock visual probe.`,
       'The late-note screenshot-positioning probe runs separately after native gameplay results; only that run wraps/scales the clock, and it is explicitly not native-clock synchronization evidence.',
       'Judgment screenshots are separate visual captures. Reports include each capture request state/time and do not label them as peak frames.',
-      `This actual audio run used the configured ${difficulty} default.`,
+      `This actual audio run used ${songId}/${difficulty}.`,
     ],
     ...reports,
   };
   await writeFile(
-    path.join(output, `${difficulty}-report.json`),
+    path.join(output, `${runPrefix}-report.json`),
     JSON.stringify(outputReport, null, 2) + '\n',
   );
   console.log(
@@ -1361,16 +1658,20 @@ async function main() {
           ? 'passed-with-limitations'
           : 'visual-blocker',
         screenshots: [
-          `${difficulty}-observatory-selected-song.webp`,
-          `${difficulty}-gameplay-initial.webp`,
-          `${difficulty}-audience-reference.webp`,
-          `${difficulty}-audience-narrow.webp`,
-          `${difficulty}-twilight-narrow.webp`,
-          `${difficulty}-twilight-phone-dpr2.webp`,
-          `${difficulty}-twilight-reference.webp`,
-          ...(reports.judgmentVisualCaptures ?? []).map((capture) => capture.filename),
+          `${runPrefix}-observatory-selected-song.webp`,
+          `${runPrefix}-gameplay-initial.webp`,
+          `${runPrefix}-audience-reference.webp`,
+          `${runPrefix}-audience-narrow.webp`,
+          `${runPrefix}-twilight-narrow.webp`,
+          `${runPrefix}-twilight-phone-dpr2.webp`,
+          `${runPrefix}-twilight-reference.webp`,
+          ...(reports.judgmentVisualCaptures ?? []).map(
+            (capture) => capture.filename,
+          ),
           ...(reports.lateNoteTravel ?? []).map((sample) => sample.screenshot),
-          ...(reports.radiantVictory ? [reports.radiantVictory.screenshot] : []),
+          ...(reports.radiantVictory
+            ? [reports.radiantVictory.screenshot]
+            : []),
         ],
         liveMode: reports.modeAtTransition,
         radiantVictory: reports.radiantVictory
@@ -1404,7 +1705,7 @@ try {
   console.error(error.stack ?? error);
   console.error(`Proof scratch: ${scratch}`);
   await writeFile(
-    path.join(output, `${difficulty}-report.json`),
+    path.join(output, `${runPrefix}-report.json`),
     JSON.stringify(
       {
         proof: 'Brightvale actual gameplay browser proof',

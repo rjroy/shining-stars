@@ -1,12 +1,15 @@
-import { MVP_CHART as firstShiningStarChart } from '../game/mvp-chart';
-import { MVP_CHART as neverAgainChart } from '../game/never-again.candidate';
-import { MVP_CHART as abandonedChildChart } from '../game/the-abandoned-child.candidate';
-import { MVP_CHART as commodityChart } from '../game/the-commodity.candidate';
-import { MVP_CHART as gameChart } from '../game/the-game.candidate';
-import { MVP_CHART as lastTruePerformerChart } from '../game/the-last-true-performer.candidate';
-import { MVP_CHART as risingStarChart } from '../game/the-rising-star.candidate';
-import { validateChart, type ChartConfig } from '../game/chart';
-import { defaultDifficulty, parseAllowedDifficulties } from '../game/game-balance';
+import catalogData from '../../data/catalog.json';
+import {
+  validateChart,
+  type ChartConfig,
+  type ChartIssue,
+} from '../game/chart';
+import {
+  defaultDifficulty,
+  isDifficulty,
+  parseAllowedDifficulties,
+  type Difficulty,
+} from '../game/game-balance';
 
 export type SongAvailability = 'available' | 'unavailable';
 export type SongChartStatus = 'candidate' | 'verified';
@@ -24,7 +27,8 @@ export interface SongCatalogEntry {
   readonly title: string;
   readonly sortOrder: number;
   readonly audioUrl: string;
-  readonly chart: ChartConfig;
+  readonly source: string;
+  readonly charts: Readonly<Partial<Record<Difficulty, ChartConfig>>>;
   readonly segmentKind: SongSegmentKind;
   readonly availability: SongAvailability;
   readonly chartStatus: SongChartStatus;
@@ -34,180 +38,350 @@ export interface SongCatalogEntry {
 export interface SongCatalog {
   readonly songs: readonly SongCatalogEntry[];
   readonly collections: readonly SongCollection[];
-  readonly chartIssues: ReadonlyMap<string, ReturnType<typeof validateChart>>;
+  readonly chartIssues: ReadonlyMap<
+    string,
+    Readonly<Partial<Record<Difficulty, readonly ChartIssue[]>>>
+  >;
 }
 
-const INITIAL_COLLECTION_ID = 'all-songs';
+export interface CatalogMetadata {
+  readonly schemaVersion: number;
+  readonly songs: readonly Omit<
+    SongCatalogEntry,
+    'audioUrl' | 'source' | 'charts' | 'collections'
+  >[];
+  readonly collections: readonly SongCollection[];
+}
 
-/** Metadata-only static registry; URL creation does not fetch or decode audio. */
-export const SONG_CATALOG = createSongCatalog(
-  [
-    {
-      id: 'the-first-shining-star',
-      title: 'The First Shining Star (Demo Excerpt)',
-      sortOrder: 10,
-      audioUrl: new URL('../../data/music/The First Shining Star (Remastered).mp3', import.meta.url).href,
-      chart: firstShiningStarChart,
-      segmentKind: 'excerpt',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-    {
-      id: 'never-again',
-      title: 'Never Again',
-      sortOrder: 20,
-      audioUrl: new URL('../../data/music/Never Again (Remastered).mp3', import.meta.url).href,
-      chart: neverAgainChart,
-      segmentKind: 'full',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-    {
-      id: 'the-abandoned-child',
-      title: 'The Abandoned Child',
-      sortOrder: 30,
-      audioUrl: new URL('../../data/music/The Abandoned Child (Remastered).mp3', import.meta.url).href,
-      chart: abandonedChildChart,
-      segmentKind: 'full',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-    {
-      id: 'the-commodity',
-      title: 'The Commodity',
-      sortOrder: 40,
-      audioUrl: new URL('../../data/music/The Commodity (Remastered).mp3', import.meta.url).href,
-      chart: commodityChart,
-      segmentKind: 'full',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-    {
-      id: 'the-game',
-      title: 'The Game',
-      sortOrder: 50,
-      audioUrl: new URL('../../data/music/The Game.mp3', import.meta.url).href,
-      chart: gameChart,
-      segmentKind: 'full',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-    {
-      id: 'the-last-true-performer',
-      title: 'The Last True Performer',
-      sortOrder: 60,
-      audioUrl: new URL('../../data/music/The Last True Performer (Remastered).mp3', import.meta.url).href,
-      chart: lastTruePerformerChart,
-      segmentKind: 'full',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-    {
-      id: 'the-rising-star',
-      title: 'The Rising Star',
-      sortOrder: 70,
-      audioUrl: new URL('../../data/music/The Rising Star (Remastered).mp3', import.meta.url).href,
-      chart: risingStarChart,
-      segmentKind: 'full',
-      availability: 'available',
-      chartStatus: 'candidate',
-      collections: [INITIAL_COLLECTION_ID],
-    },
-  ],
-  [
-    {
-      id: INITIAL_COLLECTION_ID,
-      title: 'All Songs',
-      sortOrder: 0,
-      songIds: [
-        'the-first-shining-star',
-        'never-again',
-        'the-abandoned-child',
-        'the-commodity',
-        'the-game',
-        'the-last-true-performer',
-        'the-rising-star',
-      ],
-    },
-  ],
+export interface GeneratedSongCharts {
+  readonly schemaVersion: number;
+  readonly songId: string;
+  readonly source: string;
+  readonly charts: Readonly<Partial<Record<Difficulty, ChartConfig>>>;
+}
+
+interface GeneratedSongChartsEnvelope {
+  readonly schemaVersion: 1;
+  readonly songId: string;
+  readonly source: string;
+  readonly charts: Readonly<Record<string, unknown>>;
+}
+
+const generatedChartFiles = import.meta.glob<unknown>(
+  '../../data/charts/generated/*.charts.json',
+  { eager: true, import: 'default' },
 );
+const audioFiles = import.meta.glob<string>('../../data/music/*.mp3', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isChartNote(value: unknown): value is ChartConfig['notes'][number] {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    value.id.trim().length > 0 &&
+    typeof value.time === 'number' &&
+    typeof value.lane === 'number'
+  );
+}
+
+function isChartConfig(value: unknown): value is ChartConfig {
+  return (
+    isRecord(value) &&
+    typeof value.sourceStart === 'number' &&
+    typeof value.duration === 'number' &&
+    typeof value.twilightAt === 'number' &&
+    typeof value.twilightStrength === 'number' &&
+    Array.isArray(value.allowedDifficulties) &&
+    value.allowedDifficulties.every(isDifficulty) &&
+    Array.isArray(value.notes) &&
+    value.notes.every(isChartNote)
+  );
+}
+
+function deepFreezeChart(chart: ChartConfig): ChartConfig {
+  const notes = Object.freeze(
+    chart.notes.map((note) => Object.freeze({ ...note })),
+  );
+  return Object.freeze({
+    ...chart,
+    allowedDifficulties: Object.freeze([...chart.allowedDifficulties]),
+    notes,
+  });
+}
+
+function chartFilesById(
+  files: Readonly<Record<string, unknown>>,
+): ReadonlyMap<string, GeneratedSongChartsEnvelope> {
+  const byId = new Map<string, GeneratedSongChartsEnvelope>();
+  for (const [path, value] of Object.entries(files)) {
+    if (
+      !isRecord(value) ||
+      value.schemaVersion !== 1 ||
+      typeof value.songId !== 'string' ||
+      value.songId.length === 0 ||
+      typeof value.source !== 'string' ||
+      !isRecord(value.charts)
+    ) {
+      throw new TypeError(
+        `Generated chart bundle '${path}' has an invalid envelope.`,
+      );
+    }
+    const bundle: GeneratedSongChartsEnvelope = {
+      schemaVersion: 1,
+      songId: value.songId,
+      source: value.source,
+      charts: value.charts,
+    };
+    const fileId = path
+      .split('/')
+      .at(-1)
+      ?.replace(/\.charts\.json$/, '');
+    if (
+      fileId === undefined ||
+      fileId !== bundle.songId ||
+      byId.has(bundle.songId)
+    ) {
+      throw new TypeError(
+        `Generated chart bundle '${path}' has an invalid or duplicate song ID.`,
+      );
+    }
+    byId.set(bundle.songId, bundle);
+  }
+  return byId;
+}
+
+export function getSongDifficulties(
+  song: SongCatalogEntry,
+): readonly Difficulty[] {
+  return Object.freeze(
+    (['easy', 'normal', 'hard'] as const).filter(
+      (difficulty) => song.charts[difficulty] !== undefined,
+    ),
+  );
+}
+
+export function getSongChart(
+  song: SongCatalogEntry,
+  difficulty: Difficulty,
+): ChartConfig {
+  const chart = song.charts[difficulty];
+  if (chart === undefined) {
+    throw new RangeError(
+      `Difficulty '${difficulty}' is not supported by '${song.id}'.`,
+    );
+  }
+  return chart;
+}
 
 export function createSongCatalog(
-  songs: readonly SongCatalogEntry[],
-  collections: readonly SongCollection[],
+  metadata: CatalogMetadata,
+  chartFiles: Readonly<Record<string, unknown>>,
+  audioUrls: Readonly<Record<string, string>>,
 ): SongCatalog {
+  if (metadata.schemaVersion !== 1)
+    throw new TypeError('Catalog schemaVersion must be 1.');
+  if (!Array.isArray(metadata.songs) || !Array.isArray(metadata.collections))
+    throw new TypeError('Catalog must define songs and collections arrays.');
+  const bundles = chartFilesById(chartFiles);
   const songIds = new Set<string>();
-  const collectionIds = new Set<string>();
-  for (const collection of collections) {
-    if (!collection.id.trim() || collectionIds.has(collection.id)) {
-      throw new TypeError(`Invalid or duplicate collection ID '${collection.id}'.`);
-    }
-    if (!collection.title.trim()) {
-      throw new TypeError(`Collection '${collection.id}' must have a title.`);
-    }
-    collectionIds.add(collection.id);
-  }
-
-  const chartIssues = new Map<string, ReturnType<typeof validateChart>>();
-  for (const song of songs) {
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(song.id) || songIds.has(song.id)) {
+  for (const song of metadata.songs) {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(song.id) || songIds.has(song.id))
       throw new TypeError(`Invalid or duplicate song ID '${song.id}'.`);
-    }
     songIds.add(song.id);
-    if (!song.title.trim()) throw new TypeError(`Song '${song.id}' must have a title.`);
-    if (!Number.isInteger(song.sortOrder)) {
+    if (!song.title.trim())
+      throw new TypeError(`Song '${song.id}' must have a title.`);
+    if (!Number.isInteger(song.sortOrder))
       throw new TypeError(`Song '${song.id}' must have an integer sort order.`);
-    }
-    if (!song.audioUrl.trim()) throw new TypeError(`Song '${song.id}' must have an audio URL.`);
-    if (song.segmentKind !== 'excerpt' && song.segmentKind !== 'full') {
-      throw new TypeError(`Song '${song.id}' has an invalid segment declaration.`);
-    }
-    if (song.segmentKind === 'full' && song.chart.sourceStart !== 0) {
-      throw new TypeError(`Full-track song '${song.id}' must start at source time zero.`);
-    }
-    if (!['available', 'unavailable'].includes(song.availability)) {
+    if (song.segmentKind !== 'excerpt' && song.segmentKind !== 'full')
+      throw new TypeError(
+        `Song '${song.id}' has an invalid segment declaration.`,
+      );
+    if (
+      song.availability !== 'available' &&
+      song.availability !== 'unavailable'
+    )
       throw new TypeError(`Song '${song.id}' has invalid availability.`);
-    }
-    if (!['candidate', 'verified'].includes(song.chartStatus)) {
+    if (song.chartStatus !== 'candidate' && song.chartStatus !== 'verified')
       throw new TypeError(`Song '${song.id}' has invalid chart status.`);
-    }
-    const supportedDifficulties = parseAllowedDifficulties(song.chart.allowedDifficulties);
-    defaultDifficulty(supportedDifficulties);
-    const issues = validateChart(song.chart);
-    chartIssues.set(song.id, issues);
-    for (const collectionId of song.collections) {
-      if (!collectionIds.has(collectionId)) {
-        throw new TypeError(`Song '${song.id}' references unknown collection '${collectionId}'.`);
-      }
-    }
+  }
+  const metadataIds = songIds;
+  const bundleIds = new Set(bundles.keys());
+  if (metadataIds.size !== metadata.songs.length)
+    throw new TypeError('Catalog contains duplicate song IDs.');
+  if (
+    metadataIds.size !== bundleIds.size ||
+    [...metadataIds].some((id) => !bundleIds.has(id))
+  ) {
+    throw new TypeError(
+      'Catalog song IDs must exactly match generated chart bundle IDs.',
+    );
   }
 
-  for (const collection of collections) {
-    for (const songId of collection.songIds) {
-      const song = songs.find((entry) => entry.id === songId);
-      if (song === undefined || !song.collections.includes(collection.id)) {
-        throw new TypeError(`Collection '${collection.id}' has an invalid song reference '${songId}'.`);
+  const songs: SongCatalogEntry[] = metadata.songs.map((metadataSong) => {
+    const bundle = bundles.get(metadataSong.id);
+    if (
+      bundle === undefined ||
+      bundle.schemaVersion !== 1 ||
+      bundle.songId !== metadataSong.id
+    ) {
+      throw new TypeError(
+        `Song '${metadataSong.id}' has an invalid generated chart bundle.`,
+      );
+    }
+    if (typeof bundle.source !== 'string') {
+      throw new TypeError(
+        `Song '${metadataSong.id}' generated chart source must be a path string.`,
+      );
+    }
+    const source = bundle.source;
+    if (!source.startsWith('data/music/') || !source.endsWith('.mp3')) {
+      throw new TypeError(
+        `Song '${metadataSong.id}' has an invalid audio source.`,
+      );
+    }
+    const audioPath = `../../${source}`;
+    const audioUrl = audioUrls[audioPath];
+    if (audioUrl === undefined)
+      throw new TypeError(
+        `Song '${metadataSong.id}' references missing audio '${source}'.`,
+      );
+    const difficulties = Object.keys(bundle.charts);
+    if (difficulties.length === 0)
+      throw new TypeError(
+        `Song '${metadataSong.id}' has no difficulty charts.`,
+      );
+    for (const difficulty of difficulties) {
+      if (
+        difficulty !== 'easy' &&
+        difficulty !== 'normal' &&
+        difficulty !== 'hard'
+      ) {
+        throw new TypeError(
+          `Song '${metadataSong.id}' has an unknown chart difficulty '${difficulty}'.`,
+        );
       }
     }
-  }
+    const charts = {} as Record<Difficulty, ChartConfig>;
+    for (const difficulty of ['easy', 'normal', 'hard'] as const) {
+      const chart = bundle.charts[difficulty];
+      if (chart === undefined) continue;
+      if (!isChartConfig(chart)) {
+        throw new TypeError(
+          `Song '${metadataSong.id}' ${difficulty} chart has invalid fields or notes (each note needs a non-empty string ID, numeric time, and numeric lane).`,
+        );
+      }
+      const allowed = parseAllowedDifficulties(chart.allowedDifficulties);
+      if (allowed.length !== 1 || allowed[0] !== difficulty) {
+        throw new TypeError(
+          `Song '${metadataSong.id}' ${difficulty} chart must allow only ${difficulty}.`,
+        );
+      }
+      charts[difficulty] = deepFreezeChart(chart);
+    }
+    const present = Object.keys(charts) as Difficulty[];
+    defaultDifficulty(present);
+    if (
+      metadataSong.segmentKind === 'full' &&
+      present.some((difficulty) => charts[difficulty].sourceStart !== 0)
+    ) {
+      throw new TypeError(
+        `Full-track song '${metadataSong.id}' must start at source time zero.`,
+      );
+    }
+    return Object.freeze({
+      ...metadataSong,
+      source,
+      audioUrl,
+      charts: Object.freeze(charts),
+      collections: Object.freeze(
+        metadata.collections
+          .filter((collection) => collection.songIds.includes(metadataSong.id))
+          .map((collection) => collection.id),
+      ),
+    });
+  });
+
+  const chartIssues = new Map<
+    string,
+    Readonly<Partial<Record<Difficulty, readonly ChartIssue[]>>>
+  >();
   for (const song of songs) {
-    for (const collectionId of song.collections) {
-      const collection = collections.find((entry) => entry.id === collectionId);
-      if (collection === undefined || !collection.songIds.includes(song.id)) {
-        throw new TypeError(`Song '${song.id}' is missing from collection '${collectionId}'.`);
-      }
-    }
+    const issues: Partial<Record<Difficulty, readonly ChartIssue[]>> = {};
+    for (const difficulty of getSongDifficulties(song))
+      issues[difficulty] = Object.freeze(
+        validateChart(getSongChart(song, difficulty)),
+      );
+    chartIssues.set(song.id, Object.freeze(issues));
   }
-
+  const collectionIds = new Set<string>();
+  for (const collection of metadata.collections) {
+    if (
+      !collection.id.trim() ||
+      collectionIds.has(collection.id) ||
+      !collection.title.trim() ||
+      !Number.isInteger(collection.sortOrder)
+    )
+      throw new TypeError(
+        `Invalid or duplicate collection ID '${collection.id}'.`,
+      );
+    collectionIds.add(collection.id);
+    if (new Set(collection.songIds).size !== collection.songIds.length)
+      throw new TypeError(
+        `Collection '${collection.id}' contains duplicate song references.`,
+      );
+    for (const id of collection.songIds)
+      if (!metadataIds.has(id))
+        throw new TypeError(
+          `Collection '${collection.id}' references unknown song '${id}'.`,
+        );
+  }
+  for (const song of songs)
+    for (const collectionId of song.collections)
+      if (!collectionIds.has(collectionId))
+        throw new TypeError(
+          `Song '${song.id}' references unknown collection '${collectionId}'.`,
+        );
+  const expectedAudioPaths = new Set(
+    songs.map((song) => `../../${song.source}`),
+  );
+  const actualAudioPaths = new Set(Object.keys(audioUrls));
+  if (
+    expectedAudioPaths.size !== actualAudioPaths.size ||
+    [...expectedAudioPaths].some((path) => !actualAudioPaths.has(path))
+  ) {
+    throw new TypeError(
+      'Audio asset paths must exactly match catalog chart sources.',
+    );
+  }
   return Object.freeze({
-    songs: Object.freeze([...songs]),
-    collections: Object.freeze([...collections]),
+    songs: Object.freeze(songs),
+    collections: Object.freeze(
+      metadata.collections.map((collection) =>
+        Object.freeze({
+          ...collection,
+          songIds: Object.freeze([...collection.songIds]),
+        }),
+      ),
+    ),
     chartIssues,
   });
 }
+
+let loadedCatalog: SongCatalog | null = null;
+export const SONG_CATALOG: SongCatalog = new Proxy({} as SongCatalog, {
+  get(_target, property) {
+    loadedCatalog ??= createSongCatalog(
+      catalogData as CatalogMetadata,
+      generatedChartFiles,
+      audioFiles,
+    );
+    return Reflect.get(loadedCatalog, property);
+  },
+});
