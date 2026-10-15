@@ -3,6 +3,7 @@ import type { ChartConfig } from '../game/chart';
 import { createSongCatalog, type SongCatalogEntry } from '../catalog/catalog';
 import {
   chooseObservatorySong,
+  formatSongDuration,
   getObservatoryBrowserTitle,
 } from './observatory-ui';
 
@@ -49,6 +50,14 @@ const songs: readonly SongCatalogEntry[] = [
 const catalog = createSongCatalog(songs, [collection]);
 
 describe('Observatory selection transitions', () => {
+  it.each([
+    [8.4, '0:08'],
+    [65.8, '1:06'],
+    [417.24, '6:57'],
+  ])('formats %s seconds as %s', (seconds, expected) => {
+    expect(formatSongDuration(seconds)).toBe(expected);
+  });
+
   it('keeps the run difficulty when supported and defaults when the next song does not support it', () => {
     expect(
       chooseObservatorySong(

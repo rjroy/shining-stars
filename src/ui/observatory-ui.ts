@@ -81,6 +81,13 @@ export function getObservatoryBrowserTitle(
   return favoritesOnly ? 'Favorites' : 'All Songs';
 }
 
+/** Format playable chart time to the nearest whole second. */
+export function formatSongDuration(seconds: number): string {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
 const escapeKey = 'Escape';
 
 function createSvgIcon(name: 'heart' | 'search' | 'filter' | 'back'): string {
@@ -412,10 +419,10 @@ export function createObservatoryUI(
       const status = document.createElement('small');
       status.textContent =
         song.segmentKind === 'excerpt'
-          ? 'Demo excerpt · play-test chart'
+          ? `Demo excerpt · play-test chart · ${formatSongDuration(song.chart.duration)}`
           : song.availability === 'unavailable'
-            ? 'Unavailable'
-            : 'Play-test chart';
+            ? `Unavailable · ${formatSongDuration(song.chart.duration)}`
+            : `Play-test chart · ${formatSongDuration(song.chart.duration)}`;
       text.append(title, status);
       select.append(text);
       const favorite = createButton(
@@ -470,7 +477,10 @@ export function createObservatoryUI(
     eyebrow.className = 'detail-kicker';
     eyebrow.textContent =
       song.segmentKind === 'excerpt' ? 'Demo excerpt' : 'Full track';
-    heading.append(art, eyebrow, title);
+    const duration = document.createElement('p');
+    duration.className = 'song-detail-duration';
+    duration.textContent = `${formatSongDuration(song.chart.duration)} playable`;
+    heading.append(art, eyebrow, title, duration);
 
     const status = document.createElement('p');
     status.className = `song-chart-status${song.availability === 'unavailable' ? ' is-unavailable' : ''}`;

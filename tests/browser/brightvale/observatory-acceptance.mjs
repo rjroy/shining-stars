@@ -616,13 +616,28 @@ async function runAcceptance() {
       title:document.querySelector('[data-song-detail] h2')?.textContent,
       options:[...document.querySelectorAll('[data-song-detail] [data-run-difficulty] option')].map(option=>option.value),
       excerpt:document.querySelector('[data-song-detail] .detail-kicker')?.textContent,
+      duration:document.querySelector('[data-song-detail] .song-detail-duration')?.textContent,
       rowStatus:document.querySelector('[data-action="select-song"][data-song-id=${JSON.stringify(song.id)}] .song-row-copy small')?.textContent,
     }))()`);
     assert.equal(details.title, song.title);
     assert.deepEqual(details.options, song.difficulties);
+    const expectedDuration = (() => {
+      const seconds = Math.round(song.duration);
+      return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    })();
+    assert.equal(details.duration, `${expectedDuration} playable`, 'Details must show the playable chart duration.');
+    assert.ok(
+      details.rowStatus.endsWith(expectedDuration),
+      'Each song row must show its playable duration.',
+    );
     if (song.segmentKind === 'excerpt') {
       assert.match(details.excerpt, /Demo excerpt/i);
       assert.match(details.rowStatus, /Demo excerpt/i);
+      assert.equal(
+        expectedDuration,
+        '1:06',
+        'The demo duration is its 65.8-second playable excerpt, not the source file length.',
+      );
       assert.deepEqual(
         { sourceStart: song.sourceStart, duration: song.duration, twilightAt: song.twilightAt },
         { sourceStart: 107.1, duration: 65.8, twilightAt: 39.2 },

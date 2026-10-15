@@ -803,6 +803,12 @@
 .song-detail-heading .detail-kicker {
   margin: 0 0 6px;
 }
+.song-detail-duration {
+  margin: 7px 0 0;
+  color: #e8d9ef;
+  font: 0.78rem Georgia, 'Times New Roman', serif;
+  font-variant-numeric: tabular-nums;
+}
 .song-detail-heading h2 {
   max-width: 100%;
   overflow-wrap: anywhere;
