@@ -154,6 +154,11 @@ function makeOverrides(): BrightvaleRuntimeOverrides {
       makeSourceShapedRoot(name),
     ),
     loadSkyTextures: vi.fn(async () => makeSkyTextures()),
+    loadGroundTextures: vi.fn(async () => ({
+      city: new THREE.Texture(),
+      plaza: new THREE.Texture(),
+      dispose: vi.fn(),
+    })),
   };
 }
 
@@ -212,9 +217,15 @@ describe('Brightvale production runtime asset boundary', () => {
 
   it('uses injected browser-boundary seams and logs each asset attempt and outcome', async () => {
     const skyTextures = makeSkyTextures();
+    const groundTextures = {
+      city: new THREE.Texture(),
+      plaza: new THREE.Texture(),
+      dispose: vi.fn(),
+    };
     const overrides: BrightvaleRuntimeOverrides = {
       ...makeOverrides(),
       loadSkyTextures: vi.fn(async () => skyTextures),
+      loadGroundTextures: vi.fn(async () => groundTextures),
     };
     const log = vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
@@ -227,6 +238,7 @@ describe('Brightvale production runtime asset boundary', () => {
       [...BRIGHTVALE_ASSET_NAMES].sort(),
     );
     expect(assets.skyTextures).toBe(skyTextures);
+    expect(assets.groundTextures).toBe(groundTextures);
     expect(overrides.fetch).toHaveBeenCalledTimes(
       BRIGHTVALE_ASSET_NAMES.length,
     );
@@ -255,6 +267,7 @@ describe('Brightvale production runtime asset boundary', () => {
     assets.dispose();
     assets.dispose();
     expect(skyTextures.dispose).toHaveBeenCalledTimes(1);
+    expect(groundTextures.dispose).toHaveBeenCalledTimes(1);
   });
 
   it('loads and validates all seven real production GLBs through the installed GLTFLoader', async () => {
@@ -274,7 +287,15 @@ describe('Brightvale production runtime asset boundary', () => {
 
     const assets = await loadBrightvaleRuntimeAssets(
       new AbortController().signal,
-      { fetch, loadSkyTextures: async () => makeSkyTextures() },
+      {
+        fetch,
+        loadSkyTextures: async () => makeSkyTextures(),
+        loadGroundTextures: async () => ({
+          city: new THREE.Texture(),
+          plaza: new THREE.Texture(),
+          dispose() {},
+        }),
+      },
     );
 
     try {

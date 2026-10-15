@@ -8,15 +8,21 @@ import framingLongUrl from '../../../assets/production/brightvale-outer-framing/
 import framingPostUrl from '../../../assets/production/brightvale-outer-framing/post.glb?url';
 import warmSkyUrl from '../../../assets/production/brightvale-sky/audience-radiant-clouds.png?url';
 import twilightSkyUrl from '../../../assets/production/brightvale-sky/twilight-cosmic-clouds.png?url';
+import cityGroundUrl from '../../../assets/production/brightvale-ground/city-ground.png?url';
+import audiencePlazaUrl from '../../../assets/production/brightvale-ground/audience-plaza.png?url';
 import { BRIGHTVALE_ASSET_NAMES, loadBrightvaleAssets } from './assets';
 import type {
   BrightvaleAssetName,
   BrightvaleAssetUrls,
   BrightvaleAssets,
   BrightvaleSkyTextures,
+  BrightvaleGroundTextures,
   BrightvaleLoaderDependencies,
 } from './assets';
 import * as THREE from 'three';
+
+// Conservative fixed filtering; this loader has no renderer capability handle.
+const GROUND_TEXTURE_ANISOTROPY = 4;
 
 /** Vite rewrites these explicit production assets to deployment-aware URLs. */
 export const BRIGHTVALE_PRODUCTION_ASSET_URLS: BrightvaleAssetUrls = {
@@ -36,7 +42,66 @@ export type BrightvaleRuntimeOverrides = Partial<
   readonly loadSkyTextures?: (
     signal: AbortSignal,
   ) => Promise<BrightvaleSkyTextures>;
+  readonly loadGroundTextures?: (
+    signal: AbortSignal,
+  ) => Promise<BrightvaleGroundTextures>;
 };
+
+async function loadGroundTextures(
+  signal: AbortSignal,
+): Promise<BrightvaleGroundTextures> {
+  if (signal.aborted) throw abortError();
+  const loader = new THREE.TextureLoader();
+  const settled = Promise.allSettled([
+    loader.loadAsync(cityGroundUrl),
+    loader.loadAsync(audiencePlazaUrl),
+  ]);
+  let abortHandler: (() => void) | undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    abortHandler = () => reject(abortError());
+    signal.addEventListener('abort', abortHandler, { once: true });
+  });
+  try {
+    const results = await Promise.race([settled, aborted]);
+    const loaded = results.flatMap((result) =>
+      result.status === 'fulfilled' ? [result.value] : [],
+    );
+    const failure = results.find((result) => result.status === 'rejected');
+    if (failure?.status === 'rejected') throw failure.reason;
+    const [city, plaza] = loaded;
+    if (!city || !plaza)
+      throw new Error('Brightvale ground textures are incomplete');
+    for (const texture of loaded) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.anisotropy = GROUND_TEXTURE_ANISOTROPY;
+      texture.needsUpdate = true;
+    }
+    let disposed = false;
+    return {
+      city,
+      plaza,
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        loaded.forEach((texture) => texture.dispose());
+      },
+    };
+  } catch (error) {
+    void settled.then((results) =>
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') result.value.dispose();
+      }),
+    );
+    throw error;
+  } finally {
+    if (abortHandler) signal.removeEventListener('abort', abortHandler);
+  }
+}
 
 function abortError(): DOMException {
   return new DOMException('Brightvale sky loading was aborted', 'AbortError');
@@ -420,8 +485,10 @@ export async function loadBrightvaleRuntimeAssets(
   };
 
   const loadSky = overrides.loadSkyTextures ?? loadSkyTextures;
+  const loadGround = overrides.loadGroundTextures ?? loadGroundTextures;
   let assets: BrightvaleAssets | undefined;
   let skyTextures: BrightvaleSkyTextures | undefined;
+  let groundTextures: BrightvaleGroundTextures | undefined;
   console.info('[Brightvale] sky textures load attempt', {
     warmUrl: warmSkyUrl,
     twilightUrl: twilightSkyUrl,
@@ -443,37 +510,49 @@ export async function loadBrightvaleRuntimeAssets(
       throw error;
     },
   );
-  const [assetResult, skyResult] = await Promise.allSettled([
+  const groundPromise = loadGround(signal).then((loaded) => {
+    groundTextures = loaded;
+    return loaded;
+  });
+  const [assetResult, skyResult, groundResult] = await Promise.allSettled([
     assetPromise,
     skyPromise,
+    groundPromise,
   ]);
   if (
     assetResult.status === 'rejected' ||
     skyResult.status === 'rejected' ||
+    groundResult.status === 'rejected' ||
     signal.aborted
   ) {
     if (assets !== undefined) assets.dispose();
     skyTextures?.dispose();
+    groundTextures?.dispose();
     const error =
       assetResult.status === 'rejected'
         ? assetResult.reason
         : skyResult.status === 'rejected'
           ? skyResult.reason
-          : abortError();
+          : groundResult.status === 'rejected'
+            ? groundResult.reason
+            : abortError();
     console.error('[Brightvale] scene asset bundle load failed', { error });
     throw error;
   }
   const loadedAssets = assetResult.value;
   const loadedSky = skyResult.value;
+  const loadedGround = groundResult.value;
   let disposed = false;
   return {
     roots: loadedAssets.roots,
     skyTextures: loadedSky,
+    groundTextures: loadedGround,
     dispose() {
       if (disposed) return;
       disposed = true;
       loadedAssets.dispose();
       loadedSky.dispose();
+      loadedGround.dispose();
     },
   };
 }

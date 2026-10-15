@@ -3,6 +3,7 @@ import type { GameplayFrame } from './gameplay-frame';
 import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
 import type {
   BrightvaleAssets,
+  BrightvaleGroundTextures,
   BrightvaleSkyTextures,
 } from './brightvale/assets';
 import { createBrightvaleSky } from './brightvale/sky';
@@ -89,6 +90,9 @@ export interface BrightvaleSceneDependencies {
   readonly loadSkyTextures?: (
     signal: AbortSignal,
   ) => Promise<BrightvaleSkyTextures>;
+  readonly loadGroundTextures?: (
+    signal: AbortSignal,
+  ) => Promise<BrightvaleGroundTextures>;
   readonly createComposition?: (
     assets: BrightvaleAssets,
     world: THREE.Scene,
@@ -1122,6 +1126,7 @@ export function createBrightvaleScene(
         ((signal) =>
           loadBrightvaleRuntimeAssets(signal, {
             loadSkyTextures: dependencies?.loadSkyTextures,
+            loadGroundTextures: dependencies?.loadGroundTextures,
           })),
       createComposition: (assets, mode) => createShellComposition(assets, mode),
       render: renderFrame,

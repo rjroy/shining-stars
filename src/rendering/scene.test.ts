@@ -403,6 +403,21 @@ async function renderWithProductionAssets(
           },
         };
       },
+      loadGroundTextures: async () => ({
+        city: new THREE.DataTexture(
+          new Uint8Array([80, 120, 50, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        plaza: new THREE.DataTexture(
+          new Uint8Array([100, 100, 150, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        dispose() {},
+      }),
     },
   );
   const renderer = makeRenderer();
@@ -434,6 +449,21 @@ async function renderWithProductionAssets(
           },
         };
       },
+      loadGroundTextures: async () => ({
+        city: new THREE.DataTexture(
+          new Uint8Array([80, 120, 50, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        plaza: new THREE.DataTexture(
+          new Uint8Array([100, 100, 150, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        dispose() {},
+      }),
     },
   );
   if (scene === null) {

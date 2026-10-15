@@ -56,5 +56,20 @@ export async function loadBrightvaleProductionAssets(): Promise<BrightvaleAssets
         },
       };
     },
+    loadGroundTextures: async () => ({
+      city: new THREE.DataTexture(
+        new Uint8Array([80, 120, 50, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      ),
+      plaza: new THREE.DataTexture(
+        new Uint8Array([100, 100, 150, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      ),
+      dispose() {},
+    }),
   });
 }
