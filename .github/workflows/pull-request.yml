@@ -3,13 +3,16 @@ name: Pull request checks
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('ref-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   pull-request-checks:
@@ -46,6 +49,9 @@ jobs:
       - name: Run Brightvale harness unit tests (no browser)
         run: node --test tests/browser/brightvale/*.test.mjs
 
+      - name: Test production asset-path validation
+        run: npm run test:production-subpath
+
       - name: Run chart Python tests
         run: npm run test:chart
 
@@ -57,3 +63,35 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+
+      - name: Validate production asset paths
+        run: npm run validate:production-subpath
+
+      - name: Upload validated Pages artifact
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        # actions/upload-pages-artifact v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: dist
+
+  deploy-pages:
+    name: Deploy GitHub Pages
+    needs: pull-request-checks
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy Pages artifact
+        id: deployment
+        # actions/deploy-pages v5.0.1
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
