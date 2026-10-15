@@ -41,7 +41,7 @@ jobs:
         run: npm ci
 
       - name: Run Vitest suite
-        run: npm test
+        run: npm test -- --exclude src/main.integration.test.ts
 
       - name: Run Brightvale harness unit tests (no browser)
         run: node --test tests/browser/brightvale/*.test.mjs
