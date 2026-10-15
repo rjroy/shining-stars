@@ -1,6 +1,6 @@
 ---
 name: asset-workflow
-description: Coordinate approved game-asset work from brief and concept approval through Blender modeling, render critique, runtime integration, and separate approvals. Use when creating or integrating a visual asset for Shining Stars.
+description: Coordinate approved Shining Stars asset work through either production 2D artwork or concept-guided Blender modeling, derivatives, runtime integration, and separate approvals. Use when creating or integrating a visual asset.
 ---
 
 # Asset workflow
@@ -10,9 +10,9 @@ The user is the **visual director**, not the artist or operator. The agent owns 
 ## Approval gates — never collapse or infer them
 
 1. **Description approval.** Write a concise asset brief and obtain explicit approval of its purpose, silhouette, style, gameplay/readability needs, and constraints. A general request to make an asset is not approval of a proposed description.
-2. **Concept art.** After the brief is approved, use the `concept-art` skill to request a concept. Keep the actual generated image and record its path. Present it for review; do not proceed to modeling until the user explicitly approves that concept.
+2. **Choose the production branch.** For exploratory images use [concept-art](../concept-art/SKILL.md); concept approval is required before proceeding to Blender modeling. For production 2D artwork, use [asset-art](../asset-art/SKILL.md): the actual artwork is generated from an explicitly approved production brief under separate task-specific image authorization, then presented for exact-version artwork approval. This 2D branch does not require Blender modeling. A concept image is not production artwork, and neither a brief nor this skill authorizes generation.
 3. **Model and critique loop.** Use `blender-model` and `blender-visualize` to create the model and make disposable, reproducible previews that show the actual model for concept comparison. Open and inspect them; they are geometry-review evidence, not the final product or runtime-fidelity proof. Judge model approval on silhouette, proportion, construction, detail, topology, and visible geometry flaws using neutral or restrained views. Do not require concept-lighting reproduction or let emission, bloom, exposure, lighting, tone mapping, reflections, or final material presentation alone block geometry approval or trigger modeling iterations. Preserve meaningful material assignments/separation and export-relevant structure; report presentation differences honestly. Assess final appearance separately during runtime integration. Bring focused evidence/questions to the user; do not ask them to model or run the loop. Avoid toy-like substitutes. If convincing modeling is not possible, explain why and ask for direction. Iterate in bounded batches; if geometry stops materially improving, pause with evidence and remaining gaps. Request explicit **model approval** against geometry evidence; concept approval is not model approval.
-4. **Runtime integration.** Only after model approval, integrate the approved export into the runtime. Keep the editable source and build/export process reproducible. Present runtime evidence and request separate explicit **integration approval**. Neither prior approval implies this one.
+4. **Runtime integration/acceptance.** For the Blender branch, only after model approval, integrate the approved export into the runtime. For the 2D branch, runtime integration follows approved artwork and any separately approved production derivatives. Keep editable/master sources and derivative processes reproducible. Verify in the actual game and request separate explicit **runtime acceptance**; prior approvals, screenshots, and successful checks do not imply it.
 
 After model acceptance, use [asset-production](../asset-production/SKILL.md) for an explicitly authorized production derivative and its review before promotion. Production authorization is not runtime integration authorization.
 
