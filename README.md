@@ -57,6 +57,12 @@ ESLint (`npm run lint`) and Prettier (`npm run format:check`) are not CI gates y
 
 To require this status before merging, a repository administrator can select the `Pull request checks` status from GitHub Actions in branch protection or the applicable ruleset's required status checks. No repository protection settings are changed here. Hosted validation on PR #155 confirmed a complete passing run and a deliberate failing assertion reported against its source line; the temporary failure probe was then removed.
 
+## GitHub Pages deployment
+
+Successful validation runs publish the exact `dist/` build only when the event is a push to `master` (or a manual dispatch targeting `master`). Pull requests run validation but neither upload a Pages artifact nor deploy. The deployment job waits for validation, uses a separate non-cancelling `github-pages` concurrency group so an active publication is not interrupted, and requests only the `pages: write` and `id-token: write` permissions needed for the Pages deployment token. No deployment secrets or action that changes repository settings are used.
+
+Before the first deployment, a repository administrator must open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. The workflow uses the `github-pages` environment; allow the repository's normal GitHub Actions deployment permissions for that environment. This workflow does not enable Pages or alter repository/environment settings. After deployment, the intended site URL is <https://rjroy.github.io/shining-stars/>. Vite's production build must use the repository base path `/shining-stars/` for JavaScript, textures, models, charts, and audio URLs, while `npm run dev` continues to serve from `/` locally. Verify both the actual Pages site and its runtime assets after publishing; hosted Pages deployment and gameplay validation remain pending and are not claimed here.
+
 For browser lifecycle regression checks, start Vite and run the standard-library Python harness against its URL:
 
 ```sh
