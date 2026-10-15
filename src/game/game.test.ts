@@ -5,7 +5,8 @@ import {
   type ChartNote,
   validateChart,
 } from './chart';
-import { createGame, type GameSession, type HitQuality } from './game';
+import { createGame, type GameSession } from './game';
+import { getDifficultyProfile, type Difficulty } from './game-balance';
 
 interface ChartOptions {
   readonly duration?: number;
@@ -14,7 +15,7 @@ interface ChartOptions {
   readonly allowedDifficulties?: readonly TestDifficulty[];
 }
 
-type TestDifficulty = 'easy' | 'normal' | 'hard';
+type TestDifficulty = Difficulty;
 
 const createGameWithDifficulty = createGame as unknown as (
   chart: ChartConfig,
@@ -74,24 +75,25 @@ function physicalPressTime(
   return noteTime + timingError + inputOffset;
 }
 
-const exactWindowCases: readonly {
-  readonly inputOffset: number;
-  readonly timingError: number;
-  readonly quality: HitQuality;
-}[] = [
-  { inputOffset: -0.2, timingError: -0.15, quality: 'good' },
-  { inputOffset: -0.2, timingError: -0.075, quality: 'perfect' },
-  { inputOffset: -0.2, timingError: 0.075, quality: 'perfect' },
-  { inputOffset: -0.2, timingError: 0.15, quality: 'good' },
-  { inputOffset: 0, timingError: -0.15, quality: 'good' },
-  { inputOffset: 0, timingError: -0.075, quality: 'perfect' },
-  { inputOffset: 0, timingError: 0.075, quality: 'perfect' },
-  { inputOffset: 0, timingError: 0.15, quality: 'good' },
-  { inputOffset: 0.2, timingError: -0.15, quality: 'good' },
-  { inputOffset: 0.2, timingError: -0.075, quality: 'perfect' },
-  { inputOffset: 0.2, timingError: 0.075, quality: 'perfect' },
-  { inputOffset: 0.2, timingError: 0.15, quality: 'good' },
-];
+const exactWindowCases = (['easy', 'normal', 'hard'] as const).flatMap(
+  (difficulty) => {
+    const { perfectWindowSeconds, goodWindowSeconds } =
+      getDifficultyProfile(difficulty).timing;
+    return [-0.2, 0, 0.2].flatMap((inputOffset) =>
+      [
+        { timingError: -goodWindowSeconds, quality: 'good' as const },
+        { timingError: -perfectWindowSeconds, quality: 'perfect' as const },
+        { timingError: perfectWindowSeconds, quality: 'perfect' as const },
+        { timingError: goodWindowSeconds, quality: 'good' as const },
+      ].map(({ timingError, quality }) => ({
+        difficulty,
+        inputOffset,
+        timingError,
+        quality,
+      })),
+    );
+  },
+);
 
 describe('game model', () => {
   it.each([-0.2, 0.2])(
@@ -109,13 +111,40 @@ describe('game model', () => {
   );
 
   it.each(exactWindowCases)(
-    'includes the exact timing-window edge at offset $inputOffset and error $timingError',
-    ({ inputOffset, timingError, quality }) => {
-      const game = makeGame([note('edge', 2)], inputOffset);
+    'includes the exact $difficulty timing-window edge at offset $inputOffset and error $timingError',
+    ({ difficulty, inputOffset, timingError, quality }) => {
+      const game = createGameWithDifficulty(
+        makeChart([note('edge', 2)], { allowedDifficulties: [difficulty] }),
+        inputOffset,
+        difficulty,
+      );
 
       expect(
         game.press(0, physicalPressTime(2, inputOffset, timingError)),
       ).toMatchObject({ noteId: 'edge', quality });
+    },
+  );
+
+  it.each(['easy', 'normal', 'hard'] as const)(
+    'classifies just-outside %s boundaries from its selected profile',
+    (difficulty) => {
+      const { perfectWindowSeconds, goodWindowSeconds } =
+        getDifficultyProfile(difficulty).timing;
+      const epsilon = 0.0001;
+      const outsidePerfect = makeDifficultyGame(
+        [note('outside-perfect', 2)],
+        difficulty,
+      );
+      expect(
+        outsidePerfect.press(0, 2 + perfectWindowSeconds + epsilon),
+      ).toMatchObject({ noteId: 'outside-perfect', quality: 'good' });
+
+      const outsideGood = makeDifficultyGame(
+        [note('outside-good', 2)],
+        difficulty,
+      );
+      expect(outsideGood.press(0, 2 + goodWindowSeconds + epsilon)).toBeNull();
+      expect(outsideGood.snapshot().notes[0]?.outcome).toBe('miss');
     },
   );
 
@@ -165,9 +194,13 @@ describe('game model', () => {
   });
 
   it('keeps the exact offset-adjusted miss deadline eligible and misses only after it', () => {
+    const goodWindow = getDifficultyProfile('normal').timing.goodWindowSeconds;
     const inputOffset = 0.2;
-    const game = makeGame([note('deadline', 2)], inputOffset);
-    const deadline = physicalPressTime(2, inputOffset, 0.15);
+    const chart = makeChart([note('deadline', 2)], {
+      allowedDifficulties: ['normal'],
+    });
+    const game = createGameWithDifficulty(chart, inputOffset, 'normal');
+    const deadline = physicalPressTime(2, inputOffset, goodWindow);
 
     game.advanceTo(deadline);
     expect(game.snapshot().notes[0]?.outcome).toBeNull();
@@ -176,7 +209,11 @@ describe('game model', () => {
       quality: 'good',
     });
 
-    const missGame = makeGame([note('miss-deadline', 2)], inputOffset);
+    const missGame = createGameWithDifficulty(
+      makeChart([note('miss-deadline', 2)], { allowedDifficulties: ['normal'] }),
+      inputOffset,
+      'normal',
+    );
     missGame.advanceTo(deadline + 0.0001);
     expect(missGame.snapshot().notes[0]?.outcome).toBe('miss');
   });
@@ -402,13 +439,11 @@ describe('game model', () => {
     });
   });
 
-  it.each([
-    { difficulty: 'easy' as const, perfect: 0.25, good: 0.5 },
-    { difficulty: 'normal' as const, perfect: 0.075, good: 0.15 },
-    { difficulty: 'hard' as const, perfect: 0.05, good: 0.1 },
-  ])(
+  it.each(['easy', 'normal', 'hard'] as const)(
     '$difficulty uses inclusive Perfect/Good edges and misses only after its Good edge',
-    ({ difficulty, perfect, good }) => {
+    (difficulty) => {
+      const { perfectWindowSeconds: perfect, goodWindowSeconds: good } =
+        getDifficultyProfile(difficulty).timing;
       for (const [error, quality] of [
         [-good, 'good'],
         [-perfect, 'perfect'],
@@ -441,67 +476,37 @@ describe('game model', () => {
 
   it('selects the nearest overlapping Easy note and breaks an exact tie earlier', () => {
     const easy = makeDifficultyGame(
-      [note('earlier', 2), note('later', 2.8)],
+      [note('earlier', 2), note('later', 2.24)],
       'easy',
     );
 
-    expect(easy.press(0, 2.4)).toMatchObject({
+    const midpoint = (2 + 2.24) / 2;
+    expect(easy.press(0, midpoint)).toMatchObject({
       noteId: 'earlier',
       quality: 'good',
     });
-    expect(easy.press(0, 2.4)).toMatchObject({ noteId: 'later' });
+    expect(easy.press(0, midpoint)).toMatchObject({ noteId: 'later' });
 
     const hard = makeDifficultyGame(
-      [note('earlier', 2), note('later', 2.8)],
+      [note('earlier', 2), note('later', 2.24)],
       'hard',
     );
-    expect(hard.press(0, 2.4)).toBeNull();
+    expect(hard.press(0, midpoint)).toBeNull();
   });
 
-  it.each([
-    {
-      difficulty: 'easy' as const,
-      audiencePerfect: 2,
-      audienceGood: 1,
-      goodCost: 0,
-      missCost: 2,
-      goodDamage: 1,
-      perfectDamage: 2,
-      expectedRenown: 3,
-    },
-    {
-      difficulty: 'normal' as const,
-      audiencePerfect: 3,
-      audienceGood: 2,
-      goodCost: 1,
-      missCost: 3,
-      goodDamage: 2,
-      perfectDamage: 3,
-      expectedRenown: 5,
-    },
-    {
-      difficulty: 'hard' as const,
-      audiencePerfect: 5,
-      audienceGood: 3,
-      goodCost: 2,
-      missCost: 3,
-      goodDamage: 3,
-      perfectDamage: 5,
-      expectedRenown: 8,
-    },
-  ])(
-    '$difficulty applies its shared Audience rewards and Twilight combat values',
-    ({
-      difficulty,
-      audiencePerfect,
-      audienceGood,
-      goodCost,
-      missCost,
-      goodDamage,
-      perfectDamage,
-      expectedRenown,
-    }) => {
-      const goodOffset = (0.075 + 0.15) / 2;
+  it.each(['easy', 'normal', 'hard'] as const)(
+    '%s applies its shared Audience rewards and Twilight combat values',
+    (difficulty) => {
+      const profile = getDifficultyProfile(difficulty);
+      const { perfectWindowSeconds, goodWindowSeconds } = profile.timing;
+      const audiencePerfect = profile.audience.perfect;
+      const audienceGood = profile.audience.good;
+      const goodCost = profile.twilight.good.personalCost;
+      const missCost = profile.twilight.miss.personalCost;
+      const goodDamage = profile.twilight.good.damage;
+      const perfectDamage = profile.twilight.perfect.damage;
+      const expectedRenown = audiencePerfect + audienceGood;
+      const goodOffset = (perfectWindowSeconds + goodWindowSeconds) / 2;
       const game = makeDifficultyGame(
         [
           note('audience-perfect', 1),
@@ -515,15 +520,8 @@ describe('game model', () => {
       );
 
       expect(game.press(0, 1)?.quality).toBe('perfect');
-      const difficultyGoodOffset =
-        difficulty === 'easy'
-          ? (0.25 + 0.5) / 2
-          : difficulty === 'normal'
-            ? goodOffset
-            : (0.05 + 0.1) / 2;
-      expect(game.press(0, 2 + difficultyGoodOffset)?.quality).toBe('good');
-      const goodWindow =
-        difficulty === 'easy' ? 0.5 : difficulty === 'normal' ? 0.15 : 0.1;
+      expect(game.press(0, 2 + goodOffset)?.quality).toBe('good');
+      const goodWindow = goodWindowSeconds;
       game.advanceTo(3 + goodWindow + 0.001);
       const audienceSnapshot = game.snapshot();
       expect(audienceSnapshot).toMatchObject({
@@ -541,7 +539,7 @@ describe('game model', () => {
 
       game.advanceTo(5);
       expect(game.snapshot().personalStrength).toBe(expectedRenown);
-      expect(game.press(0, 6.3 + difficultyGoodOffset)?.quality).toBe('good');
+      expect(game.press(0, 6.3 + goodOffset)?.quality).toBe('good');
       expect(game.press(0, 7.3)?.quality).toBe('perfect');
       game.advanceTo(8.3 + goodWindow + 0.001);
       expect(game.snapshot()).toMatchObject({

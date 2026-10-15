@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BrightvaleAssets } from './brightvale/assets';
 import type { BrightvaleShellComposition } from './brightvale/scene-shell';
+import type { SongCollection } from '../catalog/catalog';
 
 export interface ObservatorySceneFrame {
   readonly width: number;
@@ -22,11 +23,10 @@ export interface ObservatoryComposition extends BrightvaleShellComposition {
   anchors(): readonly ObservatoryProjectedAnchor[];
 }
 
-const COLLECTION_ID = 'all-songs';
-
 /** Procedural twilight observatory sharing the app's existing WebGL renderer. */
 export function createObservatoryComposition(
   assets: BrightvaleAssets,
+  collections: readonly SongCollection[] = [],
 ): ObservatoryComposition {
   const root = new THREE.Group();
   root.name = 'Brightvale.Observatory';
@@ -88,47 +88,12 @@ export function createObservatoryComposition(
   ownedGeometries.add(starsGeometry);
   ownedMaterials.add(starsMaterial);
 
-  const constellationPoints = [
-    new THREE.Vector3(-3.1, 0.35, 1.4),
-    new THREE.Vector3(-1.65, 1.1, 1.2),
-    new THREE.Vector3(-0.2, 0.1, 1.1),
-    new THREE.Vector3(1.25, 0.9, 1.2),
-    new THREE.Vector3(2.85, 0.05, 1.1),
-    new THREE.Vector3(1.7, -0.9, 1.1),
-    new THREE.Vector3(-0.4, -0.75, 1.1),
-  ];
-  const constellation = new THREE.Group();
-  constellation.name = 'Observatory.CollectionConstellation';
-  root.add(constellation);
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints(
-    constellationPoints,
-  );
-  const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0xf5c96d,
-    transparent: true,
-    opacity: 0.7,
+  const collectionTargets = collections.map((collection) => {
+    const target = new THREE.Group();
+    target.name = `Observatory.CollectionAnchor.${collection.id}`;
+    root.add(target);
+    return { collection, target };
   });
-  constellation.add(new THREE.Line(lineGeometry, lineMaterial));
-  ownedGeometries.add(lineGeometry);
-  ownedMaterials.add(lineMaterial);
-  const anchorMaterials: THREE.MeshBasicMaterial[] = [];
-  constellationPoints.forEach((point, index) => {
-    const material = new THREE.MeshBasicMaterial({
-      color: index === 0 ? 0xffdf8b : 0xc8afff,
-      transparent: true,
-      opacity: 0.9,
-    });
-    const star = new THREE.Mesh(
-      new THREE.SphereGeometry(index === 0 ? 0.13 : 0.075, 12, 8),
-      material,
-    );
-    star.position.copy(point);
-    constellation.add(star);
-    anchorMaterials.push(material);
-    ownedGeometries.add(star.geometry);
-    ownedMaterials.add(material);
-  });
-
   let width = 1;
   let height = 1;
   let destroyed = false;
@@ -139,10 +104,20 @@ export function createObservatoryComposition(
       width = frame.width;
       height = frame.height;
       const reducedMotion = frame.reducedMotion;
-      constellation.scale.x = Math.min(
-        1,
-        (width * 0.34) / ((height / 10) * 3.1),
-      );
+      const count = Math.max(1, collectionTargets.length);
+      const columns = Math.min(count, width < 1100 || width < height ? 2 : 3);
+      const horizontalSpan = width < height ? 1 : width < 1100 ? 0.56 : 0.78;
+      collectionTargets.forEach(({ target }, index) => {
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        target.position.set(
+          (-8 * width) / height +
+            (col + 0.5) *
+              ((((16 * width) / height) * horizontalSpan) / columns),
+          1.15 - row * (width < height ? 1.5 : 2.1),
+          1.1,
+        );
+      });
       camera.left = (-8 * width) / height;
       camera.right = (8 * width) / height;
       camera.top = 5;
@@ -154,22 +129,17 @@ export function createObservatoryComposition(
       stars.rotation.z = reducedMotion
         ? 0
         : Math.sin(frame.elapsedSeconds * 0.025) * 0.012;
-      anchorMaterials.forEach((material, index) => {
-        material.opacity = reducedMotion
-          ? 0.9
-          : 0.72 + 0.2 * Math.sin(frame.elapsedSeconds * 1.4 + index);
-      });
     },
     anchors() {
       root.updateMatrixWorld(true);
-      const anchor = constellationPoints[0]!.clone();
-      constellation.localToWorld(anchor);
-      const projected = anchor.project(camera);
-      const x = ((projected.x + 1) / 2) * width;
-      const y = ((1 - projected.y) / 2) * height;
-      return [
-        {
-          collectionId: COLLECTION_ID,
+      return collectionTargets.map(({ collection, target }) => {
+        const anchor = new THREE.Vector3(0, 0, 0);
+        target.localToWorld(anchor);
+        const projected = anchor.project(camera);
+        const x = ((projected.x + 1) / 2) * width;
+        const y = ((1 - projected.y) / 2) * height;
+        return {
+          collectionId: collection.id,
           x,
           y,
           visible:
@@ -179,8 +149,8 @@ export function createObservatoryComposition(
             x <= width &&
             y >= 0 &&
             y <= height,
-        },
-      ];
+        };
+      });
     },
     dispose() {
       if (destroyed) return;

@@ -1,7 +1,8 @@
 import './ui/styles.css';
 import { createBrowserAudioContextAdapter } from './audio/browser-audio';
 import { parseSongOutputVolume } from './audio/song-volume';
-import { SONG_CATALOG } from './catalog/catalog';
+import { getSongChart, SONG_CATALOG } from './catalog/catalog';
+import type { ChartConfig } from './game/chart';
 import type { Difficulty } from './game/game-balance';
 import { projectGameplayFrame } from './rendering/gameplay-frame';
 import { createBrightvaleScene, type BrightvaleScene } from './rendering/scene';
@@ -29,6 +30,7 @@ let gameplay: GameUI | null = null;
 let performance: PerformanceCoordinator | null = null;
 let activeSongId: string | null = null;
 let activeDifficulty: Difficulty | null = null;
+let activeChart: ChartConfig | null = null;
 let animationFrame = 0;
 let disposed = false;
 let elapsedSeconds = 0;
@@ -62,6 +64,9 @@ function createRenderer(): void {
   const generationScene = createBrightvaleScene(
     shell.surface,
     handleRendererUnavailable,
+    undefined,
+    undefined,
+    SONG_CATALOG.collections,
   );
   if (generationScene === null) {
     handleRendererUnavailable();
@@ -103,15 +108,21 @@ function paintGameplay(
   >,
 ): void {
   const song = SONG_CATALOG.songs.find((entry) => entry.id === activeSongId);
-  if (song === undefined || gameplay === null || scene === null) {
+  const chart = activeChart;
+  if (
+    song === undefined ||
+    chart === null ||
+    gameplay === null ||
+    scene === null
+  ) {
     throw new Error('The selected song or gameplay renderer is unavailable.');
   }
   const audioNow = performance?.snapshot().audioNow ?? 0;
   const status = scene.updateFrame({
-    city: projectSceneState(controllerSnapshot, song.chart, reducedMotion),
+    city: projectSceneState(controllerSnapshot, chart, reducedMotion),
     gameplay: projectGameplayFrame(
       controllerSnapshot,
-      song.chart,
+      chart,
       gameplay.getGameplayLayout(),
       reducedMotion,
       audioNow,
@@ -135,6 +146,7 @@ async function returnToBrowser(): Promise<void> {
     gameplay = null;
     activeSongId = null;
     activeDifficulty = null;
+    activeChart = null;
     observatory.setPlayStatus('idle');
     shell.activate('observatory');
     observatory.focusSelectedSong();
@@ -154,7 +166,8 @@ function onPlay(request: {
   }
   activeSongId = song.id;
   activeDifficulty = request.difficulty;
-  gameplay = createGameUI(applicationRoot, song, {
+  activeChart = getSongChart(song, request.difficulty);
+  gameplay = createGameUI(applicationRoot, song, activeChart, {
     start: () => beginSelectedPerformance(),
     resume: () => {
       if (performance === null) return;

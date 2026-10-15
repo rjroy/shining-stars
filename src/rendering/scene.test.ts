@@ -98,6 +98,12 @@ const makeScene = createBrightvaleScene as unknown as (
   onUnavailable: () => void,
   rendererFactory: () => SceneRenderer,
   dependencies: SceneDependencies,
+  collections?: readonly {
+    id: string;
+    title: string;
+    sortOrder: number;
+    songIds: readonly string[];
+  }[],
 ) => SceneFacade | null;
 
 function makeLayout(width = 1600, height = 900): BrightvaleViewportLayout {
@@ -487,13 +493,26 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     const host = makeHost();
     const renderer = makeRenderer();
     const assets = makeAssets();
-    const scene = makeScene(host, vi.fn(), () => renderer.renderer, {
-      loadAssets: vi.fn(async () => assets),
-      createComposition: vi.fn(() => ({
-        root: new THREE.Group(),
-        dispose: vi.fn(),
-      })),
-    });
+    const scene = makeScene(
+      host,
+      vi.fn(),
+      () => renderer.renderer,
+      {
+        loadAssets: vi.fn(async () => assets),
+        createComposition: vi.fn(() => ({
+          root: new THREE.Group(),
+          dispose: vi.fn(),
+        })),
+      },
+      [
+        {
+          id: 'test-collection',
+          title: 'Test Collection',
+          sortOrder: 10,
+          songIds: ['song'],
+        },
+      ],
+    );
     expect(scene).not.toBeNull();
     if (scene === null) throw new Error('scene did not initialize');
     expect(
@@ -517,8 +536,8 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     const observatoryRender = renderer.calls.at(-1)!;
     expect(observatoryRender.camera).toBeInstanceOf(THREE.OrthographicCamera);
     expect(renderer.calls).toHaveLength(1);
-    expect(scene.getObservatoryAnchors()).toEqual([
-      expect.objectContaining({ collectionId: 'all-songs', visible: true }),
+    expect(scene.getObservatoryAnchors()).toMatchObject([
+      { collectionId: 'test-collection', visible: true },
     ]);
 
     scene.destroy();
@@ -530,13 +549,26 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     const host = makeHost();
     const renderer = makeRenderer();
     const assets = makeAssets();
-    const scene = makeScene(host, vi.fn(), () => renderer.renderer, {
-      loadAssets: vi.fn(async () => assets),
-      createComposition: vi.fn(() => ({
-        root: new THREE.Group(),
-        dispose: vi.fn(),
-      })),
-    });
+    const scene = makeScene(
+      host,
+      vi.fn(),
+      () => renderer.renderer,
+      {
+        loadAssets: vi.fn(async () => assets),
+        createComposition: vi.fn(() => ({
+          root: new THREE.Group(),
+          dispose: vi.fn(),
+        })),
+      },
+      [
+        {
+          id: 'test-collection',
+          title: 'Test Collection',
+          sortOrder: 10,
+          songIds: ['song'],
+        },
+      ],
+    );
     if (scene === null) throw new Error('scene did not initialize');
 
     expect(scene.updateFrame(makeFrame())).toBe('loading');
@@ -572,15 +604,16 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect(resizedCamera.top).toBeCloseTo(5);
     expect(resizedCamera.bottom).toBeCloseTo(-5);
     const constellation = resizedRender.scene.getObjectByName(
-      'Observatory.CollectionConstellation',
+      'Observatory.CollectionAnchor.test-collection',
     );
     if (constellation === undefined)
       throw new Error('resized Observatory constellation is missing');
     resizedRender.scene.updateMatrixWorld(true);
-    const projectedAnchor = new THREE.Vector3(-3.1, 0.35, 1.4)
+    const projectedAnchor = new THREE.Vector3(0, 0, 0)
       .applyMatrix4(constellation.matrixWorld)
       .project(resizedCamera);
     const [anchor] = scene.getObservatoryAnchors();
+    expect(anchor?.collectionId).toBe('test-collection');
     expect(anchor?.x).toBeCloseTo(((projectedAnchor.x + 1) / 2) * 1200);
     expect(anchor?.y).toBeCloseTo(((1 - projectedAnchor.y) / 2) * 800);
     expect(anchor?.visible).toBe(true);

@@ -1,11 +1,11 @@
 ---
 name: concept-art
-description: Generate and verify concept images for an explicitly approved Shining Stars asset brief using the user's authorized Codex image-generation route. Use when asset-workflow reaches its concept-art stage.
+description: Generate and verify exploratory concept images for an explicitly approved Shining Stars asset brief using the user's authorized Codex image-generation route. Use for concept exploration, not final 2D production artwork; use asset-art for production 2D artwork.
 ---
 
 # Concept art
 
-Follow the approval gates and handoff rules in [asset-workflow](../asset-workflow/SKILL.md). This skill is for concept images only, not modeling, asset production, or runtime integration. A request to author skills is not authorization to generate an image; require an approved brief and task-specific authorization first.
+Follow the approval gates and handoff rules in [asset-workflow](../asset-workflow/SKILL.md). This skill is for exploratory concept images only, not production artwork, modeling, asset derivatives, or runtime integration. Use [asset-art](../asset-art/SKILL.md) for actual 2D game artwork. A request to author skills is not authorization to generate an image; require an approved brief and task-specific authorization first.
 
 ## Route and verification
 

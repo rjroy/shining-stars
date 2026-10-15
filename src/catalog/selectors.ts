@@ -1,5 +1,14 @@
-import { defaultDifficulty, isDifficulty, type Difficulty } from '../game/game-balance';
-import type { SongAvailability, SongCatalog, SongCatalogEntry } from './catalog';
+import {
+  defaultDifficulty,
+  isDifficulty,
+  type Difficulty,
+} from '../game/game-balance';
+import { getSongDifficulties } from './catalog';
+import type {
+  SongAvailability,
+  SongCatalog,
+  SongCatalogEntry,
+} from './catalog';
 
 export interface SongBrowseFilters {
   readonly query?: string;
@@ -28,11 +37,16 @@ export function normalizeSongSearch(value: string): string {
     .trim();
 }
 
-export function getOrderedSongs(catalog: SongCatalog): readonly SongCatalogEntry[] {
-  return [...catalog.songs].sort((left, right) =>
-    left.sortOrder - right.sortOrder ||
-    normalizeSongSearch(left.title).localeCompare(normalizeSongSearch(right.title)) ||
-    left.id.localeCompare(right.id),
+export function getOrderedSongs(
+  catalog: SongCatalog,
+): readonly SongCatalogEntry[] {
+  return [...catalog.songs].sort(
+    (left, right) =>
+      left.sortOrder - right.sortOrder ||
+      normalizeSongSearch(left.title).localeCompare(
+        normalizeSongSearch(right.title),
+      ) ||
+      left.id.localeCompare(right.id),
   );
 }
 
@@ -42,12 +56,27 @@ export function selectSongs(
   favoriteIds: ReadonlySet<string> = new Set(),
 ): readonly SongCatalogEntry[] {
   const query = normalizeSongSearch(filters.query ?? '');
-  return getOrderedSongs(catalog).filter((song) =>
-    (query === '' || normalizeSongSearch(song.title).includes(query)) &&
-    (filters.collectionId === undefined || song.collections.includes(filters.collectionId)) &&
-    (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
-    (filters.availability === undefined || song.availability === filters.availability) &&
-    (filters.supportsDifficulty === undefined || song.chart.allowedDifficulties.includes(filters.supportsDifficulty)),
+  const collection =
+    filters.collectionId === undefined
+      ? undefined
+      : catalog.collections.find((item) => item.id === filters.collectionId);
+  const ordered =
+    collection === undefined
+      ? getOrderedSongs(catalog)
+      : collection.songIds.flatMap((id) => {
+          const song = catalog.songs.find((entry) => entry.id === id);
+          return song === undefined ? [] : [song];
+        });
+  return ordered.filter(
+    (song) =>
+      (query === '' || normalizeSongSearch(song.title).includes(query)) &&
+      (filters.collectionId === undefined ||
+        song.collections.includes(filters.collectionId)) &&
+      (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
+      (filters.availability === undefined ||
+        song.availability === filters.availability) &&
+      (filters.supportsDifficulty === undefined ||
+        getSongDifficulties(song).includes(filters.supportsDifficulty)),
   );
 }
 
@@ -59,9 +88,12 @@ export function reconcileSongSelection(
 ): SongSelection {
   const results = selectSongs(catalog, filters, favoriteIds);
   const retained = results.find((song) => song.id === current.selectedSongId);
-  const selected = retained ?? results.find((song) => song.availability === 'available') ?? null;
+  const selected =
+    retained ??
+    results.find((song) => song.availability === 'available') ??
+    null;
   if (selected === null) return { selectedSongId: null, runDifficulty: null };
-  const allowed = selected.chart.allowedDifficulties;
+  const allowed = getSongDifficulties(selected);
   return {
     selectedSongId: selected.id,
     runDifficulty:
@@ -76,10 +108,15 @@ export function canStartSong(
   song: SongCatalogEntry | null,
   runDifficulty: Difficulty | null,
 ): boolean {
-  if (song === null || song.availability !== 'available' || runDifficulty === null) return false;
+  if (
+    song === null ||
+    song.availability !== 'available' ||
+    runDifficulty === null
+  )
+    return false;
   return (
-    catalog.chartIssues.get(song.id)?.length === 0 &&
+    catalog.chartIssues.get(song.id)?.[runDifficulty]?.length === 0 &&
     isDifficulty(runDifficulty) &&
-    song.chart.allowedDifficulties.includes(runDifficulty)
+    getSongDifficulties(song).includes(runDifficulty)
   );
 }

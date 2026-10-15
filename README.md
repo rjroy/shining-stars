@@ -12,9 +12,9 @@ npm ci
 npm run dev
 ```
 
-The browser entry is `index.html`; `src/main.ts` owns the application lifecycle and wires the chart, game, audio transport, and UI. The selected MP3 remains in `data/music/` and is imported as a Vite asset URL; do not copy it into a public directory or modify the original recording. The active chart is generated from detected onsets; its timing is still provisional and has not been listening-verified.
+The browser entry is `index.html`; `src/main.ts` owns the application lifecycle and wires the selected generated difficulty chart, game, audio transport, and UI. Songs and collections are described in `data/catalog.json`; per-song charts are eagerly imported from `data/charts/generated/`, while source audio remains in `data/music/` and is imported as a Vite asset URL. Do not copy MP3s into a public directory or modify the original recordings. Onset-derived charts are provisional and have not been listening-verified.
 
-Per-song authoring settings, including initial Twilight Strength, live in `data/charts/song-authoring.json`; see the [chart workflow](docs/beat-chart-workflow.md) for the schema and validation rules.
+Per-song percent-based excerpt settings and Easy/Normal/Hard authoring values live in `data/charts/song-authoring.json`; the runtime profile values remain in `data/charts/difficulty-profiles.json`. See the [chart workflow](docs/beat-chart-workflow.md) for the v2 schema, final-strength formula, cache freshness, catalog editing, and generated output paths.
 
 ## Song output volume
 
@@ -33,7 +33,7 @@ Keep that environment on the server while running automated song-playback checks
 
 These system tools are for chart authoring, not browser runtime dependencies. Installation is managed by the user; agents must never install software or dependencies on the user's behalf. See [the offline beat-chart workflow](docs/beat-chart-workflow.md) for generation, provenance, and cached-check instructions.
 
-Generate the chart with `npm run chart:generate`; verify that the generated chart and cached beat artifact still match the source and current settings with `npm run chart:check`. Run the focused, standard-library test suite with `npm run test:chart`.
+Generate and verify all 29 configured songs with `npm run chart:generate` and `npm run chart:check`. These defaults intentionally pass `--all`, producing/checking 87 difficulty variants plus onset caches. Run the focused, standard-library Python test suite with `npm run test:chart`.
 
 ## Checks and build
 
@@ -56,10 +56,11 @@ python3 tests/browser-lifecycle.py http://127.0.0.1:5173/
 
 The harness requires Chromium and ChromeDriver at `/usr/bin/chromium` and `/usr/bin/chromedriver`. It suppresses the animation-frame loop to isolate retry and hidden-during-load lifecycle paths; it does not replace a real-tab check with normal animation frames, user-gesture playback, and actual pause/resume behavior.
 
-For the full gameplay flow, use the normal animation-frame loop and the actual browser `AudioContext.currentTime` clock:
+For browser validation of the actual Observatory app and generated charts:
 
 ```sh
-python3 tests/browser-flow.py http://127.0.0.1:5173/
+npm run test:brightvale:acceptance          # bounded real-app smoke
+npm run test:brightvale:acceptance:exhaustive # all 87 chart variants
 ```
 
-This runs two native-audio, real-`AudioContext.currentTime` WebDriver scenarios with the normal animation-frame loop: all-miss defeat at the Twilight handoff, and a timed strategic run that reaches a combat outcome when the configured chart supports it. It checks displayed Renown/strengths, unresolved future notes, early audio stopping, source non-overlap, and restart from the configured excerpt offset. The run characterizes interaction and scoring, not musical accuracy or listening verification. Screenshots and JSON diagnostics go under `/tmp/opencode/brightvale-stage5/`.
+Both modes statically validate all 87 generated chart variants. Smoke plays representative charts from different songs and difficulties in the real app; exhaustive starts and returns from every supported song/difficulty pair and takes longer. Evidence is written under `.lore/local/evidence/observatory-acceptance/`. Playback is muted through `VITE_SONG_VOLUME=0`, uses trusted clicks and the browser's native audio clock, and does not claim musical accuracy or human approval. The script reports the number of actual playback runs; smoke does not imply 87 played runs.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
-import { createSongCatalog, type SongCatalogEntry } from '../catalog/catalog';
+import { createSongCatalog } from '../catalog/catalog';
 import {
   chooseObservatorySong,
   formatSongDuration,
@@ -23,31 +23,45 @@ const chart = (
   allowedDifficulties,
   notes: [],
 });
-const songs: readonly SongCatalogEntry[] = [
+const metadataSongs = [
   {
     id: 'mixed',
     title: 'Mixed Song',
     sortOrder: 1,
-    audioUrl: '/mixed.mp3',
-    chart: chart(['normal', 'hard']),
     segmentKind: 'full',
     availability: 'available',
     chartStatus: 'candidate',
-    collections: ['all-songs'],
   },
   {
     id: 'easy-only',
     title: 'Easy Song',
     sortOrder: 2,
-    audioUrl: '/easy.mp3',
-    chart: chart(['easy']),
     segmentKind: 'full',
     availability: 'available',
     chartStatus: 'candidate',
-    collections: ['all-songs'],
   },
-];
-const catalog = createSongCatalog(songs, [collection]);
+] as const;
+const catalog = createSongCatalog(
+  { schemaVersion: 1, songs: metadataSongs, collections: [collection] },
+  {
+    'mixed.charts.json': {
+      schemaVersion: 1,
+      songId: 'mixed',
+      source: 'data/music/mixed.mp3',
+      charts: { normal: chart(['normal']), hard: chart(['hard']) },
+    },
+    'easy-only.charts.json': {
+      schemaVersion: 1,
+      songId: 'easy-only',
+      source: 'data/music/easy.mp3',
+      charts: { easy: chart(['easy']) },
+    },
+  },
+  {
+    '../../data/music/mixed.mp3': '/mixed.mp3',
+    '../../data/music/easy.mp3': '/easy.mp3',
+  },
+);
 
 describe('Observatory selection transitions', () => {
   it.each([

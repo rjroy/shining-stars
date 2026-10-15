@@ -10,10 +10,11 @@ import {
   type ControllerSnapshot,
   type GameController,
 } from '../game/controller';
-import { validateChart } from '../game/chart';
+import { validateChart, type ChartConfig } from '../game/chart';
 import { createGame } from '../game/game';
 import { isDifficulty, type Difficulty } from '../game/game-balance';
 import type { SongCatalogEntry } from '../catalog/catalog';
+import { getSongChart, getSongDifficulties } from '../catalog/catalog';
 
 export interface PerformanceSnapshot {
   readonly songId: string | null;
@@ -66,8 +67,14 @@ interface ActivePerformance<
   TSource extends AudioSourcePort<TBuffer>,
 > {
   readonly generation: number;
+  readonly selection: Readonly<{
+    song: SongCatalogEntry;
+    difficulty: Difficulty;
+    chart: ChartConfig;
+  }>;
   readonly song: SongCatalogEntry;
   readonly difficulty: Difficulty;
+  readonly chart: ChartConfig;
   readonly controller: GameController;
   readonly context: AudioContextPort<TBuffer, TSource>;
   readonly prepareTask: Promise<void>;
@@ -164,13 +171,16 @@ export function createPerformanceCoordinator<
     if (song.availability !== 'available') {
       throw new TypeError(`Song '${song.id}' is unavailable.`);
     }
-    if (validateChart(song.chart).length > 0) {
+    if (!getSongDifficulties(song).includes(difficulty)) {
+      throw new RangeError(
+        `Difficulty '${String(difficulty)}' is not supported by '${song.id}'.`,
+      );
+    }
+    const chart = getSongChart(song, difficulty);
+    if (validateChart(chart).length > 0) {
       throw new TypeError(`Song '${song.id}' has an invalid chart.`);
     }
-    if (
-      !isDifficulty(difficulty) ||
-      !song.chart.allowedDifficulties.includes(difficulty)
-    ) {
+    if (!isDifficulty(difficulty)) {
       throw new RangeError(
         `Difficulty '${String(difficulty)}' is not supported by '${song.id}'.`,
       );
@@ -182,6 +192,7 @@ export function createPerformanceCoordinator<
     setupSongId = song.id;
     setupDifficulty = difficulty;
     const requestGeneration = generation;
+    const selection = Object.freeze({ song, difficulty, chart });
 
     let context: AudioContextPort<TBuffer, TSource>;
     try {
@@ -205,8 +216,8 @@ export function createPerformanceCoordinator<
     const audio = createAudioTransport(
       {
         sourceUrl: song.audioUrl,
-        sourceStart: song.chart.sourceStart,
-        duration: song.chart.duration,
+        sourceStart: chart.sourceStart,
+        duration: chart.duration,
       },
       {
         context,
@@ -222,7 +233,7 @@ export function createPerformanceCoordinator<
       inputOffset: dependencies.inputOffset,
       visualOffset: dependencies.visualOffset,
       createGame: (inputOffset, requestedDifficulty) =>
-        createGame(song.chart, inputOffset, requestedDifficulty ?? difficulty),
+        createGame(chart, inputOffset, requestedDifficulty ?? difficulty),
       render: (controllerSnapshot) => {
         try {
           dependencies.render?.(controllerSnapshot);
@@ -266,8 +277,10 @@ export function createPerformanceCoordinator<
     })();
     const activeRecord: ActivePerformance<TBuffer, TSource> = {
       generation: requestGeneration,
-      song,
-      difficulty,
+      selection,
+      song: selection.song,
+      difficulty: selection.difficulty,
+      chart: selection.chart,
       controller,
       context,
       prepareTask,

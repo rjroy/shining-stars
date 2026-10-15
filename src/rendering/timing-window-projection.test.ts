@@ -102,17 +102,31 @@ describe('difficulty timing-window projection', () => {
     expect(normal.goodHalfProgress).toBeDefined();
     expect(hard.goodHalfProgress).toBeDefined();
     expect(easy.perfectHalfProgress).toBeLessThan(easy.goodHalfProgress);
-    expect(easy.goodHalfProgress).toBeCloseTo(hard.goodHalfProgress * 5, 14);
+    const easyProfile = getDifficultyProfile('easy');
+    const normalProfile = getDifficultyProfile('normal');
+    const hardProfile = getDifficultyProfile('hard');
+    expect(easy.goodHalfProgress).toBeCloseTo(
+      hard.goodHalfProgress *
+        (easyProfile.timing.goodWindowSeconds /
+          hardProfile.timing.goodWindowSeconds),
+      14,
+    );
     expect(easy.perfectHalfProgress).toBeCloseTo(
-      hard.perfectHalfProgress * 5,
+      hard.perfectHalfProgress *
+        (easyProfile.timing.perfectWindowSeconds /
+          hardProfile.timing.perfectWindowSeconds),
       14,
     );
     expect(normal.goodHalfProgress).toBeCloseTo(
-      hard.goodHalfProgress * 1.5,
+      hard.goodHalfProgress *
+        (normalProfile.timing.goodWindowSeconds /
+          hardProfile.timing.goodWindowSeconds),
       14,
     );
     expect(normal.perfectHalfProgress).toBeCloseTo(
-      hard.perfectHalfProgress * 1.5,
+      hard.perfectHalfProgress *
+        (normalProfile.timing.perfectWindowSeconds /
+          hardProfile.timing.perfectWindowSeconds),
       14,
     );
   });
@@ -131,14 +145,18 @@ describe('difficulty timing-window projection', () => {
       early.notes[0]!.progress - early.timingWindows.goodHalfProgress,
     ).toBeLessThan(0);
 
+    const hardGoodWindow =
+      getDifficultyProfile('hard').timing.goodWindowSeconds;
+    const lateTransportTime =
+      chartNotes[0].time + hardGoodWindow + 0.05;
     const late = projectGameplayFrame(
-      makeSnapshot('hard', 2.4),
+      makeSnapshot('hard', lateTransportTime),
       chart,
       layout,
       false,
     );
     expect(late.notes[0]?.progress).toBeCloseTo(
-      1 + 0.4 / VISIBLE_NOTE_SECONDS,
+      1 + (hardGoodWindow + 0.05) / VISIBLE_NOTE_SECONDS,
     );
     expect(late.timingWindows.goodHalfProgress).toBeDefined();
     expect(late.timingWindows.goodHalfProgress).toBeGreaterThan(0);

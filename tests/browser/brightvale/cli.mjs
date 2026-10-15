@@ -3,21 +3,30 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
-const mode = process.argv[2] ?? 'all';
+const [mode = 'all', ...arguments_] = process.argv.slice(2);
 const commands = {
-  normal: ['gameplay.mjs', 'normal'],
+  normal: ['gameplay.mjs', 'the-first-shining-star', 'normal'],
   responsive: ['responsive.mjs'],
 };
-const sequence = mode === 'all' ? ['normal', 'responsive'] : [mode];
+const sequence =
+  mode === 'all'
+    ? [['normal'], ['responsive']]
+    : mode === 'gameplay'
+      ? [['gameplay', ...arguments_]]
+      : [[mode]];
 
-if (sequence.some((name) => !(name in commands))) {
+if (
+  sequence.some(([name]) => !(name in commands) && name !== 'gameplay') ||
+  (mode === 'gameplay' && arguments_.length !== 2)
+) {
   throw new Error(
-    'Usage: npm run test:brightvale:browser -- [normal|responsive|all] (hard is not currently supported)',
+    'Usage: npm run test:brightvale:browser -- [normal|responsive|all|gameplay <song-id> <easy|normal|hard>]',
   );
 }
 
-for (const name of sequence) {
-  const [script, ...args] = commands[name];
+for (const [name, ...runArgs] of sequence) {
+  const [script, ...args] =
+    name === 'gameplay' ? ['gameplay.mjs', ...runArgs] : commands[name];
   const child = spawn(
     process.execPath,
     [path.join(directory, script), ...args],

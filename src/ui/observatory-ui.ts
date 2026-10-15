@@ -1,5 +1,10 @@
-import type { Difficulty } from '../game/game-balance';
-import type { SongCatalog } from '../catalog/catalog';
+import { defaultDifficulty, type Difficulty } from '../game/game-balance';
+import {
+  getSongChart,
+  getSongDifficulties,
+  type SongCatalog,
+  type SongCatalogEntry,
+} from '../catalog/catalog';
 import {
   canStartSong,
   reconcileSongSelection,
@@ -60,11 +65,11 @@ export function chooseObservatorySong(
     selectedSongId: song.id,
     runDifficulty:
       selection.runDifficulty !== null &&
-      song.chart.allowedDifficulties.includes(selection.runDifficulty)
+      getSongDifficulties(song).includes(selection.runDifficulty)
         ? selection.runDifficulty
-        : song.chart.allowedDifficulties.includes('normal')
+        : getSongDifficulties(song).includes('normal')
           ? 'normal'
-          : (song.chart.allowedDifficulties[0] ?? null),
+          : (getSongDifficulties(song)[0] ?? null),
   };
 }
 
@@ -86,6 +91,10 @@ export function formatSongDuration(seconds: number): string {
   const totalSeconds = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(totalSeconds / 60);
   return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+function browseChart(song: SongCatalogEntry) {
+  return getSongChart(song, defaultDifficulty(getSongDifficulties(song)));
 }
 
 const escapeKey = 'Escape';
@@ -260,11 +269,9 @@ export function createObservatoryUI(
       ? { selectedSongId: null, runDifficulty: null }
       : {
           selectedSongId: initialSong.id,
-          runDifficulty: initialSong.chart.allowedDifficulties.includes(
-            'normal',
-          )
+          runDifficulty: getSongDifficulties(initialSong).includes('normal')
             ? 'normal'
-            : (initialSong.chart.allowedDifficulties[0] ?? null),
+            : (getSongDifficulties(initialSong)[0] ?? null),
         };
   let currentSelection = selection;
   let screen: 'overview' | 'browser' = 'overview';
@@ -368,7 +375,30 @@ export function createObservatoryUI(
         anchorButtons.set(item.id, button);
         layer.append(button);
       }
+      let artwork = button.querySelector<HTMLImageElement>(
+        'img[data-collection-artwork]',
+      );
+      if (item.artworkUrl !== undefined) {
+        button.classList.add('has-artwork');
+        if (artwork === null) {
+          artwork = document.createElement('img');
+          artwork.dataset.collectionArtwork = '';
+          artwork.alt = '';
+          artwork.setAttribute('aria-hidden', 'true');
+          artwork.decoding = 'async';
+          artwork.draggable = false;
+          button.prepend(artwork);
+        }
+        if (artwork.dataset.artworkUrl !== item.artworkUrl) {
+          artwork.src = item.artworkUrl;
+          artwork.dataset.artworkUrl = item.artworkUrl;
+        }
+      } else {
+        button.classList.remove('has-artwork');
+        artwork?.remove();
+      }
       button.dataset.collectionId = item.id;
+      button.dataset.artworkUrl = item.artworkUrl ?? '';
       button.setAttribute(
         'aria-pressed',
         String(item.id === selectedCollectionId),
@@ -419,10 +449,10 @@ export function createObservatoryUI(
       const status = document.createElement('small');
       status.textContent =
         song.segmentKind === 'excerpt'
-          ? `Demo excerpt · play-test chart · ${formatSongDuration(song.chart.duration)}`
+          ? `Demo excerpt · play-test chart · ${formatSongDuration(browseChart(song).duration)}`
           : song.availability === 'unavailable'
-            ? `Unavailable · ${formatSongDuration(song.chart.duration)}`
-            : `Play-test chart · ${formatSongDuration(song.chart.duration)}`;
+            ? `Unavailable · ${formatSongDuration(browseChart(song).duration)}`
+            : `Play-test chart · ${formatSongDuration(browseChart(song).duration)}`;
       text.append(title, status);
       select.append(text);
       const favorite = createButton(
@@ -479,7 +509,7 @@ export function createObservatoryUI(
       song.segmentKind === 'excerpt' ? 'Demo excerpt' : 'Full track';
     const duration = document.createElement('p');
     duration.className = 'song-detail-duration';
-    duration.textContent = `${formatSongDuration(song.chart.duration)} playable`;
+    duration.textContent = `${formatSongDuration(browseChart(song).duration)} playable`;
     heading.append(art, eyebrow, title, duration);
 
     const status = document.createElement('p');
@@ -500,13 +530,13 @@ export function createObservatoryUI(
     difficulty.setAttribute('aria-label', `Difficulty for ${song.title}`);
     appendOptions(
       difficulty,
-      song.chart.allowedDifficulties.map((value) => ({
+      getSongDifficulties(song).map((value) => ({
         value,
         label: value[0]!.toUpperCase() + value.slice(1),
       })),
     );
     difficulty.value = currentSelection.runDifficulty ?? '';
-    difficulty.disabled = song.chart.allowedDifficulties.length < 2;
+    difficulty.disabled = getSongDifficulties(song).length < 2;
     difficultyLabel.append(difficulty);
 
     const play = createButton(
@@ -559,6 +589,31 @@ export function createObservatoryUI(
     else allSongsButton?.removeAttribute('aria-current');
     root.querySelector<HTMLElement>('[data-collection-title]')!.textContent =
       currentCollection()?.title ?? 'All Songs';
+    const collectionEmblem = root.querySelector<HTMLElement>('.detail-emblem')!;
+    const collection = currentCollection();
+    collectionEmblem.dataset.collectionId = collection?.id ?? '';
+    let detailArtwork = collectionEmblem.querySelector<HTMLImageElement>(
+      'img[data-collection-artwork]',
+    );
+    if (collection?.artworkUrl !== undefined) {
+      collectionEmblem.classList.add('has-artwork');
+      if (detailArtwork === null) {
+        detailArtwork = document.createElement('img');
+        detailArtwork.dataset.collectionArtwork = '';
+        detailArtwork.alt = '';
+        detailArtwork.setAttribute('aria-hidden', 'true');
+        detailArtwork.decoding = 'async';
+        detailArtwork.draggable = false;
+        collectionEmblem.append(detailArtwork);
+      }
+      if (detailArtwork.dataset.artworkUrl !== collection.artworkUrl) {
+        detailArtwork.src = collection.artworkUrl;
+        detailArtwork.dataset.artworkUrl = collection.artworkUrl;
+      }
+    } else {
+      collectionEmblem.classList.remove('has-artwork');
+      detailArtwork?.remove();
+    }
     root.querySelector<HTMLElement>('[data-collection-count]')!.textContent =
       `${currentCollection()?.songIds.length ?? 0} songs`;
     root.querySelector<HTMLElement>('.collection-story')!.textContent =
@@ -722,7 +777,8 @@ export function createObservatoryUI(
       const difficulty = normalizeDifficulty(target.value);
       if (
         difficulty !== null &&
-        currentSong()?.chart.allowedDifficulties.includes(difficulty)
+        currentSong() !== null &&
+        getSongDifficulties(currentSong()!).includes(difficulty)
       ) {
         currentSelection = { ...currentSelection, runDifficulty: difficulty };
         playStatus = 'idle';

@@ -6,6 +6,7 @@ import {
   type ChartNote,
   validateChart,
 } from './chart';
+import { maximumGoodWindowSeconds } from './game-balance';
 
 const validConfig: ChartConfig = {
   sourceStart: 107.1,
@@ -18,6 +19,10 @@ const validConfig: ChartConfig = {
     { id: 'twilight-note', time: 50, lane: 3 },
   ],
 };
+const inputOffset = 0.2;
+const normalEnvelope =
+  maximumGoodWindowSeconds(['normal', 'hard']) + inputOffset;
+const easyEnvelope = maximumGoodWindowSeconds(['easy']) + inputOffset;
 
 function withConfig(overrides: Partial<ChartConfig> = {}): ChartConfig {
   return { ...validConfig, ...overrides };
@@ -142,27 +147,39 @@ describe('validateChart', () => {
   });
 
   it('accepts an earliest timing envelope exactly at excerpt time zero', () => {
-    const edgeNote: ChartNote = { id: 'start-edge', time: 0.35, lane: 0 };
+    const edgeNote: ChartNote = {
+      id: 'start-edge',
+      time: normalEnvelope,
+      lane: 0,
+    };
 
     expect(validateChart(withConfig({ notes: [edgeNote] }))).toEqual([]);
   });
 
   it('rejects an envelope that begins before excerpt time zero', () => {
-    const earlyNote: ChartNote = { id: 'too-early', time: 0.349, lane: 0 };
+    const earlyNote: ChartNote = {
+      id: 'too-early',
+      time: normalEnvelope - 0.001,
+      lane: 0,
+    };
 
     expectIssue(withConfig({ notes: [earlyNote] }), 'before-excerpt-start');
   });
 
   it('uses the maximum allowed Good window plus the input offset for excerpt-start safety', () => {
-    const easyEdge: ChartNote = { id: 'easy-start-edge', time: 0.7, lane: 0 };
+    const easyEdge: ChartNote = {
+      id: 'easy-start-edge',
+      time: easyEnvelope,
+      lane: 0,
+    };
     const easyTooEarly: ChartNote = {
       id: 'easy-before-start',
-      time: 0.69,
+      time: easyEnvelope - 0.001,
       lane: 0,
     };
     const normalEdge: ChartNote = {
       id: 'normal-start-edge',
-      time: 0.35,
+      time: normalEnvelope,
       lane: 0,
     };
 
@@ -179,7 +196,11 @@ describe('validateChart', () => {
   });
 
   it("requires an audience envelope's latest edge strictly before the handoff guard", () => {
-    const edgeNote: ChartNote = { id: 'audience-edge', time: 38.35, lane: 0 };
+    const edgeNote: ChartNote = {
+      id: 'audience-edge',
+      time: validConfig.twilightAt - 0.5 - normalEnvelope,
+      lane: 0,
+    };
 
     expectIssue(
       withConfig({ notes: [edgeNote] }),
@@ -190,7 +211,10 @@ describe('validateChart', () => {
   it('uses the maximum allowed Good window to protect the Audience side of Twilight handoff', () => {
     const audienceEdge: ChartNote = {
       id: 'easy-audience-handoff',
-      time: 38.1,
+      time:
+        validConfig.twilightAt -
+        0.5 -
+        (maximumGoodWindowSeconds(['easy', 'normal']) + inputOffset),
       lane: 0,
     };
     expectIssue(
@@ -200,7 +224,11 @@ describe('validateChart', () => {
   });
 
   it("requires a Twilight envelope's earliest edge strictly after the handoff guard", () => {
-    const edgeNote: ChartNote = { id: 'twilight-edge', time: 40.05, lane: 0 };
+    const edgeNote: ChartNote = {
+      id: 'twilight-edge',
+      time: validConfig.twilightAt + 0.5 + normalEnvelope,
+      lane: 0,
+    };
 
     expectIssue(
       withConfig({ notes: [edgeNote] }),
@@ -211,7 +239,11 @@ describe('validateChart', () => {
   it('uses the maximum allowed Good window to protect the Twilight side of handoff', () => {
     const twilightEdge: ChartNote = {
       id: 'easy-twilight-handoff',
-      time: 40.3,
+      time:
+        validConfig.twilightAt +
+        0.5 +
+        maximumGoodWindowSeconds(['easy', 'normal']) +
+        inputOffset,
       lane: 0,
     };
     expectIssue(
@@ -231,20 +263,36 @@ describe('validateChart', () => {
   });
 
   it('accepts a final note whose latest timing edge is exactly duration minus 0.5s', () => {
-    const finalNote: ChartNote = { id: 'end-edge', time: 64.95, lane: 0 };
+    const finalNote: ChartNote = {
+      id: 'end-edge',
+      time: validConfig.duration - 0.5 - normalEnvelope,
+      lane: 0,
+    };
 
     expect(validateChart(withConfig({ notes: [finalNote] }))).toEqual([]);
   });
 
   it('rejects a final note whose latest timing edge passes duration minus 0.5s', () => {
-    const lateNote: ChartNote = { id: 'too-late', time: 64.951, lane: 0 };
+    const lateNote: ChartNote = {
+      id: 'too-late',
+      time: validConfig.duration - 0.5 - normalEnvelope + 0.001,
+      lane: 0,
+    };
 
     expectIssue(withConfig({ notes: [lateNote] }), 'after-excerpt-end');
   });
 
   it('uses the maximum allowed Good window plus the input offset for excerpt-end safety', () => {
-    const endEdge: ChartNote = { id: 'easy-end-edge', time: 64.6, lane: 0 };
-    const tooLate: ChartNote = { id: 'easy-too-late', time: 64.7, lane: 0 };
+    const endEdge: ChartNote = {
+      id: 'easy-end-edge',
+      time: validConfig.duration - 0.5 - easyEnvelope,
+      lane: 0,
+    };
+    const tooLate: ChartNote = {
+      id: 'easy-too-late',
+      time: validConfig.duration - 0.5 - easyEnvelope + 0.001,
+      lane: 0,
+    };
 
     expect(validateChart(withDifficultyConfig([endEdge], ['easy']))).toEqual(
       [],

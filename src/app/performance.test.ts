@@ -1,11 +1,84 @@
 import { describe, expect, it } from 'vitest';
-import { SONG_CATALOG } from '../catalog/catalog';
+import { createSongCatalog } from '../catalog/catalog';
+import type { ChartConfig } from '../game/chart';
 import type {
   AudioBufferPort,
   AudioContextPort,
   AudioSourcePort,
 } from '../audio/audio';
 import { createPerformanceCoordinator } from './performance';
+
+function testChart(difficulty: 'easy' | 'normal' | 'hard'): ChartConfig {
+  return {
+    sourceStart: 0,
+    duration: 20,
+    twilightAt: 10,
+    twilightStrength:
+      difficulty === 'easy' ? 60 : difficulty === 'normal' ? 80 : 110,
+    allowedDifficulties: [difficulty],
+    notes: [
+      {
+        id: `${difficulty}-chart-note`,
+        time: difficulty === 'hard' ? 5 : 1.5,
+        lane: 0,
+      },
+    ],
+  };
+}
+
+const testCatalog = createSongCatalog(
+  {
+    schemaVersion: 1,
+    songs: [
+      {
+        id: 'test-song',
+        title: 'Test Song',
+        sortOrder: 10,
+        segmentKind: 'full',
+        availability: 'available',
+        chartStatus: 'candidate',
+      },
+      {
+        id: 'replacement-song',
+        title: 'Replacement Song',
+        sortOrder: 20,
+        segmentKind: 'full',
+        availability: 'available',
+        chartStatus: 'candidate',
+      },
+    ],
+    collections: [
+      {
+        id: 'all-songs',
+        title: 'All Songs',
+        sortOrder: 0,
+        songIds: ['test-song', 'replacement-song'],
+      },
+    ],
+  },
+  {
+    'test-song.charts.json': {
+      schemaVersion: 1,
+      songId: 'test-song',
+      source: 'data/music/Test Song.mp3',
+      charts: {
+        easy: testChart('easy'),
+        normal: testChart('normal'),
+        hard: testChart('hard'),
+      },
+    },
+    'replacement-song.charts.json': {
+      schemaVersion: 1,
+      songId: 'replacement-song',
+      source: 'data/music/Replacement Song.mp3',
+      charts: { normal: testChart('normal') },
+    },
+  },
+  {
+    '../../data/music/Test Song.mp3': '/test.mp3',
+    '../../data/music/Replacement Song.mp3': '/replacement.mp3',
+  },
+);
 
 class TestBuffer implements AudioBufferPort {
   constructor(readonly duration: number) {}
@@ -110,7 +183,7 @@ function harness() {
       return new ArrayBuffer(8);
     },
   });
-  const song = SONG_CATALOG.songs[0];
+  const song = testCatalog.songs[0];
   if (song === undefined) throw new Error('Expected a catalog song fixture.');
   return { coordinator, contexts, fetched, song };
 }
@@ -144,6 +217,21 @@ describe('performance coordinator', () => {
 
     await h.coordinator.markGameplayReady();
     expect(h.contexts[0]?.sources).toHaveLength(1);
+  });
+
+  it('freezes the selected difficulty chart variant into the run', async () => {
+    const h = harness();
+    await h.coordinator.prepare(h.song, 'hard');
+    const initial = h.coordinator.snapshot().controller?.game;
+    expect(initial).toMatchObject({ twilightStrength: 110 });
+    expect(initial?.notes.map((note) => note.id)).toEqual(['hard-chart-note']);
+    expect(h.coordinator.snapshot().difficulty).toBe('hard');
+    await h.coordinator.markGameplayReady();
+    await h.coordinator.restart();
+    expect(h.coordinator.snapshot().controller?.game).toMatchObject({
+      twilightStrength: 110,
+      notes: [{ id: 'hard-chart-note', outcome: null }],
+    });
   });
 
   it('cancels a decode logically on return and ignores late completion', async () => {
@@ -203,7 +291,7 @@ describe('performance coordinator', () => {
   it('keeps a replacement song selected when an older fetch resolves late', async () => {
     const h = harness();
     const oldFetch = deferred<ArrayBuffer>();
-    const replacement = SONG_CATALOG.songs[1];
+    const replacement = testCatalog.songs[1];
     if (replacement === undefined)
       throw new Error('Expected replacement song fixture.');
     const coordinator = createPerformanceCoordinator({

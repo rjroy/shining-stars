@@ -21,6 +21,9 @@ class BeatChartWorkflowTests(unittest.TestCase):
         self.artifact = self.root / "data" / "the-first-shining-star.beats.json"
         self.chart = self.root / "src" / "mvp-chart.ts"
         self.calls = []
+        self.song_config = self.write_song_config(
+            {"the-first-shining-star": self.song_settings(self.source)}
+        )
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -52,6 +55,7 @@ class BeatChartWorkflowTests(unittest.TestCase):
 
     def args(self, *extra):
         return [
+            "--song-config", str(self.song_config),
             str(self.source),
             "--artifact", str(self.artifact),
             "--chart", str(self.chart),
@@ -513,7 +517,11 @@ class BeatChartWorkflowTests(unittest.TestCase):
             artifact["config"]["allowed_difficulties"], ["normal", "hard"]
         )
         self.assertEqual(
-            artifact["config"]["maximum_allowed_good_window_ms"], 150
+            artifact["config"]["maximum_allowed_good_window_ms"],
+            max(
+                beat_chart.load_difficulty_profiles()[difficulty]["timing"]["good_ms"]
+                for difficulty in artifact["config"]["allowed_difficulties"]
+            ),
         )
         self.assertIn("twilightStrength: 100", self.chart.read_text(encoding="utf-8"))
         self.assertIn(
@@ -556,7 +564,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
             {
                 "profiles": {
                     "easy": {
-                        "timing": {"perfect_ms": 250, "good_ms": 500},
+                        "timing": {"perfect_ms": 75, "good_ms": 150},
                         "audience": {"perfect": 2, "good": 1, "miss": 0},
                         "twilight": {
                             "perfect": {"personal_cost": 0, "damage": 2},
@@ -565,7 +573,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         },
                     },
                     "normal": {
-                        "timing": {"perfect_ms": 75, "good_ms": 150},
+                        "timing": {"perfect_ms": 65, "good_ms": 125},
                         "audience": {"perfect": 3, "good": 2, "miss": 0},
                         "twilight": {
                             "perfect": {"personal_cost": 0, "damage": 3},
@@ -598,7 +606,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
         malformed_profiles.append(missing_profile)
 
         invalid_window = json.loads(json.dumps(original))
-        invalid_window["profiles"]["easy"]["timing"]["good_ms"] = 100
+        invalid_window["profiles"]["easy"]["timing"]["good_ms"] = 50
         malformed_profiles.append(invalid_window)
 
         negative_reward = json.loads(json.dumps(original))
