@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data/music/The Rising Star (Remastered).mp3"
 CHART = ROOT / "data/charts/generated/the-rising-star.charts.json"
 EVIDENCE = ROOT / ".lore/local/evidence/music-lane-experiment"
+PREFERRED_TEMP_DIR = Path("/tmp/opencode")
 SAMPLE_RATE, BUFFER, HOP = 22050, 2048, 256
 WINDOW_BEFORE, WINDOW_AFTER = 0.030, 0.150
 BLOCK_NOTES, BEAM_WIDTH = 32, 64
@@ -77,7 +78,16 @@ def _persist_attempts(attempts):
 
 
 def temporary_audio_directory():
-    return tempfile.TemporaryDirectory(prefix="pitch-lane-", dir="/tmp/opencode")
+    # Prefer the local workspace temp directory when it is available, but do
+    # not require CI or a clean machine to create that parent directory.
+    if PREFERRED_TEMP_DIR.is_dir():
+        try:
+            return tempfile.TemporaryDirectory(prefix="pitch-lane-", dir=PREFERRED_TEMP_DIR)
+        except FileNotFoundError:
+            # The preferred parent may disappear between is_dir() and mkdtemp().
+            if PREFERRED_TEMP_DIR.is_dir():
+                raise
+    return tempfile.TemporaryDirectory(prefix="pitch-lane-")
 
 
 def candidate_with_lanes(data, lanes):

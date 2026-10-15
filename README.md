@@ -47,6 +47,16 @@ npm run build        # typecheck and production Vite build to dist/
 
 Use `npm run format` to apply the configured Prettier formatting. `format` and `format:check` use the same explicit app/setup allowlist: package manifests, TypeScript/Vite/ESLint configuration, the HTML entry, all TypeScript and CSS under `src/`, and this README. The Python browser harness is intentionally excluded. These commands do not traverse Beads, agent settings, lore, or data directories.
 
+## Pull request checks
+
+The `Pull request checks / Pull request checks` GitHub Actions check runs on pull requests using Ubuntu 24.04, Node.js 24, and Python 3.14. It installs npm dependencies with `npm ci` and runs the Vitest suite with `src/main.integration.test.ts` explicitly excluded, the Brightvale Node harness unit tests (`*.test.mjs`; no browser is launched), chart Python tests, the cached generated-chart check, TypeScript type-checking, and the production build. The chart check verifies checked-in cached output; CI does not regenerate charts or alter balance data. `tests/test_browser_harness_assumptions.py` is not included because it currently fails in a clean checkout: it expects `data/charts/the-first-shining-star.beats.json`, which is absent.
+
+The workflow uses read-only repository contents permission and needs no secrets. Actions are pinned to immutable commit SHAs; as of October 2026 the pins are checkout v7.0.1, setup-node v7.1.0, and setup-python v7.0.0. Update these pins deliberately when upgrading actions. Superseded runs for the same pull request are cancelled.
+
+ESLint (`npm run lint`) and Prettier (`npm run format:check`) are not CI gates yet: the current baseline fails both, with existing lint findings across app, tests, and asset files, and formatting differences in 13 allowlisted files. Browser-driven checks (including `test:brightvale:browser`, lifecycle/acceptance scripts, and Chromium-based tests) are also deferred because they require a browser, server, or both. CI intentionally reports only the deterministic unit/static checks listed above.
+
+To require this status before merging, a repository administrator can select the `Pull request checks` status from GitHub Actions in branch protection or the applicable ruleset's required status checks. No repository protection settings are changed here. Hosted validation on PR #155 confirmed a complete passing run and a deliberate failing assertion reported against its source line; the temporary failure probe was then removed.
+
 For browser lifecycle regression checks, start Vite and run the standard-library Python harness against its URL:
 
 ```sh

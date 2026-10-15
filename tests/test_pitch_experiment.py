@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.pitch_experiment import (
     candidate_with_lanes, eligible_contour_pairs, map_lanes, metrics,
@@ -85,6 +86,21 @@ class PitchExperimentTests(unittest.TestCase):
                 (path / "partial.wav").write_bytes(b"partial")
                 raise RuntimeError("synthetic extraction failure")
         self.assertFalse(path.exists())
+
+    def test_temporary_audio_directory_falls_back_when_preferred_parent_is_missing(self):
+        with tempfile.TemporaryDirectory() as root:
+            preferred = Path(root) / "missing" / "opencode"
+            with patch("scripts.pitch_experiment.PREFERRED_TEMP_DIR", preferred):
+                with self.assertRaisesRegex(RuntimeError, "synthetic extraction failure"):
+                    with temporary_audio_directory() as directory:
+                        path = Path(directory)
+                        self.assertTrue(path.is_dir())
+                        self.assertEqual(path.parent, Path(tempfile.gettempdir()))
+                        self.assertNotEqual(path.parent, preferred)
+                        (path / "partial.wav").write_bytes(b"partial")
+                        raise RuntimeError("synthetic extraction failure")
+                self.assertFalse(path.exists())
+            self.assertFalse(preferred.exists())
 
     def test_failed_subprocess_attempt_is_persisted(self):
         with tempfile.TemporaryDirectory() as tmp:
