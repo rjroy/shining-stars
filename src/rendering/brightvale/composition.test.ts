@@ -18,7 +18,10 @@ import {
   type BrightvaleAssetName,
   type BrightvaleAssets,
 } from './assets';
-import { createBrightvaleComposition } from './composition';
+import {
+  BRIGHTVALE_GROUND_UV,
+  createBrightvaleComposition,
+} from './composition';
 import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';
 import type { SceneStateProjection } from '../scene-state';
 
@@ -45,7 +48,36 @@ async function loadProductionAssets(): Promise<BrightvaleAssets> {
     );
     return new Response(new Uint8Array(bytes), { status: 200 });
   });
-  return loadBrightvaleRuntimeAssets(new AbortController().signal, { fetch });
+  return loadBrightvaleRuntimeAssets(new AbortController().signal, {
+    fetch,
+    loadSkyTextures: async () => {
+      const warm = new THREE.DataTexture(
+        new Uint8Array([255, 255, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      );
+      const twilight = new THREE.DataTexture(
+        new Uint8Array([255, 255, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      );
+      return {
+        warm,
+        twilight,
+        dispose() {
+          warm.dispose();
+          twilight.dispose();
+        },
+      };
+    },
+    loadGroundTextures: async () => ({
+      city: new THREE.Texture(),
+      plaza: new THREE.Texture(),
+      dispose() {},
+    }),
+  });
 }
 
 function requireAssets(): BrightvaleAssets {
@@ -268,6 +300,34 @@ describe('Brightvale production composition', () => {
       expect(mesh?.matrix.toArray()).toEqual(
         new THREE.Matrix4().fromArray([...surface.matrixColumnMajor]).toArray(),
       );
+      const uv = mesh?.geometry.getAttribute('uv');
+      expect(uv?.count).toBe(surface.positionsLocalGltf.length);
+      const mapping =
+        surface.name === 'Review.Ground'
+          ? BRIGHTVALE_GROUND_UV.city
+          : BRIGHTVALE_GROUND_UV.plaza;
+      const cosine = Math.cos(mapping.rotationRadians);
+      const sine = Math.sin(mapping.rotationRadians);
+      const expectedUv = surface.positionsLocalGltf.flatMap(([x, y, z]) => {
+        const point = new THREE.Vector3(x, y, z).applyMatrix4(mesh!.matrix);
+        return [
+          (point.x * cosine + point.z * sine) / mapping.repeatWorldUnits +
+            mapping.offset[0],
+          (-point.x * sine + point.z * cosine) / mapping.repeatWorldUnits +
+            mapping.offset[1],
+        ];
+      });
+      expect(Array.from(uv?.array ?? [])).toEqual(
+        Array.from(new Float32Array(expectedUv)),
+      );
+      const material = mesh?.material as THREE.MeshToonMaterial;
+      expect(material.map).toBe(
+        surface.name === 'Review.Ground'
+          ? loadedAssets?.groundTextures?.city
+          : loadedAssets?.groundTextures?.plaza,
+      );
+      expect(material.emissiveMap).toBe(material.map);
+      expect(material.emissiveIntensity).toBeGreaterThan(0);
 
       const normals = mesh?.geometry.getAttribute('normal');
       expect(normals, `${surface.name} normals`).toBeDefined();
@@ -298,7 +358,10 @@ describe('Brightvale production composition', () => {
         expect(faceNormal.length()).toBeGreaterThan(0);
         faceNormal.normalize();
         for (const vertex of vertexIndices) {
-          const normal = new THREE.Vector3().fromBufferAttribute(normals, vertex);
+          const normal = new THREE.Vector3().fromBufferAttribute(
+            normals,
+            vertex,
+          );
           expect(normal.dot(faceNormal)).toBeGreaterThan(0.999);
         }
       }
@@ -317,6 +380,17 @@ describe('Brightvale production composition', () => {
     expect(crowdBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(350);
 
     const allBatches = [...cityBatches, ...framingBatches, ...crowdBatches];
+    expect(allBatches.every((batch) => batch.castShadow)).toBe(true);
+    expect(allBatches.every((batch) => batch.receiveShadow)).toBe(true);
+    const ground = composition.root.getObjectByName('Review.Ground') as
+      THREE.Mesh | undefined;
+    expect(ground).toBeInstanceOf(THREE.Mesh);
+    expect(ground?.castShadow).toBe(false);
+    expect(ground?.receiveShadow).toBe(true);
+    const key = scene.getObjectByName('Brightvale.Key') as
+      THREE.DirectionalLight | undefined;
+    expect(key?.castShadow).toBe(true);
+    expect(key?.shadow.mapSize.toArray()).toEqual([2048, 2048]);
     const geometryMaterialPairs = new Set<string>();
     for (const batch of allBatches) {
       expect(Array.isArray(batch.material)).toBe(false);

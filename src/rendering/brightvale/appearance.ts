@@ -16,6 +16,8 @@ type SourceSurfaceMaterial = THREE.Material & {
   readonly emissive?: THREE.Color;
   readonly emissiveIntensity?: number;
   readonly flatShading?: boolean;
+  readonly map?: THREE.Texture | null;
+  readonly emissiveMap?: THREE.Texture | null;
 };
 
 interface LightPreset {
@@ -30,7 +32,15 @@ interface LightPreset {
   readonly pointPosition: THREE.Vector3;
 }
 
-const PRESETS: Readonly<Record<'audience' | 'twilight' | 'radiant', LightPreset>> = {
+const GROUND_EMISSIVE = {
+  audience: { city: 0x78bf8f, plaza: 0xc5c1ec },
+  twilight: { city: 0x82c79b, plaza: 0xb6adff },
+  radiant: { city: 0xa5ca8b, plaza: 0xe3d8fa },
+} as const;
+
+const PRESETS: Readonly<
+  Record<'audience' | 'twilight' | 'radiant', LightPreset>
+> = {
   audience: {
     sky: new THREE.Color(0xffd49b),
     ground: new THREE.Color(0x27334d),
@@ -120,6 +130,7 @@ export function createBrightvaleAppearance(
   const materialBySignature = new Map<string, THREE.MeshToonMaterial>();
   const ownedMaterials = new Set<THREE.MeshToonMaterial>();
   const cityEmissionBaselines = new Map<THREE.MeshToonMaterial, number>();
+  const groundMaterials = new Map<THREE.MeshToonMaterial, 'city' | 'plaza'>();
   const hemisphere = new THREE.HemisphereLight(
     PRESETS.audience.sky,
     PRESETS.audience.ground,
@@ -128,6 +139,7 @@ export function createBrightvaleAppearance(
   hemisphere.name = 'Brightvale.Ambience';
   const key = new THREE.DirectionalLight(0xffc982, 2.15);
   key.name = 'Brightvale.Key';
+  key.castShadow = true;
   key.position.set(-12, 32, 18);
   const fill = new THREE.DirectionalLight(0x6685c4, 1.15);
   fill.name = 'Brightvale.Fill';
@@ -142,6 +154,7 @@ export function createBrightvaleAppearance(
 
   let currentCityBrightness = 1;
   let disposed = false;
+  const groundTargetColor = new THREE.Color();
 
   const update = (state: SceneStateProjection): void => {
     if (disposed) throw new Error('Brightvale appearance has been disposed');
@@ -176,6 +189,15 @@ export function createBrightvaleAppearance(
     );
     for (const [material, baseline] of cityEmissionBaselines)
       material.emissiveIntensity = baseline * currentCityBrightness;
+    const fromGround = GROUND_EMISSIVE.audience;
+    const toGround = state.victory
+      ? GROUND_EMISSIVE.radiant
+      : GROUND_EMISSIVE.twilight;
+    for (const [material, surface] of groundMaterials) {
+      material.emissive.set(fromGround[surface]);
+      groundTargetColor.set(toGround[surface]);
+      material.emissive.lerp(groundTargetColor, amount);
+    }
   };
 
   return {
@@ -194,12 +216,19 @@ export function createBrightvaleAppearance(
       const emissive =
         properties.emissive?.clone() ?? new THREE.Color(0x000000);
       const emissiveIntensity = properties.emissiveIntensity ?? 1;
+      const groundSurface = source.userData.brightvaleGround as
+        'city' | 'plaza' | undefined;
+      const map = properties.map ?? null;
+      const emissiveMap = properties.emissiveMap ?? null;
       const signature = [
         role,
         color.getHexString(),
         emissive.getHexString(),
         emissiveIntensity,
         source.side,
+        map?.uuid ?? '',
+        emissiveMap?.uuid ?? '',
+        groundSurface ?? '',
       ].join('|');
 
       let material = materialBySignature.get(signature);
@@ -211,6 +240,8 @@ export function createBrightvaleAppearance(
           side: source.side,
           emissive,
           emissiveIntensity,
+          map,
+          emissiveMap,
         });
         // Preserve black-based pure emitters; their glow remains in emissive.
         if (
@@ -227,12 +258,17 @@ export function createBrightvaleAppearance(
         material.userData.brightvaleRole = role;
         materialBySignature.set(signature, material);
         ownedMaterials.add(material);
+        if (groundSurface) groundMaterials.set(material, groundSurface);
       }
 
       materialBySource.set(source, material);
       if (role === 'emissive_window') {
         cityEmissionBaselines.set(material, emissiveIntensity);
         material.emissiveIntensity = emissiveIntensity * currentCityBrightness;
+      }
+      if (groundSurface) {
+        material.color.set(groundSurface === 'city' ? 0x77b78a : 0xffffff);
+        material.emissive.set(GROUND_EMISSIVE.audience[groundSurface]);
       }
       return material;
     },
@@ -242,6 +278,7 @@ export function createBrightvaleAppearance(
       disposed = true;
       for (const light of [hemisphere, key, fill, rim, point])
         if (light.parent === scene) scene.remove(light);
+      key.shadow.dispose();
       for (const material of ownedMaterials) material.dispose();
       ramp.dispose();
     },

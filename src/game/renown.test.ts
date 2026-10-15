@@ -86,15 +86,21 @@ describe('Renown and Twilight Strength model', () => {
     });
 
     const good = createGame(
-      chart([note('audience', 2), note('twilight-good', 7)], {
-        twilightStrength: 5,
-      }),
+      chart(
+        [
+          note('audience-one', 2),
+          note('audience-two', 3),
+          note('twilight-good', 7),
+        ],
+        { twilightStrength: 5 },
+      ),
     );
     good.press(0, 2);
+    good.press(0, 3);
     good.advanceTo(5);
     good.press(0, 7.1);
     expect(good.snapshot()).toMatchObject({
-      personalStrength: 2,
+      personalStrength: 3,
       twilightStrength: 3,
       status: 'playing',
     });
@@ -122,14 +128,16 @@ describe('Renown and Twilight Strength model', () => {
     const game = createGame(
       chart(
         [
-          note('audience-good', 2),
+          note('audience-perfect-one', 2),
+          note('audience-perfect-two', 3),
           note('twilight-good-one', 7),
           note('twilight-good-two', 9),
         ],
         { twilightStrength: 4 },
       ),
     );
-    game.press(0, 2.1); // Audience Good grants two Renown.
+    game.press(0, 2);
+    game.press(0, 3); // Two Perfect hits provide six strength for two Good costs.
     game.advanceTo(5);
     game.press(0, 7.1);
     game.press(0, 9.1);

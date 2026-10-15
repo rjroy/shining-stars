@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import * as THREE from 'three';
 import {
   BRIGHTVALE_ASSET_NAMES,
   type BrightvaleAssetName,
@@ -33,5 +34,42 @@ export async function loadBrightvaleProductionAssets(): Promise<BrightvaleAssets
       );
       return new Response(new Uint8Array(bytes), { status: 200 });
     },
+    loadSkyTextures: async () => {
+      const makeTexture = (): THREE.DataTexture => {
+        const texture = new THREE.DataTexture(
+          new Uint8Array([255, 255, 255, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        );
+        texture.needsUpdate = true;
+        return texture;
+      };
+      const warm = makeTexture();
+      const twilight = makeTexture();
+      return {
+        warm,
+        twilight,
+        dispose() {
+          warm.dispose();
+          twilight.dispose();
+        },
+      };
+    },
+    loadGroundTextures: async () => ({
+      city: new THREE.DataTexture(
+        new Uint8Array([80, 120, 50, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      ),
+      plaza: new THREE.DataTexture(
+        new Uint8Array([100, 100, 150, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      ),
+      dispose() {},
+    }),
   });
 }

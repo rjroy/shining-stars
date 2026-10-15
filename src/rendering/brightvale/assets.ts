@@ -16,7 +16,24 @@ export type BrightvaleAssetUrls = Readonly<Record<BrightvaleAssetName, string>>;
 
 export interface BrightvaleAssets {
   readonly roots: Readonly<Record<BrightvaleAssetName, THREE.Group>>;
+  /** Runtime sky overlays loaded by the renderer; generic loader fixtures may omit them. */
+  readonly skyTextures?: BrightvaleSkyTextures;
+  /** Flat ground maps owned by the runtime bundle. */
+  readonly groundTextures?: BrightvaleGroundTextures;
   /** Releases imported resources owned by this bundle; safe to call repeatedly. */
+  dispose(): void;
+}
+
+export interface BrightvaleGroundTextures {
+  readonly city: THREE.Texture;
+  readonly plaza: THREE.Texture;
+  dispose(): void;
+}
+
+export interface BrightvaleSkyTextures {
+  readonly warm: THREE.Texture;
+  readonly twilight: THREE.Texture;
+  /** Releases these textures; safe to call repeatedly. */
   dispose(): void;
 }
 
@@ -52,7 +69,8 @@ function collectMaterialTextures(
   }
 
   if (Array.isArray(value)) {
-    for (const entry of value) collectMaterialTextures(entry, resources, visited);
+    for (const entry of value)
+      collectMaterialTextures(entry, resources, visited);
     return;
   }
   for (const entry of Object.values(value)) {
@@ -82,7 +100,8 @@ function collectRootResources(root: THREE.Group): Set<OwnedResource> {
   const resources = new Set<OwnedResource>();
   root.traverse((object) => {
     const renderable = object as THREE.Mesh;
-    if (renderable.geometry?.isBufferGeometry) resources.add(renderable.geometry);
+    if (renderable.geometry?.isBufferGeometry)
+      resources.add(renderable.geometry);
 
     const materials = Array.isArray(renderable.material)
       ? renderable.material

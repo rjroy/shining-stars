@@ -544,7 +544,7 @@ describe('game model', () => {
       game.advanceTo(8.3 + goodWindow + 0.001);
       expect(game.snapshot()).toMatchObject({
         renown: expectedRenown,
-        personalStrength: expectedRenown - goodCost - missCost,
+        personalStrength: Math.max(0, expectedRenown - goodCost - missCost),
         twilightStrength: 100 - goodDamage - perfectDamage,
         notes: [
           { id: 'audience-perfect', outcome: 'perfect' },

@@ -156,6 +156,12 @@ function makeAssets(dispose = vi.fn()): BrightvaleAssets {
   const roots = Object.fromEntries(
     BRIGHTVALE_ASSET_NAMES.map((name) => [name, new THREE.Group()]),
   ) as unknown as BrightvaleAssets['roots'];
+  roots.city.add(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 2),
+      new THREE.MeshBasicMaterial(),
+    ),
+  );
   for (const name of ['highway', 'platform'] as const) {
     const road = new THREE.Mesh(
       new THREE.PlaneGeometry(20, 100),
@@ -165,12 +171,40 @@ function makeAssets(dispose = vi.fn()): BrightvaleAssets {
     road.position.y = name === 'highway' ? 0.41 : 0.43;
     roots[name].add(road);
   }
-  return { roots, dispose };
+  const makeSkyTexture = (): THREE.DataTexture => {
+    const texture = new THREE.DataTexture(
+      new Uint8Array([255, 255, 255, 255]),
+      1,
+      1,
+      THREE.RGBAFormat,
+    );
+    texture.needsUpdate = true;
+    return texture;
+  };
+  const warm = makeSkyTexture();
+  const twilight = makeSkyTexture();
+  const skyTextures = {
+    warm,
+    twilight,
+    dispose: vi.fn(() => {
+      warm.dispose();
+      twilight.dispose();
+    }),
+  };
+  return {
+    roots,
+    skyTextures,
+    dispose: vi.fn(() => {
+      dispose();
+      skyTextures.dispose();
+    }),
+  };
 }
 
 interface RendererHarness {
   renderer: SceneRenderer;
   readonly calls: Array<{ scene: THREE.Scene; camera: THREE.Camera }>;
+  readonly skyCalls: Array<{ scene: THREE.Scene; camera: THREE.Camera }>;
   readonly setSizes: Array<readonly [number, number, boolean | undefined]>;
   readonly pixelRatios: number[];
   viewport: readonly [number, number, number, number];
@@ -200,6 +234,7 @@ function makeRenderer(order?: string[]): RendererHarness {
   const harness: RendererHarness = {
     canvas,
     calls: [],
+    skyCalls: [],
     setSizes: [],
     pixelRatios: [],
     viewport: [0, 0, 1600, 900],
@@ -217,6 +252,12 @@ function makeRenderer(order?: string[]): RendererHarness {
     outputColorSpace: THREE.SRGBColorSpace,
     toneMapping: THREE.ACESFilmicToneMapping,
     toneMappingExposure: 1,
+    shadowMap: {
+      enabled: false,
+      type: THREE.BasicShadowMap,
+      autoUpdate: true,
+      needsUpdate: false,
+    } as THREE.WebGLRenderer['shadowMap'],
     setClearColor: vi.fn(),
     setPixelRatio: (value: number) => harness.pixelRatios.push(value),
     setSize: (width: number, height: number, updateStyle?: boolean) => {
@@ -235,7 +276,9 @@ function makeRenderer(order?: string[]): RendererHarness {
     clear: vi.fn(),
     clearDepth: vi.fn(),
     render(scene: THREE.Scene, camera: THREE.Camera) {
-      harness.calls.push({ scene, camera });
+      const call = { scene, camera };
+      if (scene.name === 'Brightvale.Sky') harness.skyCalls.push(call);
+      else harness.calls.push(call);
       if (harness.failRender) throw new Error('renderer frame failed');
     },
     dispose() {
@@ -337,6 +380,45 @@ async function renderWithProductionAssets(
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
   const assets = await loadBrightvaleRuntimeAssets(
     new AbortController().signal,
+    {
+      loadSkyTextures: async () => {
+        const warm = new THREE.DataTexture(
+          new Uint8Array([255, 255, 255, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        );
+        const twilight = new THREE.DataTexture(
+          new Uint8Array([255, 255, 255, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        );
+        return {
+          warm,
+          twilight,
+          dispose() {
+            warm.dispose();
+            twilight.dispose();
+          },
+        };
+      },
+      loadGroundTextures: async () => ({
+        city: new THREE.DataTexture(
+          new Uint8Array([80, 120, 50, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        plaza: new THREE.DataTexture(
+          new Uint8Array([100, 100, 150, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        dispose() {},
+      }),
+    },
   );
   const renderer = makeRenderer();
   const unavailable = vi.fn();
@@ -344,6 +426,45 @@ async function renderWithProductionAssets(
     makeHost(),
     unavailable,
     () => renderer.renderer,
+    {
+      loadSkyTextures: async () => {
+        const warm = new THREE.DataTexture(
+          new Uint8Array([255, 255, 255, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        );
+        const twilight = new THREE.DataTexture(
+          new Uint8Array([255, 255, 255, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        );
+        return {
+          warm,
+          twilight,
+          dispose() {
+            warm.dispose();
+            twilight.dispose();
+          },
+        };
+      },
+      loadGroundTextures: async () => ({
+        city: new THREE.DataTexture(
+          new Uint8Array([80, 120, 50, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        plaza: new THREE.DataTexture(
+          new Uint8Array([100, 100, 150, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        dispose() {},
+      }),
+    },
   );
   if (scene === null) {
     assets.dispose();
@@ -438,7 +559,7 @@ function productionSurfaceHeightAt(
 }
 
 describe('Brightvale scene facade and renderer lifecycle', () => {
-  it('stays loading until bundle resolution, then reports rendered only after both passes succeed', async () => {
+  it('stays loading until bundle resolution, then renders the shared sky before the world and overlay passes', async () => {
     installSceneGlobals();
     const host = makeHost();
     const unavailable = vi.fn();
@@ -472,6 +593,11 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect.soft(scene.updateFrame(makeFrame())).toBe('rendered');
     expect.soft(createComposition).toHaveBeenCalledTimes(1);
     expect.soft(renderer.calls).toHaveLength(2);
+    expect.soft(renderer.skyCalls).toHaveLength(1);
+    expect.soft(renderer.skyCalls[0]?.scene.name).toBe('Brightvale.Sky');
+    expect
+      .soft(renderer.skyCalls[0]?.camera)
+      .toBeInstanceOf(THREE.OrthographicCamera);
     expect
       .soft(renderer.calls[0]?.camera)
       .toBeInstanceOf(THREE.PerspectiveCamera);
@@ -481,11 +607,15 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect.soft(renderer.calls[0]?.scene).not.toBe(renderer.calls[1]?.scene);
     expect.soft(renderer.setSizes).toContainEqual([1600, 900, false]);
     expect.soft(renderer.pixelRatios).toContain(1.5);
+    expect(renderer.renderer.shadowMap.enabled).toBe(true);
+    expect(renderer.renderer.shadowMap.type).toBe(THREE.PCFSoftShadowMap);
+    expect(renderer.renderer.shadowMap.autoUpdate).toBe(false);
     expect.soft(unavailable).not.toHaveBeenCalled();
 
     scene.destroy();
     expect(compositionDispose).toHaveBeenCalledTimes(1);
     expect(bundleDispose).toHaveBeenCalledTimes(1);
+    expect(bundle.skyTextures?.dispose).toHaveBeenCalledTimes(1);
     expect(disposalOrder).toEqual(['composition', 'assets', 'renderer']);
   });
 
@@ -536,6 +666,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     const observatoryRender = renderer.calls.at(-1)!;
     expect(observatoryRender.camera).toBeInstanceOf(THREE.OrthographicCamera);
     expect(renderer.calls).toHaveLength(1);
+    expect(renderer.skyCalls).toHaveLength(1);
     expect(scene.getObservatoryAnchors()).toMatchObject([
       { collectionId: 'test-collection', visible: true },
     ]);

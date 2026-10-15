@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BrightvaleAssets } from './assets';
 import { createBrightvaleAppearance } from './appearance';
+import { fitDirectionalShadowCamera, setShadowParticipation } from './shadows';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleRuntimeLayout } from './layout';
@@ -9,6 +10,20 @@ export interface BrightvaleComposition extends BrightvaleShellComposition {
   /** Applies visual state without rebuilding the assembled scene. */
   updateAppearance(state: SceneStateProjection): void;
 }
+
+/** Rotated planar mapping keeps grass variation legible at grazing angles. */
+export const BRIGHTVALE_GROUND_UV = {
+  city: {
+    repeatWorldUnits: 800,
+    rotationRadians: Math.PI / 5,
+    offset: [0.5, 0.5],
+  },
+  plaza: {
+    repeatWorldUnits: 22.5,
+    rotationRadians: Math.PI / 10,
+    offset: [0, 0],
+  },
+} as const;
 
 interface BatchSource {
   readonly mesh: THREE.Mesh;
@@ -109,6 +124,10 @@ export function createBrightvaleComposition(
     generatedGeometries.add(sourceGeometry);
     for (const surface of layout.groundSurfaces) {
       const colorValues = surface.material.baseColorLinear;
+      const isCity = surface.name === 'Review.Ground';
+      const texture = isCity
+        ? assets.groundTextures?.city
+        : assets.groundTextures?.plaza;
       const material = new THREE.MeshStandardMaterial({
         name: surface.material.name,
         color: new THREE.Color(
@@ -120,6 +139,16 @@ export function createBrightvaleComposition(
         roughness: surface.material.roughness,
         side: surface.material.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
       });
+      if (texture) {
+        material.map = texture;
+        material.emissiveMap = texture;
+        material.color.set(0xffffff);
+        material.emissive.set(isCity ? 0x78bf8f : 0xc5c1ec);
+        // A restrained texture-matched fill lifts the map from the dark toon
+        // ramp while the lit diffuse term still carries the existing shadows.
+        material.emissiveIntensity = isCity ? 0.38 : 0.42;
+        material.userData.brightvaleGround = isCity ? 'city' : 'plaza';
+      }
       ownedSourceMaterials.add(material);
       groundSources.add(new THREE.Mesh(sourceGeometry, material));
     }
@@ -134,6 +163,7 @@ export function createBrightvaleComposition(
       const source = assets.roots[name];
       const clone = source.clone(true);
       copyAppearanceMaterials(source, clone, appearance!.materialFor);
+      setShadowParticipation(clone, { cast: true, receive: true });
       wrapper.add(clone);
       playfield.add(wrapper);
     };
@@ -159,10 +189,28 @@ export function createBrightvaleComposition(
     root.add(groundGroup);
     for (const surface of layout.groundSurfaces) {
       const geometry = new THREE.BufferGeometry();
+      const isCityGround = surface.name === 'Review.Ground';
+      const uv = isCityGround
+        ? BRIGHTVALE_GROUND_UV.city
+        : BRIGHTVALE_GROUND_UV.plaza;
+      const surfaceMatrix = matrix(surface.matrixColumnMajor);
+      const uvs: number[] = [];
+      const cosine = Math.cos(uv.rotationRadians);
+      const sine = Math.sin(uv.rotationRadians);
+      for (const [x, y, z] of surface.positionsLocalGltf) {
+        const point = new THREE.Vector3(x, y, z).applyMatrix4(surfaceMatrix);
+        uvs.push(
+          (point.x * cosine + point.z * sine) / uv.repeatWorldUnits +
+            uv.offset[0],
+          (-point.x * sine + point.z * cosine) / uv.repeatWorldUnits +
+            uv.offset[1],
+        );
+      }
       geometry.setAttribute(
         'position',
         new THREE.Float32BufferAttribute(surface.positionsLocalGltf.flat(), 3),
       );
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
       geometry.setIndex(surface.triangleIndices.flat());
       geometry.computeVertexNormals();
       generatedGeometries.add(geometry);
@@ -177,9 +225,10 @@ export function createBrightvaleComposition(
       );
       mesh.name = surface.name;
       mesh.matrixAutoUpdate = false;
-      mesh.matrix.copy(matrix(surface.matrixColumnMajor));
+      mesh.matrix.copy(surfaceMatrix);
       groundGroup.add(mesh);
     }
+    setShadowParticipation(groundGroup, { cast: false, receive: true });
 
     const batchSources = new Map<
       THREE.Object3D,
@@ -278,6 +327,18 @@ export function createBrightvaleComposition(
         }
       }
     }
+
+    setShadowParticipation(cityGroup, { cast: true, receive: true });
+    setShadowParticipation(framingGroup, { cast: true, receive: true });
+    setShadowParticipation(crowdGroup, { cast: true, receive: true });
+    const key = scene.getObjectByName('Brightvale.Key');
+    if (!(key instanceof THREE.DirectionalLight))
+      throw new Error('Brightvale key light is required for scene shadows');
+    fitDirectionalShadowCamera(
+      key,
+      [cityGroup, playfield, framingGroup, crowdGroup],
+      groundGroup.children,
+    );
 
     let appearanceState: SceneStateProjection | undefined;
     return {

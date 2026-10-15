@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import type { GameplayFrame } from './gameplay-frame';
 import { FEEDBACK_VISIBLE_SECONDS } from './gameplay-frame';
-import type { BrightvaleAssets } from './brightvale/assets';
+import type {
+  BrightvaleAssets,
+  BrightvaleGroundTextures,
+  BrightvaleSkyTextures,
+} from './brightvale/assets';
+import { createBrightvaleSky } from './brightvale/sky';
+import type { BrightvaleSky } from './brightvale/sky';
 import {
   createObservatoryComposition,
   type ObservatoryComposition,
@@ -61,6 +67,7 @@ export interface SceneRenderer {
   outputColorSpace: THREE.WebGLRenderer['outputColorSpace'];
   toneMapping: THREE.ToneMapping;
   toneMappingExposure: number;
+  shadowMap: THREE.WebGLRenderer['shadowMap'];
   setClearColor(color: THREE.ColorRepresentation, alpha?: number): void;
   setPixelRatio(value: number): void;
   setSize(width: number, height: number, updateStyle?: boolean): void;
@@ -79,8 +86,14 @@ export type SceneRendererFactory = (
 
 /** Narrow seam for deterministic facade lifecycle tests. */
 export interface BrightvaleSceneDependencies {
-  readonly loadAssets: (signal: AbortSignal) => Promise<BrightvaleAssets>;
-  readonly createComposition: (
+  readonly loadAssets?: (signal: AbortSignal) => Promise<BrightvaleAssets>;
+  readonly loadSkyTextures?: (
+    signal: AbortSignal,
+  ) => Promise<BrightvaleSkyTextures>;
+  readonly loadGroundTextures?: (
+    signal: AbortSignal,
+  ) => Promise<BrightvaleGroundTextures>;
+  readonly createComposition?: (
     assets: BrightvaleAssets,
     world: THREE.Scene,
   ) => BrightvaleShellComposition;
@@ -311,7 +324,21 @@ export function createBrightvaleScene(
   const canvas = renderer.domElement;
   const worldScene = new THREE.Scene();
   const observatoryScene = new THREE.Scene();
-  observatoryScene.background = new THREE.Color('#100d2a');
+  const observatorySkyState: SceneStateProjection = {
+    phase: 'audience',
+    victory: false,
+    cityIntensity: 0,
+    cityBrightness: 0,
+    transitionProgress: 0,
+    motion: {
+      powerLinePulse: false,
+      buildingPulse: false,
+      windTravel: false,
+      cameraPush: 0,
+    },
+    playerDefiant: false,
+    twilightConsumed: false,
+  };
   const overlayScene = new THREE.Scene();
   const overlayCamera = new THREE.OrthographicCamera(0, 1, 0, 1, 0.1, 10);
   overlayCamera.position.set(0, 0, 5);
@@ -483,9 +510,11 @@ export function createBrightvaleScene(
   let observer: ResizeObserver | null = null;
   let resizeListener: (() => void) | null = null;
   let shell: ReturnType<typeof createBrightvaleSceneShell> | null = null;
+  let sky: BrightvaleSky | null = null;
   let rendererWidth = -1;
   let rendererHeight = -1;
   let rendererPixelRatio = -1;
+  let shadowScene: THREE.Scene | null = null;
 
   const setRendererPixelRatio = (): void => {
     const pixelRatio = Math.min(
@@ -610,6 +639,8 @@ export function createBrightvaleScene(
     ownedGeometries.clear();
     for (const material of ownedMaterials) material.dispose();
     ownedMaterials.clear();
+    sky?.dispose();
+    sky = null;
     renderer.dispose();
     console.info('[Brightvale] scene renderer disposed');
   };
@@ -707,10 +738,29 @@ export function createBrightvaleScene(
         elapsedSeconds: observatoryFrame.elapsedSeconds,
         reducedMotion: observatoryFrame.reducedMotion,
       });
-      renderer.autoClear = true;
-      renderer.setViewport(0, 0, layout.width, layout.height);
-      renderer.setScissorTest(false);
-      renderer.render(observatoryScene, observatoryComposition.camera);
+      const previousAutoClear = renderer.autoClear;
+      try {
+        renderer.autoClear = false;
+        renderer.setViewport(0, 0, layout.width, layout.height);
+        renderer.setScissorTest(false);
+        renderer.clear(true, true, true);
+        if (sky === null) throw new Error('Brightvale sky is not ready');
+        sky.update(
+          lastFrame?.city ?? observatorySkyState,
+          layout.width / layout.height,
+          { observatory: true },
+        );
+        renderer.render(sky.scene, sky.camera);
+        if (shadowScene !== observatoryScene) {
+          renderer.shadowMap.needsUpdate = true;
+          shadowScene = observatoryScene;
+        }
+        renderer.render(observatoryScene, observatoryComposition.camera);
+      } finally {
+        renderer.autoClear = previousAutoClear;
+        renderer.setScissorTest(false);
+        renderer.setViewport(0, 0, layout.width, layout.height);
+      }
       return;
     }
     if (lastFrame === null) throw new Error('Brightvale has no gameplay frame');
@@ -719,6 +769,7 @@ export function createBrightvaleScene(
     const range = timingProgress(frame.gameplay);
     if (composition.current === null || composition.projection === null)
       throw new Error('Brightvale composition is not ready');
+    if (sky === null) throw new Error('Brightvale sky is not ready');
 
     const key = normalizedLayoutKey(layout, range);
     if (key !== lastProjectionKey) {
@@ -958,6 +1009,12 @@ export function createBrightvaleScene(
       renderer.setViewport(0, 0, width, height);
       renderer.setScissorTest(false);
       renderer.clear(true, true, true);
+      sky.update(frame.city, width / height);
+      renderer.render(sky.scene, sky.camera);
+      if (shadowScene !== worldScene) {
+        renderer.shadowMap.needsUpdate = true;
+        shadowScene = worldScene;
+      }
       renderer.render(worldScene, composition.projection.camera);
       renderer.clearDepth();
       renderer.render(overlayScene, overlayCamera);
@@ -973,6 +1030,11 @@ export function createBrightvaleScene(
     assets: BrightvaleAssets,
     mode: 'gameplay' | 'observatory' = 'gameplay',
   ): BrightvaleShellComposition => {
+    if (sky === null) {
+      if (assets.skyTextures === undefined)
+        throw new Error('Brightvale runtime sky textures are missing');
+      sky = createBrightvaleSky(assets.skyTextures);
+    }
     if (mode === 'observatory') {
       observatoryComposition = createObservatoryComposition(
         assets,
@@ -983,7 +1045,7 @@ export function createBrightvaleScene(
     const frame = lastFrame;
     if (frame === null)
       throw new Error('cannot compose without a viewport frame');
-    if (dependencies === undefined) {
+    if (dependencies?.createComposition === undefined) {
       composition.profile = createBrightvaleSurfaceProfile(assets.roots);
       composition.frontProgress = getFrontPlatformProgress(
         composition.playfield,
@@ -1046,6 +1108,10 @@ export function createBrightvaleScene(
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
     setRendererPixelRatio();
     const initialSize = readHostContentSize();
     setRendererSize(initialSize.width, initialSize.height);
@@ -1057,7 +1123,11 @@ export function createBrightvaleScene(
         mode === 'observatory' ? observatoryScene : worldScene,
       loadAssets:
         dependencies?.loadAssets ??
-        ((signal) => loadBrightvaleRuntimeAssets(signal)),
+        ((signal) =>
+          loadBrightvaleRuntimeAssets(signal, {
+            loadSkyTextures: dependencies?.loadSkyTextures,
+            loadGroundTextures: dependencies?.loadGroundTextures,
+          })),
       createComposition: (assets, mode) => createShellComposition(assets, mode),
       render: renderFrame,
       onFailure: () => {
