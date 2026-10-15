@@ -122,7 +122,7 @@ describe('Observatory scene composition', () => {
     empty.dispose();
   });
 
-  it('builds only procedural Observatory effects and borrows city resources', () => {
+  it('builds the Observatory city without duplicating shared sky effects or owning city resources', () => {
     const assets = createAssets();
     const cityGeometry = (assets.roots.city.children[0] as THREE.Mesh).geometry;
     const disposeGeometry = vi.spyOn(cityGeometry, 'dispose');
@@ -149,7 +149,7 @@ describe('Observatory scene composition', () => {
       composition.root.children.some(
         (object) => object instanceof THREE.Points,
       ),
-    ).toBe(true);
+    ).toBe(false);
     const collectionAnchor = createObservatoryComposition(assets, collections);
     expect(
       collectionAnchor.root.getObjectByName(

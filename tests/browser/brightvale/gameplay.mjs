@@ -1506,6 +1506,13 @@ async function main() {
           screenshot: `${runPrefix}-radiant-victory.webp`,
         };
         await screenshot('radiant-victory.webp');
+        await resize(390, 844);
+        reports.radiantVictoryNarrow = await inspect();
+        if (reports.radiantVictoryNarrow.state.renderer !== 'rendered')
+          throw new Error('Radiant sky did not render at the narrow viewport');
+        await screenshot('radiant-victory-narrow.webp');
+        reports.radiantVictory.narrowScreenshot = `${runPrefix}-radiant-victory-narrow.webp`;
+        await resize(1600, 900);
       }
     } else if (index > victoryNoteIndex) {
       const hud = await inspectResourceHud();

@@ -45,7 +45,31 @@ async function loadProductionAssets(): Promise<BrightvaleAssets> {
     );
     return new Response(new Uint8Array(bytes), { status: 200 });
   });
-  return loadBrightvaleRuntimeAssets(new AbortController().signal, { fetch });
+  return loadBrightvaleRuntimeAssets(new AbortController().signal, {
+    fetch,
+    loadSkyTextures: async () => {
+      const warm = new THREE.DataTexture(
+        new Uint8Array([255, 255, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      );
+      const twilight = new THREE.DataTexture(
+        new Uint8Array([255, 255, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      );
+      return {
+        warm,
+        twilight,
+        dispose() {
+          warm.dispose();
+          twilight.dispose();
+        },
+      };
+    },
+  });
 }
 
 function requireAssets(): BrightvaleAssets {
