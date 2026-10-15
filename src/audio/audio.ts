@@ -68,13 +68,18 @@ export interface AudioTransportDependencies<
   TSource extends AudioSourcePort<TBuffer>,
 > {
   readonly context: AudioContextPort<TBuffer, TSource>;
-  readonly fetchAudio: (sourceUrl: string) => Promise<ArrayBuffer>;
+  readonly fetchAudio: (
+    sourceUrl: string,
+    signal?: AbortSignal,
+  ) => Promise<ArrayBuffer>;
   readonly log?: (entry: AudioLogEntry) => void;
 }
 
 export interface AudioTransport {
   snapshot(): AudioTransportSnapshot;
   load(): Promise<AudioTransportSnapshot>;
+  /** Abort an in-flight fetch and invalidate any decode already underway. */
+  cancelLoad(): AudioTransportSnapshot;
   start(): Promise<AudioTransportSnapshot>;
   resume(): Promise<AudioTransportSnapshot>;
   pause(): AudioTransportSnapshot;
@@ -133,6 +138,7 @@ export function createAudioTransport<
   let pendingResumeEpoch: number | null = null;
   let loadEpoch = 0;
   let loadPromise: Promise<AudioTransportSnapshot> | null = null;
+  let loadAbortController: AbortController | null = null;
   let disposePromise: Promise<void> | null = null;
 
   function log(entry: AudioLogEntry): void {
@@ -204,6 +210,7 @@ export function createAudioTransport<
   }
 
   function disconnectSource(record: ActiveSource<TSource>): void {
+    record.source.buffer = null;
     try {
       record.source.disconnect();
     } catch {
@@ -321,6 +328,7 @@ export function createAudioTransport<
 
   async function performLoad(
     requestEpoch: number,
+    abortController: AbortController,
   ): Promise<AudioTransportSnapshot> {
     let operation: 'fetch' | 'decode' | 'duration-validation' = 'fetch';
     try {
@@ -329,7 +337,10 @@ export function createAudioTransport<
       }
 
       log({ operation: 'fetch', outcome: 'attempt' });
-      const audioData = await dependencies.fetchAudio(config.sourceUrl);
+      const audioData = await dependencies.fetchAudio(
+        config.sourceUrl,
+        abortController.signal,
+      );
       log({ operation: 'fetch', outcome: 'success' });
       if (disposed || requestEpoch !== loadEpoch) {
         return snapshot();
@@ -374,6 +385,7 @@ export function createAudioTransport<
     } finally {
       if (requestEpoch === loadEpoch) {
         loadPromise = null;
+        loadAbortController = null;
       }
     }
   }
@@ -393,9 +405,24 @@ export function createAudioTransport<
     const requestEpoch = loadEpoch;
     error = null;
     transition('loading', 'load-requested');
-    const pending = Promise.resolve().then(() => performLoad(requestEpoch));
+    const abortController = new AbortController();
+    loadAbortController = abortController;
+    const pending = Promise.resolve().then(() =>
+      performLoad(requestEpoch, abortController),
+    );
     loadPromise = pending;
     return pending;
+  }
+
+  function cancelLoad(): AudioTransportSnapshot {
+    if (loadPromise === null || disposed) return snapshot();
+    loadEpoch += 1;
+    loadPromise = null;
+    loadAbortController?.abort();
+    loadAbortController = null;
+    error = null;
+    if (status === 'loading') transition('paused', 'load-cancelled');
+    return snapshot();
   }
 
   function finishExpectedSource(record: ActiveSource<TSource>): void {
@@ -657,10 +684,13 @@ export function createAudioTransport<
     disposed = true;
     playbackEpoch += 1;
     loadEpoch += 1;
+    loadAbortController?.abort();
+    loadAbortController = null;
     loadPromise = null;
     context.removeEventListener('statechange', contextStateListener);
     scheduledWhen = null;
     const stopError = stopActiveSource();
+    decodedBuffer = null;
     error = stopError;
     if (status !== 'results' && status !== 'error') {
       transition('paused', 'dispose');
@@ -673,6 +703,7 @@ export function createAudioTransport<
   return {
     snapshot,
     load,
+    cancelLoad,
     start,
     resume,
     pause,

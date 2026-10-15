@@ -4,6 +4,10 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  recordJudgmentReceipt,
+  scheduleJudgmentVisualCapture,
+} from './judgment-receipt.mjs';
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -62,6 +66,7 @@ const pending = new Map();
 const events = [];
 const reports = {};
 const lateTravelWrites = [];
+let lateTravelBindingInstalled = false;
 const base = `http://127.0.0.1:${vitePort}/`;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function waitFor(check, label, timeout = 30000) {
@@ -93,10 +98,174 @@ async function evaluate(expression, awaitPromise = true) {
   return result.result?.value;
 }
 async function click(selector) {
-  const result = await evaluate(
-    `(() => { const e=document.querySelector(${JSON.stringify(selector)}); if(!e) return false; e.click(); return true; })()`,
+  const target = await evaluate(`(() => {
+    const element=[...document.querySelectorAll(${JSON.stringify(selector)})].find(candidate=>!candidate.disabled&&!candidate.closest('[hidden]')&&candidate.getClientRects().length>0);
+    if(!element)return null;
+    element.scrollIntoView({block:'center',inline:'center'});
+    const rect=element.getBoundingClientRect();
+    if(rect.width===0||rect.height===0)return null;
+    return{x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+  })()`);
+  if (!target) throw new Error(`Missing visible enabled button ${selector}`);
+  const before = await evaluate('window.__proofTrustedClicks.length');
+  await command('Input.dispatchMouseEvent', {
+    type: 'mouseMoved',
+    x: target.x,
+    y: target.y,
+  });
+  await command('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: target.x,
+    y: target.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  await command('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: target.x,
+    y: target.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  const event = await waitFor(
+    () =>
+      evaluate(
+        `window.__proofTrustedClicks.slice(${before}).at(-1) ?? null`,
+      ),
+    `trusted click on ${selector}`,
+    5000,
   );
-  if (!result) throw new Error(`Missing clickable element ${selector}`);
+  if (!event?.trusted)
+    throw new Error(`Click was not trusted for ${selector}: ${JSON.stringify(event)}`);
+  return event;
+}
+
+async function selectAndStartFirstDemo(
+  runLabel,
+  selectedScreenshot = 'observatory-selected-song.webp',
+) {
+  await waitFor(
+    () =>
+      evaluate(`(() => {
+        const overview=document.querySelector('[data-observatory-page="overview"]');
+        const notice=document.querySelector('[data-renderer-notice]');
+        const canvas=document.querySelector('.play-surface canvas');
+        return !!overview && !overview.hidden && !!notice?.hidden &&
+          !!canvas && canvas.width>0 && canvas.height>0;
+      })()`),
+    `${runLabel} Observatory overview renderer`,
+    60000,
+  );
+  const allSongsClick = await click('[data-action="overview-all"]');
+  await waitFor(
+    () => evaluate(`!document.querySelector('[data-observatory-page="browser"]')?.hidden`),
+    `${runLabel} All Songs browser`,
+  );
+  const rowClick = await click(
+    'button[data-action="select-song"][data-song-id="the-first-shining-star"]',
+  );
+  const selected = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const detail=document.querySelector('[data-song-detail]');
+        const title=detail?.querySelector('h2')?.textContent?.trim();
+        const play=detail?.querySelector('[data-action="play"]');
+        return title && play ? {title,chartNotice:detail.querySelector('.song-chart-status')?.textContent?.trim(),playDisabled:play.disabled} : null;
+      })()`),
+    `${runLabel} selected First Shining Star detail`,
+  );
+  if (!/The First Shining Star/.test(selected.title) || selected.playDisabled)
+    throw new Error(`Demo selection is not Play-ready: ${JSON.stringify(selected)}`);
+  const audioContextsBeforePlay = await evaluate(
+    'window.__proofAudioContexts.length',
+  );
+  if (audioContextsBeforePlay !== 0)
+    throw new Error(
+      `An AudioContext was created before the trusted Play action: ${audioContextsBeforePlay}`,
+    );
+  await screenshot(selectedScreenshot);
+  const playClick = await click('[data-action="play"]');
+  if (playClick.action !== 'play' || playClick.trusted !== true)
+    throw new Error(`Play did not receive a genuine click: ${JSON.stringify(playClick)}`);
+  const scheduled = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const context=window.__proofAudioContexts?.[0];
+        return context && Number.isFinite(window.__proofScheduledWhen)
+          ? {stateAtCreation:context.__proofStateAtCreation,state:context.state,
+              createdDuringTrustedPlay:context.__proofCreatedDuringTrustedPlay,
+              createdAtTime:context.__proofCreatedAtTime,
+              scheduledWhen:window.__proofScheduledWhen,
+              sourceOffset:window.__proofScheduledOffset,
+              sourceDuration:window.__proofScheduledDuration,
+              currentTime:context.currentTime,
+              ownCurrentTime: Object.hasOwn(context,'currentTime')}
+          : null;
+      })()`),
+    `${runLabel} real Play startup and audio scheduling`,
+    20000,
+  );
+  const playing = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const context=window.__proofAudioContexts?.[0];
+        return context && Number.isFinite(window.__proofScheduledWhen) &&
+          context.state==='running' && context.currentTime>=window.__proofScheduledWhen
+          ? {state:context.state,currentTime:context.currentTime,
+              scheduledWhen:window.__proofScheduledWhen,
+              sourceOffset:window.__proofScheduledOffset,
+              sourceDuration:window.__proofScheduledDuration,
+              ownCurrentTime:Object.hasOwn(context,'currentTime')}
+          : null;
+      })()`),
+    `${runLabel} actual audio clock passing scheduled start`,
+    12000,
+  );
+  if (
+    !scheduled.createdDuringTrustedPlay ||
+    audioContextsBeforePlay !== 0 ||
+    scheduled.ownCurrentTime ||
+    playing.ownCurrentTime
+  ) {
+    throw new Error(
+      `Play did not start from a genuine gesture on an unmodified AudioContext: ${JSON.stringify({ selected, playClick, scheduled, playing })}`,
+    );
+  }
+  return {
+    selected,
+    audioContextsBeforePlay,
+    allSongsClick,
+    rowClick,
+    playClick,
+    selectionScreenshot: `${difficulty}-${selectedScreenshot}`,
+    scheduled,
+    playing,
+    startupClockModified: false,
+  };
+}
+
+async function installPostStartupClockProbe() {
+  const result = await evaluate(`(() => {
+    const context=window.__proofAudioContexts?.[0];
+    if(!context || !Number.isFinite(window.__proofScheduledWhen))return null;
+    let prototype=Object.getPrototypeOf(context);
+    let descriptor;
+    while(prototype&&!descriptor){descriptor=Object.getOwnPropertyDescriptor(prototype,'currentTime');prototype=Object.getPrototypeOf(prototype)}
+    if(!descriptor?.get)return null;
+    const raw=()=>descriptor.get.call(context);
+    let rawBase=raw();
+    let logicalBase=rawBase;
+    let rate=1;
+    Object.defineProperty(context,'currentTime',{configurable:true,get:()=>logicalBase+(raw()-rawBase)*rate});
+    context.__setProofClockRate=(next)=>{const now=raw();logicalBase+=((now-rawBase)*rate);rawBase=now;rate=next};
+    const nativeBefore=raw();
+    const reportedAfterInstall=context.currentTime;
+    const nativeAfter=raw();
+    return{installedAfterPlaybackStart:true,nativeAtInstall:rawBase,reportedAfterInstall,nativeBefore,nativeAfter,initialRate:rate,unchangedAtInstall:rate===1&&reportedAfterInstall>=nativeBefore&&reportedAfterInstall<=nativeAfter};
+  })()`);
+  if (!result?.unchangedAtInstall)
+    throw new Error(`Could not install a neutral post-start clock probe: ${JSON.stringify(result)}`);
+  return result;
 }
 async function key(code, type) {
   await command('Input.dispatchKeyEvent', {
@@ -133,6 +302,40 @@ async function screenshot(name) {
     path.join(output, `${difficulty}-${name}`),
     Buffer.from(shot.data, 'base64'),
   );
+}
+function queueJudgmentVisualCapture(receipt, pendingCaptures) {
+  const filename = `${difficulty}-judgment-${receipt.outcome}-capture-${receipt.noteId}.webp`;
+  const capture = scheduleJudgmentVisualCapture(
+    receipt,
+    async () => {
+      const stateAtCaptureRequest = await evaluate(`(()=>({
+        liveRegionText:document.querySelector('[data-gameplay-status]')?.textContent?.trim()??'',
+        performanceTime:performance.now(),
+        audioTime:window.__proofAudioContexts?.[0]?.currentTime??null,
+        scheduledWhen:window.__proofScheduledWhen??null
+      }))()`);
+      await screenshot(filename);
+      const expectedStillVisible = new RegExp(
+        `Lane ${receipt.lane}: ${receipt.outcome}`, 'i',
+      ).test(stateAtCaptureRequest.liveRegionText);
+      if (!expectedStillVisible) {
+        throw new Error(
+          `Visual capture for ${receipt.noteId} was requested after its feedback changed: ${JSON.stringify(stateAtCaptureRequest)}`,
+        );
+      }
+      return {
+        filename,
+        captureState: stateAtCaptureRequest,
+        stateVerifiedAtCaptureRequest: expectedStillVisible,
+        screenshotRole: 'captured after receipt; not labeled as a peak frame',
+      };
+    },
+    (result) => {
+      reports.judgmentVisualCaptures ??= [];
+      reports.judgmentVisualCaptures.push(result);
+    },
+  );
+  pendingCaptures.push(capture);
 }
 function timingLegendScreenshotProbe(name, measuredRegion) {
   const imagePath = path.join(output, `${difficulty}-${name}`);
@@ -238,7 +441,6 @@ async function main() {
       '--use-angle=swiftshader',
       '--enable-unsafe-swiftshader',
       '--mute-audio',
-      '--autoplay-policy=no-user-gesture-required',
       '--hide-scrollbars',
       `--remote-debugging-port=${debugPort}`,
       `--user-data-dir=${path.join(scratch, 'profile')}`,
@@ -297,24 +499,86 @@ async function main() {
   await command('Page.enable');
   await command('Runtime.enable');
   await command('Page.addScriptToEvaluateOnNewDocument', {
-    source: `(()=>{const Native=window.AudioContext;if(Native){window.__proofAudioContexts=[];window.AudioContext=function(...args){const c=new Native(...args);let prototype=Native.prototype;let descriptor;while(prototype&&!descriptor){descriptor=Object.getOwnPropertyDescriptor(prototype,'currentTime');prototype=Object.getPrototypeOf(prototype)}if(descriptor?.get){const raw=()=>descriptor.get.call(c);let rawBase=raw();let logicalBase=rawBase;let rate=1;Object.defineProperty(c,'currentTime',{configurable:true,get:()=>logicalBase+(raw()-rawBase)*rate});c.__setProofClockRate=(next)=>{const now=raw();logicalBase+=((now-rawBase)*rate);rawBase=now;rate=next}}window.__proofAudioContexts.push(c);return c};window.AudioContext.prototype=Native.prototype}const p=window.AudioBufferSourceNode?.prototype;if(p){const start=p.start;p.start=function(when,...args){window.__proofScheduledWhen=when;window.__proofScheduledOffset=args[0]??0;return start.call(this,when,...args)}}})()`,
+    source: `(()=>{
+      window.__proofTrustedClicks=[];
+      window.__proofLastTrustedClick=null;
+      window.__proofJudgmentReceipts=[];
+      window.__proofActiveJudgment=null;
+      document.addEventListener('click',event=>{
+        const button=event.target instanceof Element?event.target.closest('button[data-action]'):null;
+        if(!button)return;
+        const record={action:button.dataset.action??null,songId:button.dataset.songId??null,trusted:event.isTrusted};
+        window.__proofTrustedClicks.push(record);
+        window.__proofLastTrustedClick=record;
+      },true);
+      const observeJudgment=()=>{
+        const active=window.__proofActiveJudgment;
+        const text=document.querySelector('[data-gameplay-status]')?.textContent?.trim()??'';
+        if(!active||!text||text===active.baselineText)return;
+        const match=text.match(new RegExp('Lane '+active.lane+': (Perfect|Good|Miss)','i'));
+        if(match?.[1]?.toLowerCase()!==active.expected)return;
+        window.__proofJudgmentReceipts.push({
+          ...active,
+          outcome:match[1].toLowerCase(),
+          liveRegionText:text,
+          performanceTime:performance.now(),
+          audioTime:window.__proofAudioContexts?.[0]?.currentTime??null,
+          scheduledWhen:window.__proofScheduledWhen??null
+        });
+        window.__proofActiveJudgment=null;
+      };
+      new MutationObserver(observeJudgment).observe(document,{subtree:true,childList:true,characterData:true});
+      const Native=window.AudioContext;
+      if(Native){
+        window.__proofAudioContexts=[];
+        window.AudioContext=function(...args){
+          const context=new Native(...args);
+          const click=window.__proofLastTrustedClick;
+          context.__proofStateAtCreation=context.state;
+          context.__proofCreatedAtTime=context.currentTime;
+          context.__proofCreatedDuringTrustedPlay=click?.action==='play'&&click.trusted===true;
+          window.__proofAudioContexts.push(context);
+          return context;
+        };
+        window.AudioContext.prototype=Native.prototype;
+      }
+      const sourcePrototype=window.AudioBufferSourceNode?.prototype;
+      if(sourcePrototype){
+        const start=sourcePrototype.start;
+        sourcePrototype.start=function(when,...args){
+          window.__proofScheduledWhen=when;
+          window.__proofScheduledOffset=args[0]??0;
+          window.__proofScheduledDuration=args[1]??null;
+          return start.call(this,when,...args);
+        };
+      }
+    })()`,
   });
   await command('Page.navigate', { url: base });
+  reports.startupGesture = await selectAndStartFirstDemo('initial run');
+  reports.gameplayInitialScreenshot = `${difficulty}-gameplay-initial.webp`;
+  await screenshot('gameplay-initial.webp');
+  reports.initialPause = await pauseWithEscape();
   await resize(1600, 900);
   await waitFor(
     async () => {
       const s = await status();
-      return s.host && s.host.width > 0 && s.renderer === 'rendered';
+      const gameplayVisible = await evaluate(
+        `document.querySelector('[data-experience-screen="gameplay"]')?.hidden===false`,
+      );
+      return s.host && s.host.width > 0 && s.renderer === 'rendered' && gameplayVisible;
     },
-    'initial rendered frame',
+    'actual gameplay after Observatory Play',
     60000,
   );
   reports.initial = await inspect();
-  if (!reports.initial.state.panels.includes('ready'))
-    throw new Error('Ready panel not visible before start');
-  if (reports.initial.state.startDisabled)
-    throw new Error('Start remained disabled after rendered scene');
-  await screenshot('ready-reference.webp');
+  if (
+    reports.initial.state.renderer !== 'rendered' ||
+    reports.initial.state.panels.includes('error')
+  )
+    throw new Error(
+      `Gameplay did not become ready after Play: ${JSON.stringify(reports.initial.state)}`,
+    );
   reports.initialHud = await inspectResourceHud();
   if (reports.initialHud.difficultySelect !== null)
     throw new Error(
@@ -337,11 +601,6 @@ async function main() {
     throw new Error(
       'Visible pause button unexpectedly remains in the gameplay HUD.',
     );
-  await click('[data-action="start"]');
-  await waitFor(async () => {
-    const s = await status();
-    return !s.panels.includes('ready') && s.renderer === 'rendered';
-  }, 'active gameplay');
   const chartSource = await readFile(
     path.join(root, 'src/game/mvp-chart.ts'),
     'utf8',
@@ -350,6 +609,14 @@ async function main() {
     chartSource.match(/sourceStart: ([\d.]+)/)?.[1] ?? 0,
   );
   const chartDuration = Number(chartSource.match(/duration: ([\d.]+)/)?.[1] ?? 0);
+  if (
+    reports.startupGesture.scheduled.sourceOffset !== chartSourceStart ||
+    reports.startupGesture.scheduled.sourceDuration !== chartDuration
+  ) {
+    throw new Error(
+      `Play scheduled a different chart interval: ${JSON.stringify({ startup: reports.startupGesture, chartSourceStart, chartDuration })}`,
+    );
+  }
   const notes = [
     ...chartSource.matchAll(/\{ id: '(\w+)', time: ([\d.]+), lane: (\d) \}/g),
   ].map(([, id, time, lane]) => ({
@@ -366,7 +633,7 @@ async function main() {
   const goodWindowSeconds =
     profileFile.profiles[difficulty].timing.good_ms / 1000;
   const sendCutoffSeconds = goodWindowSeconds * 0.75;
-  const scheduledWhen = await waitFor(
+  let scheduledWhen = await waitFor(
     async () =>
       evaluate(
         'Number.isFinite(window.__proofScheduledWhen) ? window.__proofScheduledWhen : null',
@@ -395,6 +662,29 @@ async function main() {
     }
     throw new Error(`Timed out waiting for resumed song time ${position}`);
   };
+  const armJudgmentReceipt = async (note, expected) =>
+    evaluate(`(()=>{
+      const active={
+        runId:'normal-native-restart',
+        noteId:${JSON.stringify(note.id)},
+        lane:${JSON.stringify(['D', 'F', 'J', 'K'][note.lane])},
+        expected:${JSON.stringify(expected)},
+        baselineText:document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''
+      };
+      window.__proofActiveJudgment=active;
+      return active;
+    })()`);
+  const waitForJudgmentReceipt = async (note, expected) =>
+    waitFor(
+      () =>
+        evaluate(`window.__proofJudgmentReceipts.find(receipt=>
+          receipt.runId==='normal-native-restart'&&
+          receipt.noteId===${JSON.stringify(note.id)}&&
+          receipt.expected===${JSON.stringify(expected)}
+        )??null`),
+      `browser-side ${expected} receipt for ${note.id}`,
+      5000,
+    );
   const captureLateNoteTravel = async (note, samples) => {
     reports.lateNoteTravel = [];
     const clockWasScaled = await evaluate(`(()=>{
@@ -406,9 +696,12 @@ async function main() {
     if (!clockWasScaled)
       throw new Error('Could not slow the silent proof clock for frame sampling');
     try {
-      await command('Runtime.addBinding', {
-        name: '__brightvaleLateTravelSample',
-      });
+      if (!lateTravelBindingInstalled) {
+        await command('Runtime.addBinding', {
+          name: '__brightvaleLateTravelSample',
+        });
+        lateTravelBindingInstalled = true;
+      }
       const scheduled = await evaluate(`(()=>{
         const audio=window.__proofAudioContexts?.[0];
         const scheduled=window.__proofScheduledWhen;
@@ -446,13 +739,45 @@ async function main() {
   };
   const hitNotes = [];
   const pendingPeakScreenshots = [];
-  const pendingFadeScreenshots = [];
-  const captureFadeAfter = (name, delayMs) =>
-    pendingFadeScreenshots.push(
-      new Promise((resolve, reject) => {
-        setTimeout(() => screenshot(name).then(resolve, reject), delayMs);
-      }),
+  if (!reports.initialPause.panels.includes('pause'))
+    throw new Error(
+      `Expected the initial performance to be paused during chart-proof setup: ${JSON.stringify(reports.initialPause)}`,
     );
+  const restartClick = await click('[data-action="restart"]');
+  const restartedSchedule = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const when=window.__proofScheduledWhen;
+        return Number.isFinite(when)&&when!==${JSON.stringify(scheduledWhen)}
+          ?{when,offset:window.__proofScheduledOffset,duration:window.__proofScheduledDuration}
+          :null;
+      })()`),
+    'trusted Start over schedule from chart time zero',
+    10000,
+  );
+  if (
+    restartClick.action !== 'restart' ||
+    restartedSchedule.offset !== chartSourceStart ||
+    restartedSchedule.duration !== chartDuration
+  )
+    throw new Error(
+      `Start over did not restore the authored chart interval: ${JSON.stringify({ restartClick, restartedSchedule, chartSourceStart, chartDuration })}`,
+    );
+  await waitFor(
+    () =>
+      evaluate(`(() => {
+        const context=window.__proofAudioContexts?.[0];
+        return context?.state==='running'&&context.currentTime>=${JSON.stringify(restartedSchedule.when)};
+      })()`),
+    'restarted chart audio clock at its actual scheduled start',
+    12000,
+  );
+  scheduledWhen = restartedSchedule.when;
+  reports.noteRunRestart = {
+    click: restartClick,
+    scheduled: restartedSchedule,
+    clockModified: false,
+  };
   let capturedReferenceAudience = false;
   let resizedNarrow = false;
   let capturedNarrowAudience = false;
@@ -460,25 +785,10 @@ async function main() {
   let capturedReferenceTwilight = false;
   let pausedAtTwilight = false;
   for (const note of notes) {
-    if (note.id === 'a05') {
-      const positions = [
-        { name: 'before-target', transportTime: note.time - 0.05 },
-        { name: 'at-target', transportTime: note.time },
-        { name: 'late-window', transportTime: note.time + goodWindowSeconds * 0.45 },
-        { name: 'before-miss-cutoff', transportTime: note.time + goodWindowSeconds - 0.03 },
-      ].map((sample) => ({ ...sample, noteId: note.id, lane: note.lane }));
-      const captured = await captureLateNoteTravel(note, positions);
-      if (
-        captured.some(
-          (sample, index) =>
-            sample.capturedTransportTime < positions[index].transportTime ||
-            sample.capturedTransportTime - positions[index].transportTime > 0.045,
-        )
-      )
-        throw new Error(
-          `Actual-app note travel samples missed their transport instants: ${JSON.stringify(captured)}`,
-        );
-    }
+    if (['a01', 'a02', 'a04'].includes(note.id))
+      await armJudgmentReceipt(note, note.id === 'a02' ? 'good' : 'perfect');
+    else if (note.id === 'a05')
+      await armJudgmentReceipt(note, 'miss');
     if (!capturedReferenceAudience && note.time >= 9.7) {
       await waitTransport(10.2);
       reports.audienceReference = await inspect();
@@ -608,28 +918,23 @@ async function main() {
       note.id === 'a02' ? 0.085 : note.id === 'a05' ? goodWindowSeconds + 0.03 : 0;
     await waitTransport(note.time + effectDelay);
     if (note.id === 'a05') {
-      await pause(110);
       const missedLane = ['D', 'F', 'J', 'K'][note.lane];
-      const accessibleText = await waitFor(async () => {
-        const text = await evaluate(
-          `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
-        );
-        return new RegExp(`Lane ${missedLane}: Miss`, 'i').test(text)
-          ? text
-          : false;
-      }, `the deliberately missed ${note.id} lane`);
-      await screenshot('judgment-miss-peak.webp');
-      await pause(450);
-      await screenshot('judgment-miss-fade.webp');
+      const liveRegion = await waitForJudgmentReceipt(note, 'miss');
+      const receipt = recordJudgmentReceipt({
+        runId: 'normal-native-restart',
+        noteId: note.id,
+        lane: missedLane,
+        expected: 'miss',
+        liveRegionText: liveRegion.liveRegionText,
+        receivedAt: liveRegion.performanceTime,
+      });
+      queueJudgmentVisualCapture(receipt, pendingPeakScreenshots);
       reports.judgmentEffects ??= [];
       reports.judgmentEffects.push({
-        noteId: note.id,
-        outcome: 'miss',
-        accessibleText,
-        screenshots: [
-          'normal-judgment-miss-peak.webp',
-          'normal-judgment-miss-fade.webp',
-        ],
+        ...receipt,
+        receiptAudioTime: liveRegion.audioTime,
+        receiptScheduledWhen: liveRegion.scheduledWhen,
+        screenshots: [`normal-judgment-miss-capture-${note.id}.webp`],
         source: 'actual chart note left unplayed until its model miss deadline',
       });
       hitNotes.push({ id: note.id, result: 'deliberately-missed' });
@@ -638,13 +943,6 @@ async function main() {
     const keyCode = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'][note.lane];
     const now = await audioTime();
     const lateness = now - scheduledWhen - note.time;
-    if (
-      note.id === 'a02' &&
-      (lateness < 0.075 || lateness > 0.145)
-    )
-      throw new Error(
-        `The real-app Good probe missed the Normal Good window: ${lateness}s`,
-      );
     if (lateness > sendCutoffSeconds && note.id !== 'a02') {
       hitNotes.push({ id: note.id, result: 'not-sent-late', lateness });
       continue;
@@ -652,29 +950,22 @@ async function main() {
     await key(keyCode, 'down');
     if (note.id === 'a01' || note.id === 'a02' || note.id === 'a04') {
       const expected = note.id === 'a02' ? 'good' : 'perfect';
-      if (note.id === 'a01')
-        await screenshot(`judgment-${expected}-peak.webp`);
-      else if (note.id === 'a02')
-        pendingPeakScreenshots.push(screenshot(`judgment-${expected}-peak.webp`));
-      if (note.id === 'a01' || note.id === 'a02')
-        captureFadeAfter(`judgment-${expected}-fade.webp`, 400);
-      const accessibleText = await evaluate(
-        `document.querySelector('[data-gameplay-status]')?.textContent?.trim()??''`,
-      );
-      if (!new RegExp(expected, 'i').test(accessibleText))
-        throw new Error(
-          `Expected actual ${expected} feedback for ${note.id}, got: ${accessibleText}`,
-        );
+      const liveRegion = await waitForJudgmentReceipt(note, expected);
+      const receipt = recordJudgmentReceipt({
+        runId: 'normal-native-restart',
+        noteId: note.id,
+        lane: ['D', 'F', 'J', 'K'][note.lane],
+        expected,
+        liveRegionText: liveRegion.liveRegionText,
+        receivedAt: liveRegion.performanceTime,
+      });
+      queueJudgmentVisualCapture(receipt, pendingPeakScreenshots);
       reports.judgmentEffects ??= [];
       reports.judgmentEffects.push({
-        noteId: note.id,
-        outcome: expected,
-        lateness,
-        accessibleText,
-        screenshots: [
-          `normal-judgment-${expected}-peak.webp`,
-          `normal-judgment-${expected}-fade.webp`,
-        ],
+        ...receipt,
+        receiptAudioTime: liveRegion.audioTime,
+        receiptScheduledWhen: liveRegion.scheduledWhen,
+        screenshots: [`normal-judgment-${expected}-capture-${note.id}.webp`],
         source: 'actual chart note, CDP D/F/J/K keyboard input and rendered WebGL app',
       });
       await key(keyCode, 'up');
@@ -685,19 +976,40 @@ async function main() {
     hitNotes.push({ id: note.id, result: 'key-sent', lateness });
   }
   await Promise.all(pendingPeakScreenshots);
-  await Promise.all(pendingFadeScreenshots);
   if (
     !['perfect', 'good', 'miss'].every((outcome) =>
       reports.judgmentEffects?.some((event) => event.outcome === outcome),
     )
   )
     throw new Error(
-      `Expected actual Perfect, Good, and Miss visual probes; captured ${JSON.stringify(reports.judgmentEffects)}`,
+      `Expected actual Perfect, Good, and Miss judgment receipts; captured ${JSON.stringify(reports.judgmentEffects)}`,
+    );
+  reports.nativeClockJudgmentReceipts = reports.judgmentEffects
+    .filter((event) => ['a01', 'a02', 'a04'].includes(event.noteId))
+    .map(({ runId, noteId, lane, outcome, expected, receivedAt, receiptAudioTime, receiptScheduledWhen }) => ({
+      runId,
+      noteId,
+      lane,
+      outcome,
+      expected,
+      receivedAt,
+      receiptAudioTime,
+      receiptScheduledWhen,
+    }));
+  if (
+    reports.nativeClockJudgmentReceipts.map((event) => event.outcome).join(',') !==
+    'perfect,good,perfect'
+  )
+    throw new Error(
+      `Native-clock trusted judgments were not Perfect/Good/Perfect: ${JSON.stringify(reports.nativeClockJudgmentReceipts)}`,
     );
   reports.chartInput = {
     method:
-      'CDP keyDown/keyUp on D/F/J/K at actual Web Audio transport time; no controller or scoring hooks',
-    audioClockObserved: true,
+      'CDP keyDown/keyUp on D/F/J/K; immediate browser-side live-region receipt associated to run/note/lane; no controller or scoring hooks',
+    nativeClockJudgmentNotes: ['a01', 'a02', 'a04'],
+    nativeClockPlaythroughContinuesUntil: 't02 (Escape Pause)',
+    controlledVisualProbeRun: 'controlled-visual-probe-run',
+    controlledVisualClockIsNotNativeSyncEvidence: true,
     difficulty,
     goodWindowSeconds,
     sendCutoffSeconds,
@@ -818,23 +1130,18 @@ async function main() {
   }
   // Start a fresh real-app run and play the chart through Twilight's defeat to
   // verify radiant mode and the natural song-end boundary with real input.
-  await command('Page.navigate', { url: base });
-  await waitFor(async () => {
-    const state = await status();
-    return (
-      state.renderer === 'rendered' &&
-      state.panels.includes('ready') &&
-      !state.startDisabled
-    );
-  }, 'fresh actual-app ready state', 60000);
-  await click('[data-action="start"]');
-  await waitFor(
-    async () =>
-      evaluate(
-        'Number.isFinite(window.__proofScheduledWhen) && window.__proofAudioContexts?.length > 0',
-      ),
-    'actual-app victory-run audio schedule',
+  await command('Page.navigate', { url: `${base}?browser-proof=victory` });
+  reports.victoryRunStartup = await selectAndStartFirstDemo(
+    'victory run',
+    'victory-observatory-selected-song.webp',
   );
+  if (
+    reports.victoryRunStartup.scheduled.sourceOffset !== chartSourceStart ||
+    reports.victoryRunStartup.scheduled.sourceDuration !== chartDuration
+  )
+    throw new Error(
+      `Victory run Play scheduled a different demo interval: ${JSON.stringify(reports.victoryRunStartup.scheduled)}`,
+    );
   const waitRestartTransport = async (position) => {
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
@@ -954,6 +1261,53 @@ async function main() {
     outcome: finalOutcome,
     songDuration: chartDuration,
   };
+  // Keep the native-clock gameplay/judgment runs uninterrupted. Run the scaled
+  // late-note frame-positioning probe separately after the outcome is recorded.
+  await command('Page.navigate', { url: `${base}?browser-proof=controlled-visual` });
+  reports.controlledVisualRunStartup = await selectAndStartFirstDemo(
+    'controlled visual probe run',
+    'controlled-visual-observatory-selected-song.webp',
+  );
+  reports.controlledVisualClockProbe = await installPostStartupClockProbe();
+  const controlledVisualSchedule =
+    reports.controlledVisualRunStartup.scheduled;
+  scheduledWhen = controlledVisualSchedule.scheduledWhen;
+  const lateNote = notes.find((note) => note.id === 'a05');
+  if (!lateNote) throw new Error('Chart has no a05 visual probe note');
+  await waitTransport(lateNote.time - 0.08);
+  const visualSamples = [
+    { name: 'before-target', transportTime: lateNote.time - 0.05 },
+    { name: 'at-target', transportTime: lateNote.time },
+    {
+      name: 'late-window',
+      transportTime: lateNote.time + goodWindowSeconds * 0.45,
+    },
+    {
+      name: 'before-miss-cutoff',
+      transportTime: lateNote.time + goodWindowSeconds - 0.03,
+    },
+  ].map((sample) => ({ ...sample, noteId: lateNote.id, lane: lateNote.lane }));
+  const capturedVisualSamples = await captureLateNoteTravel(
+    lateNote,
+    visualSamples,
+  );
+  if (
+    capturedVisualSamples.some(
+      (sample, index) =>
+        sample.capturedTransportTime < visualSamples[index].transportTime ||
+        sample.capturedTransportTime - visualSamples[index].transportTime > 0.045,
+    )
+  )
+    throw new Error(
+      `Controlled visual samples missed their requested transport instants: ${JSON.stringify(capturedVisualSamples)}`,
+    );
+  reports.controlledVisualProbe = {
+    runId: 'controlled-visual-probe-run',
+    noteId: lateNote.id,
+    clockScaled: true,
+    nativeClockSyncClaim: false,
+    samples: capturedVisualSamples,
+  };
   reports.webVitals = {
     userAgent: await evaluate('navigator.userAgent'),
     devicePixelRatio: await evaluate('devicePixelRatio'),
@@ -988,6 +1342,10 @@ async function main() {
       'This HUD uses the default Normal run; selection of other difficulty profiles is not currently exposed.',
       'This live harness sends chart-timed keyboard inputs but does not independently inspect internal score judgments or live note mesh vertices.',
       'Per-person occlusion is not exposed by the live app DOM; no fully-visible crowd claim is made from these screenshots.',
+      'Both gameplay runs begin through a trusted mouse click on the actual Observatory Play button; no AudioContext exists before Play, and the context is created in that trusted event without an autoplay-policy override or a modified startup clock.',
+      'The initial a01 Perfect, a02 Good, and a04 Perfect judgments are captured immediately from the live region with browser-side receipt time, run, note, and lane association before any scaled-clock visual probe.',
+      'The late-note screenshot-positioning probe runs separately after native gameplay results; only that run wraps/scales the clock, and it is explicitly not native-clock synchronization evidence.',
+      'Judgment screenshots are separate visual captures. Reports include each capture request state/time and do not label them as peak frames.',
       `This actual audio run used the configured ${difficulty} default.`,
     ],
     ...reports,
@@ -1003,18 +1361,14 @@ async function main() {
           ? 'passed-with-limitations'
           : 'visual-blocker',
         screenshots: [
-          `${difficulty}-ready-reference.webp`,
+          `${difficulty}-observatory-selected-song.webp`,
+          `${difficulty}-gameplay-initial.webp`,
           `${difficulty}-audience-reference.webp`,
           `${difficulty}-audience-narrow.webp`,
           `${difficulty}-twilight-narrow.webp`,
           `${difficulty}-twilight-phone-dpr2.webp`,
           `${difficulty}-twilight-reference.webp`,
-          `${difficulty}-judgment-perfect-peak.webp`,
-          `${difficulty}-judgment-perfect-fade.webp`,
-          `${difficulty}-judgment-good-peak.webp`,
-          `${difficulty}-judgment-good-fade.webp`,
-          `${difficulty}-judgment-miss-peak.webp`,
-          `${difficulty}-judgment-miss-fade.webp`,
+          ...(reports.judgmentVisualCaptures ?? []).map((capture) => capture.filename),
           ...(reports.lateNoteTravel ?? []).map((sample) => sample.screenshot),
           ...(reports.radiantVictory ? [reports.radiantVictory.screenshot] : []),
         ],

@@ -140,23 +140,26 @@ interface Harness {
   readonly context: FakeContext;
   readonly transport: AudioTransport;
   fetchCalls(): number;
-  setFetchBehavior(behavior: (sourceUrl: string) => Promise<ArrayBuffer>): void;
+  setFetchBehavior(
+    behavior: (sourceUrl: string, signal?: AbortSignal) => Promise<ArrayBuffer>,
+  ): void;
 }
 
 function createHarness(log?: (entry: AudioLogEntry) => void): Harness {
   const context = new FakeContext();
   let fetchCount = 0;
-  let fetchBehavior: (sourceUrl: string) => Promise<ArrayBuffer> = async (
-    sourceUrl,
-  ) => {
+  let fetchBehavior: (
+    sourceUrl: string,
+    signal?: AbortSignal,
+  ) => Promise<ArrayBuffer> = async (sourceUrl) => {
     void sourceUrl;
     return new ArrayBuffer(8);
   };
   const transport = createAudioTransport(config, {
     context,
-    fetchAudio(sourceUrl) {
+    fetchAudio(sourceUrl, signal) {
       fetchCount += 1;
-      return fetchBehavior(sourceUrl);
+      return fetchBehavior(sourceUrl, signal);
     },
     log,
   });
@@ -660,5 +663,53 @@ describe('audio transport', () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it('aborts a pending fetch and permits a clean retry', async () => {
+    const harness = createHarness();
+    const fetchGate = deferred<ArrayBuffer>();
+    let signal: AbortSignal | undefined;
+    harness.setFetchBehavior((_url, requestSignal) => {
+      signal = requestSignal;
+      return fetchGate.promise;
+    });
+    const pendingLoad = harness.transport.load();
+    await Promise.resolve();
+    harness.transport.cancelLoad();
+
+    expect(signal?.aborted).toBe(true);
+    fetchGate.resolve(new ArrayBuffer(8));
+    await pendingLoad;
+    expect(harness.context.decodeCalls).toBe(0);
+
+    harness.setFetchBehavior(async () => new ArrayBuffer(8));
+    await expect(harness.transport.load()).resolves.toMatchObject({
+      status: 'ready',
+    });
+  });
+
+  it('invalidates a decode that cannot be aborted and releases the decoded buffer on dispose', async () => {
+    const harness = createHarness();
+    const decodeGate = deferred<FakeBuffer>();
+    harness.context.decodeBehavior = () => decodeGate.promise;
+    const pendingLoad = harness.transport.load();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(harness.context.decodeCalls).toBe(1);
+    harness.transport.cancelLoad();
+    decodeGate.resolve(new FakeBuffer(200));
+    await pendingLoad;
+    expect(harness.transport.snapshot()).toMatchObject({
+      status: 'paused',
+      loaded: false,
+    });
+
+    harness.context.decodeBehavior = async () => new FakeBuffer(200);
+    await harness.transport.load();
+    await harness.transport.start();
+    const source = sourceAt(harness.context);
+    expect(source.buffer).not.toBeNull();
+    await harness.transport.dispose();
+    expect(source.buffer).toBeNull();
   });
 });

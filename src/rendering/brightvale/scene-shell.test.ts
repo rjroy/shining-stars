@@ -35,7 +35,9 @@ function makeComposition(
   return { root, dispose };
 }
 
-function makeHarness(overrides: Partial<BrightvaleSceneShellDependencies> = {}) {
+function makeHarness(
+  overrides: Partial<BrightvaleSceneShellDependencies> = {},
+) {
   const scene = new THREE.Scene();
   const load = deferred<BrightvaleAssets>();
   const composition = makeComposition();
@@ -77,9 +79,14 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     harness.load.resolve(assets);
     await flushMicrotasks();
 
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('rendered');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'rendered',
+    );
     expect(harness.scene.children).toContain(harness.composition.root);
-    expect(harness.dependencies.createComposition).toHaveBeenCalledWith(assets);
+    expect(harness.dependencies.createComposition).toHaveBeenCalledWith(
+      assets,
+      'gameplay',
+    );
     expect(harness.dependencies.render).toHaveBeenCalledTimes(1);
   });
 
@@ -87,18 +94,26 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     const harness = makeHarness();
     const assets = makeAssets();
 
-    expect(harness.shell.updateFrame({ viewportUsable: false })).toBe('suspended');
+    expect(harness.shell.updateFrame({ viewportUsable: false })).toBe(
+      'suspended',
+    );
     expect(harness.receivedSignal?.aborted).toBe(false);
-    assets.roots.platform.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial()));
+    assets.roots.platform.add(
+      new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial()),
+    );
     harness.load.resolve(assets);
     await flushMicrotasks();
 
-    expect(harness.shell.updateFrame({ viewportUsable: false })).toBe('suspended');
+    expect(harness.shell.updateFrame({ viewportUsable: false })).toBe(
+      'suspended',
+    );
     expect(harness.scene.children).not.toContain(harness.composition.root);
     expect(harness.dependencies.render).not.toHaveBeenCalled();
     expect(assets.dispose).not.toHaveBeenCalled();
 
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('rendered');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'rendered',
+    );
     expect(harness.scene.children).toContain(harness.composition.root);
     expect(harness.dependencies.render).toHaveBeenCalledTimes(1);
   });
@@ -109,17 +124,23 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     harness.load.resolve(assets);
     await flushMicrotasks();
 
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('rendered');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'rendered',
+    );
     const attachedRoot = harness.scene.children[0];
     expect(attachedRoot).toBe(harness.composition.root);
 
-    expect(harness.shell.updateFrame({ viewportUsable: false })).toBe('suspended');
+    expect(harness.shell.updateFrame({ viewportUsable: false })).toBe(
+      'suspended',
+    );
     expect(harness.scene.children).toEqual([attachedRoot]);
     expect(harness.dependencies.createComposition).toHaveBeenCalledTimes(1);
     expect(harness.dependencies.render).toHaveBeenCalledTimes(1);
     expect(assets.dispose).not.toHaveBeenCalled();
 
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('rendered');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'rendered',
+    );
     expect(harness.scene.children).toEqual([attachedRoot]);
     expect(harness.dependencies.createComposition).toHaveBeenCalledTimes(1);
     expect(harness.dependencies.render).toHaveBeenCalledTimes(2);
@@ -134,7 +155,9 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     harness.load.reject(failure);
     await flushMicrotasks();
 
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('unavailable');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'unavailable',
+    );
     expect(harness.scene.children).toHaveLength(0);
     expect(harness.dependencies.createComposition).not.toHaveBeenCalled();
     expect(harness.dependencies.render).not.toHaveBeenCalled();
@@ -160,7 +183,9 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     harness.load.resolve(assets);
     await flushMicrotasks();
 
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('unavailable');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'unavailable',
+    );
     expect(harness.scene.children).toHaveLength(0);
     expect(assets.dispose).toHaveBeenCalledTimes(1);
     expect(onFailure).toHaveBeenCalledTimes(1);
@@ -232,7 +257,9 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     harness.shell.destroy();
     harness.shell.destroy();
     expect(harness.receivedSignal?.aborted).toBe(true);
-    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe('unavailable');
+    expect(harness.shell.updateFrame({ viewportUsable: true })).toBe(
+      'unavailable',
+    );
 
     harness.load.resolve(lateAssets);
     await flushMicrotasks();
@@ -280,7 +307,56 @@ describe('isolated Brightvale scene shell lifecycle', () => {
     shell.destroy();
 
     expect(scene.children).not.toContain(composition.root);
-    expect(events).toEqual(['scene-detach', 'composition-dispose', 'bundle-dispose']);
+    expect(events).toEqual([
+      'scene-detach',
+      'composition-dispose',
+      'bundle-dispose',
+    ]);
     expect(shell.updateFrame({ viewportUsable: true })).toBe('unavailable');
+  });
+
+  it('switches between cached modes on their own scenes while using one shell render boundary', async () => {
+    const gameplay = new THREE.Scene();
+    const observatory = new THREE.Scene();
+    const assets = makeAssets();
+    const gameplayComposition = makeComposition();
+    const observatoryComposition = makeComposition();
+    const load = deferred<BrightvaleAssets>();
+    const createComposition = vi.fn(
+      (_assets: BrightvaleAssets, mode: 'gameplay' | 'observatory') =>
+        mode === 'gameplay' ? gameplayComposition : observatoryComposition,
+    );
+    const render = vi.fn();
+    const shell = createBrightvaleSceneShell({
+      scene: gameplay,
+      sceneForMode: (mode) => (mode === 'gameplay' ? gameplay : observatory),
+      loadAssets: () => load.promise,
+      createComposition,
+      render,
+      onFailure: vi.fn(),
+    });
+    load.resolve(assets);
+    await flushMicrotasks();
+
+    expect(shell.updateFrame({ viewportUsable: true })).toBe('rendered');
+    expect(
+      shell.updateFrame({ viewportUsable: true, mode: 'observatory' }),
+    ).toBe('rendered');
+    expect(gameplay.children).toHaveLength(0);
+    expect(observatory.children).toContain(observatoryComposition.root);
+    expect(shell.updateFrame({ viewportUsable: true })).toBe('rendered');
+    expect(observatory.children).toHaveLength(0);
+    expect(gameplay.children).toContain(gameplayComposition.root);
+    expect(createComposition).toHaveBeenCalledTimes(2);
+    expect(render.mock.calls.map(([mode]) => mode)).toEqual([
+      'gameplay',
+      'observatory',
+      'gameplay',
+    ]);
+
+    shell.destroy();
+    expect(gameplayComposition.dispose).toHaveBeenCalledTimes(1);
+    expect(observatoryComposition.dispose).toHaveBeenCalledTimes(1);
+    expect(assets.dispose).toHaveBeenCalledTimes(1);
   });
 });

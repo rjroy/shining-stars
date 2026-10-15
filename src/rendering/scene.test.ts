@@ -18,10 +18,7 @@ import type {
   BrightvaleViewportLayout,
 } from './brightvale/viewport';
 import { createBrightvaleScene, type SceneRenderer } from './scene';
-import {
-  FEEDBACK_VISIBLE_SECONDS,
-  type GameplayFrame,
-} from './gameplay-frame';
+import { FEEDBACK_VISIBLE_SECONDS, type GameplayFrame } from './gameplay-frame';
 import type { SceneStateProjection } from './scene-state';
 import { projectTimingWindowHalfProgress } from './note-projection';
 
@@ -81,6 +78,18 @@ interface SceneDependencies {
 
 interface SceneFacade {
   updateFrame(frame: SceneFrame): BrightvaleRendererStatus;
+  updateObservatoryFrame(frame: {
+    readonly width: number;
+    readonly height: number;
+    readonly elapsedSeconds: number;
+    readonly reducedMotion: boolean;
+  }): BrightvaleRendererStatus;
+  getObservatoryAnchors(): readonly {
+    readonly collectionId: string;
+    readonly x: number;
+    readonly y: number;
+    readonly visible: boolean;
+  }[];
   destroy(): void;
 }
 
@@ -239,7 +248,7 @@ interface TestHost extends HTMLElement {
 
 function makeHost(): TestHost {
   const children: unknown[] = [];
-  const host = { width: 1600, height: 900 };
+  const host = Object.assign(new EventTarget(), { width: 1600, height: 900 });
   Object.defineProperties(host, {
     clientWidth: { get: () => host.width },
     clientHeight: { get: () => host.height },
@@ -474,6 +483,117 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect(disposalOrder).toEqual(['composition', 'assets', 'renderer']);
   });
 
+  it('initializes Observatory directly through one renderer and keeps projected anchors in CSS pixels', async () => {
+    const host = makeHost();
+    const renderer = makeRenderer();
+    const assets = makeAssets();
+    const scene = makeScene(host, vi.fn(), () => renderer.renderer, {
+      loadAssets: vi.fn(async () => assets),
+      createComposition: vi.fn(() => ({
+        root: new THREE.Group(),
+        dispose: vi.fn(),
+      })),
+    });
+    expect(scene).not.toBeNull();
+    if (scene === null) throw new Error('scene did not initialize');
+    expect(
+      scene.updateObservatoryFrame({
+        width: 1600,
+        height: 900,
+        elapsedSeconds: 0,
+        reducedMotion: false,
+      }),
+    ).toBe('loading');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(
+      scene.updateObservatoryFrame({
+        width: 1600,
+        height: 900,
+        elapsedSeconds: 2,
+        reducedMotion: true,
+      }),
+    ).toBe('rendered');
+    const observatoryRender = renderer.calls.at(-1)!;
+    expect(observatoryRender.camera).toBeInstanceOf(THREE.OrthographicCamera);
+    expect(renderer.calls).toHaveLength(1);
+    expect(scene.getObservatoryAnchors()).toEqual([
+      expect.objectContaining({ collectionId: 'all-songs', visible: true }),
+    ]);
+
+    scene.destroy();
+    expect(renderer.disposeCount).toBe(1);
+    expect(assets.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the active Observatory mode on a late gameplay layout measurement until gameplay is explicitly selected', async () => {
+    const host = makeHost();
+    const renderer = makeRenderer();
+    const assets = makeAssets();
+    const scene = makeScene(host, vi.fn(), () => renderer.renderer, {
+      loadAssets: vi.fn(async () => assets),
+      createComposition: vi.fn(() => ({
+        root: new THREE.Group(),
+        dispose: vi.fn(),
+      })),
+    });
+    if (scene === null) throw new Error('scene did not initialize');
+
+    expect(scene.updateFrame(makeFrame())).toBe('loading');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(scene.updateFrame(makeFrame())).toBe('rendered');
+    expect(
+      scene.updateObservatoryFrame({
+        width: 1600,
+        height: 900,
+        elapsedSeconds: 1,
+        reducedMotion: false,
+      }),
+    ).toBe('rendered');
+    const observatoryScene = renderer.calls.at(-1)?.scene;
+    const renderCount = renderer.calls.length;
+
+    host.dispatchEvent(
+      new CustomEvent('brightvale-layout-measured', {
+        detail: makeLayout(1200, 800),
+      }),
+    );
+    expect(renderer.calls).toHaveLength(renderCount + 1);
+    expect(renderer.calls.at(-1)?.scene).toBe(observatoryScene);
+    expect(renderer.calls.at(-1)?.camera).toBeInstanceOf(
+      THREE.OrthographicCamera,
+    );
+    expect(renderer.setSizes.at(-1)).toEqual([1200, 800, false]);
+    const resizedRender = renderer.calls.at(-1)!;
+    const resizedCamera = resizedRender.camera as THREE.OrthographicCamera;
+    expect(resizedCamera.left).toBeCloseTo(-12);
+    expect(resizedCamera.right).toBeCloseTo(12);
+    expect(resizedCamera.top).toBeCloseTo(5);
+    expect(resizedCamera.bottom).toBeCloseTo(-5);
+    const constellation = resizedRender.scene.getObjectByName(
+      'Observatory.CollectionConstellation',
+    );
+    if (constellation === undefined)
+      throw new Error('resized Observatory constellation is missing');
+    resizedRender.scene.updateMatrixWorld(true);
+    const projectedAnchor = new THREE.Vector3(-3.1, 0.35, 1.4)
+      .applyMatrix4(constellation.matrixWorld)
+      .project(resizedCamera);
+    const [anchor] = scene.getObservatoryAnchors();
+    expect(anchor?.x).toBeCloseTo(((projectedAnchor.x + 1) / 2) * 1200);
+    expect(anchor?.y).toBeCloseTo(((1 - projectedAnchor.y) / 2) * 800);
+    expect(anchor?.visible).toBe(true);
+
+    expect(scene.updateFrame(makeFrame(makeLayout(1200, 800)))).toBe(
+      'rendered',
+    );
+    expect(renderer.calls.at(-2)?.camera).toBeInstanceOf(
+      THREE.PerspectiveCamera,
+    );
+    scene.destroy();
+  });
+
   it('suspends at zero raw dimensions without disposal, then resumes on a non-playing frame', async () => {
     installSceneGlobals();
     const renderer = makeRenderer();
@@ -684,7 +804,10 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     });
     const rendered = await renderWithProductionAssets();
     try {
-      const canvasTextureFor = (overlay: THREE.Scene | undefined, lane: number) => {
+      const canvasTextureFor = (
+        overlay: THREE.Scene | undefined,
+        lane: number,
+      ) => {
         const judgmentLabel = overlay?.children.find(
           (object) => object.name === `Brightvale.Label.judgment-${lane}`,
         ) as THREE.Mesh | undefined;
@@ -694,7 +817,11 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       const initialTextures = [0, 2, 3].map((lane) =>
         canvasTextureFor(rendered.renderer.calls.at(-1)?.scene, lane),
       );
-      expect(initialTextures.every((texture) => texture instanceof THREE.CanvasTexture)).toBe(true);
+      expect(
+        initialTextures.every(
+          (texture) => texture instanceof THREE.CanvasTexture,
+        ),
+      ).toBe(true);
       const activeFrame: SceneFrame = {
         ...rendered.frame,
         gameplay: {
@@ -775,7 +902,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         (object) => object.userData.gameplayRole === 'lane-judgment-rays',
       ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
       expect(missRays.visible).toBe(true);
-      expect(missRays.material.opacity).toBeLessThan(rayMaterial.material.opacity);
+      expect(missRays.material.opacity).toBeLessThan(
+        rayMaterial.material.opacity,
+      );
       expect(missRays.scale.x).toBeLessThan(1);
 
       const ring = impacts?.[0]?.children.find(
@@ -797,12 +926,15 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       };
       expect(rendered.scene.updateFrame(nextFrame)).toBe('rendered');
       const nextWorld = rendered.renderer.calls.at(-2)?.scene;
-      expect([0, 2, 3].map((lane) => canvasTextureFor(
-        rendered.renderer.calls.at(-1)?.scene,
-        lane,
-      ))).toEqual(initialTextures);
+      expect(
+        [0, 2, 3].map((lane) =>
+          canvasTextureFor(rendered.renderer.calls.at(-1)?.scene, lane),
+        ),
+      ).toEqual(initialTextures);
       const nextImpact = nextWorld?.children.find(
-        (object) => object.userData.gameplayRole === 'lane-judgment-effect' && object.name.endsWith('.0'),
+        (object) =>
+          object.userData.gameplayRole === 'lane-judgment-effect' &&
+          object.name.endsWith('.0'),
       ) as THREE.Group;
       const nextRing = nextImpact.children.find(
         (object) => object.userData.gameplayRole === 'lane-judgment-ring',
@@ -812,7 +944,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
       expect(nextRing.geometry).toBe(initialGeometry);
       expect(nextImpact.scale.x).toBe(initialScale);
-      expect((nextRing.material as THREE.MeshBasicMaterial).opacity).toBeLessThan(initialOpacity);
+      expect(
+        (nextRing.material as THREE.MeshBasicMaterial).opacity,
+      ).toBeLessThan(initialOpacity);
       expect(nextRays.material.opacity).toBeCloseTo(
         Math.pow(1 - 0.3 / FEEDBACK_VISIBLE_SECONDS, 0.25),
       );
@@ -851,7 +985,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       const expiredWorld = rendered.renderer.calls.at(-2)?.scene;
       expect(
         expiredWorld?.children
-          .filter((object) => object.userData.gameplayRole === 'lane-judgment-effect')
+          .filter(
+            (object) => object.userData.gameplayRole === 'lane-judgment-effect',
+          )
           .every((object) => !object.visible),
       ).toBe(true);
     } finally {

@@ -40,9 +40,10 @@ describe('gameplay copy', () => {
     );
   });
 
-  it('keeps the existing onset chart notice and avoids prescriptive chart density', () => {
-    expect(uiSource).toMatch(/Notes follow aubio-detected onsets\./i);
-    expect(uiSource).toMatch(/Aubio onset chart/i);
+  it('labels chart confidence and demo excerpts without inventing song copy', () => {
+    expect(uiSource).toMatch(/song\.chartStatus === 'candidate'/i);
+    expect(uiSource).toMatch(/Demo excerpt/i);
+    expect(uiSource).toMatch(/song\.title/i);
     expect(uiSource).not.toMatch(/one note per\b/i);
     expect(uiSource).not.toMatch(/detected beats/i);
   });

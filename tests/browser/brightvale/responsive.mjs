@@ -90,6 +90,45 @@ async function evaluate(expression) {
     );
   return result.result?.value;
 }
+async function click(selector) {
+  const target = await evaluate(`(() => {
+    const element=[...document.querySelectorAll(${JSON.stringify(selector)})].find(candidate=>!candidate.disabled&&!candidate.closest('[hidden]')&&candidate.getClientRects().length>0);
+    if(!element)return null;
+    element.scrollIntoView({block:'center',inline:'center'});
+    const rect=element.getBoundingClientRect();
+    return{x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+  })()`);
+  if (!target) throw new Error(`Missing visible enabled button ${selector}`);
+  const before = await evaluate('window.__responsiveProofClicks.length');
+  await cdp('Input.dispatchMouseEvent', {
+    type: 'mouseMoved',
+    x: target.x,
+    y: target.y,
+  });
+  await cdp('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: target.x,
+    y: target.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  await cdp('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: target.x,
+    y: target.y,
+    button: 'left',
+    clickCount: 1,
+  });
+  const event = await waitFor(
+    () =>
+      evaluate(`window.__responsiveProofClicks.slice(${before}).at(-1) ?? null`),
+    `trusted click on ${selector}`,
+    5000,
+  );
+  if (!event?.trusted)
+    throw new Error(`Click was not trusted for ${selector}: ${JSON.stringify(event)}`);
+  return event;
+}
 async function measure() {
   return evaluate(
     `(()=>{
@@ -228,23 +267,151 @@ async function main() {
   await cdp('Page.enable');
   await cdp('Runtime.enable');
   await waitFor(
-    async () => {
-      const m = await measure();
-      return m?.rendererStatus === 'rendered' && m.canvas.width > 0;
-    },
-    'actual UI and default GLB scene render',
+    () =>
+      evaluate(`(() => {
+        const overview=document.querySelector('[data-observatory-page="overview"]');
+        const notice=document.querySelector('[data-renderer-notice]');
+        const canvas=document.querySelector('.play-surface canvas');
+        return !!overview&&!overview.hidden&&!!notice?.hidden&&!!canvas&&canvas.width>0&&canvas.height>0;
+      })()`),
+    'actual Observatory overview and scene render',
     60000,
   );
-  await evaluate(
-    `(()=>{const host=document.querySelector('.play-surface');window.__brightvaleMeasuredLayouts=[];host.addEventListener('brightvale-layout-measured',event=>window.__brightvaleMeasuredLayouts.push({sequence:window.__brightvaleMeasuredLayouts.length+1,width:event.detail.width,height:event.detail.height}))})()`,
-  );
+  await evaluate(`(() => {
+    window.__responsiveProofClicks=[];
+    window.__responsiveLastClick=null;
+    document.addEventListener('click',event=>{
+      const button=event.target instanceof Element?event.target.closest('button[data-action]'):null;
+      if(!button)return;
+      const record={action:button.dataset.action??null,songId:button.dataset.songId??null,trusted:event.isTrusted};
+      window.__responsiveProofClicks.push(record);
+      window.__responsiveLastClick=record;
+    },true);
+    const Native=window.AudioContext;
+    window.__responsiveAudioContexts=[];
+    window.AudioContext=function(...args){
+      const context=new Native(...args);
+      const click=window.__responsiveLastClick;
+      context.__proofStateAtCreation=context.state;
+      context.__proofCreatedDuringTrustedPlay=click?.action==='play'&&click.trusted===true;
+      window.__responsiveAudioContexts.push(context);
+      return context;
+    };
+    window.AudioContext.prototype=Native.prototype;
+    const sourcePrototype=window.AudioBufferSourceNode?.prototype;
+    if(sourcePrototype){
+      const start=sourcePrototype.start;
+      sourcePrototype.start=function(when,...args){
+        window.__responsiveScheduled={when,offset:args[0]??0,duration:args[1]??null};
+        return start.call(this,when,...args);
+      };
+    }
+  })()`);
   evidence = {
     source,
     viewports: [],
     issues: [],
     dprSamples: [],
     webglResizeChecks: [],
+    startupGesture: null,
   };
+  if ((await evaluate('window.__responsiveAudioContexts.length')) !== 0)
+    throw new Error('An AudioContext existed before the Observatory Play click');
+  const allSongsClick = await click('[data-action="overview-all"]');
+  await waitFor(
+    () => evaluate(`!document.querySelector('[data-observatory-page="browser"]')?.hidden`),
+    'All Songs browser',
+  );
+  const rowClick = await click(
+    'button[data-action="select-song"][data-song-id="the-first-shining-star"]',
+  );
+  const selected = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const detail=document.querySelector('[data-song-detail]');
+        const title=detail?.querySelector('h2')?.textContent?.trim();
+        const play=detail?.querySelector('[data-action="play"]');
+        return title&&play?{title,playDisabled:play.disabled}:null;
+      })()`),
+    'selected First Shining Star Demo Excerpt',
+  );
+  if (!/The First Shining Star/.test(selected.title) || selected.playDisabled)
+    throw new Error(`Demo song is not Play-ready: ${JSON.stringify(selected)}`);
+  const audioContextsBeforePlay = await evaluate(
+    'window.__responsiveAudioContexts.length',
+  );
+  if (audioContextsBeforePlay !== 0)
+    throw new Error(
+      `An AudioContext was created before Observatory Play: ${audioContextsBeforePlay}`,
+    );
+  const playClick = await click('[data-action="play"]');
+  const scheduled = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const context=window.__responsiveAudioContexts?.[0];
+        return context&&window.__responsiveScheduled
+          ?{stateAtCreation:context.__proofStateAtCreation,state:context.state,
+             createdDuringTrustedPlay:context.__proofCreatedDuringTrustedPlay,
+             sampleRate:context.sampleRate,scheduled:window.__responsiveScheduled,
+             currentTime:context.currentTime,ownCurrentTime:Object.hasOwn(context,'currentTime')}
+          :null;
+      })()`),
+    'trusted Play audio source scheduling',
+    20000,
+  );
+  const actualStart = await waitFor(
+    () =>
+      evaluate(`(() => {
+        const context=window.__responsiveAudioContexts?.[0];
+        return context&&context.state==='running'&&context.currentTime>=window.__responsiveScheduled?.when
+          ?{state:context.state,currentTime:context.currentTime,scheduledWhen:window.__responsiveScheduled.when}
+          :null;
+      })()`),
+    'native audio clock passing the scheduled source start',
+    12000,
+  );
+  if (
+    allSongsClick.action !== 'overview-all' ||
+    rowClick.songId !== 'the-first-shining-star' ||
+    playClick.action !== 'play' ||
+    !playClick.trusted ||
+    !scheduled.createdDuringTrustedPlay ||
+    audioContextsBeforePlay !== 0 ||
+    scheduled.ownCurrentTime ||
+    actualStart.state !== 'running'
+  )
+    throw new Error(
+      `Observatory Play did not perform a trusted unmodified-clock start: ${JSON.stringify({ allSongsClick, rowClick, selected, playClick, scheduled, actualStart })}`,
+    );
+  evidence.startupGesture = {
+    songId: 'the-first-shining-star',
+    selectedTitle: selected.title,
+    audioContextsBeforePlay,
+    allSongsClick,
+    rowClick,
+    playClick,
+    contextStateAtCreation: scheduled.stateAtCreation,
+    contextStateAtPlayback: actualStart.state,
+    sampleRate: scheduled.sampleRate,
+    sourceStart: scheduled.scheduled.offset,
+    scheduledDuration: scheduled.scheduled.duration,
+    scheduledWhen: scheduled.scheduled.when,
+    currentTimeAtActualStart: actualStart.currentTime,
+    clockModified: false,
+    autoplayPolicyOverride: false,
+    songOutputMuted: true,
+  };
+  await waitFor(
+    async () => {
+      const measurement = await measure();
+      return measurement?.rendererStatus === 'rendered' && measurement.canvas.width > 0;
+    },
+    'actual gameplay scene after Observatory Play',
+    60000,
+  );
+  await evaluate(
+    `(()=>{const host=document.querySelector('.play-surface');window.__brightvaleMeasuredLayouts=[];host.addEventListener('brightvale-layout-measured',event=>window.__brightvaleMeasuredLayouts.push({sequence:window.__brightvaleMeasuredLayouts.length+1,width:event.detail.width,height:event.detail.height}))})()`,
+  );
   evidence.viewports.push(await measure());
 
   for (const width of [1120, 620]) {

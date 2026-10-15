@@ -8,8 +8,10 @@ original source audio is never modified.
 
 `data/charts/song-authoring.json` is the JSON collection for chart settings.
 Songs are keyed by stable song ID and each entry identifies its source path.
-Only the currently playable song is configured; other audio files do not have
-guessed excerpt settings. The active entry is:
+The currently playable song retains its existing settings. Six additional
+full-recording entries are offline candidates; their measured duration and
+midpoint are recorded explicitly in the collection. The current runtime entry
+is:
 
 ```json
 {
@@ -107,6 +109,96 @@ Both outputs are fully built and validated before either is replaced. Each
 file is replaced atomically on its own; the pair is not a cross-file
 transaction. This is a low-density onset-derived starting chart, not a claim
 that aubio inferred a downbeat, meter, melody, or human-verified musical fit.
+
+## Prepare the six full-song candidates safely
+
+The six candidate settings use `start_time: 0`, the full duration measured from
+each MP3 container with FFprobe, and `twilight_time: duration / 2` (the exact
+midpoint is stored in the JSON settings). They provisionally reuse the current
+song's strength 100, Normal+Hard difficulty list, 64 ms minimum spacing,
+stride 2, and lane pattern `[0, 2, 1, 3]`. These are starting settings, not
+playability or musical approval.
+
+Each generated artifact and TypeScript chart is isolated from the default live
+artifact and `src/game/mvp-chart.ts`. Generate and verify all six with:
+
+```sh
+for song in never-again the-abandoned-child the-commodity the-game \
+  the-last-true-performer the-rising-star; do
+  npm run chart:generate -- --song "$song" \
+    --artifact "data/charts/candidates/$song.beats.json" \
+    --chart "src/game/$song.candidate.ts"
+done
+for song in never-again the-abandoned-child the-commodity the-game \
+  the-last-true-performer the-rising-star; do
+  npm run chart:check -- --song "$song" \
+    --artifact "data/charts/candidates/$song.beats.json" \
+    --chart "src/game/$song.candidate.ts"
+done
+```
+
+The generated chart includes source SHA-256; the beat artifact also retains
+the complete onset list, selected-onset provenance, settings, and normalized
+tool commands. Onsets are aubio's detected transient times, not a musically
+verified beat grid, downbeat, meter, melody, or playability assessment. Review
+and approve candidates separately before any runtime catalog integration.
+
+## Full-song browser audio preflight evidence
+
+The six candidates were preflighted sequentially on 2026-10-14 using the
+installed Chromium 152.0.7977.82 (HeadlessChrome on Linux), the actual Web
+Audio `AudioContext`, `createBrowserAudioContextAdapter`, and
+`createAudioTransport`. The runner decodes each complete MP3 into an actual
+`AudioBuffer`, then requires transport `ready` and `playing` after a trusted
+CDP mouse click on the harness start button. Each fresh page began with a
+suspended context; its click resumed the context. The harness does not change
+the audio clock, bypass autoplay policy, or claim Observatory visual
+integration. Audio was muted at three independent boundaries: Vite ran with
+`VITE_SONG_VOLUME=0`, Chromium used `--mute-audio`, and the adapter gain was
+explicitly zero. The runner and its owned Vite/Chromium processes were cleaned
+up and their listeners verified closed.
+
+All six browser contexts and decoded buffers were stereo at 48,000 Hz. In each
+case the authored full-track interval was `[0, chart duration]`, and the
+transport scheduled offset 0 and exactly the authored duration. All contexts
+were suspended before click, resumed on the trusted click, reached `ready`,
+then `playing`; no shortfall or unexplained residual blocked integration.
+
+| Song | Source SHA-256 prefix | Chart duration (s) | Decoded frames | Browser duration (s) | Signed decoded-minus-chart residual (s) | MP3 frames / skip / tail discard (samples) |
+|---|---|---:|---:|---:|---:|---:|
+| Never Again (Remastered) | `c504fde831b8` | 434.959979 | 20,878,079 | 434.95997916666664 | +0.000000166666666 | 18,125 / 1,105 / 816 |
+| The Abandoned Child (Remastered) | `a33cafd713ec` | 417.639979 | 20,046,719 | 417.63997916666665 | +0.000000166666666 | 17,403 / 1,105 / 432 |
+| The Commodity (Remastered) | `d96ff62e6a04` | 318.879979 | 15,306,239 | 318.87997916666666 | +0.000000166666666 | 13,288 / 1,105 / 432 |
+| The Game | `e2f0607292e2` | 413.359979 | 19,841,279 | 413.3599791666667 | +0.000000166666666 | 17,225 / 1,105 / 816 |
+| The Last True Performer (Remastered) | `13b0d97cd399` | 403.359979 | 19,361,279 | 403.3599791666667 | +0.000000166666666 | 16,808 / 1,105 / 432 |
+| The Rising Star (Remastered) | `9561a8a2ae25` | 417.239979 | 20,027,519 | 417.23997916666667 | +0.000000166666666 | 17,386 / 1,105 / 48 |
+
+**Residual classification:** every positive residual is 1/6 microsecond (about
+0.008 of a 48 kHz sample), not an omitted fraction of musical content. FFprobe
+reports the MP3 container duration to six decimal places; its packet timeline
+also contains MP3 encoder-delay and tail-padding side data. For every track,
+the browser's decoded `AudioBuffer.length` exactly equals the sum of encoded
+MP3 frame samples minus FFprobe's initial `skip_samples` and final
+`discard_padding`. Thus the browser decoded the complete side-data-trimmed
+encoded recording, while the chart uses the microsecond-rounded FFprobe
+duration. No chart timing was changed, and the transport's duration guard
+accepted each interval. This establishes no missing encoded frames in these
+browser decodes; it is not a listening-based judgment about the recording's
+musical ending or the charts' playability.
+
+Reproduce the muted check and its focused evidence-logic tests with:
+
+```sh
+node --test tests/browser/brightvale/audio-preflight-evidence.test.mjs
+node tests/browser/brightvale/audio-preflight.mjs
+```
+
+The complete browser, source hashes, FFprobe packet/trim metadata, decoded
+buffer fields, signed residuals, transport snapshots, and cleanup evidence are
+written to the ignored local file
+`.lore/local/evidence/full-song-audio-preflight.json`. Only the installed
+Chromium build was available; other browser engines were not tested. This
+behavior harness is not an actual Observatory UI or visual-integration test.
 
 ## Author another source safely
 
