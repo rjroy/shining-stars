@@ -1,0 +1,59 @@
+name: Pull request checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pull-request-checks:
+    name: Pull request checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        # actions/setup-node v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Python 3.14
+        # actions/setup-python v7.0.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+
+      - name: Install locked npm dependencies
+        run: npm ci
+
+      - name: Run Vitest suite
+        run: npm test
+
+      - name: Run Brightvale harness unit tests (no browser)
+        run: node --test tests/browser/brightvale/*.test.mjs
+
+      - name: Run chart Python tests
+        run: npm run test:chart
+
+      - name: Verify generated chart caches
+        run: npm run chart:check
+
+      - name: Type-check TypeScript
+        run: npm run typecheck
+
+      - name: Build production bundle
+        run: npm run build
