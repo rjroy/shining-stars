@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.5662650602409639,
+      "baselineHandCounts": [
+        71,
+        71
+      ],
+      "baselineLaneCounts": [
+        36,
+        35,
+        36,
+        35
+      ],
+      "baselineLaneShares": [
+        0.2535211267605634,
+        0.24647887323943662,
+        0.2535211267605634,
+        0.24647887323943662
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7590361445783133,
+      "candidateHandCounts": [
+        71,
+        71
+      ],
+      "candidateLaneCounts": [
+        35,
+        36,
+        36,
+        35
+      ],
+      "candidateLaneShares": [
+        0.24647887323943662,
+        0.2535211267605634,
+        0.2535211267605634,
+        0.24647887323943662
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 142,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 115,
+      "stablePitchCoverage": 0.8098591549295775,
+      "stableUnequalPitchAdjacentPairs": 83,
+      "unknownPitchCount": 27
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.45217391304347826,
+      "baselineHandCounts": [
+        217,
+        216
+      ],
+      "baselineLaneCounts": [
+        109,
+        108,
+        108,
+        108
+      ],
+      "baselineLaneShares": [
+        0.2517321016166282,
+        0.24942263279445728,
+        0.24942263279445728,
+        0.24942263279445728
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.8043478260869565,
+      "candidateHandCounts": [
+        218,
+        215
+      ],
+      "candidateLaneCounts": [
+        109,
+        109,
+        109,
+        106
+      ],
+      "candidateLaneShares": [
+        0.2517321016166282,
+        0.2517321016166282,
+        0.2517321016166282,
+        0.24480369515011546
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 433,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 351,
+      "stablePitchCoverage": 0.8106235565819861,
+      "stableUnequalPitchAdjacentPairs": 230,
+      "unknownPitchCount": 82
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.6403508771929824,
+      "baselineHandCounts": [
+        107,
+        106
+      ],
+      "baselineLaneCounts": [
+        54,
+        53,
+        53,
+        53
+      ],
+      "baselineLaneShares": [
+        0.2535211267605634,
+        0.24882629107981222,
+        0.24882629107981222,
+        0.24882629107981222
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7456140350877193,
+      "candidateHandCounts": [
+        109,
+        104
+      ],
+      "candidateLaneCounts": [
+        54,
+        55,
+        53,
+        51
+      ],
+      "candidateLaneShares": [
+        0.2535211267605634,
+        0.25821596244131456,
+        0.24882629107981222,
+        0.23943661971830985
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 213,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 174,
+      "stablePitchCoverage": 0.8169014084507042,
+      "stableUnequalPitchAdjacentPairs": 114,
+      "unknownPitchCount": 39
+    }
+  },
+  "pitch_analysis_key": "c7ebeab4ab9db498282f57af414d23a3a40b59388f51f4c525acddbd64d07b50",
+  "schema_version": 1,
+  "song_id": "the-ferrymans-coin",
+  "source_sha256": "5c5f10ae4e3f71869460d7b3611fa6975e8d1ea48d55850aa40c75adca2063a4"
+}

@@ -6,10 +6,24 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+if __package__:
+    from .pitch_lanes import map_lanes, validate_lane_mapping
+    from . import pitch_analysis
+else:
+    try:
+        from scripts.pitch_lanes import map_lanes, validate_lane_mapping
+        from scripts import pitch_analysis
+    except ModuleNotFoundError as exc:
+        if exc.name != "scripts":
+            raise
+        from pitch_lanes import map_lanes, validate_lane_mapping
+        import pitch_analysis
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -28,6 +42,10 @@ DEFAULT_MINIMUM_DELTA_MS = 64
 DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
 DEFAULT_GENERATED_DIR = PROJECT_ROOT / "data/charts/generated"
 DEFAULT_ONSETS_DIR = PROJECT_ROOT / "data/charts/onsets"
+DEFAULT_PITCH_CACHE_DIR = PROJECT_ROOT / "data/charts/pitch-cache"
+DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data/charts/reports"
+PITCH_RECIPE_VERSION = pitch_analysis.PITCH_RECIPE_VERSION
+PITCH_RECIPE_ARGS = pitch_analysis.PITCH_RECIPE_ARGS
 DIFFICULTIES = ("easy", "normal", "hard")
 DIFFICULTY_AUTHORING = {
     "easy": {"twilight_strength": 70, "minimum_delta": 64, "stride": 3},
@@ -368,6 +386,7 @@ def _validate_song_settings(song_id, settings):
         raise ValueError("song ID must be a non-empty string")
     if not isinstance(settings, dict):
         raise ValueError(f"song settings for {song_id!r} must be an object")
+    _reject_song_level_lane_mapping(song_id, settings)
     source = settings.get("source")
     if not isinstance(source, str) or not source.strip():
         raise ValueError(f"song {song_id!r} source must be a non-empty path")
@@ -408,7 +427,7 @@ def _validate_song_settings(song_id, settings):
         )
     ):
         raise ValueError("lane_rules must be a non-empty pattern of lanes 0, 1, 2, or 3")
-    return {
+    validated = {
         "source": source,
         "start_time": start_time,
         "twilight_time": twilight_time,
@@ -419,6 +438,29 @@ def _validate_song_settings(song_id, settings):
         "stride": stride,
         "lane_rules": {"type": "pattern", "data": list(lane_rules["data"])},
     }
+    if "lane_mapping" in settings:
+        validated["lane_mapping"] = settings["lane_mapping"]
+    return validated
+
+
+def _reject_song_level_lane_mapping(song_id, settings):
+    if "lane_mapping" not in settings:
+        return
+    raise ValueError(
+        f"song {song_id!r} lane_mapping must be configured under "
+        "difficulties.<difficulty>.lane_mapping"
+    )
+
+
+def _validate_difficulty_lane_mapping(song_id, difficulty, settings):
+    if "lane_mapping" not in settings:
+        return
+    try:
+        validate_lane_mapping(settings["lane_mapping"])
+    except ValueError as exc:
+        raise ValueError(
+            f"song {song_id!r} has invalid {difficulty} lane_mapping: {exc}"
+        ) from exc
 
 
 def load_song_config(path=DEFAULT_SONG_CONFIG, song_id=DEFAULT_SONG_ID):
@@ -430,6 +472,17 @@ def load_song_config(path=DEFAULT_SONG_CONFIG, song_id=DEFAULT_SONG_ID):
         raise ValueError(f"unknown song ID: {song_id}")
     if document.get("schema_version") == 2:
         settings = document["songs"][song_id]
+        if not isinstance(settings, dict):
+            raise ValueError(f"song settings for {song_id!r} must be an object")
+        _reject_song_level_lane_mapping(song_id, settings)
+        choices = settings.get("difficulties")
+        if not isinstance(choices, dict):
+            raise ValueError(f"song {song_id!r} must specify difficulty settings")
+        for difficulty in DIFFICULTIES:
+            choice = choices.get(difficulty)
+            if not isinstance(choice, dict):
+                raise ValueError(f"song {song_id!r} has invalid {difficulty} settings")
+            _validate_difficulty_lane_mapping(song_id, difficulty, choice)
         return {
             **settings,
             "allowed_difficulties": ["normal", "hard"],
@@ -455,6 +508,7 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             raise ValueError(f"invalid ASCII song ID: {song_id!r}")
         if not isinstance(settings, dict) or not isinstance(settings.get("source"), str):
             raise ValueError(f"song {song_id!r} must specify a source path")
+        _reject_song_level_lane_mapping(song_id, settings)
         for name in ("start_time", "duration", "twilight_time"):
             value = _finite_number(settings.get(name), name)
             if value < 0 or (name != "start_time" and value <= 0) or value > 100:
@@ -471,8 +525,12 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             raise ValueError(f"song {song_id!r} must author easy, normal, and hard difficulties")
         for difficulty in DIFFICULTIES:
             choice = choices[difficulty]
-            if not isinstance(choice, dict) or set(choice) != set(DIFFICULTY_AUTHORING[difficulty]):
+            if not isinstance(choice, dict):
                 raise ValueError(f"song {song_id!r} has invalid {difficulty} settings")
+            expected = set(DIFFICULTY_AUTHORING[difficulty])
+            if not expected <= set(choice) or set(choice) - expected - {"lane_mapping"}:
+                raise ValueError(f"song {song_id!r} has invalid {difficulty} settings")
+            _validate_difficulty_lane_mapping(song_id, difficulty, choice)
             strength = _finite_number(choice["twilight_strength"], "twilight_strength")
             delta = _finite_number(choice["minimum_delta"], "minimum_delta")
             stride = choice["stride"]
@@ -492,6 +550,80 @@ def _source_duration(source, runner):
     if duration <= 0:
         raise ValueError(f"source duration must be positive: {source}")
     return duration
+
+
+def _pitch_tool_identity():
+    """Identify the extraction executables without including transient paths."""
+    binaries = {}
+    for name in ("ffmpeg", "aubiopitch"):
+        executable = shutil.which(name)
+        if not executable:
+            raise RuntimeError(f"required pitch-analysis tool is unavailable: {name}")
+        binaries[name] = _sha256_file(executable)
+    result = subprocess.run(
+        ["ffmpeg", "-version"], capture_output=True, text=True, check=False, timeout=10
+    )
+    if result.returncode != 0:
+        raise RuntimeError("could not identify ffmpeg version")
+    return {
+        "ffmpeg_version": (result.stdout or "").splitlines()[0].strip(),
+        "ffmpeg_sha256": binaries["ffmpeg"],
+        "aubiopitch_sha256": binaries["aubiopitch"],
+    }
+
+
+def _pitch_cache_path(song_id, key):
+    return DEFAULT_PITCH_CACHE_DIR / f"{song_id}.{key}.json"
+
+
+def _pitch_analysis_for_song(song_id, source, source_hash, runner, check, onset_cache):
+    expected_key = onset_cache.get("pitch_analysis_key")
+    if check:
+        if not isinstance(expected_key, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_key):
+            raise ValueError(f"onset cache for {song_id} lacks pitch analysis provenance")
+        cache_path = _pitch_cache_path(song_id, expected_key)
+        if not cache_path.exists():
+            raise ValueError(f"missing pitch cache for {song_id}")
+        cache = json.loads(cache_path.read_text(encoding="utf-8"))
+        pitch_analysis.validate_cache(
+            cache, source_hash, PITCH_RECIPE_VERSION, PITCH_RECIPE_ARGS, expected_key
+        )
+        return cache
+
+    identity = _pitch_tool_identity()
+    key = pitch_analysis.analysis_key(
+        source_hash, PITCH_RECIPE_VERSION, PITCH_RECIPE_ARGS, identity
+    )
+    cache_path = _pitch_cache_path(song_id, key)
+    if cache_path.exists():
+        cache = json.loads(cache_path.read_text(encoding="utf-8"))
+        pitch_analysis.validate_cache(
+            cache, source_hash, PITCH_RECIPE_VERSION, PITCH_RECIPE_ARGS, key
+        )
+        return cache
+
+    with tempfile.TemporaryDirectory(prefix="pitch-chart-") as temp_dir:
+        wav_path = Path(temp_dir) / "full-source.wav"
+        args = PITCH_RECIPE_ARGS
+        ffmpeg = [
+            "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", str(source), "-map", "0:a:0", "-ac", "1", "-ar",
+            str(args["sample_rate"]), "-f", "wav", str(wav_path),
+        ]
+        _run_process(runner, ffmpeg, "FFmpeg pitch audio conversion", timeout=pitch_analysis.PITCH_TIMEOUT_SECONDS)
+        aubio = [
+            "aubiopitch", "-i", str(wav_path), "-r", str(args["sample_rate"]),
+            "-B", str(args["buffer_size"]), "-H", str(args["hop_size"]),
+            "-p", str(args["algorithm"]), "-u", str(args["pitch_unit"]),
+            "-T", str(args["time_unit"]), "-s", str(args["silence_db"]),
+        ]
+        result = _run_process(
+            runner, aubio, "aubio pitch extraction", timeout=pitch_analysis.PITCH_TIMEOUT_SECONDS
+        )
+        frames = pitch_analysis.parse_pitch_frames(result.stdout or "")
+    return pitch_analysis.make_cache(
+        source_hash, PITCH_RECIPE_VERSION, PITCH_RECIPE_ARGS, identity, frames
+    )
 
 
 def _validate_onset_values(onsets, song_id):
@@ -560,7 +692,8 @@ def _validate_cache_provenance(cache, song_id, source, digest, *, legacy=False):
             raise ValueError(f"onset cache for {song_id} has invalid projection provenance")
 
 
-def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, song_id, source_hash):
+def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, song_id, source_hash,
+                      pitch_frames=None, with_analysis=False):
     excerpt_start = duration_seconds * settings["start_time"] / 100
     excerpt_duration = duration_seconds * settings["duration"] / 100
     twilight_at = excerpt_duration * settings["twilight_time"] / 100
@@ -568,9 +701,21 @@ def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, s
         raise ValueError(f"song {song_id} has invalid computed twilight boundary")
     choice = settings["difficulties"][difficulty]
     notes = select_notes(onsets, excerpt_start, excerpt_duration, twilight_at,
-                         stride=choice["stride"], lane_pattern=settings["lane_rules"]["data"],
-                         minimum_delta_ms=choice["minimum_delta"],
-                         allowed_difficulties=[difficulty])
+                          stride=choice["stride"], lane_pattern=settings["lane_rules"]["data"],
+                          minimum_delta_ms=choice["minimum_delta"],
+                          allowed_difficulties=[difficulty])
+    baseline_lanes = [note["lane"] for note in notes]
+    records = None
+    mapping_metrics = None
+    if pitch_frames is not None:
+        records = pitch_analysis.note_records(
+            pitch_frames, notes, excerpt_start, PITCH_RECIPE_ARGS
+        )
+        controls = validate_lane_mapping(choice.get("lane_mapping", {}))
+        candidate_lanes = _map_pitch_lanes(records, baseline_lanes, controls)
+        for note, lane in zip(notes, candidate_lanes, strict=True):
+            note["lane"] = lane
+        mapping_metrics = pitch_analysis.metrics(baseline_lanes, candidate_lanes, records)
     count = sum(note["relative_time"] > twilight_at for note in notes)
     if count == 0:
         raise ValueError(f"zeroTwilight: {song_id}/{difficulty} has no twilight notes")
@@ -591,7 +736,16 @@ def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, s
         "allowedDifficulties": [difficulty],
         "notes": chart_notes,
     }
+    if with_analysis:
+        return chart, notes, count, {
+            "controls": validate_lane_mapping(choice.get("lane_mapping", {})),
+            "metrics": mapping_metrics,
+        }
     return chart, notes, count
+
+
+def _map_pitch_lanes(records, fallback_lanes, controls):
+    return map_lanes(records, fallback_lanes, controls)
 
 
 def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_path):
@@ -633,6 +787,9 @@ def _bulk_run(args, runner):
         source_snapshots[song_id] = (source, digest)
         onset_path = DEFAULT_ONSETS_DIR / f"{song_id}.beats.json"
         cache = _analysis_for_song(song_id, settings, source, digest, runner, args.check, onset_path)
+        pitch_cache = _pitch_analysis_for_song(
+            song_id, source, digest, runner, args.check, cache
+        )
         if args.check:
             audio_duration = cache.get("source_duration_seconds")
             if not audio_duration:
@@ -640,27 +797,62 @@ def _bulk_run(args, runner):
         else:
             audio_duration = _source_duration(source, runner)
         charts = {}
+        report_controls = {}
+        report_metrics = {}
         for difficulty in DIFFICULTIES:
-            chart, notes, count = _difficulty_chart(cache["onsets"], settings, audio_duration,
-                                                    profiles[difficulty], difficulty, song_id, digest)
+            chart, notes, count, analysis = _difficulty_chart(
+                cache["onsets"], settings, audio_duration, profiles[difficulty],
+                difficulty, song_id, digest, pitch_cache["frames"], with_analysis=True,
+            )
             charts[difficulty] = chart
+            report_controls[difficulty] = analysis["controls"]
+            report_metrics[difficulty] = analysis["metrics"]
         projection = {"song": settings, "profile_sha256": profile_hash}
-        cache.update({"source_duration_seconds": audio_duration, "projection": projection})
+        cache.update({
+            "source_duration_seconds": audio_duration,
+            "projection": projection,
+            "pitch_analysis_key": pitch_cache["analysis_key"],
+        })
         onset_text = json.dumps(cache, indent=2, sort_keys=True, allow_nan=False) + "\n"
         envelope = {"schemaVersion": 1, "songId": song_id, "source": settings["source"], "charts": charts}
         generated_path = DEFAULT_GENERATED_DIR / f"{song_id}.charts.json"
+        report = {
+            "schema_version": 1,
+            "song_id": song_id,
+            "source_sha256": digest,
+            "pitch_analysis_key": pitch_cache["analysis_key"],
+            "mapper_version": "pitch-lanes-v1",
+            "controls": report_controls,
+            "metrics": report_metrics,
+        }
+        report_path = DEFAULT_REPORTS_DIR / f"{song_id}.lanes.json"
+        report_text = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        pitch_path = _pitch_cache_path(song_id, pitch_cache["analysis_key"])
+        pitch_text = json.dumps(pitch_cache, indent=2, sort_keys=True, allow_nan=False) + "\n"
         if args.check:
             actual_onsets = onset_path.read_text(encoding="utf-8")
             if actual_onsets != onset_text:
                 raise ValueError(f"onset projection or profile cache is stale for {song_id}")
             if not generated_path.exists() or json.loads(generated_path.read_text(encoding="utf-8")) != envelope:
                 raise ValueError(f"generated chart is stale for {song_id}")
+            if not report_path.exists() or report_path.read_text(encoding="utf-8") != report_text:
+                raise ValueError(f"lane report is stale for {song_id}")
         else:
-            built.extend(((onset_path, onset_text), (generated_path, json.dumps(envelope, indent=2, sort_keys=True, allow_nan=False) + "\n")))
+            built.extend((
+                (onset_path, onset_text),
+                (pitch_path, pitch_text),
+                (generated_path, json.dumps(envelope, indent=2, sort_keys=True, allow_nan=False) + "\n"),
+                (report_path, report_text),
+            ))
     if args.all:
         expected_generated = {f"{song_id}.charts.json" for song_id in songs}
         expected_onsets = {f"{song_id}.beats.json" for song_id in songs}
-        for directory, expected, label in ((DEFAULT_GENERATED_DIR, expected_generated, "generated chart"), (DEFAULT_ONSETS_DIR, expected_onsets, "onset artifact")):
+        expected_reports = {f"{song_id}.lanes.json" for song_id in songs}
+        for directory, expected, label in (
+            (DEFAULT_GENERATED_DIR, expected_generated, "generated chart"),
+            (DEFAULT_ONSETS_DIR, expected_onsets, "onset artifact"),
+            (DEFAULT_REPORTS_DIR, expected_reports, "lane report"),
+        ):
             stale = {path.name for path in directory.glob("*") if path.is_file()} - expected if directory.exists() else set()
             if stale:
                 raise ValueError(f"stale {label} outputs: {sorted(stale)}")
@@ -755,11 +947,13 @@ def _atomic_write(path, content):
             temporary_path.unlink(missing_ok=True)
 
 
-def _run_process(runner, command, label):
+def _run_process(runner, command, label, timeout=1800):
     try:
-        result = runner(command, capture_output=True, text=True, check=False)
+        result = runner(command, capture_output=True, text=True, check=False, timeout=timeout)
     except OSError as error:
         raise RuntimeError(f"Could not start {label}: {error}") from error
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(f"{label} timed out after {timeout} seconds") from error
     if result.returncode != 0:
         detail = (result.stderr or "").strip()
         suffix = f": {detail}" if detail else ""

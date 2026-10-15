@@ -1344,8 +1344,9 @@
     314.652405,
     315.742554
   ],
+  "pitch_analysis_key": "b94725ea410a2cbce86a400f9a1f4cbfbd53b2f90ec7c75bffe98ba784c1f814",
   "projection": {
-    "profile_sha256": "40f40ff5531355093465e619259fb1a6548c4b27a5dd0379fc66f26862f4b9bb",
+    "profile_sha256": "de552b8009f7a8b6e856d3e270bd560e54242b20f534f15ef640bec11041adef",
     "song": {
       "difficulties": {
         "easy": {

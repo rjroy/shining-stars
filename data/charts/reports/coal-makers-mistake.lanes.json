@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 1,
+      "repetition_avoidance": 1,
+      "wide_jump_avoidance": 1
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.5454545454545454,
+      "baselineHandCounts": [
+        76,
+        75
+      ],
+      "baselineLaneCounts": [
+        38,
+        38,
+        38,
+        37
+      ],
+      "baselineLaneShares": [
+        0.25165562913907286,
+        0.25165562913907286,
+        0.25165562913907286,
+        0.24503311258278146
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7727272727272727,
+      "candidateHandCounts": [
+        76,
+        75
+      ],
+      "candidateLaneCounts": [
+        37,
+        39,
+        38,
+        37
+      ],
+      "candidateLaneShares": [
+        0.24503311258278146,
+        0.2582781456953642,
+        0.25165562913907286,
+        0.24503311258278146
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.3125,
+      "noteCount": 151,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 104,
+      "stablePitchCoverage": 0.6887417218543046,
+      "stableUnequalPitchAdjacentPairs": 66,
+      "unknownPitchCount": 47
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.4658385093167702,
+      "baselineHandCounts": [
+        233,
+        232
+      ],
+      "baselineLaneCounts": [
+        117,
+        116,
+        116,
+        116
+      ],
+      "baselineLaneShares": [
+        0.25161290322580643,
+        0.24946236559139784,
+        0.24946236559139784,
+        0.24946236559139784
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.7950310559006211,
+      "candidateHandCounts": [
+        232,
+        233
+      ],
+      "candidateLaneCounts": [
+        116,
+        116,
+        117,
+        116
+      ],
+      "candidateLaneShares": [
+        0.24946236559139784,
+        0.24946236559139784,
+        0.25161290322580643,
+        0.24946236559139784
+      ],
+      "candidateLongestLaneRun": 4,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 465,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 297,
+      "stablePitchCoverage": 0.6387096774193548,
+      "stableUnequalPitchAdjacentPairs": 161,
+      "unknownPitchCount": 168
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.5,
+      "baselineHandCounts": [
+        114,
+        113
+      ],
+      "baselineLaneCounts": [
+        57,
+        57,
+        57,
+        56
+      ],
+      "baselineLaneShares": [
+        0.2511013215859031,
+        0.2511013215859031,
+        0.2511013215859031,
+        0.24669603524229075
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.8875,
+      "candidateHandCounts": [
+        114,
+        113
+      ],
+      "candidateLaneCounts": [
+        57,
+        57,
+        57,
+        56
+      ],
+      "candidateLaneShares": [
+        0.2511013215859031,
+        0.2511013215859031,
+        0.2511013215859031,
+        0.24669603524229075
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.34375,
+      "noteCount": 227,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 145,
+      "stablePitchCoverage": 0.6387665198237885,
+      "stableUnequalPitchAdjacentPairs": 80,
+      "unknownPitchCount": 82
+    }
+  },
+  "pitch_analysis_key": "1127a7c759ae787361cf8ce6f3f2cb46df25146243a0f5d2556837c1e750a206",
+  "schema_version": 1,
+  "song_id": "coal-makers-mistake",
+  "source_sha256": "51ae2dec3eb2733941f1cfc8377d0aac2babfe34bfc9722dfd8ff8f53f48b67e"
+}
