@@ -20,6 +20,15 @@ export interface SongCollection {
   readonly title: string;
   readonly sortOrder: number;
   readonly songIds: readonly string[];
+  readonly artworkUrl?: string;
+}
+
+export interface SongCollectionMetadata {
+  readonly id: string;
+  readonly title: string;
+  readonly sortOrder: number;
+  readonly songIds: readonly string[];
+  readonly artwork?: string;
 }
 
 export interface SongCatalogEntry {
@@ -50,7 +59,7 @@ export interface CatalogMetadata {
     SongCatalogEntry,
     'audioUrl' | 'source' | 'charts' | 'collections'
   >[];
-  readonly collections: readonly SongCollection[];
+  readonly collections: readonly SongCollectionMetadata[];
 }
 
 export interface GeneratedSongCharts {
@@ -76,6 +85,27 @@ const audioFiles = import.meta.glob<string>('../../data/music/*.mp3', {
   query: '?url',
   import: 'default',
 });
+const collectionArtworkFiles = import.meta.glob<string>(
+  '../../assets/production/observatory-medallions/*.webp',
+  { eager: true, query: '?url', import: 'default' },
+);
+
+function resolveCollectionArtwork(
+  fileName: string,
+  collectionId: string,
+): string {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*\.webp$/.test(fileName))
+    throw new TypeError(
+      `Collection '${collectionId}' has an invalid artwork file name '${fileName}'.`,
+    );
+  const path = `../../assets/production/observatory-medallions/${fileName}`;
+  const artworkUrl = collectionArtworkFiles[path];
+  if (artworkUrl === undefined)
+    throw new TypeError(
+      `Collection '${collectionId}' references missing artwork '${fileName}'.`,
+    );
+  return artworkUrl;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -363,12 +393,18 @@ export function createSongCatalog(
   return Object.freeze({
     songs: Object.freeze(songs),
     collections: Object.freeze(
-      metadata.collections.map((collection) =>
-        Object.freeze({
-          ...collection,
+      metadata.collections.map((collection) => {
+        const { artwork, ...metadataCollection } = collection;
+        return Object.freeze({
+          ...metadataCollection,
+          ...(artwork === undefined
+            ? {}
+            : {
+                artworkUrl: resolveCollectionArtwork(artwork, collection.id),
+              }),
           songIds: Object.freeze([...collection.songIds]),
-        }),
-      ),
+        });
+      }),
     ),
     chartIssues,
   });

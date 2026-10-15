@@ -220,8 +220,31 @@ describe('real app Observatory-to-gameplay integration', () => {
         ),
       'rendered Observatory scene',
     );
+    await waitFor(
+      async () =>
+        await evaluate(
+          "[...document.querySelectorAll('[data-collection-artwork]')].length === 4 && [...document.querySelectorAll('[data-collection-artwork]')].every(image => image.complete && image.naturalWidth === 1024 && image.naturalHeight === 1024)",
+        ),
+      'decoded collection medallions',
+    );
+    expect(
+      await evaluate(
+        "Promise.all([...document.querySelectorAll('[data-collection-artwork]')].map(image=>image.decode())).then(()=>true)",
+      ),
+    ).toBe(true);
     expect(await evaluate('window.__audioContextCount')).toBe(0);
     expect(await evaluate('window.__audioRequests')).toEqual([]);
+    const fallbackReport = await evaluate(
+      `(async()=>{const {createObservatoryUI}=await import('/src/ui/observatory-ui.ts');const host=document.createElement('div');host.id='unillustrated-collection-test';host.style.cssText='position:fixed;left:-10000px;top:0;width:700px;height:700px';document.body.append(host);const catalog={songs:[],collections:[{id:'new-curation',title:'New Curation',sortOrder:10,songIds:[]}],chartIssues:new Map()};const ui=createObservatoryUI(host,catalog,{onPlay:()=>{}});const anchor=host.querySelector('[data-action=select-collection]');const accessibleLabel=anchor.getAttribute('aria-label');const anchorHasArtwork=!!anchor.querySelector('img[data-collection-artwork]');const anchorFallback=!!anchor.querySelector('.song-glyph');const detailFallback=!!host.querySelector('.detail-emblem > svg');anchor.click();const selected=host.querySelector('.detail-emblem').dataset.collectionId;host.querySelector('[data-action=browse-collection]').click();const empty=host.querySelector('.song-list-empty')?.textContent;ui.destroy();host.remove();return {accessibleLabel,anchorHasArtwork,anchorFallback,detailFallback,selected,empty}})()`,
+    );
+    expect(fallbackReport).toMatchObject({
+      accessibleLabel: 'Select New Curation constellation',
+      anchorHasArtwork: false,
+      anchorFallback: true,
+      detailFallback: true,
+      selected: 'new-curation',
+    });
+    expect(fallbackReport.empty).toContain('No songs match');
 
     await evaluate(
       "document.querySelector('button[data-action=select-collection]')?.focus()",
@@ -259,6 +282,19 @@ describe('real app Observatory-to-gameplay integration', () => {
           "document.querySelector('[data-collection-title]')?.textContent",
         ),
       ).toBe(title);
+      const selectedArtwork = await evaluate(
+        `(()=>{const button=document.querySelector('[data-collection-id="${collectionId}"]');const buttonImage=button.querySelector('img[data-collection-artwork]');const buttonBox=button.getBoundingClientRect(),buttonArt=buttonImage.getBoundingClientRect();const detail=document.querySelector('.detail-emblem');const detailImage=detail.querySelector('img[data-collection-artwork]');const detailBox=detail.getBoundingClientRect(),detailArt=detailImage.getBoundingClientRect();return {button:buttonImage?.dataset.artworkUrl,buttonLoaded:buttonImage?.complete&&buttonImage.naturalWidth===1024,buttonFit:getComputedStyle(buttonImage).objectFit,buttonBounds:buttonArt.left>=buttonBox.left&&buttonArt.right<=buttonBox.right&&buttonArt.top>=buttonBox.top&&buttonArt.bottom<=buttonBox.bottom,detailId:detail.dataset.collectionId,detail:detailImage?.dataset.artworkUrl,detailLoaded:detailImage?.complete&&detailImage.naturalWidth===1024,detailFit:getComputedStyle(detailImage).objectFit,detailBounds:detailArt.left>=detailBox.left&&detailArt.right<=detailBox.right&&detailArt.top>=detailBox.top&&detailArt.bottom<=detailBox.bottom,fallbackIcon:getComputedStyle(button.querySelector('.song-glyph')).display}})()`,
+      );
+      expect(selectedArtwork.button).toContain(`${collectionId}.webp`);
+      expect(selectedArtwork.buttonLoaded).toBe(true);
+      expect(selectedArtwork.buttonFit).toBe('contain');
+      expect(selectedArtwork.buttonBounds).toBe(true);
+      expect(selectedArtwork.detailId).toBe(collectionId);
+      expect(selectedArtwork.detail).toContain(`${collectionId}.webp`);
+      expect(selectedArtwork.detailLoaded).toBe(true);
+      expect(selectedArtwork.detailFit).toBe('contain');
+      expect(selectedArtwork.detailBounds).toBe(true);
+      expect(selectedArtwork.fallbackIcon).toBe('none');
       await click('[data-action="browse-collection"]');
       expect(
         await evaluate(
@@ -309,6 +345,7 @@ describe('real app Observatory-to-gameplay integration', () => {
     expect(
       resizedProjection.every((anchor: { hit: boolean }) => anchor.hit),
     ).toBe(true);
+    await screenshot('shining-stars-collections-overview-narrow');
     await command('Emulation.setDeviceMetricsOverride', {
       width: 390,
       height: 844,

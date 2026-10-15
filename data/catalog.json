@@ -239,6 +239,7 @@
       "id": "lyra-of-brightvale",
       "title": "Lyra of Brightvale",
       "sortOrder": 10,
+      "artwork": "lyra-of-brightvale.webp",
       "songIds": [
         "the-abandoned-child",
         "the-commodity",
@@ -252,6 +253,7 @@
       "id": "christmas-star",
       "title": "Christmas Star",
       "sortOrder": 20,
+      "artwork": "christmas-star.webp",
       "songIds": [
         "beautiful-disaster",
         "coal-makers-mistake",
@@ -276,6 +278,7 @@
       "id": "outside-worlds",
       "title": "Outside Worlds",
       "sortOrder": 30,
+      "artwork": "outside-worlds.webp",
       "songIds": [
         "the-game",
         "hymn-of-the-breathing-rebellion",

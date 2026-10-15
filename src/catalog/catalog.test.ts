@@ -277,4 +277,38 @@ describe('song catalog runtime', () => {
     );
     expect(selectSongs(empty, { collectionId: 'empty-sky' })).toEqual([]);
   });
+
+  it('resolves optional collection artwork and leaves unillustrated collections on fallback', () => {
+    const catalog = createSongCatalog(
+      {
+        ...metadata,
+        collections: [
+          {
+            ...metadata.collections[0]!,
+            artwork: 'lyra-of-brightvale.webp',
+          },
+        ],
+      },
+      generated,
+      audio,
+    );
+    expect(catalog.collections[0]?.artworkUrl).toContain('lyra-of-brightvale');
+    const fallbackCatalog = createSongCatalog(metadata, generated, audio);
+    expect(fallbackCatalog.collections[0]?.artworkUrl).toBeUndefined();
+    expect(() =>
+      createSongCatalog(
+        {
+          ...metadata,
+          collections: [
+            {
+              ...metadata.collections[0]!,
+              artwork: 'unregistered-art.webp',
+            },
+          ],
+        },
+        generated,
+        audio,
+      ),
+    ).toThrow(/references missing artwork/);
+  });
 });

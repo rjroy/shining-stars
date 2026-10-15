@@ -604,7 +604,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect(resizedCamera.top).toBeCloseTo(5);
     expect(resizedCamera.bottom).toBeCloseTo(-5);
     const constellation = resizedRender.scene.getObjectByName(
-      'Observatory.CollectionConstellation',
+      'Observatory.CollectionAnchor.test-collection',
     );
     if (constellation === undefined)
       throw new Error('resized Observatory constellation is missing');

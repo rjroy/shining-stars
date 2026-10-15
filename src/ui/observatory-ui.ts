@@ -375,7 +375,30 @@ export function createObservatoryUI(
         anchorButtons.set(item.id, button);
         layer.append(button);
       }
+      let artwork = button.querySelector<HTMLImageElement>(
+        'img[data-collection-artwork]',
+      );
+      if (item.artworkUrl !== undefined) {
+        button.classList.add('has-artwork');
+        if (artwork === null) {
+          artwork = document.createElement('img');
+          artwork.dataset.collectionArtwork = '';
+          artwork.alt = '';
+          artwork.setAttribute('aria-hidden', 'true');
+          artwork.decoding = 'async';
+          artwork.draggable = false;
+          button.prepend(artwork);
+        }
+        if (artwork.dataset.artworkUrl !== item.artworkUrl) {
+          artwork.src = item.artworkUrl;
+          artwork.dataset.artworkUrl = item.artworkUrl;
+        }
+      } else {
+        button.classList.remove('has-artwork');
+        artwork?.remove();
+      }
       button.dataset.collectionId = item.id;
+      button.dataset.artworkUrl = item.artworkUrl ?? '';
       button.setAttribute(
         'aria-pressed',
         String(item.id === selectedCollectionId),
@@ -566,6 +589,31 @@ export function createObservatoryUI(
     else allSongsButton?.removeAttribute('aria-current');
     root.querySelector<HTMLElement>('[data-collection-title]')!.textContent =
       currentCollection()?.title ?? 'All Songs';
+    const collectionEmblem = root.querySelector<HTMLElement>('.detail-emblem')!;
+    const collection = currentCollection();
+    collectionEmblem.dataset.collectionId = collection?.id ?? '';
+    let detailArtwork = collectionEmblem.querySelector<HTMLImageElement>(
+      'img[data-collection-artwork]',
+    );
+    if (collection?.artworkUrl !== undefined) {
+      collectionEmblem.classList.add('has-artwork');
+      if (detailArtwork === null) {
+        detailArtwork = document.createElement('img');
+        detailArtwork.dataset.collectionArtwork = '';
+        detailArtwork.alt = '';
+        detailArtwork.setAttribute('aria-hidden', 'true');
+        detailArtwork.decoding = 'async';
+        detailArtwork.draggable = false;
+        collectionEmblem.append(detailArtwork);
+      }
+      if (detailArtwork.dataset.artworkUrl !== collection.artworkUrl) {
+        detailArtwork.src = collection.artworkUrl;
+        detailArtwork.dataset.artworkUrl = collection.artworkUrl;
+      }
+    } else {
+      collectionEmblem.classList.remove('has-artwork');
+      detailArtwork?.remove();
+    }
     root.querySelector<HTMLElement>('[data-collection-count]')!.textContent =
       `${currentCollection()?.songIds.length ?? 0} songs`;
     root.querySelector<HTMLElement>('.collection-story')!.textContent =

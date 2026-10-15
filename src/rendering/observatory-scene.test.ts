@@ -50,12 +50,12 @@ describe('Observatory scene composition', () => {
         elapsedSeconds: 0,
         reducedMotion: false,
       });
-      const constellation = composition.root.getObjectByName(
-        'Observatory.CollectionConstellation',
+      const collectionAnchor = composition.root.getObjectByName(
+        'Observatory.CollectionAnchor.lyra-of-brightvale',
       )!;
       composition.root.updateMatrixWorld(true);
       const point = new THREE.Vector3(0, 0, 0)
-        .applyMatrix4(constellation.matrixWorld)
+        .applyMatrix4(collectionAnchor.matrixWorld)
         .project(composition.camera);
       return {
         anchors: composition.anchors(),
@@ -136,6 +136,18 @@ describe('Observatory scene composition', () => {
         (object) => object instanceof THREE.Points,
       ),
     ).toBe(true);
+    const collectionAnchor = createObservatoryComposition(assets, collections);
+    expect(
+      collectionAnchor.root.getObjectByName(
+        'Observatory.CollectionAnchor.lyra-of-brightvale',
+      )?.children,
+    ).toHaveLength(0);
+    expect(
+      collectionAnchor.root.children.some(
+        (object) => object instanceof THREE.Line,
+      ),
+    ).toBe(false);
+    collectionAnchor.dispose();
     composition.dispose();
     expect(disposeGeometry).not.toHaveBeenCalled();
     expect(assets.dispose).not.toHaveBeenCalled();

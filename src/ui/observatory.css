@@ -337,6 +337,52 @@
   text-wrap: balance;
   pointer-events: none;
 }
+.constellation-hotspot.has-artwork {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  filter: drop-shadow(0 8px 12px rgb(4 6 24 / 48%));
+  transition:
+    filter 220ms ease,
+    transform 220ms ease;
+}
+.constellation-hotspot.has-artwork > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.constellation-hotspot.has-artwork > .song-glyph,
+.constellation-hotspot.has-artwork::before,
+.constellation-hotspot.has-artwork::after {
+  display: none;
+}
+.constellation-hotspot.has-artwork:hover,
+.constellation-hotspot.has-artwork:focus-visible {
+  filter: drop-shadow(0 9px 16px rgb(4 6 24 / 56%))
+    drop-shadow(0 0 12px rgb(255 218 125 / 56%));
+}
+.constellation-hotspot.has-artwork[aria-pressed='true'] {
+  z-index: 1;
+  filter: drop-shadow(0 10px 17px rgb(4 6 24 / 58%))
+    drop-shadow(0 0 17px rgb(255 220 132 / 84%));
+  transform: translate(-50%, -50%) scale(1.08);
+}
+.constellation-hotspot.has-artwork[aria-pressed='true']::after {
+  display: block;
+  inset: -3.5%;
+  border: 1px solid rgb(255 233 170 / 92%);
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgb(255 211 112 / 50%);
+  content: '';
+  transform: none;
+  pointer-events: none;
+}
+.constellation-hotspot.has-artwork:focus-visible {
+  outline: 2px solid #fff1bd;
+  outline-offset: 5px;
+}
 .constellation-hotspot:hover,
 .constellation-hotspot[aria-pressed='true'] {
   border-color: #fff5cf;
@@ -390,6 +436,19 @@
 .detail-emblem svg circle:nth-of-type(2) {
   stroke: #d9b7fa;
   stroke-dasharray: 2 5;
+}
+.detail-emblem.has-artwork {
+  filter: drop-shadow(0 9px 15px rgb(3 5 22 / 48%))
+    drop-shadow(0 0 12px rgb(255 213 128 / 42%));
+}
+.detail-emblem.has-artwork img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.detail-emblem.has-artwork svg {
+  display: none;
 }
 .collection-detail .detail-kicker,
 .song-detail-panel .detail-kicker {
@@ -1315,7 +1374,8 @@
   .observatory-nav-button,
   .observatory-tool-button,
   .song-row,
-  .observatory-gold-button {
+  .observatory-gold-button,
+  .constellation-hotspot {
     transition: none;
   }
 }
