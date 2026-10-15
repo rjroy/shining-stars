@@ -56,7 +56,18 @@ export function selectSongs(
   favoriteIds: ReadonlySet<string> = new Set(),
 ): readonly SongCatalogEntry[] {
   const query = normalizeSongSearch(filters.query ?? '');
-  return getOrderedSongs(catalog).filter(
+  const collection =
+    filters.collectionId === undefined
+      ? undefined
+      : catalog.collections.find((item) => item.id === filters.collectionId);
+  const ordered =
+    collection === undefined
+      ? getOrderedSongs(catalog)
+      : collection.songIds.flatMap((id) => {
+          const song = catalog.songs.find((entry) => entry.id === id);
+          return song === undefined ? [] : [song];
+        });
+  return ordered.filter(
     (song) =>
       (query === '' || normalizeSongSearch(song.title).includes(query)) &&
       (filters.collectionId === undefined ||

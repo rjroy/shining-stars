@@ -236,17 +236,23 @@
   ],
   "collections": [
     {
-      "id": "all-songs",
-      "title": "All Songs",
-      "sortOrder": 0,
+      "id": "lyra-of-brightvale",
+      "title": "Lyra of Brightvale",
+      "sortOrder": 10,
       "songIds": [
-        "the-first-shining-star",
-        "never-again",
         "the-abandoned-child",
         "the-commodity",
-        "the-game",
         "the-last-true-performer",
         "the-rising-star",
+        "never-again",
+        "the-first-shining-star"
+      ]
+    },
+    {
+      "id": "christmas-star",
+      "title": "Christmas Star",
+      "sortOrder": 20,
+      "songIds": [
         "beautiful-disaster",
         "coal-makers-mistake",
         "december-light",
@@ -255,12 +261,7 @@
         "glitch-in-the-bell",
         "grylas-lullaby",
         "hope-came-down",
-        "hymn-of-the-breathing-rebellion",
-        "the-eternal-march",
-        "the-ferrymans-coin",
-        "the-gravediggers-warning",
         "the-midnight-bells",
-        "the-necromancers-duet",
         "the-prophets-transmission",
         "the-return-of-light",
         "the-smallest-light",
@@ -269,6 +270,19 @@
         "twenty-seven-times",
         "where-candles-meet-the-dark",
         "workshop-warriors"
+      ]
+    },
+    {
+      "id": "outside-worlds",
+      "title": "Outside Worlds",
+      "sortOrder": 30,
+      "songIds": [
+        "the-game",
+        "hymn-of-the-breathing-rebellion",
+        "the-eternal-march",
+        "the-ferrymans-coin",
+        "the-gravediggers-warning",
+        "the-necromancers-duet"
       ]
     }
   ]

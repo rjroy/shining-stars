@@ -323,7 +323,7 @@ export function createSongCatalog(
   const collectionIds = new Set<string>();
   for (const collection of metadata.collections) {
     if (
-      !collection.id.trim() ||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(collection.id) ||
       collectionIds.has(collection.id) ||
       !collection.title.trim() ||
       !Number.isInteger(collection.sortOrder)

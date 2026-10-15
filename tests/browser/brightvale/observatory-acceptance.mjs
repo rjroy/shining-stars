@@ -572,17 +572,41 @@ async function runAcceptance() {
   assert.deepEqual(await cdp.evaluate('window.__audioRequests'), []);
   report.browsingAudioRequestsBeforePlay = 0;
 
+  const initialCollection = await cdp.evaluate(`(async()=>{
+    const {SONG_CATALOG}=await import('/src/catalog/catalog.ts');
+    const collection=SONG_CATALOG.collections[0];
+    return collection===undefined ? null : {
+      id:collection.id,title:collection.title,sortOrder:collection.sortOrder,
+      songIds:[...collection.songIds],
+    };
+  })()`);
+  assert.ok(initialCollection, 'The authored catalog must define an initial collection.');
   const overview = await cdp.evaluate(`(()=>({
+    selectedCollectionId:document.querySelector('[data-action="select-collection"][aria-pressed="true"]')?.dataset.collectionId,
     title:document.querySelector('[data-collection-title]')?.textContent,
     count:document.querySelector('[data-collection-count]')?.textContent,
     story:document.querySelector('.collection-story')?.textContent,
   }))()`);
   assert.deepEqual(overview, {
-    title: 'All Songs',
-    count: '29 songs',
-    story: '29 songs in the current collection.',
+    selectedCollectionId: initialCollection.id,
+    title: initialCollection.title,
+    count: `${initialCollection.songIds.length} songs`,
+    story: `${initialCollection.songIds.length} songs in the current collection.`,
   });
   await click('[data-action="browse-collection"]');
+  assert.deepEqual(
+    await cdp.evaluate(`(()=>({
+      breadcrumb:document.querySelector('[data-breadcrumb]')?.textContent,
+      songIds:[...document.querySelectorAll('.song-row')].map(row=>row.dataset.songId),
+    }))()`),
+    {
+      breadcrumb: initialCollection.title,
+      songIds: initialCollection.songIds,
+    },
+    'Initial collection browsing must preserve authored membership and order.',
+  );
+  await click('[data-action="back-overview"]');
+  await click('[data-action="all-songs"]');
   assert.equal(
     await cdp.evaluate(
       "document.querySelector('[data-breadcrumb]')?.textContent",
@@ -592,8 +616,8 @@ async function runAcceptance() {
   assert.equal(
     await cdp.evaluate("document.querySelectorAll('.song-row').length"),
     29,
+    'The explicit All Songs route must still expose all catalog songs.',
   );
-  await click('[data-action="back-overview"]');
   await click('[data-action="all-songs"]');
 
   const catalogState = await cdp.evaluate(`(async()=>{

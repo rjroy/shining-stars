@@ -31,6 +31,7 @@ import {
   type BrightvaleShellComposition,
 } from './brightvale/scene-shell';
 import type { SceneStateProjection } from './scene-state';
+import type { SongCollection } from '../catalog/catalog';
 import type {
   BrightvaleRendererStatus,
   BrightvaleViewportLayout,
@@ -292,6 +293,7 @@ export function createBrightvaleScene(
   rendererFactory: SceneRendererFactory = (parameters) =>
     new THREE.WebGLRenderer(parameters),
   dependencies?: BrightvaleSceneDependencies,
+  collections: readonly SongCollection[] = [],
 ): BrightvaleScene | null {
   let renderer: SceneRenderer;
   try {
@@ -972,7 +974,10 @@ export function createBrightvaleScene(
     mode: 'gameplay' | 'observatory' = 'gameplay',
   ): BrightvaleShellComposition => {
     if (mode === 'observatory') {
-      observatoryComposition = createObservatoryComposition(assets);
+      observatoryComposition = createObservatoryComposition(
+        assets,
+        collections,
+      );
       return observatoryComposition;
     }
     const frame = lastFrame;

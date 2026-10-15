@@ -1,9 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { access, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createServer } from 'vite';
+import proposedCollections from '../data/proposed-collections.json';
 
 const scratchParent = '/tmp/opencode';
 
@@ -181,6 +182,17 @@ describe('real app Observatory-to-gameplay integration', () => {
         clickCount: 1,
       });
     };
+    const screenshot = async (name: string): Promise<void> => {
+      const result = await command('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false,
+      });
+      await mkdir('/tmp/opencode', { recursive: true });
+      await writeFile(
+        `/tmp/opencode/${name}.png`,
+        Buffer.from(result.data, 'base64'),
+      );
+    };
 
     await command('Page.enable');
     await command('Runtime.enable');
@@ -216,7 +228,107 @@ describe('real app Observatory-to-gameplay integration', () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
-      'all-songs',
+      'lyra-of-brightvale',
+    );
+    expect(
+      await evaluate(
+        "[...document.querySelectorAll('[data-action=select-collection]')].map(e=>e.dataset.collectionId)",
+      ),
+    ).toEqual(['lyra-of-brightvale', 'christmas-star', 'outside-worlds']);
+    const authoredSongIds = Object.values(proposedCollections).flat();
+    expect(authoredSongIds).toHaveLength(29);
+    expect(new Set(authoredSongIds).size).toBe(29);
+    expect(
+      await evaluate(
+        "[...document.querySelectorAll('.song-row-main')].map(e=>e.dataset.songId).sort()",
+      ),
+    ).toEqual([...authoredSongIds].sort());
+    for (const [title, songIds] of Object.entries(proposedCollections)) {
+      const collectionId = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      await click(
+        `button[data-action="select-collection"][data-collection-id="${collectionId}"]`,
+      );
+      expect(
+        await evaluate('document.activeElement?.dataset.collectionId'),
+      ).toBe(collectionId);
+      expect(
+        await evaluate(
+          "document.querySelector('[data-collection-title]')?.textContent",
+        ),
+      ).toBe(title);
+      await click('[data-action="browse-collection"]');
+      expect(
+        await evaluate(
+          "[...document.querySelectorAll('.song-row-main')].map(e=>e.dataset.songId)",
+        ),
+      ).toEqual(songIds);
+      await click('[data-action="back-overview"]');
+    }
+    const projectionReport = await evaluate(
+      `(()=>[...document.querySelectorAll('[data-action=select-collection]')].map(e=>{const r=e.getBoundingClientRect();return {id:e.dataset.collectionId,x:r.x+r.width/2,y:r.y+r.height/2,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}}))()`,
+    );
+    expect(projectionReport).toHaveLength(3);
+    expect(
+      projectionReport.every((anchor: { hit: boolean }) => anchor.hit),
+    ).toBe(true);
+    await screenshot('shining-stars-collections-overview-desktop');
+    await evaluate(
+      "document.querySelector('[data-collection-id=outside-worlds]')?.focus()",
+    );
+    await command('Input.dispatchKeyEvent', {
+      type: 'keyDown',
+      key: 'Enter',
+      code: 'Enter',
+      windowsVirtualKeyCode: 13,
+    });
+    await command('Input.dispatchKeyEvent', {
+      type: 'keyUp',
+      key: 'Enter',
+      code: 'Enter',
+      windowsVirtualKeyCode: 13,
+    });
+    expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
+      'outside-worlds',
+    );
+    await command('Emulation.setDeviceMetricsOverride', {
+      width: 900,
+      height: 760,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
+      'outside-worlds',
+    );
+    const resizedProjection = await evaluate(
+      "[...document.querySelectorAll('[data-action=select-collection]')].map(e=>{const r=e.getBoundingClientRect();return {id:e.dataset.collectionId,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}})",
+    );
+    expect(
+      resizedProjection.every((anchor: { hit: boolean }) => anchor.hit),
+    ).toBe(true);
+    await command('Emulation.setDeviceMetricsOverride', {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 1,
+      mobile: true,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const portraitProjection = await evaluate(
+      "(()=>{const nodes=[...document.querySelectorAll('[data-action=select-collection]')],rects=nodes.map(e=>e.getBoundingClientRect()),detail=document.querySelector('.collection-detail').getBoundingClientRect(),overlap=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1;return nodes.map((e,i)=>{const r=rects[i];return {visible:!e.hidden&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),clear:!overlap(r,detail)&&rects.every((other,j)=>i===j||!overlap(r,other))}})})()",
+    );
+    expect(portraitProjection).toHaveLength(3);
+    expect(
+      portraitProjection.every(
+        (anchor: { visible: boolean; hit: boolean; clear: boolean }) =>
+          anchor.visible && anchor.hit && anchor.clear,
+      ),
+    ).toBe(true);
+    await screenshot('shining-stars-collections-overview-portrait');
+    await evaluate(
+      "document.querySelector('[data-action=all-songs]')?.click()",
     );
     await click('[data-action="toggle-filters"]');
     expect(
@@ -238,9 +350,49 @@ describe('real app Observatory-to-gameplay integration', () => {
     ).toBe('29 songs');
 
     await click('[data-action="all-songs"]');
+    await click('[data-action="toggle-filters"]');
     expect(
       await evaluate("document.querySelectorAll('.song-row').length"),
     ).toBe(29);
+    const headerCheck = async (
+      width: number,
+      height: number,
+      label: string,
+    ) => {
+      await command('Emulation.setDeviceMetricsOverride', {
+        width,
+        height,
+        deviceScaleFactor: 1,
+        mobile: width < 600,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      const overlaps = await evaluate(
+        `(()=>{const rect=(s)=>document.querySelector(s).getBoundingClientRect();const overlap=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1;const kicker=rect('.browser-title-block .observatory-kicker'),title=rect('[data-browser-title]'),count=rect('[data-browser-count]'),label=rect('.song-list-heading span:first-child'),total=rect('[data-result-count]'),heading=rect('.browser-heading'),listHeading=rect('.song-list-heading');return {title:overlap(kicker,title)||overlap(title,count)||overlap(kicker,count),list:overlap(label,total),section:overlap(heading,listHeading),boxes:[kicker.toJSON(),title.toJSON(),count.toJSON(),label.toJSON(),total.toJSON(),heading.toJSON(),listHeading.toJSON()]}})()`,
+      );
+      expect(overlaps.title, `${label}: browser title header overlap`).toBe(
+        false,
+      );
+      expect(overlaps.list, `${label}: song-list header overlap`).toBe(false);
+      expect(
+        overlaps.section,
+        `${label}: browser heading overlaps song list`,
+      ).toBe(false);
+      await screenshot(`shining-stars-collections-${label}`);
+    };
+    await headerCheck(1440, 900, 'desktop');
+    await headerCheck(900, 760, 'narrow');
+    await headerCheck(390, 844, 'portrait');
+    expect(
+      await evaluate(
+        "document.querySelector('[data-result-count]')?.textContent",
+      ),
+    ).toBe('29 songs');
+    await command('Emulation.setDeviceMetricsOverride', {
+      width: 1440,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
     await click(
       'button[data-action="select-song"][data-song-id="never-again"]',
     );

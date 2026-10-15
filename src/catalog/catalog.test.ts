@@ -207,4 +207,74 @@ describe('song catalog runtime', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
+
+  it('preserves the authored membership order within each collection scope', () => {
+    const authored = {
+      ...metadata,
+      collections: [
+        {
+          id: 'alpha',
+          title: 'Alpha',
+          sortOrder: 10,
+          songIds: ['easy-song', 'mixed-song'],
+        },
+        {
+          id: 'beta',
+          title: 'Beta',
+          sortOrder: 20,
+          songIds: ['mixed-song', 'easy-song'],
+        },
+      ],
+    };
+    const catalog = createSongCatalog(authored, generated, audio);
+    expect(
+      selectSongs(catalog, { collectionId: 'alpha' }).map(({ id }) => id),
+    ).toEqual(['easy-song', 'mixed-song']);
+    expect(
+      selectSongs(catalog, {
+        collectionId: 'beta',
+        supportsDifficulty: 'easy',
+      }).map(({ id }) => id),
+    ).toEqual(['easy-song']);
+    expect(selectSongs(catalog).map(({ id }) => id)).toEqual([
+      'mixed-song',
+      'easy-song',
+    ]);
+  });
+
+  it('requires stable slug IDs for authored collections', () => {
+    const invalid = {
+      ...metadata,
+      collections: [
+        {
+          id: 'Christmas Star',
+          title: 'Christmas Star',
+          sortOrder: 10,
+          songIds: ['mixed-song'],
+        },
+      ],
+    };
+    expect(() => createSongCatalog(invalid, generated, audio)).toThrow(
+      /Invalid or duplicate collection ID/,
+    );
+  });
+
+  it('allows an authored empty collection to resolve to no browser songs', () => {
+    const empty = createSongCatalog(
+      {
+        ...metadata,
+        collections: [
+          {
+            id: 'empty-sky',
+            title: 'Empty Sky',
+            sortOrder: 10,
+            songIds: [],
+          },
+        ],
+      },
+      generated,
+      audio,
+    );
+    expect(selectSongs(empty, { collectionId: 'empty-sky' })).toEqual([]);
+  });
 });

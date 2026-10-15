@@ -64,6 +64,9 @@ function createRenderer(): void {
   const generationScene = createBrightvaleScene(
     shell.surface,
     handleRendererUnavailable,
+    undefined,
+    undefined,
+    SONG_CATALOG.collections,
   );
   if (generationScene === null) {
     handleRendererUnavailable();
