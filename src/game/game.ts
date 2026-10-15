@@ -291,6 +291,9 @@ export function createGame(
   function resolveMiss(note: MutableGameNote): void {
     if (note.outcome === null) {
       note.outcome = 'miss';
+      if (note.phase === 'audience') {
+        renown = Math.max(0, renown + profile.audience.miss);
+      }
     }
   }
 

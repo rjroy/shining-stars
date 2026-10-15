@@ -44,13 +44,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function finiteNumber(value: unknown, name: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new TypeError(
+      `Difficulty profile ${name} must be finite.`,
+    );
+  }
+  return value;
+}
+
 function finiteNonNegative(value: unknown, name: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+  const parsed = finiteNumber(value, name);
+  if (parsed < 0) {
     throw new TypeError(
       `Difficulty profile ${name} must be finite and non-negative.`,
     );
   }
-  return value;
+  return parsed;
 }
 
 function parseProfile(raw: unknown, difficulty: Difficulty): DifficultyProfile {
@@ -91,7 +101,7 @@ function parseProfile(raw: unknown, difficulty: Difficulty): DifficultyProfile {
       `${difficulty}.audience.perfect`,
     ),
     good: finiteNonNegative(audience.good, `${difficulty}.audience.good`),
-    miss: finiteNonNegative(audience.miss, `${difficulty}.audience.miss`),
+    miss: finiteNumber(audience.miss, `${difficulty}.audience.miss`),
   });
   const parsedTwilight = Object.freeze({
     perfect: Object.freeze({
@@ -115,11 +125,11 @@ function parseProfile(raw: unknown, difficulty: Difficulty): DifficultyProfile {
       ),
     }),
     miss: Object.freeze({
-      personalCost: finiteNonNegative(
+      personalCost: finiteNumber(
         twilight.miss?.personal_cost,
         `${difficulty}.twilight.miss.personal_cost`,
       ),
-      damage: finiteNonNegative(
+      damage: finiteNumber(
         twilight.miss?.damage,
         `${difficulty}.twilight.miss.damage`,
       ),
