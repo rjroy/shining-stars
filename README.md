@@ -55,7 +55,7 @@ The workflow uses read-only repository contents permission and needs no secrets.
 
 ESLint (`npm run lint`) and Prettier (`npm run format:check`) are not CI gates yet: the current baseline fails both, with existing lint findings across app, tests, and asset files, and formatting differences in 13 allowlisted files. Browser-driven checks (including `test:brightvale:browser`, lifecycle/acceptance scripts, and Chromium-based tests) are also deferred because they require a browser, server, or both. CI intentionally reports only the deterministic unit/static checks listed above.
 
-To require this status before merging, a repository administrator can add the `Pull request checks / Pull request checks` job to branch protection or the applicable ruleset's required status checks. No repository protection settings are changed here. The workflow still needs to be exercised by a real pull request to confirm GitHub reports both successful checks and failures as expected; this repository state alone does not verify hosted-run behavior.
+To require this status before merging, a repository administrator can select the `Pull request checks` status from GitHub Actions in branch protection or the applicable ruleset's required status checks. No repository protection settings are changed here. Hosted validation on PR #155 confirmed a complete passing run and a deliberate failing assertion reported against its source line; the temporary failure probe was then removed.
 
 For browser lifecycle regression checks, start Vite and run the standard-library Python harness against its URL:
 
