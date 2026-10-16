@@ -333,10 +333,10 @@ async function main() {
         const play=detail?.querySelector('[data-action="play"]');
         return title&&play?{title,playDisabled:play.disabled}:null;
       })()`),
-    'selected First Shining Star Demo Excerpt',
+    'selected First Shining Star',
   );
   if (!/The First Shining Star/.test(selected.title) || selected.playDisabled)
-    throw new Error(`Demo song is not Play-ready: ${JSON.stringify(selected)}`);
+    throw new Error(`Full song is not Play-ready: ${JSON.stringify(selected)}`);
   const audioContextsBeforePlay = await evaluate(
     'window.__responsiveAudioContexts.length',
   );

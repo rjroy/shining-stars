@@ -1363,7 +1363,7 @@
           "twilight_strength": 80
         }
       },
-      "duration": 18.13071856261735,
+      "duration": 100,
       "lane_rules": {
         "data": [
           0,
@@ -1374,8 +1374,8 @@
         "type": "pattern"
       },
       "source": "data/music/The First Shining Star (Remastered).mp3",
-      "start_time": 29.510637660430373,
-      "twilight_time": 59.57446808510639
+      "start_time": 0,
+      "twilight_time": 50
     }
   },
   "schemaVersion": 1,

@@ -4,16 +4,19 @@ Run browser checks from the repository root:
 
 ```sh
 npm run test:brightvale:browser -- responsive
-npm run test:brightvale:browser -- normal # demo excerpt / Normal variant
+npm run test:brightvale:browser -- normal # First Shining Star / Normal variant
 npm run test:brightvale:browser -- gameplay the-first-shining-star hard
 npm run test:brightvale:browser # gameplay plus responsive checks
 ```
 
 The bounded gameplay harness selects a song ID and generated difficulty
-variant through the actual Observatory controls. It requires the demo excerpt
-so its native-clock judgment scenarios remain bounded; use catalog acceptance
-below for full tracks. Gameplay output is muted, the Play action is trusted,
-and the run uses the native `AudioContext.currentTime` clock. A separate
+variant through the actual Observatory controls. Its native-clock judgment
+scenarios use four safe audience notes at or after 12 seconds, at least four
+seconds before Twilight, and spaced at least 0.75 seconds apart. It supports
+full tracks as well as excerpts when the selected chart provides those notes;
+catalog acceptance below covers broader full-track playback. Gameplay output
+is muted, the Play action is trusted, and the run uses the native
+`AudioContext.currentTime` clock. A separate
 post-judgment screenshot probe is explicitly labeled as clock-scaled visual
 evidence and is not native-clock judgment evidence.
 The no-key visual pass owns the audience screenshots/OCR and audience viewport

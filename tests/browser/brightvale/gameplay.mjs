@@ -31,10 +31,6 @@ const authoringDocument = JSON.parse(
 const selectedSong = catalogDocument.songs.find((song) => song.id === songId);
 if (selectedSong === undefined)
   throw new Error(`Song '${songId}' is not in data/catalog.json.`);
-if (selectedSong.segmentKind !== 'excerpt')
-  throw new Error(
-    'This bounded native-judgment harness requires the demo excerpt; use acceptance smoke/exhaustive for full-track playback.',
-  );
 const chartBundle = JSON.parse(
   await readFile(
     path.join(root, `data/charts/generated/${songId}.charts.json`),
@@ -74,7 +70,7 @@ const judgmentNotes = judgmentCandidates.reduce((selected, note) => {
 }, []);
 if (judgmentNotes.length < 4)
   throw new Error(
-    `Generated ${songId}/${difficulty} chart lacks four safe audience judgment notes.`,
+    `Generated ${songId}/${difficulty} chart lacks four safe audience judgment notes before Twilight.`,
   );
 const judgmentExpectedById = new Map([
   [judgmentNotes[0].id, 'perfect'],
@@ -244,12 +240,11 @@ async function selectAndStartSong(
       })()`),
     `${runLabel} selected ${selectedSong.title} detail`,
   );
-  if (
-    !selected.title.includes(
-      selectedSong.title.replace(' (Demo Excerpt)', ''),
-    ) ||
-    selected.playDisabled
-  )
+  const expectedTitle =
+    selectedSong.segmentKind === 'excerpt'
+      ? selectedSong.title.replace(/\s*\(Demo Excerpt\)$/i, '')
+      : selectedSong.title;
+  if (selected.title !== expectedTitle || selected.playDisabled)
     throw new Error(
       `Selected chart is not Play-ready: ${JSON.stringify(selected)}`,
     );
