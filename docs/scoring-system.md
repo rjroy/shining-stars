@@ -100,6 +100,16 @@ Use five stars with the fill-then-gold behavior described above. Show the multip
 
 Adding scoring must preserve the approved city and highway positioning. Adapt the HUD rather than moving the scene to accommodate it.
 
+### Milestone echoes
+
+Completing a normal star produces an expanding, fading pearl-white copy; completing a gold star produces a gold copy. Partial fills do not trigger an echo. If one update completes several stars, each completed milestone receives its own copy.
+
+An increased multiplier produces an expanding, fading copy of the new value. On a Miss that returns the multiplier to ×1, the HUD shows ×1 immediately while a copy of the old multiplier shrinks and fades. Unchanged multipliers do not repeat the effect.
+
+These are decorative, non-interactive overlays, not additional stars or score. They do not change measured HUD bounds, exclusions, or city/highway framing. Star and multiplier-increase echoes last 2600 ms: they expand to 4× and 3.5× their source size respectively by 18%, hold at 0.9 opacity through 65% (1690 ms), then fade. Star copies expand down/right from their top-left corner; multiplier copies expand down/left from their top-right corner, keeping expansion inward at screen edges. Multiplier decreases use cool silver rather than celebratory cream/gold, remain at 2.2× size and 0.9 opacity through 55% of their 2000 ms lifetime (1100 ms), then contract to 0.45× and fade. All echoes are capped at 90% opacity and fade to zero. Echo-only #111111 outlines use a 1 px non-scaling SVG stroke for stars and a 0.35 px text stroke before scaling for multipliers, painted behind their unchanged fills. The original HUD has no added outline or opacity change. Large echoes can still temporarily overlap the HUD on narrow screens; translucency and outlines improve separation without shrinking or repositioning them. Cleanup fallback timers allow the complete animation plus 100 ms; simultaneous copies remain capped at 24.
+
+Initial rendering, restart, results, and reduced-motion updates do not replay milestones. Audience, Twilight, and Radiant continue the same milestone history. Reduced motion disables the echoes without delaying the real HUD update. Transient copies, animation callbacks, and fallback timers are removed on completion, restart, pause/results, motion-preference changes, and UI disposal; disposal also removes preference and resize listeners.
+
 ## Separate follow-up: saved achievements in song selection
 
 `shining-stars-c0n` tracks displaying these alongside song length:

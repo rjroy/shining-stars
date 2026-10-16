@@ -105,8 +105,166 @@ export function getScorePresentation(fields: ScoreFields) {
   };
 }
 
+type ScoreTransitionState = ScoreFields &
+  Pick<GameSnapshot, 'transportTime' | 'status'>;
+type ScoreEcho =
+  | { kind: 'star'; index: number; track: 'normal' | 'gold' }
+  | {
+      kind: 'multiplier';
+      from: number;
+      to: number;
+      direction: 'grow' | 'shrink';
+      text: string;
+    };
+
+export function createScoreTransitionTracker() {
+  let previous: ScoreTransitionState | null = null;
+  let disposed = false;
+  return {
+    update(
+      state: ScoreTransitionState,
+      options: { active: boolean; reducedMotion: boolean },
+    ): ScoreEcho[] {
+      if (disposed) return [];
+      const before = previous;
+      previous = { ...state };
+      if (
+        !before ||
+        !options.active ||
+        options.reducedMotion ||
+        state.status === 'results' ||
+        state.score < before.score ||
+        state.transportTime < before.transportTime ||
+        state.normalMaximum !== before.normalMaximum
+      )
+        return [];
+      const echoes: ScoreEcho[] = [];
+      if (state.normalMaximum > 0) {
+        const oldRatio = before.score / state.normalMaximum;
+        const ratio = state.score / state.normalMaximum;
+        for (const [track, thresholds] of [
+          ['normal', [0.2, 0.3, 0.4, 0.5, 0.6]],
+          ['gold', [0.7, 0.75, 0.8, 0.85, 0.9]],
+        ] as const) {
+          thresholds.forEach((threshold, index) => {
+            if (oldRatio < threshold && ratio >= threshold)
+              echoes.push({ kind: 'star', index, track });
+          });
+        }
+      }
+      if (state.multiplier > before.multiplier) {
+        echoes.push({
+          kind: 'multiplier',
+          from: before.multiplier,
+          to: state.multiplier,
+          direction: 'grow',
+          text: `×${state.multiplier}`,
+        });
+      } else if (state.multiplier === 1 && before.multiplier > 1) {
+        echoes.push({
+          kind: 'multiplier',
+          from: before.multiplier,
+          to: 1,
+          direction: 'shrink',
+          text: `×${before.multiplier}`,
+        });
+      }
+      return echoes;
+    },
+    reset() {
+      previous = null;
+    },
+    dispose() {
+      disposed = true;
+      previous = null;
+    },
+  };
+}
+
+const SCORE_STAR_PATH =
+  'M50 5 63 34 95 38 71 60 78 93 50 76 22 93 29 60 5 38 37 34Z';
+
+/** Decorative copies live outside the measured HUD, never inside its flow. */
+function createScoreEchoLayer(root: HTMLElement) {
+  const layer = document.createElement('div');
+  layer.className = 'score-echo-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.dataset.scoreEchoLayer = '';
+  root.append(layer);
+  const targets = [
+    ...root.querySelectorAll<SVGSVGElement>('[data-score-stars] .score-star'),
+  ];
+  const multiplier = root.querySelector<HTMLElement>('[data-score-multiplier]');
+  const cleanups = new Set<() => void>();
+  const clear = () => {
+    for (const cleanup of cleanups) cleanup();
+  };
+  return {
+    clear,
+    play(event: ScoreEcho) {
+      const target = event.kind === 'star' ? targets[event.index] : multiplier;
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const origin = root.getBoundingClientRect();
+      const echo = document.createElement('span');
+      echo.className = `score-echo score-echo--${event.kind === 'star' ? event.track : event.direction}`;
+      echo.dataset.scoreEcho = event.kind;
+      if (event.kind === 'star') {
+        echo.dataset.echoTrack = event.track;
+        echo.dataset.echoIndex = String(event.index);
+        const svg = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'svg',
+        );
+        svg.setAttribute('viewBox', '0 0 100 100');
+        svg.setAttribute('focusable', 'false');
+        const path = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'path',
+        );
+        path.setAttribute('d', SCORE_STAR_PATH);
+        svg.append(path);
+        echo.append(svg);
+      } else {
+        echo.textContent = event.text;
+        echo.dataset.echoDirection = event.direction;
+        const style = getComputedStyle(target);
+        echo.style.font = style.font;
+        echo.style.letterSpacing = style.letterSpacing;
+      }
+      echo.style.left = `${rect.left - origin.left}px`;
+      echo.style.top = `${rect.top - origin.top}px`;
+      echo.style.width = `${rect.width}px`;
+      echo.style.height = `${rect.height}px`;
+      // Match the CSS hold/fade; the fallback must not cut off a visible echo.
+      const duration =
+        event.kind === 'star' || event.direction === 'grow' ? 2600 : 2000;
+      let timer: ReturnType<typeof setTimeout>;
+      const cleanup = () => {
+        clearTimeout(timer);
+        echo.removeEventListener('animationend', cleanup);
+        echo.removeEventListener('animationcancel', cleanup);
+        echo.remove();
+        cleanups.delete(cleanup);
+      };
+      // Bound simultaneous transient nodes, even under unusual snapshot bursts.
+      if (cleanups.size >= 24) cleanups.values().next().value?.();
+      cleanups.add(cleanup);
+      echo.addEventListener('animationend', cleanup);
+      echo.addEventListener('animationcancel', cleanup);
+      timer = setTimeout(cleanup, duration + 100);
+      layer.append(echo);
+    },
+    destroy() {
+      clear();
+      layer.remove();
+    },
+  };
+}
+
 function scoreStarsMarkup(prefix: string): string {
-  const path = 'M50 5 63 34 95 38 71 60 78 93 50 76 22 93 29 60 5 38 37 34Z';
+  const path = SCORE_STAR_PATH;
   return `<span class="score-stars" data-${prefix}-stars role="img" aria-label="Normal stars: 0 of 5; Gold stars: 0 of 5." aria-live="off">${Array.from(
     { length: 5 },
     (_, index) => {
@@ -299,6 +457,16 @@ export function createGameUI(
   let resultsRendered = false;
   const updateScore = createScoreReadout(root, 'score');
   const updateResultScore = createScoreReadout(root, 'result-score');
+  const scoreTransitions = createScoreTransitionTracker();
+  const scoreEchoes = createScoreEchoLayer(root);
+  const motionPreference =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+  const onMotionPreferenceChange = () => scoreEchoes.clear();
+  motionPreference?.addEventListener('change', onMotionPreferenceChange);
+  window.addEventListener('resize', scoreEchoes.clear);
+  let previousScoreFrame: ScoreTransitionState | null = null;
   const feedbackAnnouncements = createFeedbackAnnouncementTracker();
   const victoryAnnouncements = createVictoryAnnouncementTracker();
   const emptyRect: BrightvaleViewportRect = {
@@ -426,11 +594,17 @@ export function createGameUI(
       ['start', 'resume', 'restart'].includes(action ?? '')
     )
       return;
-    if (action === 'start') actions.start();
-    else if (action === 'resume') actions.resume();
-    else if (action === 'restart') actions.restart();
-    else if (action === 'return') actions.returnToBrowser();
-    else if (action === 'renderer-retry') actions.onRendererRetry?.();
+    if (action === 'start' || action === 'restart') {
+      scoreEchoes.clear();
+      scoreTransitions.reset();
+      previousScoreFrame = null;
+      if (action === 'start') actions.start();
+      else actions.restart();
+    } else if (action === 'resume') actions.resume();
+    else if (action === 'return') {
+      scoreEchoes.clear();
+      actions.returnToBrowser();
+    } else if (action === 'renderer-retry') actions.onRendererRetry?.();
   }
 
   root.addEventListener('click', onClick);
@@ -486,6 +660,26 @@ export function createGameUI(
     const isPlaying = audio.status === 'playing' && game.status === 'playing';
     const isReady =
       !isPaused && !isPlaying && !isStarting && !isError && !isResults;
+    const echoesActive =
+      isPlaying &&
+      !isError &&
+      !pendingPlaybackRequests &&
+      rendererStatus === 'rendered';
+    if (
+      !echoesActive ||
+      motionPreference?.matches ||
+      (previousScoreFrame !== null &&
+        (game.score < previousScoreFrame.score ||
+          game.transportTime < previousScoreFrame.transportTime ||
+          game.normalMaximum !== previousScoreFrame.normalMaximum))
+    )
+      scoreEchoes.clear();
+    const echoes = scoreTransitions.update(game, {
+      active: echoesActive,
+      reducedMotion: motionPreference?.matches ?? false,
+    });
+    previousScoreFrame = { ...game };
+    for (const echo of echoes) scoreEchoes.play(echo);
     playSurface?.setAttribute('aria-busy', String(pendingPlaybackRequests));
     showPanel(
       isResults
@@ -681,6 +875,7 @@ export function createGameUI(
       busyMessage = message;
     },
     setRendererStatus(status, message) {
+      if (status !== 'rendered') scoreEchoes.clear();
       rendererStatus = status;
       rendererMessage =
         message ??
@@ -703,11 +898,16 @@ export function createGameUI(
       return gameplayLayout;
     },
     showFatal(message) {
+      if (message !== null) scoreEchoes.clear();
       fatalMessage = message;
       if (message !== null) setText(root, '[data-audio-error]', message);
       if (message !== null) showPanel('error');
     },
     destroy() {
+      scoreTransitions.dispose();
+      scoreEchoes.destroy();
+      motionPreference?.removeEventListener('change', onMotionPreferenceChange);
+      window.removeEventListener('resize', scoreEchoes.clear);
       root.removeEventListener('click', onClick);
       layoutResizeObserver?.disconnect();
       if (layoutResizeObserver === null && typeof window !== 'undefined')
