@@ -644,6 +644,7 @@
     serif;
 }
 .browser-layout {
+  container: song-browser / size;
   display: grid;
   flex: 1 1 auto;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
@@ -859,7 +860,7 @@
   fill: #ffda62;
 }
 .song-achievement {
-  margin: 0 0 17px;
+  margin: 0 0 12px;
   padding-block: 12px;
   border-block: 1px solid rgb(228 194 158 / 25%);
   color: #e8d9ef;
@@ -923,25 +924,29 @@
 .song-detail-panel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
   align-items: stretch;
   width: auto;
   min-width: 0;
+  min-height: 0;
   max-height: 100%;
   margin: 0;
   padding: clamp(18px, 2vw, 30px);
   overflow: auto;
   border-radius: 28% 28% 14px 14px / 10% 10% 14px 14px;
 }
+.song-detail-panel > * {
+  flex-shrink: 0;
+}
 .song-detail-heading {
   display: grid;
   justify-items: center;
-  margin: 0 0 15px;
+  margin: 0 0 10px;
   text-align: center;
 }
 .song-detail-emblem {
   display: grid;
-  width: clamp(78px, 8vw, 126px);
+  width: clamp(64px, 6vw, 80px);
   aspect-ratio: 1;
   margin-bottom: 8px;
   border: 1px solid rgb(255 220 143 / 63%);
@@ -1041,6 +1046,103 @@
     'Times New Roman',
     serif;
   text-align: center;
+}
+.song-play-help:empty {
+  display: none;
+}
+
+/* The list/detail region's real height, not the monitor height, owns this fit. */
+@media (min-width: 641px) {
+  .song-detail-panel {
+    align-self: stretch;
+  }
+  @container song-browser (max-height: 560px) {
+    .song-detail-panel {
+      padding: 16px 18px;
+    }
+    .song-detail-heading {
+      grid-template-columns: 50px minmax(0, 1fr);
+      gap: 4px 10px;
+      justify-items: start;
+      text-align: left;
+      margin-bottom: 10px;
+    }
+    .song-detail-emblem {
+      grid-column: 1;
+      grid-row: 1 / span 3;
+      align-self: center;
+      width: 50px;
+      margin: 0;
+    }
+    .song-detail-heading .detail-kicker,
+    .song-detail-heading h2,
+    .song-detail-duration {
+      grid-column: 2;
+      margin: 0;
+    }
+    .song-detail-heading h2 {
+      font-size: 1.3rem;
+      line-height: 1.15;
+    }
+    .song-chart-status {
+      margin-bottom: 10px;
+      padding: 4px 8px;
+    }
+    .song-achievement {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 4px 10px;
+      align-items: center;
+      padding-block: 9px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+    .song-achievement-label,
+    .song-achievement > div,
+    .song-best-copy {
+      grid-column: 1;
+    }
+    .song-achievement .song-rating-stars {
+      margin: 0;
+    }
+    .song-achievement .song-target {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      justify-content: start;
+      margin: 0;
+    }
+    .song-achievement .song-target-basis {
+      grid-column: 2;
+      grid-row: 3;
+      margin: 0;
+    }
+  }
+  @container song-browser (max-height: 440px) {
+    .song-detail-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(100px, 0.8fr);
+      align-content: safe center;
+      align-items: center;
+      column-gap: 10px;
+    }
+    .song-detail-heading,
+    .song-chart-status,
+    .song-achievement,
+    .song-play-help {
+      grid-column: 1 / -1;
+    }
+    .song-chart-status {
+      justify-self: center;
+    }
+    .song-difficulty-label {
+      margin: 0;
+      text-align: left;
+    }
+    .song-play-button {
+      align-self: end;
+      min-height: 43px;
+    }
+  }
 }
 .song-detail-empty {
   display: grid;
