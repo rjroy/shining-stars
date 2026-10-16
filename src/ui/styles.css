@@ -217,6 +217,8 @@ a:focus-visible {
   align-self: start;
   padding: 0;
   border: 0;
+  /* Keep the established header flow; corner readouts must not push stage labels. */
+  transform: translateY(88px);
 }
 .heading-identity {
   grid-column: 2;
@@ -233,6 +235,7 @@ a:focus-visible {
   padding: 0;
   border: 0;
   text-align: right;
+  transform: translateY(88px);
 }
 .opponent-resource[hidden] {
   display: none;
@@ -273,6 +276,97 @@ h1 {
   align-content: start;
   gap: 2px;
   min-width: 0;
+}
+.score-readout,
+.combo-readout {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: #f4f8ff;
+  text-shadow: 0 2px 7px rgb(3 8 24 / 90%);
+}
+.score-readout {
+  /* Overlays are still measured as real HUD exclusions by ui.ts. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  justify-items: start;
+}
+.combo-readout {
+  position: absolute;
+  top: 0;
+  right: 0;
+  justify-items: end;
+}
+.score-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.score-value,
+.combo-value {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.06;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.combo-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: #fff0cd;
+}
+.combo-multiplier {
+  font-size: clamp(0.9rem, 1.5vw, 1.25rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.score-stars {
+  display: flex;
+  gap: 3px;
+  margin: 3px 0 5px;
+  width: max-content;
+}
+.score-star {
+  display: block;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 65%));
+}
+.star-empty {
+  fill: rgb(6 13 32 / 82%);
+  stroke: #9aaac2;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.star-normal {
+  fill: #e7f1ff;
+}
+.star-gold {
+  fill: #ffda62;
+}
+.result-score {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  margin-top: 20px;
+}
+.result-score .score-value {
+  color: #f4f8ff;
+}
+.result-combo {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.result-combo strong,
+.result-combo [data-result-score-multiplier] {
+  margin-left: 6px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
 }
 .resource-name {
   color: var(--muted);
@@ -657,6 +751,7 @@ button:disabled {
   .player-resource {
     grid-column: 1;
     grid-row: 1;
+    transform: translateY(54px);
   }
   .heading-identity {
     grid-column: 1 / -1;
@@ -669,6 +764,31 @@ button:disabled {
   .opponent-resource {
     grid-column: 2;
     grid-row: 1;
+    transform: translateY(54px);
+  }
+  .heading-identity-copy {
+    /* Retain the established mobile flow height while clearing the corner bars. */
+    transform: translateY(50px) scale(0.7);
+    transform-origin: top left;
+  }
+  .score-readout,
+  .combo-readout {
+    gap: 0;
+  }
+  .score-readout .score-label,
+  .combo-readout .score-label {
+    font-size: 0.6rem;
+  }
+  .score-readout .score-value,
+  .combo-readout .combo-value {
+    font-size: 1.5rem;
+  }
+  .score-readout .score-star {
+    width: 14px;
+    height: 14px;
+  }
+  .score-readout .score-stars {
+    margin: 2px 0 0;
   }
   .resource-name {
     font-size: 0.6rem;
@@ -708,6 +828,27 @@ button:disabled {
   .result-line {
     min-height: 76px;
     padding: 9px;
+  }
+}
+
+/* The middle-width corners must clear the centered timing legend, including
+   three-digit strength values. Keep the established heading/stage flow. */
+@media (min-width: 641px) and (max-width: 900px) and (min-height: 541px) {
+  .resource-name {
+    font-size: 0.6rem;
+  }
+  .resource-meter {
+    grid-template-columns: 48px auto;
+    gap: 6px;
+  }
+  .resource-amount {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-height: 540px) {
+  .resource-meter {
+    grid-template-columns: 72px auto;
   }
 }
 

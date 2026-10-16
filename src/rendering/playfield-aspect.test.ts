@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import { getDifficultyProfile } from '../game/game-balance';
+import { getTheoreticalMaximumScore } from '../game/game';
 import { projectGameplayFrame, VISIBLE_NOTE_SECONDS } from './gameplay-frame';
 import type { BrightvaleViewportLayout } from './brightvale/viewport';
 
@@ -34,6 +35,10 @@ const snapshot: ControllerSnapshot = {
     personalStrength: 100,
     twilightStrength: 100,
     difficulty: 'easy',
+    score: 0,
+    combo: 0,
+    multiplier: 1,
+    normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
     notes: [{ id: 'wide-note', lane: 3, phase: 'audience', outcome: null }],
     result: null,
   },

@@ -72,6 +72,83 @@ function setElementText(element: HTMLElement, value: string): void {
   if (element.textContent !== value) element.textContent = value;
 }
 
+type ScoreFields = Pick<
+  GameSnapshot,
+  'score' | 'combo' | 'multiplier' | 'normalMaximum'
+>;
+
+/** Two continuous progress tracks painted into the same five silhouettes. */
+export function getScorePresentation(fields: ScoreFields) {
+  const ratio =
+    fields.normalMaximum > 0 ? fields.score / fields.normalMaximum : 0;
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  const normalEdges = [0, 0.2, 0.3, 0.4, 0.5, 0.6];
+  const goldEdges = [0.6, 0.7, 0.75, 0.8, 0.85, 0.9];
+  const stars = Array.from({ length: 5 }, (_, index) => ({
+    normalFill: clamp(
+      (ratio - normalEdges[index]!) /
+        (normalEdges[index + 1]! - normalEdges[index]!),
+    ),
+    goldFill: clamp(
+      (ratio - goldEdges[index]!) / (goldEdges[index + 1]! - goldEdges[index]!),
+    ),
+  }));
+  const amount = (track: 'normalFill' | 'goldFill') =>
+    Number(stars.reduce((sum, star) => sum + star[track], 0).toFixed(2));
+  return {
+    scoreText: fields.score.toLocaleString('en-US'),
+    comboText: String(fields.combo),
+    multiplierText: `×${fields.multiplier}`,
+    stars,
+    starSummary: `Normal stars: ${amount('normalFill')} of 5; Gold stars: ${amount('goldFill')} of 5.`,
+    ariaLive: 'off' as const,
+  };
+}
+
+function scoreStarsMarkup(prefix: string): string {
+  const path = 'M50 5 63 34 95 38 71 60 78 93 50 76 22 93 29 60 5 38 37 34Z';
+  return `<span class="score-stars" data-${prefix}-stars role="img" aria-label="Normal stars: 0 of 5; Gold stars: 0 of 5." aria-live="off">${Array.from(
+    { length: 5 },
+    (_, index) => {
+      const id = `performance-${prefix}-${index}`;
+      return `<svg class="score-star" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><defs><clipPath id="${id}-normal"><rect data-normal-fill width="0" height="100" /></clipPath><clipPath id="${id}-gold"><rect data-gold-fill width="0" height="100" /></clipPath></defs><path class="star-empty" d="${path}"/><path class="star-normal" d="${path}" clip-path="url(#${id}-normal)"/><path class="star-gold" d="${path}" clip-path="url(#${id}-gold)"/></svg>`;
+    },
+  ).join('')}</span>`;
+}
+
+function createScoreReadout(root: HTMLElement, prefix: string) {
+  const score = root.querySelector<HTMLElement>(`[data-${prefix}]`);
+  const combo = root.querySelector<HTMLElement>(`[data-${prefix}-combo]`);
+  const multiplier = root.querySelector<HTMLElement>(
+    `[data-${prefix}-multiplier]`,
+  );
+  const stars = root.querySelector<HTMLElement>(`[data-${prefix}-stars]`);
+  const normal = [
+    ...(stars?.querySelectorAll<SVGRectElement>('[data-normal-fill]') ?? []),
+  ];
+  const gold = [
+    ...(stars?.querySelectorAll<SVGRectElement>('[data-gold-fill]') ?? []),
+  ];
+  return (fields: ScoreFields) => {
+    const value = getScorePresentation(fields);
+    if (score) setElementText(score, value.scoreText);
+    if (combo) setElementText(combo, value.comboText);
+    if (multiplier) setElementText(multiplier, value.multiplierText);
+    if (stars?.getAttribute('aria-label') !== value.starSummary)
+      stars?.setAttribute('aria-label', value.starSummary);
+    value.stars.forEach((star, index) => {
+      for (const [rect, fill] of [
+        [normal[index], star.normalFill],
+        [gold[index], star.goldFill],
+      ] as const) {
+        const width = String(fill * 100);
+        if (rect?.getAttribute('width') !== width)
+          rect?.setAttribute('width', width);
+      }
+    });
+  };
+}
+
 export function createGameUI(
   applicationRoot: HTMLElement,
   song: SongCatalogEntry,
@@ -83,6 +160,15 @@ export function createGameUI(
   root.innerHTML = `
       <div class="gameplay-screen-content" aria-describedby="lane-instructions">
         <div class="play-heading">
+          <div class="score-readout" aria-live="off">
+            <span class="score-label">Score</span>
+            <strong class="score-value" data-score>0</strong>
+            ${scoreStarsMarkup('score')}
+          </div>
+          <div class="combo-readout" aria-live="off">
+            <span class="score-label">Combo</span>
+            <div class="combo-numbers"><strong class="combo-value" data-score-combo>0</strong><span class="combo-multiplier" data-score-multiplier>×1</span></div>
+          </div>
           <div class="resource-readout player-resource" aria-live="polite" aria-atomic="true">
             <span class="resource-name" data-audience-resource>Renown</span>
             <div class="resource-meter audience-meter" data-audience-meter>
@@ -96,8 +182,10 @@ export function createGameUI(
             </div>
           </div>
           <div class="heading-identity">
+            <div class="heading-identity-copy">
             <p class="mode-label" data-mode-label>Audience performance</p>
             <h1 data-title>Sing with Brightvale</h1>
+            </div>
           </div>
           <div class="resource-readout opponent-resource" aria-live="polite" aria-atomic="true" data-opponent-resource hidden>
             <span class="resource-name">Twilight Strength</span>
@@ -146,6 +234,12 @@ export function createGameUI(
           <p class="dialog-overline">The song has settled</p>
           <h2 id="result-title" data-result-title>Brightvale heard you.</h2>
           <p class="result-boundary">A missed note is not surrender.</p>
+          <div class="result-score" aria-live="off">
+            <span class="score-label">Score</span>
+            <strong class="score-value" data-result-score>0</strong>
+            ${scoreStarsMarkup('result-score')}
+            <p class="result-combo">Final combo <strong data-result-score-combo>0</strong> <span data-result-score-multiplier>×1</span></p>
+          </div>
           <div class="result-grid" data-result-grid></div>
           <button class="primary-button" type="button" data-action="restart" disabled>Sing again <span aria-hidden="true">↗</span></button>
           <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
@@ -203,6 +297,8 @@ export function createGameUI(
   let rendererMessage = 'Loading Brightvale…';
   let pendingPlaybackRequests = false;
   let resultsRendered = false;
+  const updateScore = createScoreReadout(root, 'score');
+  const updateResultScore = createScoreReadout(root, 'result-score');
   const feedbackAnnouncements = createFeedbackAnnouncementTracker();
   const victoryAnnouncements = createVictoryAnnouncementTracker();
   const emptyRect: BrightvaleViewportRect = {
@@ -275,7 +371,12 @@ export function createGameUI(
         )
         .map((element) => ({
           kind: 'persistent' as const,
-          rect: readRect(element),
+          // The narrow-screen identity is visually repositioned inside its
+          // original flow slot. Exclude its actual painted bounds, not that slot.
+          rect: readRect(
+            element.querySelector<HTMLElement>('.heading-identity-copy') ??
+              element,
+          ),
         }))
         .filter(({ rect }) => rect.width > 0 && rect.height > 0),
       labels: {
@@ -345,6 +446,7 @@ export function createGameUI(
     const result = game.result;
     const grid = root.querySelector<HTMLElement>('[data-result-grid]');
     if (result === null || grid === null) return;
+    updateResultScore(result);
     const outcomeLabels = {
       victory: 'Victory',
       defeat: 'Defeat',
@@ -370,6 +472,7 @@ export function createGameUI(
 
   function render(snapshot: ControllerSnapshot, audioNow: number): void {
     const { audio, game } = snapshot;
+    updateScore(game);
     pendingPlaybackRequests = snapshot.pendingPlaybackRequests;
     const isError = audio.status === 'error' || fatalMessage !== null;
     const isResults = game.status === 'results';

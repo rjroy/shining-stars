@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import { getTheoreticalMaximumScore } from '../game/game';
 import {
   projectGameplayFrame,
   VISIBLE_NOTE_SECONDS,
@@ -54,6 +55,10 @@ function makeSnapshot(
       personalStrength: 100,
       twilightStrength: 100,
       difficulty,
+      score: 0,
+      combo: 0,
+      multiplier: 1,
+      normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
       notes: states,
       result: null,
     },
