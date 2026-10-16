@@ -29,7 +29,7 @@ Concept evidence should include: (a) the city by itself in the same camera/proje
 - `.lore/work/mockups/Golden City Rhythm Concert.webp` — opened and visually inspected. Shows a warm twilight city with dense layered towers, several tall spires, illuminated architecture, and a central opening framed around a perspective highway. Its daytime-looking bright sky, HUD, banners, waterfalls, and decorative details are not automatically requirements.
 - `.lore/work/mockups/Neon Twilight Rhythm City.webp` — opened and visually inspected. Shows the related darker violet/purple twilight treatment over a similar city/highway composition; includes a dramatic purple sky feature and floating silhouettes. These specifics are reference imagery, not confirmed Brightvale landmarks or required geometry.
 - `.lore/work/design/brightvale-perspective-highway.md` — approved highway direction and later amendment: city and crowd remain; no stage, performer, or substitute focal structure. Its low dramatic camera and gameplay-priority framing govern the composite.
-- `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — project context and reference precedence.
+- [Brightvale asset direction](../../../docs/asset-direction.md) — project context and reference precedence.
 - `assets/authoring/neon-twilight-platform/README.md` and `assets/authoring/neon-twilight-platform/concept.webp` — the platform is an approved separate asset and its concept was opened. The current WebP derivative is the maintained reference.
 
 The spire selection is a visual direction, not a claim that the mockup's exact design or any additional lore is canon. Concepts should ground its shape in the visible references and label any interpretation.
