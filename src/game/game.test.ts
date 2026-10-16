@@ -67,6 +67,20 @@ function note(id: string, time: number, lane: ChartLane = 0): ChartNote {
   return { id, time, lane };
 }
 
+function scoringState(value: unknown): {
+  score?: number;
+  combo?: number;
+  multiplier?: number;
+  normalMaximum?: number;
+} {
+  return value as {
+    score?: number;
+    combo?: number;
+    multiplier?: number;
+    normalMaximum?: number;
+  };
+}
+
 function physicalPressTime(
   noteTime: number,
   inputOffset: number,
@@ -599,5 +613,157 @@ describe('game model', () => {
     expect(() =>
       createGameWithDifficulty(normalHardChart, 0, 'expert' as TestDifficulty),
     ).toThrow();
+  });
+
+  describe('score and combo', () => {
+    it('awards Perfect 100 and scales Good linearly by absolute timing error', () => {
+      const { perfectWindowSeconds: perfect, goodWindowSeconds: miss } =
+        getDifficultyProfile('normal').timing;
+      const errors = [0, perfect, (perfect + miss) / 2, miss];
+      const expectedScores = [100, 100, 50, 0];
+
+      errors.forEach((error, index) => {
+        const game = makeGame([note(`timing-${index}`, 2)]);
+        game.press(0, 2 + error);
+        expect(scoringState(game.snapshot()).score).toBe(expectedScores[index]);
+      });
+
+      const earlyGood = makeGame([note('early-good', 2)]);
+      earlyGood.press(0, 2 - (perfect + miss) / 2);
+      expect(scoringState(earlyGood.snapshot()).score).toBe(50);
+    });
+
+    it('rounds each multiplied hit to the nearest integer', () => {
+      const { perfectWindowSeconds: perfect, goodWindowSeconds: miss } =
+        getDifficultyProfile('normal').timing;
+      const goodError = miss - 0.5025 * (miss - perfect); // 50.25 base points.
+      const notes = Array.from({ length: 11 }, (_, index) =>
+        note(`round-${index}`, 1 + index * 0.5),
+      );
+      const game = makeGame(notes, 0, { duration: 10, twilightAt: 8 });
+
+      notes.slice(0, 10).forEach((chartNote) =>
+        game.press(0, chartNote.time),
+      );
+      game.press(0, notes[10]!.time + goodError);
+
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 1101, // round(50.25 * x2), not round(50.25) * x2.
+        combo: 11,
+        multiplier: 2,
+      });
+      expect(Number.isInteger(scoringState(game.snapshot()).score)).toBe(true);
+    });
+
+    it('advances Perfect and Good streaks through each multiplier tier', () => {
+      const checkpoints = [
+        [10, 1000],
+        [11, 1200],
+        [20, 3000],
+        [21, 3300],
+        [30, 6000],
+        [31, 6400],
+        [40, 10000],
+        [41, 10500],
+      ] as const;
+      const notes = Array.from({ length: 41 }, (_, index) =>
+        note(`streak-${index}`, 1 + index * 0.5),
+      );
+      const game = makeGame(notes, 0, { duration: 30, twilightAt: 25 });
+
+      for (const [index, chartNote] of notes.entries()) {
+        game.press(0, chartNote.time);
+        const checkpoint = checkpoints.find(([count]) => count === index + 1);
+        if (checkpoint !== undefined) {
+          expect(scoringState(game.snapshot())).toMatchObject({
+            score: checkpoint[1],
+            combo: checkpoint[0],
+            multiplier: Math.min(5, Math.floor(checkpoint[0] / 10) + 1),
+          });
+        }
+      }
+    });
+
+    it('counts a Good hit as part of the successful-hit streak', () => {
+      const game = makeGame([note('perfect', 1), note('good', 2)]);
+
+      game.press(0, 1);
+      game.press(0, 2 + 0.095);
+
+      expect(scoringState(game.snapshot())).toMatchObject({ score: 150, combo: 2 });
+    });
+
+    it('scores 60 Perfect hits for 20,000 and retains the completed combo', () => {
+      const notes = Array.from({ length: 60 }, (_, index) =>
+        note(`perfect-${index}`, 1 + index * 0.5),
+      );
+      const game = makeGame(notes, 0, { duration: 60, twilightAt: 40 });
+
+      for (const chartNote of notes) game.press(0, chartNote.time);
+
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 20000,
+        combo: 60,
+        multiplier: 5,
+        normalMaximum: 20000,
+      });
+    });
+
+    it('awards no points for a Miss and resets the successful-hit streak', () => {
+      const notes = [note('first', 1), note('missed', 2), note('after-miss', 3)];
+      const game = makeGame(notes);
+
+      game.press(0, 1);
+      game.advanceTo(2.126);
+
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 100,
+        combo: 0,
+        multiplier: 1,
+      });
+      game.press(0, 3);
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 200,
+        combo: 1,
+      });
+    });
+
+    it('keeps score and combo across Audience, Twilight, Radiant, and the final hit', () => {
+      const game = makeGame(
+        [
+          note('audience', 2),
+          note('twilight-victory', 6),
+          note('radiant', 7),
+          note('final', 8.9),
+        ],
+        0,
+        { twilightAt: 5, twilightStrength: 1 },
+      );
+
+      game.press(0, 2);
+      expect(scoringState(game.snapshot())).toMatchObject({ score: 100, combo: 1 });
+      game.press(0, 6);
+      expect(game.snapshot()).toMatchObject({ phase: 'twilight', victory: true });
+      expect(scoringState(game.snapshot())).toMatchObject({ score: 200, combo: 2 });
+      game.press(0, 7);
+      expect(scoringState(game.snapshot())).toMatchObject({ score: 300, combo: 3 });
+      game.press(0, 8.9);
+      const completed = game.advanceTo(10);
+
+      expect(completed).toMatchObject({ status: 'results', victory: true });
+      expect(scoringState(completed)).toMatchObject({ score: 400, combo: 4 });
+      expect(scoringState(completed.result)).toMatchObject({
+        score: 400,
+        combo: 4,
+        multiplier: 1,
+        normalMaximum: 400,
+      });
+      expect(completed.notes.map(({ outcome }) => outcome)).toEqual([
+        'perfect',
+        'perfect',
+        'perfect',
+        'perfect',
+      ]);
+    });
   });
 });

@@ -11,7 +11,7 @@ import {
   type GameController,
 } from '../game/controller';
 import { validateChart, type ChartConfig } from '../game/chart';
-import { createGame } from '../game/game';
+import { createGame, getTheoreticalMaximumScore } from '../game/game';
 import { isDifficulty, type Difficulty } from '../game/game-balance';
 import type { SongCatalogEntry } from '../catalog/catalog';
 import { getSongChart, getSongDifficulties } from '../catalog/catalog';
@@ -177,6 +177,10 @@ export function createPerformanceCoordinator<
       );
     }
     const chart = getSongChart(song, difficulty);
+    const normalChart = getSongDifficulties(song).includes('normal')
+      ? getSongChart(song, 'normal')
+      : chart;
+    const normalMaximum = getTheoreticalMaximumScore(normalChart.notes.length);
     if (validateChart(chart).length > 0) {
       throw new TypeError(`Song '${song.id}' has an invalid chart.`);
     }
@@ -233,7 +237,12 @@ export function createPerformanceCoordinator<
       inputOffset: dependencies.inputOffset,
       visualOffset: dependencies.visualOffset,
       createGame: (inputOffset, requestedDifficulty) =>
-        createGame(chart, inputOffset, requestedDifficulty ?? difficulty),
+        createGame(
+          chart,
+          inputOffset,
+          requestedDifficulty ?? difficulty,
+          normalMaximum,
+        ),
       render: (controllerSnapshot) => {
         try {
           dependencies.render?.(controllerSnapshot);

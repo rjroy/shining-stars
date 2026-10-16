@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
+import { getTheoreticalMaximumScore } from '../game/game';
 import { GAME_BALANCE } from '../game/game-balance';
 import { getDifficultyProfile } from '../game/game-balance';
 import { projectSceneState } from './scene-state';
@@ -31,6 +32,10 @@ function makeSnapshot(
     personalStrength: 0,
     twilightStrength: chart.twilightStrength,
     difficulty: 'normal',
+    score: 0,
+    combo: 0,
+    multiplier: 1,
+    normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
     notes: [],
     result: null,
     ...gameOverrides,

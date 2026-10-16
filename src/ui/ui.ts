@@ -72,6 +72,241 @@ function setElementText(element: HTMLElement, value: string): void {
   if (element.textContent !== value) element.textContent = value;
 }
 
+type ScoreFields = Pick<
+  GameSnapshot,
+  'score' | 'combo' | 'multiplier' | 'normalMaximum'
+>;
+
+/** Two continuous progress tracks painted into the same five silhouettes. */
+export function getScorePresentation(fields: ScoreFields) {
+  const ratio =
+    fields.normalMaximum > 0 ? fields.score / fields.normalMaximum : 0;
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  const normalEdges = [0, 0.2, 0.3, 0.4, 0.5, 0.6];
+  const goldEdges = [0.6, 0.7, 0.75, 0.8, 0.85, 0.9];
+  const stars = Array.from({ length: 5 }, (_, index) => ({
+    normalFill: clamp(
+      (ratio - normalEdges[index]!) /
+        (normalEdges[index + 1]! - normalEdges[index]!),
+    ),
+    goldFill: clamp(
+      (ratio - goldEdges[index]!) / (goldEdges[index + 1]! - goldEdges[index]!),
+    ),
+  }));
+  const amount = (track: 'normalFill' | 'goldFill') =>
+    Number(stars.reduce((sum, star) => sum + star[track], 0).toFixed(2));
+  return {
+    scoreText: fields.score.toLocaleString('en-US'),
+    comboText: String(fields.combo),
+    multiplierText: `×${fields.multiplier}`,
+    stars,
+    starSummary: `Normal stars: ${amount('normalFill')} of 5; Gold stars: ${amount('goldFill')} of 5.`,
+    ariaLive: 'off' as const,
+  };
+}
+
+type ScoreTransitionState = ScoreFields &
+  Pick<GameSnapshot, 'transportTime' | 'status'>;
+type ScoreEcho =
+  | { kind: 'star'; index: number; track: 'normal' | 'gold' }
+  | {
+      kind: 'multiplier';
+      from: number;
+      to: number;
+      direction: 'grow' | 'shrink';
+      text: string;
+    };
+
+export function createScoreTransitionTracker() {
+  let previous: ScoreTransitionState | null = null;
+  let disposed = false;
+  return {
+    update(
+      state: ScoreTransitionState,
+      options: { active: boolean; reducedMotion: boolean },
+    ): ScoreEcho[] {
+      if (disposed) return [];
+      const before = previous;
+      previous = { ...state };
+      if (
+        !before ||
+        !options.active ||
+        options.reducedMotion ||
+        state.status === 'results' ||
+        state.score < before.score ||
+        state.transportTime < before.transportTime ||
+        state.normalMaximum !== before.normalMaximum
+      )
+        return [];
+      const echoes: ScoreEcho[] = [];
+      if (state.normalMaximum > 0) {
+        const oldRatio = before.score / state.normalMaximum;
+        const ratio = state.score / state.normalMaximum;
+        for (const [track, thresholds] of [
+          ['normal', [0.2, 0.3, 0.4, 0.5, 0.6]],
+          ['gold', [0.7, 0.75, 0.8, 0.85, 0.9]],
+        ] as const) {
+          thresholds.forEach((threshold, index) => {
+            if (oldRatio < threshold && ratio >= threshold)
+              echoes.push({ kind: 'star', index, track });
+          });
+        }
+      }
+      if (state.multiplier > before.multiplier) {
+        echoes.push({
+          kind: 'multiplier',
+          from: before.multiplier,
+          to: state.multiplier,
+          direction: 'grow',
+          text: `×${state.multiplier}`,
+        });
+      } else if (state.multiplier === 1 && before.multiplier > 1) {
+        echoes.push({
+          kind: 'multiplier',
+          from: before.multiplier,
+          to: 1,
+          direction: 'shrink',
+          text: `×${before.multiplier}`,
+        });
+      }
+      return echoes;
+    },
+    reset() {
+      previous = null;
+    },
+    dispose() {
+      disposed = true;
+      previous = null;
+    },
+  };
+}
+
+const SCORE_STAR_PATH =
+  'M50 5 63 34 95 38 71 60 78 93 50 76 22 93 29 60 5 38 37 34Z';
+
+/** Decorative copies live outside the measured HUD, never inside its flow. */
+function createScoreEchoLayer(root: HTMLElement) {
+  const layer = document.createElement('div');
+  layer.className = 'score-echo-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.dataset.scoreEchoLayer = '';
+  root.append(layer);
+  const targets = [
+    ...root.querySelectorAll<SVGSVGElement>('[data-score-stars] .score-star'),
+  ];
+  const multiplier = root.querySelector<HTMLElement>('[data-score-multiplier]');
+  const cleanups = new Set<() => void>();
+  const clear = () => {
+    for (const cleanup of cleanups) cleanup();
+  };
+  return {
+    clear,
+    play(event: ScoreEcho) {
+      const target = event.kind === 'star' ? targets[event.index] : multiplier;
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const origin = root.getBoundingClientRect();
+      const echo = document.createElement('span');
+      echo.className = `score-echo score-echo--${event.kind === 'star' ? event.track : event.direction}`;
+      echo.dataset.scoreEcho = event.kind;
+      if (event.kind === 'star') {
+        echo.dataset.echoTrack = event.track;
+        echo.dataset.echoIndex = String(event.index);
+        const svg = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'svg',
+        );
+        svg.setAttribute('viewBox', '0 0 100 100');
+        svg.setAttribute('focusable', 'false');
+        const path = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'path',
+        );
+        path.setAttribute('d', SCORE_STAR_PATH);
+        svg.append(path);
+        echo.append(svg);
+      } else {
+        echo.textContent = event.text;
+        echo.dataset.echoDirection = event.direction;
+        const style = getComputedStyle(target);
+        echo.style.font = style.font;
+        echo.style.letterSpacing = style.letterSpacing;
+      }
+      echo.style.left = `${rect.left - origin.left}px`;
+      echo.style.top = `${rect.top - origin.top}px`;
+      echo.style.width = `${rect.width}px`;
+      echo.style.height = `${rect.height}px`;
+      // Match the CSS hold/fade; the fallback must not cut off a visible echo.
+      const duration =
+        event.kind === 'star' || event.direction === 'grow' ? 2600 : 2000;
+      let timer: ReturnType<typeof setTimeout>;
+      const cleanup = () => {
+        clearTimeout(timer);
+        echo.removeEventListener('animationend', cleanup);
+        echo.removeEventListener('animationcancel', cleanup);
+        echo.remove();
+        cleanups.delete(cleanup);
+      };
+      // Bound simultaneous transient nodes, even under unusual snapshot bursts.
+      if (cleanups.size >= 24) cleanups.values().next().value?.();
+      cleanups.add(cleanup);
+      echo.addEventListener('animationend', cleanup);
+      echo.addEventListener('animationcancel', cleanup);
+      timer = setTimeout(cleanup, duration + 100);
+      layer.append(echo);
+    },
+    destroy() {
+      clear();
+      layer.remove();
+    },
+  };
+}
+
+function scoreStarsMarkup(prefix: string): string {
+  const path = SCORE_STAR_PATH;
+  return `<span class="score-stars" data-${prefix}-stars role="img" aria-label="Normal stars: 0 of 5; Gold stars: 0 of 5." aria-live="off">${Array.from(
+    { length: 5 },
+    (_, index) => {
+      const id = `performance-${prefix}-${index}`;
+      return `<svg class="score-star" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><defs><clipPath id="${id}-normal"><rect data-normal-fill width="0" height="100" /></clipPath><clipPath id="${id}-gold"><rect data-gold-fill width="0" height="100" /></clipPath></defs><path class="star-empty" d="${path}"/><path class="star-normal" d="${path}" clip-path="url(#${id}-normal)"/><path class="star-gold" d="${path}" clip-path="url(#${id}-gold)"/></svg>`;
+    },
+  ).join('')}</span>`;
+}
+
+function createScoreReadout(root: HTMLElement, prefix: string) {
+  const score = root.querySelector<HTMLElement>(`[data-${prefix}]`);
+  const combo = root.querySelector<HTMLElement>(`[data-${prefix}-combo]`);
+  const multiplier = root.querySelector<HTMLElement>(
+    `[data-${prefix}-multiplier]`,
+  );
+  const stars = root.querySelector<HTMLElement>(`[data-${prefix}-stars]`);
+  const normal = [
+    ...(stars?.querySelectorAll<SVGRectElement>('[data-normal-fill]') ?? []),
+  ];
+  const gold = [
+    ...(stars?.querySelectorAll<SVGRectElement>('[data-gold-fill]') ?? []),
+  ];
+  return (fields: ScoreFields) => {
+    const value = getScorePresentation(fields);
+    if (score) setElementText(score, value.scoreText);
+    if (combo) setElementText(combo, value.comboText);
+    if (multiplier) setElementText(multiplier, value.multiplierText);
+    if (stars?.getAttribute('aria-label') !== value.starSummary)
+      stars?.setAttribute('aria-label', value.starSummary);
+    value.stars.forEach((star, index) => {
+      for (const [rect, fill] of [
+        [normal[index], star.normalFill],
+        [gold[index], star.goldFill],
+      ] as const) {
+        const width = String(fill * 100);
+        if (rect?.getAttribute('width') !== width)
+          rect?.setAttribute('width', width);
+      }
+    });
+  };
+}
+
 export function createGameUI(
   applicationRoot: HTMLElement,
   song: SongCatalogEntry,
@@ -83,6 +318,15 @@ export function createGameUI(
   root.innerHTML = `
       <div class="gameplay-screen-content" aria-describedby="lane-instructions">
         <div class="play-heading">
+          <div class="score-readout" aria-live="off">
+            <span class="score-label">Score</span>
+            <strong class="score-value" data-score>0</strong>
+            ${scoreStarsMarkup('score')}
+          </div>
+          <div class="combo-readout" aria-live="off">
+            <span class="score-label">Combo</span>
+            <div class="combo-numbers"><strong class="combo-value" data-score-combo>0</strong><span class="combo-multiplier" data-score-multiplier>×1</span></div>
+          </div>
           <div class="resource-readout player-resource" aria-live="polite" aria-atomic="true">
             <span class="resource-name" data-audience-resource>Renown</span>
             <div class="resource-meter audience-meter" data-audience-meter>
@@ -96,8 +340,10 @@ export function createGameUI(
             </div>
           </div>
           <div class="heading-identity">
+            <div class="heading-identity-copy">
             <p class="mode-label" data-mode-label>Audience performance</p>
             <h1 data-title>Sing with Brightvale</h1>
+            </div>
           </div>
           <div class="resource-readout opponent-resource" aria-live="polite" aria-atomic="true" data-opponent-resource hidden>
             <span class="resource-name">Twilight Strength</span>
@@ -146,6 +392,12 @@ export function createGameUI(
           <p class="dialog-overline">The song has settled</p>
           <h2 id="result-title" data-result-title>Brightvale heard you.</h2>
           <p class="result-boundary">A missed note is not surrender.</p>
+          <div class="result-score" aria-live="off">
+            <span class="score-label">Score</span>
+            <strong class="score-value" data-result-score>0</strong>
+            ${scoreStarsMarkup('result-score')}
+            <p class="result-combo">Final combo <strong data-result-score-combo>0</strong> <span data-result-score-multiplier>×1</span></p>
+          </div>
           <div class="result-grid" data-result-grid></div>
           <button class="primary-button" type="button" data-action="restart" disabled>Sing again <span aria-hidden="true">↗</span></button>
           <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
@@ -203,6 +455,18 @@ export function createGameUI(
   let rendererMessage = 'Loading Brightvale…';
   let pendingPlaybackRequests = false;
   let resultsRendered = false;
+  const updateScore = createScoreReadout(root, 'score');
+  const updateResultScore = createScoreReadout(root, 'result-score');
+  const scoreTransitions = createScoreTransitionTracker();
+  const scoreEchoes = createScoreEchoLayer(root);
+  const motionPreference =
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+  const onMotionPreferenceChange = () => scoreEchoes.clear();
+  motionPreference?.addEventListener('change', onMotionPreferenceChange);
+  window.addEventListener('resize', scoreEchoes.clear);
+  let previousScoreFrame: ScoreTransitionState | null = null;
   const feedbackAnnouncements = createFeedbackAnnouncementTracker();
   const victoryAnnouncements = createVictoryAnnouncementTracker();
   const emptyRect: BrightvaleViewportRect = {
@@ -275,7 +539,12 @@ export function createGameUI(
         )
         .map((element) => ({
           kind: 'persistent' as const,
-          rect: readRect(element),
+          // The narrow-screen identity is visually repositioned inside its
+          // original flow slot. Exclude its actual painted bounds, not that slot.
+          rect: readRect(
+            element.querySelector<HTMLElement>('.heading-identity-copy') ??
+              element,
+          ),
         }))
         .filter(({ rect }) => rect.width > 0 && rect.height > 0),
       labels: {
@@ -325,11 +594,17 @@ export function createGameUI(
       ['start', 'resume', 'restart'].includes(action ?? '')
     )
       return;
-    if (action === 'start') actions.start();
-    else if (action === 'resume') actions.resume();
-    else if (action === 'restart') actions.restart();
-    else if (action === 'return') actions.returnToBrowser();
-    else if (action === 'renderer-retry') actions.onRendererRetry?.();
+    if (action === 'start' || action === 'restart') {
+      scoreEchoes.clear();
+      scoreTransitions.reset();
+      previousScoreFrame = null;
+      if (action === 'start') actions.start();
+      else actions.restart();
+    } else if (action === 'resume') actions.resume();
+    else if (action === 'return') {
+      scoreEchoes.clear();
+      actions.returnToBrowser();
+    } else if (action === 'renderer-retry') actions.onRendererRetry?.();
   }
 
   root.addEventListener('click', onClick);
@@ -345,6 +620,7 @@ export function createGameUI(
     const result = game.result;
     const grid = root.querySelector<HTMLElement>('[data-result-grid]');
     if (result === null || grid === null) return;
+    updateResultScore(result);
     const outcomeLabels = {
       victory: 'Victory',
       defeat: 'Defeat',
@@ -370,6 +646,7 @@ export function createGameUI(
 
   function render(snapshot: ControllerSnapshot, audioNow: number): void {
     const { audio, game } = snapshot;
+    updateScore(game);
     pendingPlaybackRequests = snapshot.pendingPlaybackRequests;
     const isError = audio.status === 'error' || fatalMessage !== null;
     const isResults = game.status === 'results';
@@ -383,6 +660,26 @@ export function createGameUI(
     const isPlaying = audio.status === 'playing' && game.status === 'playing';
     const isReady =
       !isPaused && !isPlaying && !isStarting && !isError && !isResults;
+    const echoesActive =
+      isPlaying &&
+      !isError &&
+      !pendingPlaybackRequests &&
+      rendererStatus === 'rendered';
+    if (
+      !echoesActive ||
+      motionPreference?.matches ||
+      (previousScoreFrame !== null &&
+        (game.score < previousScoreFrame.score ||
+          game.transportTime < previousScoreFrame.transportTime ||
+          game.normalMaximum !== previousScoreFrame.normalMaximum))
+    )
+      scoreEchoes.clear();
+    const echoes = scoreTransitions.update(game, {
+      active: echoesActive,
+      reducedMotion: motionPreference?.matches ?? false,
+    });
+    previousScoreFrame = { ...game };
+    for (const echo of echoes) scoreEchoes.play(echo);
     playSurface?.setAttribute('aria-busy', String(pendingPlaybackRequests));
     showPanel(
       isResults
@@ -578,6 +875,7 @@ export function createGameUI(
       busyMessage = message;
     },
     setRendererStatus(status, message) {
+      if (status !== 'rendered') scoreEchoes.clear();
       rendererStatus = status;
       rendererMessage =
         message ??
@@ -600,11 +898,16 @@ export function createGameUI(
       return gameplayLayout;
     },
     showFatal(message) {
+      if (message !== null) scoreEchoes.clear();
       fatalMessage = message;
       if (message !== null) setText(root, '[data-audio-error]', message);
       if (message !== null) showPanel('error');
     },
     destroy() {
+      scoreTransitions.dispose();
+      scoreEchoes.destroy();
+      motionPreference?.removeEventListener('change', onMotionPreferenceChange);
+      window.removeEventListener('resize', scoreEchoes.clear);
       root.removeEventListener('click', onClick);
       layoutResizeObserver?.disconnect();
       if (layoutResizeObserver === null && typeof window !== 'undefined')

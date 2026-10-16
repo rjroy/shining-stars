@@ -6,6 +6,8 @@ import type {
   AudioContextPort,
   AudioSourcePort,
 } from '../audio/audio';
+import type { SongCatalogEntry } from '../catalog/catalog';
+import { getTheoreticalMaximumScore } from '../game/game';
 import { createPerformanceCoordinator } from './performance';
 
 function testChart(difficulty: 'easy' | 'normal' | 'hard'): ChartConfig {
@@ -23,6 +25,32 @@ function testChart(difficulty: 'easy' | 'normal' | 'hard'): ChartConfig {
         lane: 0,
       },
     ],
+  };
+}
+
+function chartWithNoteCount(
+  difficulty: 'easy' | 'normal' | 'hard',
+  noteCount: number,
+): ChartConfig {
+  const chart = testChart(difficulty);
+  return {
+    ...chart,
+    notes: Array.from({ length: noteCount }, (_, index) => ({
+      id: `${difficulty}-note-${index}`,
+      time: 1.5 + index * 0.5,
+      lane: 0,
+    })),
+  };
+}
+
+function songWithDifferentChartLengths(song: SongCatalogEntry): SongCatalogEntry {
+  return {
+    ...song,
+    charts: {
+      easy: chartWithNoteCount('easy', 1),
+      normal: chartWithNoteCount('normal', 3),
+      hard: chartWithNoteCount('hard', 5),
+    },
   };
 }
 
@@ -233,6 +261,29 @@ describe('performance coordinator', () => {
       notes: [{ id: 'hard-chart-note', outcome: null }],
     });
   });
+
+  it.each(['easy', 'hard'] as const)(
+    'uses the Normal chart maximum while playing the %s chart with a different note count',
+    async (difficulty) => {
+      const h = harness();
+      const song = songWithDifferentChartLengths(h.song);
+      const normalMaximum = getTheoreticalMaximumScore(
+        song.charts.normal?.notes.length ?? 0,
+      );
+
+      await h.coordinator.prepare(song, difficulty);
+      await h.coordinator.markGameplayReady();
+
+      const game = h.coordinator.snapshot().controller?.game;
+      expect(game).toMatchObject({
+        difficulty,
+        normalMaximum,
+      });
+      expect(game?.notes).toHaveLength(difficulty === 'easy' ? 1 : 5);
+      expect(game?.normalMaximum).toBe(300);
+      await h.coordinator.dispose();
+    },
+  );
 
   it('cancels a decode logically on return and ignores late completion', async () => {
     const h = harness();

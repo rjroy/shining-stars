@@ -36,6 +36,10 @@ export interface GameResult {
   readonly twilightStrength: number;
   readonly difficulty: Difficulty;
   readonly outcome: GameOutcome;
+  readonly score: number;
+  readonly combo: number;
+  readonly multiplier: number;
+  readonly normalMaximum: number;
 }
 
 export interface GameSnapshot {
@@ -47,6 +51,11 @@ export interface GameSnapshot {
   readonly personalStrength: number;
   readonly twilightStrength: number;
   readonly difficulty: Difficulty;
+  readonly score: number;
+  readonly combo: number;
+  /** Multiplier that applies to the next successful hit. */
+  readonly multiplier: number;
+  readonly normalMaximum: number;
   readonly notes: readonly GameNoteState[];
   readonly result: GameResult | null;
 }
@@ -92,6 +101,8 @@ const MISS_EVENT_ORDER = 1;
 const HANDOFF_EVENT_ORDER = 0;
 const END_EVENT_ORDER = 2;
 const COMPARISON_ULPS = 8;
+const BASE_PERFECT_SCORE = 100;
+const MAX_SCORE_MULTIPLIER = 5;
 
 type Comparison = -1 | 0 | 1;
 
@@ -171,6 +182,30 @@ function makeStats(notes: readonly MutableGameNote[]): {
   };
 }
 
+/** Return the theoretical all-Perfect score for a chart with this many notes. */
+export function getTheoreticalMaximumScore(noteCount: number): number {
+  if (!Number.isInteger(noteCount) || noteCount < 0) {
+    throw new RangeError('Note count must be a non-negative integer.');
+  }
+
+  let total = 0;
+  for (let index = 0; index < noteCount; index += 1) {
+    const multiplier = Math.min(
+      MAX_SCORE_MULTIPLIER,
+      Math.floor(index / 10) + 1,
+    );
+    total += BASE_PERFECT_SCORE * multiplier;
+  }
+  return total;
+}
+
+function multiplierForNextHit(combo: number): number {
+  return Math.min(
+    MAX_SCORE_MULTIPLIER,
+    Math.floor(combo / 10) + 1,
+  );
+}
+
 function copyResult(result: GameResult | null): GameResult | null {
   if (result === null) {
     return null;
@@ -185,6 +220,10 @@ function copyResult(result: GameResult | null): GameResult | null {
     twilightStrength: result.twilightStrength,
     difficulty: result.difficulty,
     outcome: result.outcome,
+    score: result.score,
+    combo: result.combo,
+    multiplier: result.multiplier,
+    normalMaximum: result.normalMaximum,
   };
 }
 
@@ -193,6 +232,7 @@ export function createGame(
   chart: ChartConfig,
   inputOffset = 0,
   requestedDifficulty?: Difficulty,
+  requestedNormalMaximum?: number,
 ): GameSession {
   if (
     !Number.isFinite(inputOffset) ||
@@ -211,6 +251,12 @@ export function createGame(
     throw new TypeError(
       `Cannot start a game with an invalid chart. ${summary}`,
     );
+  }
+
+  const normalMaximum =
+    requestedNormalMaximum ?? getTheoreticalMaximumScore(chart.notes.length);
+  if (!Number.isInteger(normalMaximum) || normalMaximum < 0) {
+    throw new RangeError('Normal maximum score must be a non-negative integer.');
   }
 
   const allowedDifficulties = parseAllowedDifficulties(
@@ -245,6 +291,8 @@ export function createGame(
   let renown = 0;
   let personalStrength = 0;
   let twilightStrength = chart.twilightStrength;
+  let score = 0;
+  let combo = 0;
   let boundaryProcessed = false;
   let result: GameResult | null = null;
 
@@ -264,6 +312,10 @@ export function createGame(
       twilightStrength,
       difficulty,
       outcome,
+      score,
+      combo,
+      multiplier: multiplierForNextHit(combo),
+      normalMaximum,
     };
   }
 
@@ -291,6 +343,7 @@ export function createGame(
   function resolveMiss(note: MutableGameNote): void {
     if (note.outcome === null) {
       note.outcome = 'miss';
+      combo = 0;
       if (note.phase === 'audience') {
         renown = Math.max(0, renown + profile.audience.miss);
       }
@@ -396,6 +449,10 @@ export function createGame(
       personalStrength,
       twilightStrength,
       difficulty,
+      score,
+      combo,
+      multiplier: multiplierForNextHit(combo),
+      normalMaximum,
       notes: notes.map((note) => ({
         id: note.id,
         lane: note.lane,
@@ -495,6 +552,34 @@ export function createGame(
         : 'good';
 
       selected.outcome = quality;
+      const absoluteError = Math.abs(selectedError);
+      const basePoints =
+        quality === 'perfect'
+          ? BASE_PERFECT_SCORE
+          : Math.max(
+              0,
+              (BASE_PERFECT_SCORE *
+                (profile.timing.goodWindowSeconds - absoluteError)) /
+                (profile.timing.goodWindowSeconds -
+                  profile.timing.perfectWindowSeconds),
+            );
+      const hitMultiplier = multiplierForNextHit(combo);
+      // Account only for input-time floating-point cancellation at exact
+      // half-point boundaries; the scoring result remains an integer.
+      const goodWindowWidth =
+        profile.timing.goodWindowSeconds -
+        profile.timing.perfectWindowSeconds;
+      const roundingTolerance =
+        quality === 'good' && goodWindowWidth > 0
+          ? (Number.EPSILON *
+              COMPARISON_ULPS *
+              Math.max(1, Math.abs(transportTime), Math.abs(selected.time)) *
+              BASE_PERFECT_SCORE *
+              hitMultiplier) /
+            goodWindowWidth
+          : 0;
+      score += Math.round(basePoints * hitMultiplier + roundingTolerance);
+      combo += 1;
       if (phase === 'audience') {
         renown += profile.audience[quality];
       } else {

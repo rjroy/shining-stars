@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import { getDifficultyProfile } from '../game/game-balance';
+import { getTheoreticalMaximumScore } from '../game/game';
 import {
   FEEDBACK_VISIBLE_SECONDS,
   isFeedbackWithinVisibleAge,
@@ -43,6 +44,10 @@ function snapshot(
     personalStrength: 100,
     twilightStrength: 100,
     difficulty: 'hard' as const,
+    score: 0,
+    combo: 0,
+    multiplier: 1,
+    normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
     notes: [{ id: 'n-1', lane: 2 as const, phase: 'audience' as const, outcome: null }],
     result: null,
   };
