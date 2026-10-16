@@ -30,4 +30,4 @@ Alongside the game-distance composition, show a close view of a small representa
 - `assets/authoring/brightvale-distant-city/concept-candidate.webp` — approved city concept. Its audience is explicitly a rough placeholder, not an approved crowd design.
 - `assets/authoring/neon-twilight-platform/concept.webp` — approved standalone platform reference, not a crowd reference.
 - `.lore/work/design/brightvale-perspective-highway.md` — approved low camera and gameplay-first framing; later amendment removes stage and performer and forbids a replacement focal structure.
-- `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — current project asset context.
+- [Brightvale asset direction](../../../docs/asset-direction.md) — current project asset context.

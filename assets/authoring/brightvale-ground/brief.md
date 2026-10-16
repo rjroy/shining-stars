@@ -31,8 +31,7 @@ No alpha is needed. Color texture, intended for sRGB sampling.
   tint; existing shadows; no new geometry.
 - Existing combined review: `assets/production/brightvale-scene-review/audience.webp`
   and `twilight.webp` (existing flat ground and current scene framing).
-- Project direction context:
-  `.agents/skills/asset-workflow/references/brightvale-asset-context.md` and
+- Project direction context: [Brightvale asset direction](../../../docs/asset-direction.md) and
   `assets/authoring/brightvale-scene-review/composition-brief.md`.
 
 Description approval and task-specific generation authorization are recorded

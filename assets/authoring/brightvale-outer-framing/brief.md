@@ -26,7 +26,7 @@ Keep central lanes, notes, target area, and existing HUD/control regions readabl
 
 - `.lore/work/mockups/Golden City Rhythm Concert.webp` and `.lore/work/mockups/Neon Twilight Rhythm City.webp` — opened and inspected for edge rails, bridge-like architecture, composition, and the two twilight treatments. Decorative mockup content is not automatically required.
 - `.lore/work/design/brightvale-perspective-highway.md` — approved low camera and gameplay-first framing; later amendment excludes stage/performer and replacement focal structures.
-- `.agents/skills/asset-workflow/references/brightvale-asset-context.md` — current Brightvale asset guidance.
+- [Brightvale asset direction](../../../docs/asset-direction.md) — current project guidance and reference precedence.
 - `assets/authoring/brightvale-distant-city/concept-candidate.webp` and `assets/authoring/brightvale-distant-city/README.md` — approved distant city; composite context is not approval of the other layers.
 - `assets/authoring/brightvale-crowd/concept-cel-shaded-candidate.webp`, `assets/authoring/brightvale-crowd/brief.md`, and `assets/authoring/brightvale-crowd/README.md` — approved cel-shaded anime crowd direction and contemporary clothing; crowd remains a separate layer.
 - `assets/authoring/neon-twilight-platform/concept.webp` and `assets/authoring/neon-twilight-platform/README.md` — approved platform is a separate layer; do not duplicate its framing.
