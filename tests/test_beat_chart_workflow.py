@@ -555,6 +555,142 @@ class BeatChartWorkflowTests(unittest.TestCase):
         self.assertEqual(self.calls, [], "profile changes must invalidate cache without tools")
 
 
+class GeneratedScoringMetadataTests(unittest.TestCase):
+    """Exercise the bulk generator with local source/cache fixtures only."""
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.root = Path(self.tempdir.name)
+        self.source = self.root / "source.mp3"
+        self.source.write_bytes(b"synthetic source audio")
+        self.song_id = "scoring-fixture"
+        self.config = self.root / "song-authoring.json"
+        settings = {
+            "source": str(self.source),
+            "start_time": 0,
+            "duration": 100,
+            "twilight_time": 50,
+            "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
+            "difficulties": {
+                difficulty: {
+                    "twilight_strength": 80,
+                    "minimum_delta": 64,
+                    "stride": 1,
+                }
+                for difficulty in beat_chart.DIFFICULTIES
+            },
+        }
+        self.config.write_text(
+            json.dumps({"schema_version": 2, "songs": {self.song_id: settings}}),
+            encoding="utf-8",
+        )
+        self.generated_dir = self.root / "generated"
+        self.onsets_dir = self.root / "onsets"
+        self.reports_dir = self.root / "reports"
+        self.pitch_dir = self.root / "pitch"
+        self.normal_note_time = 1.0
+        self.patches = patch.multiple(
+            beat_chart,
+            DEFAULT_GENERATED_DIR=self.generated_dir,
+            DEFAULT_ONSETS_DIR=self.onsets_dir,
+            DEFAULT_REPORTS_DIR=self.reports_dir,
+            DEFAULT_PITCH_CACHE_DIR=self.pitch_dir,
+            _analysis_for_song=self.analysis_cache,
+            _pitch_analysis_for_song=self.pitch_cache,
+            _source_duration=lambda _source, _runner: 10.0,
+            _difficulty_chart=self.chart_for_difficulty,
+        )
+        self.patches.start()
+        self.addCleanup(self.patches.stop)
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def analysis_cache(self, _song_id, settings, _source, _digest, _runner, _check, _path):
+        return {
+            "onsets": [1.0, 2.0, 3.0],
+            "source_duration_seconds": 10.0,
+            "projection": {
+                "song": settings,
+                "profile_sha256": beat_chart._profile_file_hash(),
+            },
+            "pitch_analysis_key": "a" * 64,
+        }
+
+    @staticmethod
+    def pitch_cache(_song_id, _source, _digest, _runner, _check, _onsets):
+        return {"analysis_key": "a" * 64, "frames": []}
+
+    def chart_for_difficulty(
+        self, _onsets, _settings, _duration, _profile, difficulty, _song_id,
+        _digest, _frames, with_analysis=False,
+    ):
+        note_time = self.normal_note_time if difficulty == "normal" else 2.0
+        chart = {
+            "sourceStart": 0,
+            "duration": 10,
+            "twilightAt": 5,
+            "twilightStrength": 1,
+            "allowedDifficulties": [difficulty],
+            "notes": [{"id": f"{difficulty}-note", "time": note_time, "lane": 0}],
+        }
+        analysis = {"controls": {}, "metrics": {}}
+        return (chart, [], 1, analysis) if with_analysis else (chart, [], 1)
+
+    def run_generator(self, *extra):
+        return beat_chart.main(
+            ["--song-config", str(self.config), "--song", self.song_id, *extra]
+        )
+
+    def generated_bundle(self):
+        path = self.generated_dir / f"{self.song_id}.charts.json"
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_generated_bundle_has_scoring_metadata_and_repeat_fingerprint_is_stable(self):
+        self.assertEqual(self.run_generator(), 0)
+        first = self.generated_bundle()
+        self.assertIn("scoring", first)
+        self.assertEqual(first["scoring"]["version"], 1)
+        self.assertEqual(first["scoring"]["normalMaximum"], 100)
+        self.assertEqual(first["scoring"]["fiveGoldTarget"], 90)
+        fingerprint = first["scoring"]["chartFingerprint"]
+        self.assertIsInstance(fingerprint, str)
+        self.assertTrue(fingerprint)
+
+        self.assertEqual(self.run_generator(), 0)
+        self.assertEqual(self.generated_bundle()["scoring"]["chartFingerprint"], fingerprint)
+
+    def test_normal_chart_content_change_invalidates_fingerprint(self):
+        self.assertEqual(self.run_generator(), 0)
+        first = self.generated_bundle()
+        self.assertIn("scoring", first)
+        first_fingerprint = first["scoring"]["chartFingerprint"]
+
+        self.normal_note_time = 1.25
+        self.assertEqual(self.run_generator(), 0)
+        second = self.generated_bundle()
+        self.assertNotEqual(second["scoring"]["chartFingerprint"], first_fingerprint)
+
+    def test_check_rejects_bundle_with_removed_scoring_metadata(self):
+        self.assertEqual(self.run_generator(), 0)
+        bundle_path = self.generated_dir / f"{self.song_id}.charts.json"
+        bundle = self.generated_bundle()
+        # Seed the current contract field so this remains a behavior assertion
+        # against today's RED generator rather than a missing-key/import failure.
+        bundle["scoring"] = {
+            "version": 1,
+            "normalMaximum": 100,
+            "fiveGoldTarget": 90,
+            "chartFingerprint": "a" * 64,
+        }
+        bundle_path.write_text(json.dumps(bundle, indent=2) + "\n", encoding="utf-8")
+        bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+        del bundle["scoring"]
+        bundle_path.write_text(json.dumps(bundle, indent=2) + "\n", encoding="utf-8")
+
+        self.assertNotEqual(self.run_generator("--check"), 0)
+
+
 class SongAuthoringConfigTests(unittest.TestCase):
     def test_difficulty_lane_mapping_overrides_are_independent_and_defaulted(self):
         source_path = beat_chart.PROJECT_ROOT / "data/charts/song-authoring.json"

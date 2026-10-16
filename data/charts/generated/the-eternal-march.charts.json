@@ -5190,6 +5190,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "aa3409e4468335cede188854a4924c933b7cdebb99cf7d2863e0e55db8337c4a",
+    "fiveGoldTarget": 116100,
+    "normalMaximum": 129000,
+    "version": 1
+  },
   "songId": "the-eternal-march",
   "source": "data/music/The Eternal March.mp3"
 }

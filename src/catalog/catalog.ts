@@ -15,6 +15,13 @@ export type SongAvailability = 'available' | 'unavailable';
 export type SongChartStatus = 'candidate' | 'verified';
 export type SongSegmentKind = 'excerpt' | 'full';
 
+export interface SongScoringMetadata {
+  readonly version: 1;
+  readonly normalMaximum: number | null;
+  readonly fiveGoldTarget: number | null;
+  readonly chartFingerprint: string | null;
+}
+
 export interface SongCollection {
   readonly id: string;
   readonly title: string;
@@ -38,6 +45,7 @@ export interface SongCatalogEntry {
   readonly audioUrl: string;
   readonly source: string;
   readonly charts: Readonly<Partial<Record<Difficulty, ChartConfig>>>;
+  readonly scoring: SongScoringMetadata;
   readonly segmentKind: SongSegmentKind;
   readonly availability: SongAvailability;
   readonly chartStatus: SongChartStatus;
@@ -57,7 +65,7 @@ export interface CatalogMetadata {
   readonly schemaVersion: number;
   readonly songs: readonly Omit<
     SongCatalogEntry,
-    'audioUrl' | 'source' | 'charts' | 'collections'
+    'audioUrl' | 'source' | 'charts' | 'scoring' | 'collections'
   >[];
   readonly collections: readonly SongCollectionMetadata[];
 }
@@ -66,6 +74,7 @@ export interface GeneratedSongCharts {
   readonly schemaVersion: number;
   readonly songId: string;
   readonly source: string;
+  readonly scoring: SongScoringMetadata;
   readonly charts: Readonly<Partial<Record<Difficulty, ChartConfig>>>;
 }
 
@@ -73,6 +82,7 @@ interface GeneratedSongChartsEnvelope {
   readonly schemaVersion: 1;
   readonly songId: string;
   readonly source: string;
+  readonly scoring: unknown;
   readonly charts: Readonly<Record<string, unknown>>;
 }
 
@@ -109,6 +119,37 @@ function resolveCollectionArtwork(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isSongScoringMetadata(
+  value: unknown,
+  hasNormalChart: boolean,
+): value is SongScoringMetadata {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).length !== 4 ||
+    value.version !== 1 ||
+    !Object.prototype.hasOwnProperty.call(value, 'normalMaximum') ||
+    !Object.prototype.hasOwnProperty.call(value, 'fiveGoldTarget') ||
+    !Object.prototype.hasOwnProperty.call(value, 'chartFingerprint')
+  )
+    return false;
+  if (!hasNormalChart)
+    return (
+      value.normalMaximum === null &&
+      value.fiveGoldTarget === null &&
+      value.chartFingerprint === null
+    );
+  return (
+    typeof value.normalMaximum === 'number' &&
+    Number.isSafeInteger(value.normalMaximum) &&
+    value.normalMaximum >= 0 &&
+    typeof value.fiveGoldTarget === 'number' &&
+    Number.isSafeInteger(value.fiveGoldTarget) &&
+    value.fiveGoldTarget === Math.ceil(value.normalMaximum * 0.9) &&
+    typeof value.chartFingerprint === 'string' &&
+    /^[0-9a-f]{64}$/.test(value.chartFingerprint)
+  );
 }
 
 function isChartNote(value: unknown): value is ChartConfig['notes'][number] {
@@ -167,6 +208,7 @@ function chartFilesById(
       schemaVersion: 1,
       songId: value.songId,
       source: value.source,
+      scoring: value.scoring,
       charts: value.charts,
     };
     const fileId = path
@@ -316,6 +358,10 @@ export function createSongCatalog(
       charts[difficulty] = deepFreezeChart(chart);
     }
     const present = Object.keys(charts) as Difficulty[];
+    if (!isSongScoringMetadata(bundle.scoring, charts.normal !== undefined))
+      throw new TypeError(
+        `Song '${metadataSong.id}' has invalid generated scoring metadata.`,
+      );
     defaultDifficulty(present);
     if (
       metadataSong.segmentKind === 'full' &&
@@ -330,6 +376,7 @@ export function createSongCatalog(
       source,
       audioUrl,
       charts: Object.freeze(charts),
+      scoring: Object.freeze({ ...bundle.scoring }),
       collections: Object.freeze(
         metadata.collections
           .filter((collection) => collection.songIds.includes(metadataSong.id))

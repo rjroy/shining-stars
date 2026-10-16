@@ -47,6 +47,7 @@ DEFAULT_REPORTS_DIR = PROJECT_ROOT / "data/charts/reports"
 PITCH_RECIPE_VERSION = pitch_analysis.PITCH_RECIPE_VERSION
 PITCH_RECIPE_ARGS = pitch_analysis.PITCH_RECIPE_ARGS
 DIFFICULTIES = ("easy", "normal", "hard")
+SCORING_VERSION = 1
 DIFFICULTY_AUTHORING = {
     "easy": {"twilight_strength": 70, "minimum_delta": 64, "stride": 3},
     "normal": {"twilight_strength": 80, "minimum_delta": 64, "stride": 2},
@@ -748,6 +749,41 @@ def _map_pitch_lanes(records, fallback_lanes, controls):
     return map_lanes(records, fallback_lanes, controls)
 
 
+def _theoretical_maximum_score(note_count):
+    """Return the maximum score using ten-hit bands capped at 5x."""
+    full_bands, remainder = divmod(note_count, 10)
+    capped_bands = min(full_bands, 5)
+    multiplier_sum = capped_bands * (capped_bands + 1) // 2
+    multiplier_sum += max(full_bands - 5, 0) * 5
+    next_multiplier = min(full_bands + 1, 5)
+    return 100 * (10 * multiplier_sum + remainder * next_multiplier)
+
+
+def _scoring_metadata(charts):
+    normal_chart = charts.get("normal")
+    if normal_chart is None:
+        return {
+            "version": SCORING_VERSION,
+            "normalMaximum": None,
+            "fiveGoldTarget": None,
+            "chartFingerprint": None,
+        }
+    normal_maximum = _theoretical_maximum_score(len(normal_chart["notes"]))
+    fingerprint_input = json.dumps(
+        {"version": SCORING_VERSION, "normal": normal_chart},
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return {
+        "version": SCORING_VERSION,
+        "normalMaximum": normal_maximum,
+        "fiveGoldTarget": math.ceil(normal_maximum * 0.9),
+        "chartFingerprint": hashlib.sha256(fingerprint_input).hexdigest(),
+    }
+
+
 def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_path):
     if onset_path.exists():
         cached = json.loads(onset_path.read_text(encoding="utf-8"))
@@ -814,7 +850,13 @@ def _bulk_run(args, runner):
             "pitch_analysis_key": pitch_cache["analysis_key"],
         })
         onset_text = json.dumps(cache, indent=2, sort_keys=True, allow_nan=False) + "\n"
-        envelope = {"schemaVersion": 1, "songId": song_id, "source": settings["source"], "charts": charts}
+        envelope = {
+            "schemaVersion": 1,
+            "songId": song_id,
+            "source": settings["source"],
+            "charts": charts,
+            "scoring": _scoring_metadata(charts),
+        }
         generated_path = DEFAULT_GENERATED_DIR / f"{song_id}.charts.json"
         report = {
             "schema_version": 1,

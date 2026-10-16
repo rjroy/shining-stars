@@ -6720,6 +6720,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "aec6ba9e2f9a973d57920f6f118b862b392efd89c6ac8af61ea12af435010f2b",
+    "fiveGoldTarget": 153900,
+    "normalMaximum": 171000,
+    "version": 1
+  },
   "songId": "everythings-different-this-year",
   "source": "data/music/Everything's Different This Year.mp3"
 }

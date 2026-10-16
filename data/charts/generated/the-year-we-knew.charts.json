@@ -6890,6 +6890,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "63be04694be697031b1cc28988622e5500774608e55f6ce17cb9693b8da0fd29",
+    "fiveGoldTarget": 158400,
+    "normalMaximum": 176000,
+    "version": 1
+  },
   "songId": "the-year-we-knew",
   "source": "data/music/The Year We Knew.mp3"
 }

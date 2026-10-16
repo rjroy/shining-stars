@@ -5150,6 +5150,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "8e7ce27a3e13c68357e40c9ea015862c777712b4e7b9984cb90c2646bf58327d",
+    "fiveGoldTarget": 116100,
+    "normalMaximum": 129000,
+    "version": 1
+  },
   "songId": "the-last-true-performer",
   "source": "data/music/The Last True Performer (Remastered).mp3"
 }

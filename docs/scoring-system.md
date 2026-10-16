@@ -1,6 +1,6 @@
 # Scoring system
 
-This document records the agreed scoring rules for Shining Stars. Implementation is tracked in `shining-stars-4f4.35`; local best ratings and song-selection targets are separate follow-up work in `shining-stars-c0n`.
+This document records the agreed scoring rules for Shining Stars. Scoring implementation is tracked in `shining-stars-4f4.35`. Generated scoring metadata, local saved ratings, completed-result saving, and their song-selection display are tracked in `shining-stars-c0n`.
 
 ## Purpose
 
@@ -33,12 +33,12 @@ score += awardedPoints
 ## Combo and multiplier
 
 | Successful note in the current streak | Multiplier |
-| --- | --- |
-| 1–10 | ×1 |
-| 11–20 | ×2 |
-| 21–30 | ×3 |
-| 31–40 | ×4 |
-| 41 onward | ×5 |
+| ------------------------------------- | ---------- |
+| 1–10                                  | ×1         |
+| 11–20                                 | ×2         |
+| 21–30                                 | ×3         |
+| 31–40                                 | ×4         |
+| 41 onward                             | ×5         |
 
 The tenth successful hit earns the increased multiplier for the **next** note. The HUD shows that next-note multiplier: after hit 10 it displays ×2, although hit 10 earned ×1 points.
 
@@ -68,12 +68,12 @@ All current songs have a Normal chart. The current implementation falls back to 
 Display **five stars**, not ten. They progressively fill as normal stars, then the same five stars progressively turn gold.
 
 | Completed star | Normal threshold | Gold threshold |
-| --- | --- | --- |
-| 1 | 20% | 70% |
-| 2 | 30% | 75% |
-| 3 | 40% | 80% |
-| 4 | 50% | 85% |
-| 5 | 60% | 90% |
+| -------------- | ---------------- | -------------- |
+| 1              | 20%              | 70%            |
+| 2              | 30%              | 75%            |
+| 3              | 40%              | 80%            |
+| 4              | 50%              | 85%            |
+| 5              | 60%              | 90%            |
 
 Percentages refer to the song’s Normal maximum.
 
@@ -110,12 +110,40 @@ These are decorative, non-interactive overlays, not additional stars or score. T
 
 Initial rendering, restart, results, and reduced-motion updates do not replay milestones. Audience, Twilight, and Radiant continue the same milestone history. Reduced motion disables the echoes without delaying the real HUD update. Transient copies, animation callbacks, and fallback timers are removed on completion, restart, pause/results, motion-preference changes, and UI disposal; disposal also removes preference and resize listeners.
 
-## Separate follow-up: saved achievements in song selection
+## Generated targets and saved achievements
 
-`shining-stars-c0n` tracks displaying these alongside song length:
+Each generated chart bundle carries version-1 scoring metadata derived offline
+from its Normal chart: the theoretical all-Perfect Normal maximum, the
+five-gold target (`ceil(normalMaximum × 0.9)`), and a SHA-256 fingerprint of the
+scoring version and canonical Normal chart. Bundles without a Normal chart use
+`null` for all three values. The runtime catalog validates and exposes this
+metadata so target presentation can use the generated target instead of
+scanning charts at startup. Regenerate and run `chart:check` after Normal-chart
+or scoring-rule changes; the check verifies the generated target and fingerprint
+are current.
 
-- The player’s best earned normal/gold star rating for each song, retained in localStorage across runs and reloads.
-- The five-gold target score: **90% of the song’s Normal maximum**.
-- Cached or precomputed values, rather than recalculating from full charts on every app load. Cached targets must refresh when their chart or scoring rules change.
+The `song-ratings.ts` primitive provides localStorage-backed best earned
+normal/gold counts keyed by stable song ID. A missing entry means **unplayed**;
+a stored `0 normal / 0 gold` rating means the song was played and completed with
+no stars. Saved counts are the earned counts at completion, not a value
+recomputed from current target metadata. A later target revision therefore does
+not erase historical achievements, and a worse run never replaces a better
+record. The saved ordering is `normalStars × 6 + goldStars`, so normal stars
+dominate and gold stars break ties. Song selection shows five static star slots
+in each song row and selected detail, retaining duration and distinguishing
+unplayed from played with zero stars. The selected detail shows the generated
+five-gold target unchanged across difficulty choices, or an explicit unavailable
+state when there is no Normal chart. Menu ratings never trigger gameplay echoes.
 
-Losing saved achievements when browser storage is cleared is an accepted limitation. Cloud synchronization, leaderboards, unlocks, and meta-progression are outside this scoring implementation.
+Gameplay records the selected song's rating when it reaches a terminal result:
+Victory, Survived, or Defeat, including a zero-star Defeat. Songs without a Normal
+baseline are skipped. Quit and restart are not completions and do not write a
+rating; active/per-frame updates do not write either. Returning to selection
+refreshes both list and detail from saved ratings without another interaction.
+Corrupt or denied localStorage falls back to in-memory session ratings with a
+notice. The selector reads the current rating-storage notice on normal rendering
+and idle return, including fallback after a result write; Favorites warnings
+remain visible alongside it. Clearing browser storage loses saved achievements.
+Cloud synchronization, leaderboards, unlocks, and meta-progression are outside
+this scope. Independent actual-app validation of return-time row refresh and
+storage notices remains separate from this implementation description.

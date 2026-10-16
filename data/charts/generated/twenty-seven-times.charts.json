@@ -3250,6 +3250,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "906c9b9f2e1828c25ed441aa3d7604956591e58bff14c9f215a37b62c3e9ad39",
+    "fiveGoldTarget": 69750,
+    "normalMaximum": 77500,
+    "version": 1
+  },
   "songId": "twenty-seven-times",
   "source": "data/music/Twenty Seven Times.mp3"
 }

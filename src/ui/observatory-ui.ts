@@ -13,6 +13,7 @@ import {
   type SongSelection,
 } from '../catalog/selectors';
 import { createFavoriteStore, type FavoriteStore } from '../catalog/favorites';
+import type { SongRating } from '../catalog/song-ratings';
 import { ensureExperienceShell } from './experience-shell';
 import type { BrightvaleRendererStatus } from '../rendering/brightvale/viewport';
 
@@ -34,6 +35,22 @@ export type ObservatoryPlayStatus = 'idle' | 'preparing' | 'error';
 export interface ObservatoryUIActions {
   readonly onPlay: (request: ObservatoryPlayRequest) => void;
   readonly onRendererRetry?: () => void;
+}
+
+export interface ObservatoryUIOptions {
+  readonly getSongRating?: (songId: string) => SongRating | null;
+  readonly getRatingNotice?: () => string | null;
+}
+
+/** Keep each independent local-storage warning visible without replacing it. */
+export function getObservatoryStorageNotice(
+  favoriteNotice: string | null,
+  ratingNotice: string | null,
+): string | null {
+  const notices = [favoriteNotice, ratingNotice].filter(
+    (notice): notice is string => notice !== null && notice !== '',
+  );
+  return notices.length > 0 ? [...new Set(notices)].join(' ') : null;
 }
 
 export interface ObservatorySelectionSnapshot {
@@ -95,6 +112,34 @@ export function formatSongDuration(seconds: number): string {
 
 function browseChart(song: SongCatalogEntry) {
   return getSongChart(song, defaultDifficulty(getSongDifficulties(song)));
+}
+
+/** Static menu presentation only: targets come from generated metadata. */
+export function getObservatorySongPresentation(
+  song: SongCatalogEntry,
+  rating: SongRating | null,
+) {
+  const normal = rating?.normalStars ?? 0;
+  const gold = rating?.goldStars ?? 0;
+  const path = 'M50 5 63 34 95 38 71 60 78 93 50 76 22 93 29 60 5 38 37 34Z';
+  const starsMarkup = `<span class="song-rating-stars" role="img" aria-label="Normal stars: ${normal} of 5; Gold stars: ${gold} of 5.">${Array.from(
+    { length: 5 },
+    (_, index) =>
+      `<svg data-rating-slot="${index}" data-rating-normal="${index < normal}" data-rating-gold="${index < gold}" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="song-rating-empty" d="${path}"/>${index < normal ? `<path class="song-rating-normal" d="${path}"/>` : ''}${index < gold ? `<path class="song-rating-gold" d="${path}"/>` : ''}</svg>`,
+  ).join('')}</span>`;
+  const hasTarget = song.scoring.fiveGoldTarget !== null;
+  return {
+    durationText: formatSongDuration(browseChart(song).duration),
+    bestText:
+      rating === null ? 'Not played' : `${normal} normal · ${gold} gold`,
+    starsMarkup,
+    fiveGoldTargetText: hasTarget
+      ? song.scoring.fiveGoldTarget!.toLocaleString('en-US')
+      : 'Not available',
+    targetBasisText: hasTarget
+      ? '90% of the Normal maximum · Same for every difficulty'
+      : 'No Normal chart',
+  };
 }
 
 const escapeKey = 'Escape';
@@ -165,6 +210,7 @@ export function createObservatoryUI(
   catalog: SongCatalog,
   actions: ObservatoryUIActions,
   favoriteStore: FavoriteStore = createFavoriteStore(),
+  options: ObservatoryUIOptions = {},
 ): ObservatoryUI {
   const shell = ensureExperienceShell(applicationRoot);
   const root = shell.createScreen('observatory', 'Observatory song selection');
@@ -310,6 +356,14 @@ export function createObservatoryUI(
     node.hidden = !visible;
   }
 
+  function syncStorageNotice(): void {
+    const notice = getObservatoryStorageNotice(
+      favoriteStore.snapshot().notice,
+      options.getRatingNotice?.() ?? null,
+    );
+    setNotice('[data-storage-notice]', notice ?? '', notice !== null);
+  }
+
   function syncFilterControls(): void {
     const availability = root.querySelector<HTMLSelectElement>(
       '[data-filter-availability]',
@@ -423,6 +477,10 @@ export function createObservatoryUI(
       `${results.length} ${results.length === 1 ? 'performance' : 'performances'}`;
     const fragment = document.createDocumentFragment();
     results.forEach((song, index) => {
+      const presentation = getObservatorySongPresentation(
+        song,
+        options.getSongRating?.(song.id) ?? null,
+      );
       const row = document.createElement('div');
       row.className = `song-row${song.id === currentSelection.selectedSongId ? ' is-selected' : ''}${song.availability === 'unavailable' ? ' is-unavailable' : ''}`;
       row.setAttribute('role', 'listitem');
@@ -449,11 +507,18 @@ export function createObservatoryUI(
       const status = document.createElement('small');
       status.textContent =
         song.segmentKind === 'excerpt'
-          ? `Demo excerpt · play-test chart · ${formatSongDuration(browseChart(song).duration)}`
+          ? `Demo excerpt · play-test chart · ${presentation.durationText}`
           : song.availability === 'unavailable'
-            ? `Unavailable · ${formatSongDuration(browseChart(song).duration)}`
-            : `Play-test chart · ${formatSongDuration(browseChart(song).duration)}`;
-      text.append(title, status);
+            ? `Unavailable · ${presentation.durationText}`
+            : `Play-test chart · ${presentation.durationText}`;
+      const best = document.createElement('span');
+      best.className = 'song-row-rating';
+      best.dataset.songBest = song.id;
+      best.innerHTML = presentation.starsMarkup;
+      const bestCopy = document.createElement('span');
+      bestCopy.textContent = presentation.bestText;
+      best.append(bestCopy);
+      text.append(title, status, best);
       select.append(text);
       const favorite = createButton(
         favoriteStore.isFavorite(song.id)
@@ -494,6 +559,10 @@ export function createObservatoryUI(
       detail.append(empty);
       return;
     }
+    const presentation = getObservatorySongPresentation(
+      song,
+      options.getSongRating?.(song.id) ?? null,
+    );
     const heading = document.createElement('div');
     heading.className = 'song-detail-heading';
     const art = document.createElement('div');
@@ -509,7 +578,7 @@ export function createObservatoryUI(
       song.segmentKind === 'excerpt' ? 'Demo excerpt' : 'Full track';
     const duration = document.createElement('p');
     duration.className = 'song-detail-duration';
-    duration.textContent = `${formatSongDuration(browseChart(song).duration)} playable`;
+    duration.textContent = `${presentation.durationText} playable`;
     heading.append(art, eyebrow, title, duration);
 
     const status = document.createElement('p');
@@ -520,6 +589,31 @@ export function createObservatoryUI(
         : song.chartStatus === 'candidate'
           ? 'Play-test chart · still being refined'
           : 'Chart verified';
+
+    const achievement = document.createElement('section');
+    achievement.className = 'song-achievement';
+    achievement.dataset.songAchievement = song.id;
+    achievement.setAttribute('aria-label', 'Personal best and target');
+    const bestLabel = document.createElement('p');
+    bestLabel.className = 'song-achievement-label';
+    bestLabel.textContent = 'Personal best';
+    const bestStars = document.createElement('div');
+    bestStars.innerHTML = presentation.starsMarkup;
+    const bestCopy = document.createElement('p');
+    bestCopy.className = 'song-best-copy';
+    bestCopy.textContent = presentation.bestText;
+    const target = document.createElement('p');
+    target.className = 'song-target';
+    const targetLabel = document.createElement('span');
+    targetLabel.textContent = 'Five-gold target';
+    const targetValue = document.createElement('strong');
+    targetValue.dataset.fiveGoldTarget = '';
+    targetValue.textContent = presentation.fiveGoldTargetText;
+    target.append(targetLabel, targetValue);
+    const basis = document.createElement('p');
+    basis.className = 'song-target-basis';
+    basis.textContent = presentation.targetBasisText;
+    achievement.append(bestLabel, bestStars, bestCopy, target, basis);
 
     const difficultyLabel = document.createElement('label');
     difficultyLabel.className = 'song-difficulty-label';
@@ -563,7 +657,7 @@ export function createObservatoryUI(
     help.id = 'song-play-help';
     help.className = 'song-play-help';
     help.textContent = playStatus === 'error' ? playMessage : reason;
-    detail.append(heading, status, difficultyLabel, play, help);
+    detail.append(heading, status, achievement, difficultyLabel, play, help);
   }
 
   function render(): void {
@@ -622,12 +716,7 @@ export function createObservatoryUI(
     renderAnchors();
     renderRows();
     renderDetail();
-    const storage = favoriteStore.snapshot();
-    setNotice(
-      '[data-storage-notice]',
-      storage.notice ?? '',
-      storage.notice !== null,
-    );
+    syncStorageNotice();
     setNotice(
       '[data-play-status]',
       playMessage,
@@ -847,6 +936,10 @@ export function createObservatoryUI(
     setPlayStatus(status, message = '') {
       playStatus = status;
       playMessage = message;
+      if (status === 'idle') {
+        renderRows();
+        syncStorageNotice();
+      }
       renderDetail();
       setNotice(
         '[data-play-status]',

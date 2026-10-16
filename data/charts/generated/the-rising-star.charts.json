@@ -9605,6 +9605,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "cbcd5e79f2505b12e5885dea58b1c358fa67e81fec149c479669621b44b84ef7",
+    "fiveGoldTarget": 224100,
+    "normalMaximum": 249000,
+    "version": 1
+  },
   "songId": "the-rising-star",
   "source": "data/music/The Rising Star (Remastered).mp3"
 }

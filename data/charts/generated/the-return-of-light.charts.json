@@ -6065,6 +6065,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "5cc5b45e2805a7a16e7c9febe533358eb2b0fa8054f5c18a067dd2a0553efb3e",
+    "fiveGoldTarget": 138150,
+    "normalMaximum": 153500,
+    "version": 1
+  },
   "songId": "the-return-of-light",
   "source": "data/music/The Return of Light.mp3"
 }

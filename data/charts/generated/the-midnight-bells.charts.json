@@ -3255,6 +3255,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "8d7924dc65f3568543af7728722195d816e0c0bc33364134b2395a8b28a53ccd",
+    "fiveGoldTarget": 69750,
+    "normalMaximum": 77500,
+    "version": 1
+  },
   "songId": "the-midnight-bells",
   "source": "data/music/The Midnight Bells.mp3"
 }

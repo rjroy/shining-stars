@@ -4540,6 +4540,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "b78a73273299aa764340e434c659d4d32034b5f1cedf4c67442c4379ffc66bbb",
+    "fiveGoldTarget": 101250,
+    "normalMaximum": 112500,
+    "version": 1
+  },
   "songId": "the-smallest-light",
   "source": "data/music/The Smallest Light.mp3"
 }

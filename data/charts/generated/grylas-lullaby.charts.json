@@ -12350,6 +12350,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "43cf8a3d31e7cba8feaeef023e7c46a6f60df89973e627ce5412dc59a4265d22",
+    "fiveGoldTarget": 290700,
+    "normalMaximum": 323000,
+    "version": 1
+  },
   "songId": "grylas-lullaby",
   "source": "data/music/Gr\u00fdla's Lullaby.mp3"
 }

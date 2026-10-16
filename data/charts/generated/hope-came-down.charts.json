@@ -2030,6 +2030,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "b472fa314c73e413449ca1b5fa910726d3b854e17264f27b07ae903349e2028f",
+    "fiveGoldTarget": 40050,
+    "normalMaximum": 44500,
+    "version": 1
+  },
   "songId": "hope-came-down",
   "source": "data/music/Hope Came Down.mp3"
 }

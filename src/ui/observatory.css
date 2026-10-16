@@ -823,6 +823,83 @@
   color: #fff1dc;
   place-items: center;
 }
+.song-row-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: #e8d9ef;
+  font:
+    0.72rem/1.3 Georgia,
+    'Times New Roman',
+    serif;
+}
+.song-rating-stars {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
+}
+.song-rating-stars svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.song-rating-empty {
+  fill: rgb(6 13 32 / 82%);
+  stroke: #9aaac2;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.song-rating-normal {
+  fill: #e7f1ff;
+}
+.song-rating-gold {
+  fill: #ffda62;
+}
+.song-achievement {
+  margin: 0 0 17px;
+  padding-block: 12px;
+  border-block: 1px solid rgb(228 194 158 / 25%);
+  color: #e8d9ef;
+  font:
+    0.76rem/1.4 Georgia,
+    'Times New Roman',
+    serif;
+  text-align: center;
+}
+.song-achievement p {
+  margin: 0;
+}
+.song-achievement-label {
+  color: #fff3dc;
+}
+.song-achievement .song-rating-stars {
+  margin-block: 5px;
+}
+.song-achievement .song-rating-stars svg {
+  width: 20px;
+  height: 20px;
+}
+.song-achievement .song-target {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 3px 10px;
+  margin-top: 10px;
+}
+.song-target strong {
+  color: #ffdfa0;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.song-achievement .song-target-basis {
+  max-width: 30ch;
+  margin: 5px auto 0;
+  font-size: 0.72rem;
+}
 .song-favorite svg {
   width: 22px;
   height: 22px;
@@ -1257,6 +1334,13 @@
   .song-row-copy small {
     font-size: 0.63rem;
   }
+  .song-row-rating {
+    font-size: 0.7rem;
+  }
+  .song-rating-stars svg {
+    width: 14px;
+    height: 14px;
+  }
   .song-favorite {
     flex-basis: 42px;
     width: 42px;
@@ -1310,12 +1394,48 @@
   }
   .song-difficulty-label {
     grid-column: 1 / 3;
+    grid-row: 4;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 8px;
     margin: 0;
     font-size: 0.57rem;
     text-align: left;
+  }
+  .song-achievement {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 3px 10px;
+    margin: 3px 0;
+    padding-block: 8px;
+    text-align: left;
+  }
+  .song-achievement-label,
+  .song-achievement > div,
+  .song-best-copy {
+    grid-column: 1;
+  }
+  .song-achievement .song-rating-stars {
+    margin-block: 0;
+  }
+  .song-achievement .song-rating-stars svg {
+    width: 17px;
+    height: 17px;
+  }
+  .song-achievement .song-target {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-content: start;
+    margin: 0;
+  }
+  .song-achievement .song-target-basis {
+    grid-column: 2;
+    grid-row: 3;
+    max-width: none;
+    margin: 0;
   }
   .song-difficulty-select {
     min-height: 36px;
@@ -1324,13 +1444,14 @@
   }
   .song-play-button {
     grid-column: 3;
-    grid-row: 3;
+    grid-row: 4;
     min-height: 42px;
     padding-inline: 8px;
     font-size: 0.74rem;
   }
   .song-play-help {
     grid-column: 1 / -1;
+    grid-row: 5;
     min-height: 0;
     margin: 0;
     font-size: 0.61rem;

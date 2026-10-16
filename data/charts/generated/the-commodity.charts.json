@@ -11350,6 +11350,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "64c3d2e10ddb973e3eb864761d633d07144d0465604ec697c5cc51e51b85bee1",
+    "fiveGoldTarget": 267300,
+    "normalMaximum": 297000,
+    "version": 1
+  },
   "songId": "the-commodity",
   "source": "data/music/The Commodity (Remastered).mp3"
 }

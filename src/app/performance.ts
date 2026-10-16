@@ -11,7 +11,11 @@ import {
   type GameController,
 } from '../game/controller';
 import { validateChart, type ChartConfig } from '../game/chart';
-import { createGame, getTheoreticalMaximumScore } from '../game/game';
+import {
+  createGame,
+  getTheoreticalMaximumScore,
+  type GameResult,
+} from '../game/game';
 import { isDifficulty, type Difficulty } from '../game/game-balance';
 import type { SongCatalogEntry } from '../catalog/catalog';
 import { getSongChart, getSongDifficulties } from '../catalog/catalog';
@@ -41,6 +45,10 @@ export interface PerformanceDependencies<
   readonly inputOffset?: number;
   readonly visualOffset?: number;
   readonly render?: ControllerDependencies['render'];
+  readonly onRunCompleted?: (completion: {
+    readonly songId: string;
+    readonly result: GameResult;
+  }) => void;
 }
 
 export interface PerformanceCoordinator {
@@ -85,6 +93,7 @@ interface ActivePerformance<
   startTask: Promise<void> | null;
   operationError: string | null;
   recoveryRequired: boolean;
+  completionReported: boolean;
 }
 
 function errorMessage(error: unknown): string {
@@ -180,7 +189,9 @@ export function createPerformanceCoordinator<
     const normalChart = getSongDifficulties(song).includes('normal')
       ? getSongChart(song, 'normal')
       : chart;
-    const normalMaximum = getTheoreticalMaximumScore(normalChart.notes.length);
+    const normalMaximum =
+      song.scoring.normalMaximum ??
+      getTheoreticalMaximumScore(normalChart.notes.length);
     if (validateChart(chart).length > 0) {
       throw new TypeError(`Song '${song.id}' has an invalid chart.`);
     }
@@ -244,10 +255,47 @@ export function createPerformanceCoordinator<
           normalMaximum,
         ),
       render: (controllerSnapshot) => {
+        const currentRecord = recordRef.current;
+        const result = controllerSnapshot.game.result;
+        if (currentRecord !== null && isCurrent(currentRecord)) {
+          if (controllerSnapshot.game.status !== 'results') {
+            currentRecord.completionReported = false;
+          } else if (result !== null && !currentRecord.completionReported) {
+            currentRecord.completionReported = true;
+            if (dependencies.onRunCompleted !== undefined) {
+              const completion = {
+                songId: currentRecord.song.id,
+                result,
+              };
+              console.info('[Performance] run completion callback attempt', {
+                songId: completion.songId,
+                difficulty: result.difficulty,
+                outcome: result.outcome,
+              });
+              try {
+                dependencies.onRunCompleted(completion);
+                console.info(
+                  '[Performance] run completion callback succeeded',
+                  {
+                    songId: completion.songId,
+                    difficulty: result.difficulty,
+                    outcome: result.outcome,
+                  },
+                );
+              } catch (error) {
+                console.error('[Performance] run completion callback failed', {
+                  songId: completion.songId,
+                  difficulty: result.difficulty,
+                  outcome: result.outcome,
+                  error: errorMessage(error),
+                });
+              }
+            }
+          }
+        }
         try {
           dependencies.render?.(controllerSnapshot);
         } catch (error) {
-          const currentRecord = recordRef.current;
           if (currentRecord === null || !isCurrent(currentRecord)) return;
           currentRecord.operationError = `Gameplay renderer failed: ${errorMessage(error)}`;
           currentRecord.gameplayReady = false;
@@ -300,6 +348,7 @@ export function createPerformanceCoordinator<
       startTask: null,
       operationError: null,
       recoveryRequired: false,
+      completionReported: false,
     };
     recordRef.current = activeRecord;
     active = activeRecord;

@@ -4250,6 +4250,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "124fb5cb35d9c06420af744727cac702546a5065ff7dd93543f766b9b1267649",
+    "fiveGoldTarget": 93150,
+    "normalMaximum": 103500,
+    "version": 1
+  },
   "songId": "coal-makers-mistake",
   "source": "data/music/Coal Maker's Mistake.mp3"
 }

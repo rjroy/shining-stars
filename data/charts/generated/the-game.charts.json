@@ -11865,6 +11865,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "34bc1ec83f6b37d60f02e1323b06a036c85595fa5d147ce56a8a2307e91db8d1",
+    "fiveGoldTarget": 280350,
+    "normalMaximum": 311500,
+    "version": 1
+  },
   "songId": "the-game",
   "source": "data/music/The Game.mp3"
 }

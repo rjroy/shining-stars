@@ -5960,6 +5960,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "05fe92cd34a026168cb6e1149d2943b84d8e6d21962fb3fa6d778da4e23138c0",
+    "fiveGoldTarget": 135450,
+    "normalMaximum": 150500,
+    "version": 1
+  },
   "songId": "the-abandoned-child",
   "source": "data/music/The Abandoned Child (Remastered).mp3"
 }

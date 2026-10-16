@@ -4095,6 +4095,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "9ce22099eecbfdeae182e40e064002e3638449f19f1c56e7958b1684fc80afff",
+    "fiveGoldTarget": 90000,
+    "normalMaximum": 100000,
+    "version": 1
+  },
   "songId": "the-necromancers-duet",
   "source": "data/music/The Necromancer\u2019s Duet.mp3"
 }

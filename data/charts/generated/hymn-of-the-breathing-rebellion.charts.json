@@ -4270,6 +4270,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "4162bb022460181cc9a4386251c238e0e859b47c834b938267e92e24b83be977",
+    "fiveGoldTarget": 94050,
+    "normalMaximum": 104500,
+    "version": 1
+  },
   "songId": "hymn-of-the-breathing-rebellion",
   "source": "data/music/Hymn of the Breathing Rebellion.mp3"
 }
