@@ -1,82 +1,46 @@
-# Brightvale MVP
+# Shining Stars
 
-## Requirements and setup
+**[Play Shining Stars](https://rjroy.github.io/shining-stars/)**
 
-- Node.js `^22.13.0 || ^24.0.0 || >=26.0.0` (required by the pinned ESLint and Vitest versions)
-- npm
+Take the stage as a performer whose songs can help save Brightvale. Hit notes in time with the music, rally the Audience, and carry that strength into a confrontation with Twilight.
 
-Install the exact dependency tree from the lockfile and start the local Vite server:
+## The Observatory
+
+Browse 29 songs across **Lyra of Brightvale**, **Christmas Star**, and **Outside Worlds**, or open **All Songs**. Search the catalog, filter songs, and keep favorites close. Song details show duration, available difficulties, a personal-best star rating, and the target for five gold stars.
+
+Choose Easy, Normal, or Hard. Each difficulty has its own chart and timing profile. Charts are still being refined.
+
+## Perform
+
+- **Audience:** successful notes build Renown. At Twilight, your Renown becomes Personal Strength.
+- **Twilight:** successful notes weaken Twilight, while misses cost Personal Strength. If your strength runs out first, the result is Defeat. If the song ends while Twilight remains, you Survive. Defeating Twilight is a Victory.
+- **Radiant:** after victory, the song continues to its end, and your score and combo continue with it.
+
+On desktop, use **D**, **F**, **J**, and **K** for the four lanes. Press **Escape** to pause. On portrait phones, four touch targets support simultaneous thumbs. On small phone screens in landscape, gameplay pauses and asks you to rotate upright; choose Resume when ready. Device and browser experience may vary.
+
+## Score and records
+
+Accurate hits and sustained combos raise your score and multiplier. Five stars fill as normal stars first, then the same stars turn gold. Star targets use the song's Normal-chart maximum across difficulties. Your best completed-run star rating is saved per song in this browser; clearing browser storage removes those records. See [Scoring system](docs/scoring-system.md) for details.
+
+## Development
+
+Requirements: Node.js `^22.13.0 || ^24.0.0 || >=26.0.0` and npm.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-The browser entry is `index.html`; `src/main.ts` owns the application lifecycle and wires the selected generated difficulty chart, game, audio transport, and UI. Songs and collections are described in `data/catalog.json`; per-song charts are eagerly imported from `data/charts/generated/`, while source audio remains in `data/music/` and is imported as a Vite asset URL. Do not copy MP3s into a public directory or modify the original recordings. Onset-derived charts are provisional and have not been listening-verified.
-
-Per-song percent-based excerpt settings and Easy/Normal/Hard authoring values live in `data/charts/song-authoring.json`; the runtime profile values remain in `data/charts/difficulty-profiles.json`. See the [chart workflow](docs/beat-chart-workflow.md) for the v2 schema, final-strength formula, cache freshness, catalog editing, and generated output paths.
-
-## Song output volume
-
-Set the Vite environment variable `VITE_SONG_VOLUME` to a number from `0` (silent output) through `1` (full output). The unset value preserves full volume. Blank, malformed, non-finite, or out-of-range values safely fall back to full volume. This controls only the audio output gain; song timing and gameplay continue normally. For silent AI/browser testing, start the development server with the variable set so the gain is initialized before any playback:
+Run the available checks with:
 
 ```sh
-VITE_SONG_VOLUME=0 npm run dev -- --host 127.0.0.1 --port 5173
+npm test             # Vitest unit and app integration tests; integration needs Chromium
+npm run typecheck
+npm run build
+npm run test:chart
+npm run chart:check  # verify cached, generated chart outputs
 ```
 
-Keep that environment on the server while running automated song-playback checks such as `python3 tests/browser-flow.py http://127.0.0.1:5173/`.
+Chart authoring uses FFmpeg/FFprobe and aubio tools when cached analysis is unavailable. These are offline tools, not browser dependencies. `npm run chart:generate` processes the configured catalog. See the [beat-chart workflow](docs/beat-chart-workflow.md) for authoring inputs, provenance, and cache details. Do not modify or redistribute source recordings based on the software license alone.
 
-## Music chart authoring dependencies
-
-- **aubio** provides `aubioonset` for offline onset-timestamp extraction. The user installed Arch's `aubio 0.4.9-25`; the executable is `/usr/bin/aubioonset`.
-- **FFmpeg** converts source audio to a full-track WAV when needed, preserving the original recording and timestamp origin.
-
-These system tools are for chart authoring, not browser runtime dependencies. Installation is managed by the user; agents must never install software or dependencies on the user's behalf. See [the offline beat-chart workflow](docs/beat-chart-workflow.md) for generation, provenance, and cached-check instructions.
-
-Generate and verify all 29 configured songs with `npm run chart:generate` and `npm run chart:check`. These defaults intentionally pass `--all`, producing/checking 87 difficulty variants plus onset caches. Run the focused, standard-library Python test suite with `npm run test:chart`.
-
-## Checks and build
-
-```sh
-npm test             # deterministic Vitest tests
-npm run typecheck    # strict TypeScript check
-npm run lint         # ESLint
-npm run format:check # Prettier check
-npm run build        # typecheck and production Vite build to dist/
-```
-
-Use `npm run format` to apply the configured Prettier formatting. `format` and `format:check` use the same explicit app/setup allowlist: package manifests, TypeScript/Vite/ESLint configuration, the HTML entry, all TypeScript and CSS under `src/`, and this README. The Python browser harness is intentionally excluded. These commands do not traverse Beads, agent settings, lore, or data directories.
-
-## Pull request checks
-
-The `Pull request checks / Pull request checks` GitHub Actions check runs on pull requests using Ubuntu 24.04, Node.js 24, and Python 3.14. It installs npm dependencies with `npm ci` and runs the Vitest suite with `src/main.integration.test.ts` explicitly excluded, the Brightvale Node harness unit tests (`*.test.mjs`; no browser is launched), chart Python tests, the cached generated-chart check, TypeScript type-checking, and the production build. The chart check verifies checked-in cached output; CI does not regenerate charts or alter balance data. `tests/test_browser_harness_assumptions.py` is not included because it currently fails in a clean checkout: it expects `data/charts/the-first-shining-star.beats.json`, which is absent.
-
-The workflow uses read-only repository contents permission and needs no secrets. Actions are pinned to immutable commit SHAs; as of October 2026 the pins are checkout v7.0.1, setup-node v7.1.0, and setup-python v7.0.0. Update these pins deliberately when upgrading actions. Superseded runs for the same pull request are cancelled.
-
-ESLint (`npm run lint`) and Prettier (`npm run format:check`) are not CI gates yet: the current baseline fails both, with existing lint findings across app, tests, and asset files, and formatting differences in 13 allowlisted files. Browser-driven checks (including `test:brightvale:browser`, lifecycle/acceptance scripts, and Chromium-based tests) are also deferred because they require a browser, server, or both. CI intentionally reports only the deterministic unit/static checks listed above.
-
-To require this status before merging, a repository administrator can select the `Pull request checks` status from GitHub Actions in branch protection or the applicable ruleset's required status checks. No repository protection settings are changed here. Hosted validation on PR #155 confirmed a complete passing run and a deliberate failing assertion reported against its source line; the temporary failure probe was then removed.
-
-## GitHub Pages deployment
-
-Successful validation runs publish the exact `dist/` build only when the event is a push to `master` (or a manual dispatch targeting `master`). Pull requests run validation but neither upload a Pages artifact nor deploy. The deployment job waits for validation, uses a separate non-cancelling `github-pages` concurrency group so an active publication is not interrupted, and requests only the `pages: write` and `id-token: write` permissions needed for the Pages deployment token. No deployment secrets or action that changes repository settings are used.
-
-Before the first deployment, a repository administrator must open **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. The workflow uses the `github-pages` environment; allow the repository's normal GitHub Actions deployment permissions for that environment. This workflow does not enable Pages or alter repository/environment settings. After deployment, the intended site URL is <https://rjroy.github.io/shining-stars/>. Vite's production build must use the repository base path `/shining-stars/` for JavaScript, textures, models, charts, and audio URLs, while `npm run dev` continues to serve from `/` locally. Verify both the actual Pages site and its runtime assets after publishing; hosted Pages deployment and gameplay validation remain pending and are not claimed here.
-
-For browser lifecycle regression checks, start Vite and run the standard-library Python harness against its URL:
-
-```sh
-npm run dev -- --host 127.0.0.1 --port 5173
-python3 tests/browser-lifecycle.py http://127.0.0.1:5173/
-```
-
-The harness requires Chromium and ChromeDriver at `/usr/bin/chromium` and `/usr/bin/chromedriver`. It suppresses the animation-frame loop to isolate retry and hidden-during-load lifecycle paths; it does not replace a real-tab check with normal animation frames, user-gesture playback, and actual pause/resume behavior.
-
-For browser validation of the actual Observatory app and generated charts:
-
-```sh
-npm run test:brightvale:acceptance          # bounded real-app smoke
-npm run test:brightvale:acceptance:exhaustive # all 87 chart variants
-```
-
-Both modes statically validate all 87 generated chart variants. Smoke plays representative charts from different songs and difficulties in the real app; exhaustive starts and returns from every supported song/difficulty pair and takes longer. Evidence is written under `.lore/local/evidence/observatory-acceptance/`. Playback is muted through `VITE_SONG_VOLUME=0`, uses trusted clicks and the browser's native audio clock, and does not claim musical accuracy or human approval. The script reports the number of actual playback runs; smoke does not imply 87 played runs.
+The project software is licensed under the [MIT License](LICENSE). Media may have separate rights and terms.
