@@ -3,9 +3,9 @@
   "songs": [
     {
       "id": "the-first-shining-star",
-      "title": "The First Shining Star (Demo Excerpt)",
+      "title": "The First Shining Star",
       "sortOrder": 10,
-      "segmentKind": "excerpt",
+      "segmentKind": "full",
       "availability": "available",
       "chartStatus": "candidate"
     },

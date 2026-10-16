@@ -69,16 +69,51 @@ class V2AuthoringTests(unittest.TestCase):
             self.assertEqual(len(set(expected_difficulties.values())), 3, song_id)
         self.assertEqual(total_charts, 87)
 
-    def test_demo_percent_conversion_preserves_measured_source_times(self):
-        song = beat_chart.load_authoring_collection()["the-first-shining-star"]
-        duration = 362.919979
-        source_start = song["start_time"] * duration / 100
-        excerpt_duration = song["duration"] * duration / 100
-        twilight_at = excerpt_duration * song["twilight_time"] / 100
-        sample = 1 / 44100
-        self.assertLessEqual(abs(source_start - 107.1), sample)
-        self.assertLessEqual(abs(excerpt_duration - 65.8), sample)
-        self.assertLessEqual(abs(twilight_at - 39.2), sample)
+    def test_first_shining_star_authoring_and_generated_chart_cover_full_recording(self):
+        song_id = "the-first-shining-star"
+        song = beat_chart.load_authoring_collection()[song_id]
+        self.assertEqual(
+            (song["start_time"], song["duration"], song["twilight_time"]),
+            (0, 100, 50),
+        )
+        self.assertEqual(
+            song["difficulties"],
+            {
+                "easy": {"twilight_strength": 70, "minimum_delta": 64, "stride": 3},
+                "normal": {"twilight_strength": 80, "minimum_delta": 64, "stride": 2},
+                "hard": {"twilight_strength": 90, "minimum_delta": 50, "stride": 1},
+            },
+        )
+
+        onset_doc = json.loads(
+            (beat_chart.DEFAULT_ONSETS_DIR / f"{song_id}.beats.json").read_text()
+        )
+        measured_duration = onset_doc["source_duration_seconds"]
+        catalog = json.loads(
+            (beat_chart.PROJECT_ROOT / "data/catalog.json").read_text()
+        )
+        catalog_song = next(item for item in catalog["songs"] if item["id"] == song_id)
+        self.assertEqual(catalog_song["segmentKind"], "full")
+
+        generated = json.loads(
+            (beat_chart.DEFAULT_GENERATED_DIR / f"{song_id}.charts.json").read_text()
+        )
+        self.assertEqual(generated["source"], song["source"])
+        self.assertEqual(set(generated["charts"]), set(beat_chart.DIFFICULTIES))
+        for difficulty, chart in generated["charts"].items():
+            with self.subTest(difficulty=difficulty):
+                self.assertEqual(chart["sourceStart"], 0)
+                self.assertAlmostEqual(chart["duration"], measured_duration, places=5)
+                self.assertAlmostEqual(
+                    chart["twilightAt"], measured_duration / 2, places=5
+                )
+                note_times = [note["time"] for note in chart["notes"]]
+                self.assertTrue(
+                    all(0 <= time < measured_duration for time in note_times)
+                )
+                self.assertTrue(any(time < chart["twilightAt"] for time in note_times))
+                self.assertTrue(any(time > chart["twilightAt"] for time in note_times))
+                self.assertGreater(max(note_times), measured_duration * 0.9)
 
     def test_twilight_strength_formula_uses_ceiling_and_profile_damage(self):
         settings = {
