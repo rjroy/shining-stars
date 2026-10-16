@@ -47,6 +47,8 @@ export interface GameController {
   blur(): ControllerSnapshot;
   keyDown(code: string, repeat?: boolean): ControllerSnapshot;
   keyUp(code: string): ControllerSnapshot;
+  laneDown(lane: 0 | 1 | 2 | 3): ControllerSnapshot;
+  laneUp(lane: 0 | 1 | 2 | 3): ControllerSnapshot;
   update(): ControllerSnapshot;
   dispose(): Promise<void>;
 }
@@ -70,6 +72,7 @@ export function createGameController(
   let eventId = 0;
   let runId = 1;
   const pressedKeys = new Set<string>();
+  const pressedTouchLanes = new Set<0 | 1 | 2 | 3>();
   let controlEpoch = 0;
   let pendingTransportRequests = 0;
   let hasTransportRequestBeenMade = false;
@@ -119,6 +122,7 @@ export function createGameController(
 
     feedback.clear();
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     if (terminalAudioStopHandled) return;
     terminalAudioStopHandled = true;
     if (dependencies.audio.snapshot().hasActiveSource) {
@@ -140,16 +144,21 @@ export function createGameController(
       const transportTime = currentGameTime(audioSnapshot);
       const after = game.advanceTo(transportTime);
       for (const note of after.notes) {
-        const previous = before.notes.find((candidate) => candidate.id === note.id);
+        const previous = before.notes.find(
+          (candidate) => candidate.id === note.id,
+        );
         if (previous?.outcome === null && note.outcome === 'miss') {
-          feedback.set(note.lane, Object.freeze({
-            noteId: note.id,
-            lane: note.lane,
-            quality: 'miss',
-            eventId: ++eventId,
-            runId,
-            onsetTransportTime: transportTime,
-          }));
+          feedback.set(
+            note.lane,
+            Object.freeze({
+              noteId: note.id,
+              lane: note.lane,
+              quality: 'miss',
+              eventId: ++eventId,
+              runId,
+              onsetTransportTime: transportTime,
+            }),
+          );
         }
       }
     }
@@ -178,6 +187,7 @@ export function createGameController(
     hasTransportRequestBeenMade = true;
     pendingTransportRequests += 1;
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     feedback.clear();
     try {
       const loaded = await dependencies.audio.load();
@@ -205,6 +215,7 @@ export function createGameController(
     hasTransportRequestBeenMade = true;
     pendingTransportRequests += 1;
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     feedback.clear();
     try {
       await dependencies.audio.resume();
@@ -226,6 +237,7 @@ export function createGameController(
     pendingTransportRequests += 1;
     pendingRestartEpoch = requestEpoch;
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     feedback.clear();
     game = dependencies.createGame(inputOffset, selectedDifficulty);
     runId += 1;
@@ -272,6 +284,7 @@ export function createGameController(
       game = nextGame;
       runId += 1;
       pressedKeys.clear();
+      pressedTouchLanes.clear();
       feedback.clear();
     }
     return publish();
@@ -289,6 +302,7 @@ export function createGameController(
 
     beginControlAction();
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     feedback.clear();
     const pausedAudio = dependencies.audio.pause();
     advanceGame(pausedAudio);
@@ -302,6 +316,7 @@ export function createGameController(
 
     beginControlAction();
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     feedback.clear();
     const audioSnapshot = dependencies.audio.snapshot();
     const pausedAudio =
@@ -330,6 +345,21 @@ export function createGameController(
     }
     pressedKeys.add(code);
 
+    return pressLane(lane);
+  }
+
+  function laneDown(lane: 0 | 1 | 2 | 3): ControllerSnapshot {
+    if (disposed) return snapshot();
+    if (game.snapshot().status === 'results') {
+      stopAudioForTerminalGame();
+      return publish();
+    }
+    if (pressedTouchLanes.has(lane)) return snapshot();
+    pressedTouchLanes.add(lane);
+    return pressLane(lane);
+  }
+
+  function pressLane(lane: 0 | 1 | 2 | 3): ControllerSnapshot {
     const audioSnapshot = dependencies.audio.update();
     if (audioSnapshot.status !== 'playing') {
       return publish();
@@ -364,6 +394,12 @@ export function createGameController(
     return snapshot();
   }
 
+  function laneUp(lane: 0 | 1 | 2 | 3): ControllerSnapshot {
+    if (disposed) return snapshot();
+    pressedTouchLanes.delete(lane);
+    return snapshot();
+  }
+
   function update(): ControllerSnapshot {
     if (disposed) {
       return snapshot();
@@ -386,6 +422,7 @@ export function createGameController(
     disposed = true;
     beginControlAction();
     pressedKeys.clear();
+    pressedTouchLanes.clear();
     feedback.clear();
     disposePromise = dependencies.audio.dispose();
     return disposePromise;
@@ -402,6 +439,8 @@ export function createGameController(
     blur: pause,
     keyDown,
     keyUp,
+    laneDown,
+    laneUp,
     update,
     dispose,
   };

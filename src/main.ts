@@ -13,6 +13,7 @@ import { createGameUI, type GameUI } from './ui/ui';
 import { ensureExperienceShell } from './ui/experience-shell';
 import {
   createPerformanceCoordinator,
+  getTouchGameplayEligibility,
   type PerformanceCoordinator,
 } from './app/performance';
 
@@ -40,6 +41,54 @@ let previousFrameTime = 0;
 let sceneStatus: 'loading' | 'rendered' | 'suspended' | 'unavailable' =
   'loading';
 let returning = false;
+const coarsePointerQuery = window.matchMedia('(any-pointer: coarse)');
+let windowFocused = true;
+
+function touchEligibility() {
+  return getTouchGameplayEligibility({
+    anyPointerCoarse: coarsePointerQuery.matches,
+    surfaceWidth: shell.surface.clientWidth,
+    surfaceHeight: shell.surface.clientHeight,
+  });
+}
+
+function syncTouchPresentation(): void {
+  if (gameplay === null) return;
+  const eligibility = touchEligibility();
+  const allowed =
+    eligibility.gameplayAllowed &&
+    windowFocused &&
+    document.visibilityState !== 'hidden';
+  performance?.setGameplayAllowed(allowed);
+  const snapshot = performance?.snapshot();
+  const controller = snapshot?.controller;
+  const results = controller?.game.status === 'results';
+  const error =
+    controller?.audio.status === 'error' ||
+    (snapshot?.error !== null && snapshot?.error !== undefined);
+  gameplay.setTouchPresentation({
+    eligible: eligibility.touchEnabled,
+    portrait: eligibility.gameplayAllowed,
+    enabled:
+      allowed &&
+      isGameplayActive() &&
+      sceneStatus === 'rendered' &&
+      controller?.audio.status === 'playing' &&
+      !controller.pendingPlaybackRequests &&
+      controller.game.status === 'playing' &&
+      !snapshot?.recoveryRequired,
+    showGuard:
+      eligibility.touchEnabled &&
+      !eligibility.gameplayAllowed &&
+      !results &&
+      !error,
+  });
+}
+
+function onTouchEnvironmentChange(): void {
+  syncTouchPresentation();
+  publishPerformanceState();
+}
 const RENDERER_ERROR =
   'The celestial view stopped responding. Playback is paused; restore it, then choose Resume or start over.';
 
@@ -173,14 +222,29 @@ function onPlay(request: {
     start: () => beginSelectedPerformance(),
     resume: () => {
       if (performance === null) return;
+      syncTouchPresentation();
       void performance.resume().then(publishPerformanceState);
     },
     restart: () => {
       if (performance === null) return;
+      syncTouchPresentation();
       void performance.restart().then(publishPerformanceState);
     },
     returnToBrowser: () => void returnToBrowser(),
     onRendererRetry: retryRenderer,
+    onLaneDown: (lane) => {
+      performance?.laneDown(lane);
+    },
+    onLaneUp: (lane) => {
+      performance?.laneUp(lane);
+    },
+    onPause: () => {
+      performance?.pause();
+      publishPerformanceState();
+    },
+    onOrientationBlocked: () => {
+      performance?.setGameplayAllowed(false);
+    },
   });
   gameplay.setRendererStatus(
     sceneStatus,
@@ -256,8 +320,25 @@ function beginSelectedPerformance(): void {
     });
   }
   const active = performance;
+  const eligibility = touchEligibility();
+  active.setGameplayAllowed(
+    eligibility.gameplayAllowed &&
+      windowFocused &&
+      document.visibilityState !== 'hidden',
+  );
+  if (
+    !eligibility.gameplayAllowed ||
+    !windowFocused ||
+    document.visibilityState === 'hidden'
+  ) {
+    shell.activate('gameplay');
+    gameplay?.setBusy(null);
+    syncTouchPresentation();
+    return;
+  }
   const preparing = active.prepare(song, activeDifficulty);
   shell.activate('gameplay');
+  syncTouchPresentation();
   gameplay?.setBusy('Loading the selected recording…');
   void preparing.then(() => {
     if (performance !== active || activeSongId !== song.id || disposed) return;
@@ -266,7 +347,9 @@ function beginSelectedPerformance(): void {
 }
 
 function publishPerformanceState(): void {
-  if (performance === null || gameplay === null) return;
+  if (gameplay === null) return;
+  syncTouchPresentation();
+  if (performance === null) return;
   const snapshot = performance.snapshot();
   const controller = snapshot.controller;
   if (snapshot.recoveryRequired || controller?.audio.status === 'error') {
@@ -290,6 +373,7 @@ function publishPerformanceState(): void {
     gameplay.setRecoveryNotice(null);
     gameplay.setBusy(null);
   }
+  syncTouchPresentation();
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -327,6 +411,8 @@ function onKeyUp(event: KeyboardEvent): void {
 }
 
 function onWindowBlur(): void {
+  windowFocused = false;
+  syncTouchPresentation();
   const controller = performance?.snapshot().controller;
   if (
     controller?.audio.status === 'playing' ||
@@ -337,8 +423,17 @@ function onWindowBlur(): void {
   }
 }
 
+function onWindowFocus(): void {
+  windowFocused = true;
+  onTouchEnvironmentChange();
+}
+
 function onVisibilityChange(): void {
-  if (document.visibilityState === 'hidden') onWindowBlur();
+  if (document.visibilityState === 'hidden') {
+    syncTouchPresentation();
+    performance?.pause();
+    publishPerformanceState();
+  } else onTouchEnvironmentChange();
 }
 
 function onReducedMotionChange(event: MediaQueryListEvent): void {
@@ -396,6 +491,11 @@ createRenderer();
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 window.addEventListener('blur', onWindowBlur);
+window.addEventListener('focus', onWindowFocus);
+window.addEventListener('resize', onTouchEnvironmentChange);
+const touchResizeObserver = new ResizeObserver(onTouchEnvironmentChange);
+touchResizeObserver.observe(shell.surface);
+coarsePointerQuery.addEventListener('change', onTouchEnvironmentChange);
 document.addEventListener('visibilitychange', onVisibilityChange);
 reducedMotionQuery.addEventListener('change', onReducedMotionChange);
 animationFrame = requestAnimationFrame(frame);
@@ -407,6 +507,10 @@ function dispose(): void {
   window.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('keyup', onKeyUp);
   window.removeEventListener('blur', onWindowBlur);
+  window.removeEventListener('focus', onWindowFocus);
+  window.removeEventListener('resize', onTouchEnvironmentChange);
+  touchResizeObserver.disconnect();
+  coarsePointerQuery.removeEventListener('change', onTouchEnvironmentChange);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   reducedMotionQuery.removeEventListener('change', onReducedMotionChange);
   scene?.destroy();

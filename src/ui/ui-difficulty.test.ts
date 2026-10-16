@@ -53,7 +53,17 @@ describe('difficulty presentation contract', () => {
     expect(ui).toMatch(/Escape pauses the performance/);
     expect(ui).not.toMatch(/Press <kbd>D/);
     expect(ui).not.toMatch(/Pause <kbd>Esc/);
-    expect(ui).not.toMatch(/data-action="pause"/);
+    const gameplayMarkup = ui.match(
+      /root\.innerHTML = `([\s\S]*?)`;\s*\n\s*shell\.activate\(/,
+    )?.[1];
+    expect(gameplayMarkup).toBeDefined();
+    const touchControls = gameplayMarkup?.match(
+      /<div class="touch-controls" data-touch-controls hidden[\s\S]*?<section class="touch-rotate-guard"/,
+    )?.[0];
+    expect(touchControls).toMatch(/data-action="pause"/);
+    expect((gameplayMarkup ?? '').replace(touchControls ?? '', '')).not.toMatch(
+      /data-action="pause"/,
+    );
     const scene = readFileSync(
       resolve(process.cwd(), 'src/rendering/scene.ts'),
       'utf8',
