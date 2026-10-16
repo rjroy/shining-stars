@@ -28,7 +28,7 @@ function getBrowserStorage(): FavoriteStorage | null {
   }
 }
 
-function parseFavoriteIds(value: string | null): Set<string> {
+export function parseFavoriteIds(value: string | null): Set<string> {
   if (value === null) return new Set();
   const parsed: unknown = JSON.parse(value);
   if (!Array.isArray(parsed) || parsed.some((id) => typeof id !== 'string')) {
