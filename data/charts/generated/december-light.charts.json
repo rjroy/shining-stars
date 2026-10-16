@@ -4850,6 +4850,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "45e40bf4331b7e84db7dc15641cf5361204a73eca599a8c479092d6f847099a1",
+    "fiveGoldTarget": 108000,
+    "normalMaximum": 120000,
+    "version": 1
+  },
   "songId": "december-light",
   "source": "data/music/December Light.mp3"
 }

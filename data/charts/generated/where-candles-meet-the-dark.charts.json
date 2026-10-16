@@ -4630,6 +4630,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "8d5a421392664bb0c1d04efc60d46a943d9b6a4ce41c52dc65935bd5d4e7b254",
+    "fiveGoldTarget": 103500,
+    "normalMaximum": 115000,
+    "version": 1
+  },
   "songId": "where-candles-meet-the-dark",
   "source": "data/music/Where Candles Meet the Dark.mp3"
 }

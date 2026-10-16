@@ -105,7 +105,11 @@ The generated outputs are:
   exact source path string, and `charts.easy`, `charts.normal`, `charts.hard`.
   Every chart is a runtime `ChartConfig` with its own singleton
   `allowedDifficulties`, seconds-based timing, notes, and derived final
-  `twilightStrength`.
+  `twilightStrength`. The bundle also has `scoring` metadata, version 1:
+  `normalMaximum` is the theoretical all-Perfect score for the Normal chart,
+  `fiveGoldTarget` is `ceil(normalMaximum * 0.9)`, and `chartFingerprint` is
+  the SHA-256 of the scoring version plus canonical Normal chart data. When a
+  Normal chart is absent, all three scoring values are `null`.
 - `data/charts/pitch-cache/<song-id>.<analysis-key>.json`: extracted
   full-source F0 frames, source SHA-256, extraction recipe and tool identity,
   analysis key, and payload digest. Older content-addressed pitch caches may
@@ -127,14 +131,19 @@ content-addressed pitch caches may remain. The pitch-cache key includes the
 full-source audio SHA-256, normalized extraction recipe/version, and tool
 identity. Changes to lane controls, difficulty stride/minimum delta, excerpt
 projection, or gameplay profiles reuse extracted F0 and recompute the affected
-charts/reports. Regenerate after authoring or profile changes.
+charts/reports. Changes to the Normal chart or scoring-version rules also
+refresh the generated Normal maximum, 90% target, and fingerprint. Regenerate
+after authoring or profile changes.
 
 `chart:check` runs no FFmpeg or aubio command and does not resolve the currently
 installed pitch-tool identity. It verifies the current source hash, validates
 the recorded onset and pitch-cache provenance/payload, and recomputes expected
-charts and reports from those recorded inputs. For `--all`, it rejects missing,
-extra, or stale onset, generated-chart, and lane-report outputs. Historical
-content-addressed pitch-cache files are allowed.
+charts, scoring metadata, and reports from those recorded inputs. For `--all`,
+it rejects missing, extra, or stale onset, generated-chart, and lane-report
+outputs. Generation refreshes scoring fingerprints and targets; this offline
+check detects stale values. Runtime target presentation consumes generated
+metadata rather than scanning Normal chart notes at startup. Historical
+content-addressed pitch caches are allowed.
 
 Generation uses FFprobe to measure source duration, FFmpeg and `aubioonset`
 when onset analysis is missing, and FFmpeg plus `aubiopitch` when pitch

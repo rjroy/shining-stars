@@ -7775,6 +7775,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "122570dabed75fcadcf196a39a50b32226a1d229a59766ba4ec06f609ed65c12",
+    "fiveGoldTarget": 178650,
+    "normalMaximum": 198500,
+    "version": 1
+  },
   "songId": "the-gravediggers-warning",
   "source": "data/music/The Gravedigger\u2019s Warning.mp3"
 }

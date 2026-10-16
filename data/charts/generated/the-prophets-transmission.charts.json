@@ -8995,6 +8995,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "3aa65defe36b4244b88cfb7a508b56b743f988f610e74d5d2a964e50ffdaa499",
+    "fiveGoldTarget": 207900,
+    "normalMaximum": 231000,
+    "version": 1
+  },
   "songId": "the-prophets-transmission",
   "source": "data/music/The Prophet's Transmission.mp3"
 }

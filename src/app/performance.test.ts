@@ -7,6 +7,7 @@ import type {
   AudioSourcePort,
 } from '../audio/audio';
 import type { SongCatalogEntry } from '../catalog/catalog';
+import type { GameResult } from '../game/game';
 import { getTheoreticalMaximumScore } from '../game/game';
 import { createPerformanceCoordinator } from './performance';
 
@@ -43,13 +44,20 @@ function chartWithNoteCount(
   };
 }
 
-function songWithDifferentChartLengths(song: SongCatalogEntry): SongCatalogEntry {
+function songWithDifferentChartLengths(
+  song: SongCatalogEntry,
+): SongCatalogEntry {
   return {
     ...song,
     charts: {
       easy: chartWithNoteCount('easy', 1),
       normal: chartWithNoteCount('normal', 3),
       hard: chartWithNoteCount('hard', 5),
+    },
+    scoring: {
+      ...song.scoring,
+      normalMaximum: getTheoreticalMaximumScore(3),
+      fiveGoldTarget: Math.ceil(getTheoreticalMaximumScore(3) * 0.9),
     },
   };
 }
@@ -89,6 +97,12 @@ const testCatalog = createSongCatalog(
       schemaVersion: 1,
       songId: 'test-song',
       source: 'data/music/Test Song.mp3',
+      scoring: {
+        version: 1,
+        normalMaximum: 100,
+        fiveGoldTarget: 90,
+        chartFingerprint: 'a'.repeat(64),
+      },
       charts: {
         easy: testChart('easy'),
         normal: testChart('normal'),
@@ -99,6 +113,12 @@ const testCatalog = createSongCatalog(
       schemaVersion: 1,
       songId: 'replacement-song',
       source: 'data/music/Replacement Song.mp3',
+      scoring: {
+        version: 1,
+        normalMaximum: 100,
+        fiveGoldTarget: 90,
+        chartFingerprint: 'b'.repeat(64),
+      },
       charts: { normal: testChart('normal') },
     },
   },
@@ -284,6 +304,152 @@ describe('performance coordinator', () => {
       await h.coordinator.dispose();
     },
   );
+
+  it('uses cached catalog Normal maximum instead of rescanning selected or Normal notes', async () => {
+    const h = harness();
+    const song = songWithDifferentChartLengths(h.song);
+    const metadataMaximum = 12_345;
+    const injectedSong: SongCatalogEntry = {
+      ...song,
+      scoring: {
+        ...song.scoring,
+        normalMaximum: metadataMaximum,
+        fiveGoldTarget: Math.ceil(metadataMaximum * 0.9),
+      },
+    };
+
+    await h.coordinator.prepare(injectedSong, 'hard');
+    const game = h.coordinator.snapshot().controller?.game;
+
+    expect(
+      getTheoreticalMaximumScore(injectedSong.charts.normal?.notes.length ?? 0),
+    ).toBe(300);
+    expect(
+      getTheoreticalMaximumScore(injectedSong.charts.hard?.notes.length ?? 0),
+    ).toBe(500);
+    expect(game?.normalMaximum).toBe(metadataMaximum);
+    await h.coordinator.dispose();
+  });
+
+  it.each(['victory', 'survived', 'defeat'] as const)(
+    'reports a %s result exactly once when a run reaches results',
+    async (outcome) => {
+      const h = harness();
+      const completions: Array<{ songId: string; result: GameResult }> = [];
+      const dependencies = {
+        createAudioContext: () => {
+          const context = new TestContext();
+          h.contexts.push(context);
+          return context;
+        },
+        fetchAudio: async () => new ArrayBuffer(8),
+        onRunCompleted: (completion: {
+          songId: string;
+          result: GameResult;
+        }) => {
+          completions.push(completion);
+        },
+      };
+      const coordinator = createPerformanceCoordinator(dependencies);
+      const terminalSong = songWithDifferentChartLengths(h.song);
+      const notes: ChartConfig['notes'] =
+        outcome === 'victory'
+          ? [
+              { id: 'audience-note', time: 1.5, lane: 0 },
+              { id: 'twilight-note', time: 11.5, lane: 0 },
+            ]
+          : outcome === 'survived'
+            ? [{ id: 'audience-note', time: 1.5, lane: 0 }]
+            : [];
+      const song: SongCatalogEntry = {
+        ...terminalSong,
+        charts: {
+          normal: {
+            ...testChart('normal'),
+            twilightStrength: outcome === 'victory' ? 1 : 110,
+            notes,
+          },
+        },
+        scoring: {
+          ...terminalSong.scoring,
+          normalMaximum: getTheoreticalMaximumScore(notes.length),
+          fiveGoldTarget: Math.ceil(
+            getTheoreticalMaximumScore(notes.length) * 0.9,
+          ),
+        },
+      };
+
+      await coordinator.prepare(song, 'normal');
+      await coordinator.markGameplayReady();
+      const context = h.contexts.at(-1);
+      if (context === undefined) throw new Error('Expected an audio context.');
+
+      if (outcome !== 'defeat') {
+        context.currentTime = 3.5;
+        coordinator.keyDown('KeyD');
+        coordinator.keyUp('KeyD');
+      }
+      if (outcome === 'victory') {
+        context.currentTime = 13.5;
+        coordinator.keyDown('KeyD');
+        coordinator.keyUp('KeyD');
+      }
+      context.currentTime = 22;
+      const terminal = coordinator.update();
+      expect(terminal?.game.result?.outcome).toBe(outcome);
+      expect(completions).toHaveLength(1);
+      expect(completions[0]).toMatchObject({
+        songId: song.id,
+        result: { outcome },
+      });
+
+      coordinator.update();
+      expect(completions).toHaveLength(1);
+      await coordinator.dispose();
+    },
+  );
+
+  it('does not report an unfinished run on restart or return, and reports a later completed run', async () => {
+    const h = harness();
+    const completions: Array<{ songId: string; result: GameResult }> = [];
+    const dependencies = {
+      createAudioContext: () => {
+        const context = new TestContext();
+        h.contexts.push(context);
+        return context;
+      },
+      fetchAudio: async () => new ArrayBuffer(8),
+      onRunCompleted: (completion: { songId: string; result: GameResult }) => {
+        completions.push(completion);
+      },
+    };
+    const coordinator = createPerformanceCoordinator(dependencies);
+    const song = songWithDifferentChartLengths(h.song);
+
+    await coordinator.prepare(song, 'normal');
+    await coordinator.markGameplayReady();
+    expect(completions).toEqual([]);
+    await coordinator.restart();
+    expect(completions).toEqual([]);
+    await coordinator.returnToBrowser();
+    expect(completions).toEqual([]);
+
+    await coordinator.prepare(song, 'normal');
+    await coordinator.markGameplayReady();
+    const context = h.contexts.at(-1);
+    if (context === undefined) throw new Error('Expected an audio context.');
+    context.currentTime = 22;
+    expect(coordinator.update()?.game.result?.outcome).toBe('defeat');
+    expect(completions).toHaveLength(1);
+
+    await coordinator.restart();
+    expect(completions).toHaveLength(1);
+    context.currentTime = 44;
+    expect(coordinator.update()?.game.result?.outcome).toBe('defeat');
+    expect(completions).toHaveLength(2);
+    await coordinator.returnToBrowser();
+    expect(completions).toHaveLength(2);
+  });
 
   it('cancels a decode logically on return and ignores late completion', async () => {
     const h = harness();

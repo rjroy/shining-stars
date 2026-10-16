@@ -2,6 +2,7 @@ import './ui/styles.css';
 import { createBrowserAudioContextAdapter } from './audio/browser-audio';
 import { parseSongOutputVolume } from './audio/song-volume';
 import { getSongChart, SONG_CATALOG } from './catalog/catalog';
+import { createSongRatingStore } from './catalog/song-ratings';
 import type { ChartConfig } from './game/chart';
 import type { Difficulty } from './game/game-balance';
 import { projectGameplayFrame } from './rendering/gameplay-frame';
@@ -26,6 +27,7 @@ const reducedMotionQuery = window.matchMedia(
 let reducedMotion = reducedMotionQuery.matches;
 let scene: BrightvaleScene | null = null;
 let observatory: ObservatoryUI;
+const songRatings = createSongRatingStore();
 let gameplay: GameUI | null = null;
 let performance: PerformanceCoordinator | null = null;
 let activeSongId: string | null = null;
@@ -213,6 +215,44 @@ function beginSelectedPerformance(): void {
         return response.arrayBuffer();
       },
       render: paintGameplay,
+      onRunCompleted: ({ songId, result }) => {
+        const song = SONG_CATALOG.songs.find((entry) => entry.id === songId);
+        if (
+          song === undefined ||
+          song.scoring.normalMaximum === null ||
+          result.normalMaximum !== song.scoring.normalMaximum
+        ) {
+          console.info(
+            '[Brightvale] skipped song rating without Normal baseline',
+            {
+              songId,
+              difficulty: result.difficulty,
+              outcome: result.outcome,
+            },
+          );
+          return;
+        }
+        console.info('[Brightvale] song rating write attempt', {
+          songId,
+          difficulty: result.difficulty,
+          outcome: result.outcome,
+        });
+        try {
+          songRatings.recordCompletedResult(songId, result);
+          console.info('[Brightvale] song rating write succeeded', {
+            songId,
+            difficulty: result.difficulty,
+            outcome: result.outcome,
+          });
+        } catch (error) {
+          console.error('[Brightvale] song rating write failed', {
+            songId,
+            difficulty: result.difficulty,
+            outcome: result.outcome,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      },
     });
   }
   const active = performance;
@@ -339,10 +379,19 @@ function frame(now: number): void {
   animationFrame = requestAnimationFrame(frame);
 }
 
-observatory = createObservatoryUI(applicationRoot, SONG_CATALOG, {
-  onPlay,
-  onRendererRetry: retryRenderer,
-});
+observatory = createObservatoryUI(
+  applicationRoot,
+  SONG_CATALOG,
+  {
+    onPlay,
+    onRendererRetry: retryRenderer,
+  },
+  undefined,
+  {
+    getSongRating: (songId) => songRatings.get(songId),
+    getRatingNotice: () => songRatings.snapshot().notice,
+  },
+);
 createRenderer();
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);

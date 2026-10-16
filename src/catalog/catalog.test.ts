@@ -55,12 +55,24 @@ const generated: Readonly<Record<string, GeneratedSongCharts>> = {
     schemaVersion: 1,
     songId: 'mixed-song',
     source: 'data/music/Mixed Song.mp3',
+    scoring: {
+      version: 1,
+      normalMaximum: 100,
+      fiveGoldTarget: 90,
+      chartFingerprint: 'a'.repeat(64),
+    },
     charts: { normal: chart('normal', 72), hard: chart('hard', 94) },
   },
   'easy-song.charts.json': {
     schemaVersion: 1,
     songId: 'easy-song',
     source: 'data/music/Easy Song.mp3',
+    scoring: {
+      version: 1,
+      normalMaximum: null,
+      fiveGoldTarget: null,
+      chartFingerprint: null,
+    },
     charts: { easy: chart('easy', 60) },
   },
 };
@@ -76,11 +88,63 @@ describe('song catalog runtime', () => {
     expect(getSongDifficulties(mixed)).toEqual(['normal', 'hard']);
     expect(getSongChart(mixed, 'normal').twilightStrength).toBe(72);
     expect(getSongChart(mixed, 'hard').twilightStrength).toBe(94);
+    expect(mixed.scoring).toEqual({
+      version: 1,
+      normalMaximum: 100,
+      fiveGoldTarget: 90,
+      chartFingerprint: 'a'.repeat(64),
+    });
+    expect(Object.isFrozen(mixed.scoring)).toBe(true);
     expect(getSongDifficulties(catalog.songs[1]!)).toEqual(['easy']);
+    expect(catalog.songs[1]?.scoring).toEqual({
+      version: 1,
+      normalMaximum: null,
+      fiveGoldTarget: null,
+      chartFingerprint: null,
+    });
     expect(Object.isFrozen(getSongChart(mixed, 'normal').notes[0])).toBe(true);
     expect(
       Object.isFrozen(getSongChart(mixed, 'hard').allowedDifficulties),
     ).toBe(true);
+  });
+
+  it('requires valid generated scoring metadata and nulls it without Normal', () => {
+    const bundle = generated['mixed-song.charts.json']!;
+    const withScoring = (scoring: unknown): Readonly<Record<string, unknown>> => ({
+      ...generated,
+      'mixed-song.charts.json': { ...bundle, scoring },
+    });
+
+    for (const scoring of [
+      undefined,
+      null,
+      { ...bundle.scoring, version: 2 },
+      { ...bundle.scoring, normalMaximum: null },
+      { ...bundle.scoring, fiveGoldTarget: 181 },
+      { ...bundle.scoring, chartFingerprint: 'not-a-fingerprint' },
+    ]) {
+      expect(() => createSongCatalog(metadata, withScoring(scoring), audio)).toThrow(
+        /scoring/,
+      );
+    }
+
+    const easyBundle = generated['easy-song.charts.json']!;
+    for (const scoring of [
+      { ...easyBundle.scoring, normalMaximum: 100 },
+      { ...easyBundle.scoring, fiveGoldTarget: 90 },
+      { ...easyBundle.scoring, chartFingerprint: 'b'.repeat(64) },
+    ]) {
+      expect(() =>
+        createSongCatalog(
+          metadata,
+          {
+            ...generated,
+            'easy-song.charts.json': { ...easyBundle, scoring },
+          },
+          audio,
+        ),
+      ).toThrow(/scoring/);
+    }
   });
 
   it('rejects bundle ID/source/audio mismatches and non-singleton variants', () => {

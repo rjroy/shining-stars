@@ -3165,6 +3165,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "7bae3739f00ba624b9808a22e586b80d220e425006f642023d9356d9f849a02e",
+    "fiveGoldTarget": 67500,
+    "normalMaximum": 75000,
+    "version": 1
+  },
   "songId": "the-star-that-followed-us",
   "source": "data/music/The Star That Followed Us.mp3"
 }

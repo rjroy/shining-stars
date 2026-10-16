@@ -9820,6 +9820,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "5fc763543e810d7deb04890d94f1ccda54eace5670a7581d2662c3483c026f0a",
+    "fiveGoldTarget": 230400,
+    "normalMaximum": 256000,
+    "version": 1
+  },
   "songId": "never-again",
   "source": "data/music/Never Again (Remastered).mp3"
 }

@@ -4505,6 +4505,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "8221389dd661919b3ff81a6d29126cb224e2782df6a47266fbea9f2e5dc78d05",
+    "fiveGoldTarget": 99450,
+    "normalMaximum": 110500,
+    "version": 1
+  },
   "songId": "first-light-of-december",
   "source": "data/music/First Light of December.mp3"
 }

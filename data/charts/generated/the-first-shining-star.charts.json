@@ -1530,6 +1530,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "382e580e4df3830cc8f1baad630d39c3bc32ebbcced8c7bc5fe189b692bc02d5",
+    "fiveGoldTarget": 27450,
+    "normalMaximum": 30500,
+    "version": 1
+  },
   "songId": "the-first-shining-star",
   "source": "data/music/The First Shining Star (Remastered).mp3"
 }

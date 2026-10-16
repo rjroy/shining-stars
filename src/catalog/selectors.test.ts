@@ -64,6 +64,20 @@ const chartBundle = (
   schemaVersion: 1,
   songId: id,
   source: `data/music/${id}.mp3`,
+  scoring:
+    charts.normal === undefined
+      ? {
+          version: 1,
+          normalMaximum: null,
+          fiveGoldTarget: null,
+          chartFingerprint: null,
+        }
+      : {
+          version: 1,
+          normalMaximum: 0,
+          fiveGoldTarget: 0,
+          chartFingerprint: '0'.repeat(64),
+        },
   charts,
 });
 const chartFiles = {

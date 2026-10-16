@@ -5705,6 +5705,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "2daa629ea2fcc3ae16a6265f7cb9b13a3405b6a5b1a267fcab5b6117327f0fba",
+    "fiveGoldTarget": 129150,
+    "normalMaximum": 143500,
+    "version": 1
+  },
   "songId": "beautiful-disaster",
   "source": "data/music/Beautiful Disaster.mp3"
 }

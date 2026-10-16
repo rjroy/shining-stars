@@ -5095,6 +5095,12 @@
     }
   },
   "schemaVersion": 1,
+  "scoring": {
+    "chartFingerprint": "acd0f26e1211924dd77afd121d4a4717ce41a8399c93ba5040b2ff1430449b67",
+    "fiveGoldTarget": 114750,
+    "normalMaximum": 127500,
+    "version": 1
+  },
   "songId": "workshop-warriors",
   "source": "data/music/Workshop Warriors.mp3"
 }
