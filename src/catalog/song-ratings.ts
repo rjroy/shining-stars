@@ -39,7 +39,7 @@ const FALLBACK_NOTICE =
 const NORMAL_THRESHOLDS = [0.2, 0.3, 0.4, 0.5, 0.6] as const;
 const GOLD_THRESHOLDS = [0.7, 0.75, 0.8, 0.85, 0.9] as const;
 
-interface StoredRating {
+export interface StoredRating {
   readonly played: true;
   readonly normalStars: number;
   readonly goldStars: number;
@@ -50,7 +50,7 @@ interface StoredRatingsEnvelope {
   readonly ratings: Readonly<Record<string, StoredRating>>;
 }
 
-function isPossibleRating(value: Record<string, unknown>): value is Record<
+export function isPossibleRating(value: Record<string, unknown>): value is Record<
   string,
   unknown
 > & {
@@ -87,7 +87,7 @@ function isStarCount(value: unknown): value is number {
   );
 }
 
-function parseRatings(value: string | null): Map<string, StoredRating> {
+export function parseRatings(value: string | null): Map<string, StoredRating> {
   if (value === null) return new Map();
   const parsed: unknown = JSON.parse(value);
   if (
@@ -119,7 +119,7 @@ function withOrdinal(rating: StoredRating): SongRating {
   };
 }
 
-function validateCompletedResult(result: CompletedSongResult): void {
+export function validateCompletedResult(result: CompletedSongResult): void {
   if (
     !Number.isFinite(result.score) ||
     result.score < 0 ||
@@ -134,7 +134,7 @@ function validateCompletedResult(result: CompletedSongResult): void {
   }
 }
 
-function ratingForResult(result: CompletedSongResult): StoredRating {
+export function ratingForResult(result: CompletedSongResult): StoredRating {
   const ratio =
     result.normalMaximum > 0 ? result.score / result.normalMaximum : 0;
   return {
@@ -145,7 +145,7 @@ function ratingForResult(result: CompletedSongResult): StoredRating {
   };
 }
 
-function ordinal(rating: StoredRating): number {
+export function ratingOrdinal(rating: StoredRating): number {
   return rating.normalStars * 6 + rating.goldStars;
 }
 
@@ -235,7 +235,7 @@ export function createSongRatingStore(
 
       const candidate = ratingForResult(result);
       const current = ratings.get(songId);
-      if (current === undefined || ordinal(candidate) > ordinal(current)) {
+      if (current === undefined || ratingOrdinal(candidate) > ratingOrdinal(current)) {
         ratings.set(songId, candidate);
         persist(songId);
         return copyRating(candidate);

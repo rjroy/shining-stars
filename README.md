@@ -20,7 +20,7 @@ On desktop, use **D**, **F**, **J**, and **K** for the four lanes. Press **Escap
 
 ## Score and records
 
-Accurate hits and sustained combos raise your score and multiplier. Five stars fill as normal stars first, then the same stars turn gold. Star targets use the song's Normal-chart maximum across difficulties. Your best completed-run star rating is saved per song in this browser; clearing browser storage removes those records. See [Scoring system](docs/scoring-system.md) for details.
+Accurate hits and sustained combos raise your score and multiplier. Five stars fill as normal stars first, then the same stars turn gold. Star targets use the song's Normal-chart maximum across difficulties. Your best completed-run star rating and favorites are saved in this browser; clearing browser storage removes them. Use Save data in the Observatory to download or restore a backup. See [Scoring system](docs/scoring-system.md) and [Save data and backups](docs/save-data.md) for details.
 
 ## Development
 

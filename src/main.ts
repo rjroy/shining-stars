@@ -2,7 +2,7 @@ import './ui/styles.css';
 import { createBrowserAudioContextAdapter } from './audio/browser-audio';
 import { parseSongOutputVolume } from './audio/song-volume';
 import { getSongChart, SONG_CATALOG } from './catalog/catalog';
-import { createSongRatingStore } from './catalog/song-ratings';
+import { createSaveStore } from './app/save-data';
 import type { ChartConfig } from './game/chart';
 import type { Difficulty } from './game/game-balance';
 import { projectGameplayFrame } from './rendering/gameplay-frame';
@@ -28,7 +28,8 @@ const reducedMotionQuery = window.matchMedia(
 let reducedMotion = reducedMotionQuery.matches;
 let scene: BrightvaleScene | null = null;
 let observatory: ObservatoryUI;
-const songRatings = createSongRatingStore();
+const saveStore = createSaveStore();
+const songRatings = saveStore.songRatings;
 let gameplay: GameUI | null = null;
 let performance: PerformanceCoordinator | null = null;
 let activeSongId: string | null = null;
@@ -303,10 +304,12 @@ function beginSelectedPerformance(): void {
         });
         try {
           songRatings.recordCompletedResult(songId, result);
-          console.info('[Brightvale] song rating write succeeded', {
+          console.info('[Brightvale] song rating recorded', {
             songId,
             difficulty: result.difficulty,
             outcome: result.outcome,
+            persistence: songRatings.snapshot().persistence,
+            notice: songRatings.snapshot().notice,
           });
         } catch (error) {
           console.error('[Brightvale] song rating write failed', {
@@ -481,8 +484,9 @@ observatory = createObservatoryUI(
     onPlay,
     onRendererRetry: retryRenderer,
   },
-  undefined,
+  saveStore.favorites,
   {
+    saveStore,
     getSongRating: (songId) => songRatings.get(songId),
     getRatingNotice: () => songRatings.snapshot().notice,
   },

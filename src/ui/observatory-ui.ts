@@ -12,7 +12,9 @@ import {
   type SongBrowseFilters,
   type SongSelection,
 } from '../catalog/selectors';
-import { createFavoriteStore, type FavoriteStore } from '../catalog/favorites';
+import type { FavoriteStore } from '../catalog/favorites';
+import type { SaveStore } from '../app/save-data';
+import { createSaveDataDialog } from './save-data-dialog';
 import type { SongRating } from '../catalog/song-ratings';
 import { ensureExperienceShell } from './experience-shell';
 import type { BrightvaleRendererStatus } from '../rendering/brightvale/viewport';
@@ -38,6 +40,7 @@ export interface ObservatoryUIActions {
 }
 
 export interface ObservatoryUIOptions {
+  readonly saveStore?: SaveStore;
   readonly getSongRating?: (songId: string) => SongRating | null;
   readonly getRatingNotice?: () => string | null;
 }
@@ -61,6 +64,7 @@ export interface ObservatorySelectionSnapshot {
 }
 
 export interface ObservatoryUI {
+  refreshSavedData(): void;
   getSelectionSnapshot(): ObservatorySelectionSnapshot;
   getViewportSize(): { readonly width: number; readonly height: number };
   setProjectedAnchors(anchors: readonly ObservatoryAnchor[]): void;
@@ -209,7 +213,7 @@ export function createObservatoryUI(
   applicationRoot: HTMLElement,
   catalog: SongCatalog,
   actions: ObservatoryUIActions,
-  favoriteStore: FavoriteStore = createFavoriteStore(),
+  favoriteStore: FavoriteStore,
   options: ObservatoryUIOptions = {},
 ): ObservatoryUI {
   const shell = ensureExperienceShell(applicationRoot);
@@ -221,6 +225,7 @@ export function createObservatoryUI(
           <span class="wordmark-seal" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="18"/><path d="M24 5v38M5 24h38M11 11l26 26M37 11 11 37"/><path d="m24 12 3.2 8.8L36 24l-8.8 3.2L24 36l-3.2-8.8L12 24l8.8-3.2L24 12Z"/></svg></span>
           <span class="wordmark-copy"><strong>Shining Stars</strong><small>Observatory</small></span>
         </div>
+        <button class="observatory-save-entry" type="button" data-action="save-data">Save data</button>
         <nav class="observatory-tools" aria-label="Song navigation">
           <button class="observatory-nav-button is-active" type="button" data-action="all-songs">All Songs</button>
           <label class="observatory-search">
@@ -330,6 +335,19 @@ export function createObservatoryUI(
   let playMessage = '';
   let projectedAnchors: readonly ObservatoryAnchor[] = [];
   let disposed = false;
+  const saveDialog =
+    options.saveStore === undefined
+      ? null
+      : createSaveDataDialog(
+          root,
+          options.saveStore,
+          new Set(catalog.songs.map((song) => song.id)),
+          refreshSavedData,
+        );
+  const saveEntry = root.querySelector<HTMLButtonElement>(
+    '[data-action="save-data"]',
+  )!;
+  saveEntry.hidden = saveDialog === null;
   const anchorButtons = new Map<string, HTMLButtonElement>();
 
   function currentSong() {
@@ -724,6 +742,11 @@ export function createObservatoryUI(
     );
   }
 
+  function refreshSavedData(): void {
+    reconcile();
+    render();
+  }
+
   function openBrowser(collectionId?: string, focusSearch = true): void {
     filters = { ...filters, collectionId };
     screen = 'browser';
@@ -752,7 +775,9 @@ export function createObservatoryUI(
     const button = target.closest<HTMLButtonElement>('button[data-action]');
     if (button === null || button.disabled) return;
     const action = button.dataset.action;
-    if (action === 'all-songs' || action === 'overview-all') {
+    if (action === 'save-data') {
+      saveDialog?.open();
+    } else if (action === 'all-songs' || action === 'overview-all') {
       favoritesOnly = false;
       openBrowser(undefined);
     } else if (action === 'browse-collection') {
@@ -901,6 +926,7 @@ export function createObservatoryUI(
   render();
 
   return {
+    refreshSavedData,
     getSelectionSnapshot: snapshot,
     getViewportSize() {
       return {
@@ -964,6 +990,7 @@ export function createObservatoryUI(
     destroy() {
       if (disposed) return;
       disposed = true;
+      saveDialog?.destroy();
       root.removeEventListener('click', onClick);
       root.removeEventListener('input', onInput);
       root.removeEventListener('change', onChange);

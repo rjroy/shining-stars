@@ -122,8 +122,8 @@ scanning charts at startup. Regenerate and run `chart:check` after Normal-chart
 or scoring-rule changes; the check verifies the generated target and fingerprint
 are current.
 
-The `song-ratings.ts` primitive provides localStorage-backed best earned
-normal/gold counts keyed by stable song ID. A missing entry means **unplayed**;
+The unified save store provides localStorage-backed best earned normal/gold
+counts keyed by stable song ID alongside favorites. A missing rating entry means **unplayed**;
 a stored `0 normal / 0 gold` rating means the song was played and completed with
 no stars. Saved counts are the earned counts at completion, not a value
 recomputed from current target metadata. A later target revision therefore does
@@ -140,10 +140,11 @@ Victory, Survived, or Defeat, including a zero-star Defeat. Songs without a Norm
 baseline are skipped. Quit and restart are not completions and do not write a
 rating; active/per-frame updates do not write either. Returning to selection
 refreshes both list and detail from saved ratings without another interaction.
-Corrupt or denied localStorage falls back to in-memory session ratings with a
-notice. The selector reads the current rating-storage notice on normal rendering
-and idle return, including fallback after a result write; Favorites warnings
-remain visible alongside it. Clearing browser storage loses saved achievements.
+Corrupt or denied localStorage falls back to in-memory session data with a
+notice. The selector reads the current save-storage notice on normal rendering
+and idle return, including fallback after a result write. Clearing browser
+storage loses saved achievements and favorites. See [Save data and backups](save-data.md)
+for the portable format, migration, and import/export behavior.
 Cloud synchronization, leaderboards, unlocks, and meta-progression are outside
 this scope. Independent actual-app validation of return-time row refresh and
 storage notices remains separate from this implementation description.
