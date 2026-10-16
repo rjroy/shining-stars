@@ -32,6 +32,31 @@ export interface PerformanceSnapshot {
   readonly audioNow: number | null;
 }
 
+export interface TouchGameplayEnvironment {
+  readonly anyPointerCoarse: boolean;
+  readonly surfaceWidth: number;
+  readonly surfaceHeight: number;
+}
+
+export interface TouchGameplayEligibility {
+  readonly touchEnabled: boolean;
+  readonly gameplayAllowed: boolean;
+}
+
+/** Derive touch affordance and the orientation gate from the game surface. */
+export function getTouchGameplayEligibility({
+  anyPointerCoarse,
+  surfaceWidth,
+  surfaceHeight,
+}: TouchGameplayEnvironment): TouchGameplayEligibility {
+  const touchEnabled =
+    anyPointerCoarse && Math.min(surfaceWidth, surfaceHeight) <= 600;
+  return {
+    touchEnabled,
+    gameplayAllowed: !touchEnabled || surfaceHeight >= surfaceWidth,
+  };
+}
+
 export interface PerformanceDependencies<
   TBuffer extends AudioBufferPort,
   TSource extends AudioSourcePort<TBuffer>,
@@ -61,10 +86,14 @@ export interface PerformanceCoordinator {
   /** Playback is gated until the renderer reports that gameplay can be shown. */
   markGameplayReady(): Promise<PerformanceSnapshot>;
   pause(): PerformanceSnapshot;
+  /** Gate gameplay while orientation is unsuitable; lifting it never resumes. */
+  setGameplayAllowed(allowed: boolean): PerformanceSnapshot;
   resume(): Promise<PerformanceSnapshot>;
   restart(): Promise<PerformanceSnapshot>;
   keyDown(code: string, repeat?: boolean): ControllerSnapshot | null;
   keyUp(code: string): ControllerSnapshot | null;
+  laneDown(lane: 0 | 1 | 2 | 3): ControllerSnapshot | null;
+  laneUp(lane: 0 | 1 | 2 | 3): ControllerSnapshot | null;
   update(): ControllerSnapshot | null;
   returnToBrowser(): Promise<void>;
   dispose(): Promise<void>;
@@ -94,6 +123,7 @@ interface ActivePerformance<
   operationError: string | null;
   recoveryRequired: boolean;
   completionReported: boolean;
+  needsExplicitPlaybackAction: boolean;
 }
 
 function errorMessage(error: unknown): string {
@@ -115,6 +145,7 @@ export function createPerformanceCoordinator<
   let setupSongId: string | null = null;
   let setupDifficulty: Difficulty | null = null;
   let cleanupBarrier: Promise<void> = Promise.resolve();
+  let gameplayAllowed = true;
 
   function snapshot(): PerformanceSnapshot {
     const current = active;
@@ -152,7 +183,9 @@ export function createPerformanceCoordinator<
       !isCurrent(record) ||
       !record.gameplayReady ||
       !record.canStart ||
-      record.recoveryRequired
+      record.recoveryRequired ||
+      record.needsExplicitPlaybackAction ||
+      !gameplayAllowed
     ) {
       return Promise.resolve();
     }
@@ -160,8 +193,9 @@ export function createPerformanceCoordinator<
     record.startTask = (async () => {
       try {
         await cleanupBarrier;
-        if (!isCurrent(record)) return;
+        if (!isCurrent(record) || !gameplayAllowed) return;
         record.cleanupReady = true;
+        if (!gameplayAllowed) return;
         await record.controller.start();
       } catch (error) {
         if (isCurrent(record)) {
@@ -177,6 +211,7 @@ export function createPerformanceCoordinator<
     difficulty: Difficulty,
   ): Promise<PerformanceSnapshot> {
     if (disposed) return Promise.resolve(snapshot());
+    if (!gameplayAllowed) return Promise.resolve(snapshot());
     if (song.availability !== 'available') {
       throw new TypeError(`Song '${song.id}' is unavailable.`);
     }
@@ -317,6 +352,10 @@ export function createPerformanceCoordinator<
       ]);
       const currentRecord = recordRef.current;
       if (currentRecord === null || !isCurrent(currentRecord)) return;
+      // A load already in flight can settle back to `ready` after orientation
+      // cancellation paused the transport; restore the paused state before
+      // exposing the completed preparation.
+      if (!gameplayAllowed) currentRecord.controller.pause();
       if (resumeResult.status === 'rejected') {
         currentRecord.operationError = errorMessage(resumeResult.reason);
       } else if (resumeResult.value.error !== null) {
@@ -349,6 +388,7 @@ export function createPerformanceCoordinator<
       operationError: null,
       recoveryRequired: false,
       completionReported: false,
+      needsExplicitPlaybackAction: false,
     };
     recordRef.current = activeRecord;
     active = activeRecord;
@@ -372,6 +412,7 @@ export function createPerformanceCoordinator<
     if (
       current === null ||
       !isCurrent(current) ||
+      !gameplayAllowed ||
       !current.preparationDone ||
       !current.canStart ||
       !current.gameplayReady
@@ -381,12 +422,15 @@ export function createPerformanceCoordinator<
     try {
       if (!current.cleanupReady) {
         await cleanupBarrier;
-        if (!isCurrent(current) || !current.gameplayReady) return snapshot();
+        if (!isCurrent(current) || !current.gameplayReady || !gameplayAllowed)
+          return snapshot();
         current.cleanupReady = true;
       }
-      if (!isCurrent(current) || !current.gameplayReady) return snapshot();
+      if (!isCurrent(current) || !current.gameplayReady || !gameplayAllowed)
+        return snapshot();
       current.operationError = null;
       current.recoveryRequired = false;
+      current.needsExplicitPlaybackAction = false;
       await current.controller[action]();
     } catch (error) {
       if (isCurrent(current)) {
@@ -426,6 +470,15 @@ export function createPerformanceCoordinator<
       active?.controller.pause();
       return snapshot();
     },
+    setGameplayAllowed: (allowed) => {
+      const wasAllowed = gameplayAllowed;
+      gameplayAllowed = allowed;
+      if (wasAllowed && !allowed && active !== null) {
+        active.needsExplicitPlaybackAction = true;
+        active.controller.pause();
+      }
+      return snapshot();
+    },
     resume: () => runControllerAction('resume'),
     restart: () => runControllerAction('restart'),
     keyDown: (code, repeat) => {
@@ -439,6 +492,23 @@ export function createPerformanceCoordinator<
       if (current === null || !current.gameplayReady || !current.canStart)
         return null;
       return current.controller.keyUp(code);
+    },
+    laneDown: (lane) => {
+      const current = active;
+      if (
+        current === null ||
+        !current.gameplayReady ||
+        !current.canStart ||
+        !gameplayAllowed
+      )
+        return null;
+      return current.controller.laneDown(lane);
+    },
+    laneUp: (lane) => {
+      const current = active;
+      if (current === null || !current.gameplayReady || !current.canStart)
+        return null;
+      return current.controller.laneUp(lane);
     },
     update: () => {
       const current = active;

@@ -10,6 +10,7 @@ import type { SongCatalogEntry } from '../catalog/catalog';
 import type { GameResult } from '../game/game';
 import { getTheoreticalMaximumScore } from '../game/game';
 import { createPerformanceCoordinator } from './performance';
+import * as performanceApi from './performance';
 
 function testChart(difficulty: 'easy' | 'normal' | 'hard'): ChartConfig {
   return {
@@ -236,7 +237,149 @@ function harness() {
   return { coordinator, contexts, fetched, song };
 }
 
+function callCoordinatorLane(
+  coordinator: ReturnType<typeof createPerformanceCoordinator>,
+  method: 'laneDown' | 'laneUp',
+  lane: 0 | 1 | 2 | 3,
+): void {
+  const operation = Reflect.get(coordinator, method);
+  // Missing lane actions deliberately do nothing; judgment assertions expose
+  // absent routing as a behavioral failure.
+  if (typeof operation === 'function') operation.call(coordinator, lane);
+}
+
+function setGameplayAllowed(
+  coordinator: ReturnType<typeof createPerformanceCoordinator>,
+  allowed: boolean,
+): void {
+  const operation = Reflect.get(coordinator, 'setGameplayAllowed');
+  // If the lifecycle guard is absent, continuing with the real coordinator
+  // makes the following playback assertions fail for observable reasons.
+  if (typeof operation === 'function') operation.call(coordinator, allowed);
+}
+
 describe('performance coordinator', () => {
+  it('routes each of the four touch lanes through the active performance', async () => {
+    const h = harness();
+    const chart: ChartConfig = {
+      ...testChart('normal'),
+      notes: ([0, 1, 2, 3] as const).map((lane, index) => ({
+        id: `touch-${lane}`,
+        time: 1.5 + index * 0.5,
+        lane,
+      })),
+    };
+    const song: SongCatalogEntry = {
+      ...h.song,
+      charts: { normal: chart },
+      scoring: {
+        ...h.song.scoring,
+        normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
+        fiveGoldTarget: Math.ceil(
+          getTheoreticalMaximumScore(chart.notes.length) * 0.9,
+        ),
+      },
+    };
+
+    await h.coordinator.prepare(song, 'normal');
+    await h.coordinator.markGameplayReady();
+    const context = h.contexts[0];
+    if (context === undefined) throw new Error('Expected an audio context.');
+    for (const note of chart.notes) {
+      context.currentTime = note.time + 2;
+      callCoordinatorLane(h.coordinator, 'laneDown', note.lane);
+      callCoordinatorLane(h.coordinator, 'laneUp', note.lane);
+    }
+
+    expect(
+      h.coordinator
+        .snapshot()
+        .controller?.game.notes.map((note) => note.outcome),
+    ).toEqual(['perfect', 'perfect', 'perfect', 'perfect']);
+    await h.coordinator.dispose();
+  });
+
+  it.each([
+    [false, 300, 500, false, true],
+    [true, 601, 800, false, true],
+    [true, 600, 800, true, true],
+    [true, 800, 600, true, false],
+    [true, 600, 600, true, true],
+  ] as const)(
+    'exposes the touch-mode eligibility policy contract',
+    (
+      anyPointerCoarse,
+      surfaceWidth,
+      surfaceHeight,
+      touchEnabled,
+      gameplayAllowed,
+    ) => {
+      const policy = Reflect.get(performanceApi, 'getTouchGameplayEligibility');
+      expect(
+        policy,
+        'getTouchGameplayEligibility(environment) must be available',
+      ).toBeTypeOf('function');
+      if (typeof policy !== 'function') return;
+
+      expect(policy({ anyPointerCoarse, surfaceWidth, surfaceHeight })).toEqual(
+        { touchEnabled, gameplayAllowed },
+      );
+    },
+  );
+
+  it('pauses and gates preparation during blocked orientation without auto-resuming upright', async () => {
+    const h = harness();
+    setGameplayAllowed(h.coordinator, false);
+    await h.coordinator.prepare(h.song, 'normal');
+    expect(h.contexts).toHaveLength(0);
+    expect(h.coordinator.snapshot().controller).toBeNull();
+
+    setGameplayAllowed(h.coordinator, true);
+    await h.coordinator.prepare(h.song, 'normal');
+    await h.coordinator.markGameplayReady();
+    const context = h.contexts[0];
+    if (context === undefined) throw new Error('Expected an audio context.');
+    expect(context.sources).toHaveLength(1);
+
+    setGameplayAllowed(h.coordinator, false);
+    expect(context.sources[0]?.buffer).toBeNull();
+    expect(h.coordinator.snapshot().controller?.audio.status).toBe('paused');
+    await h.coordinator.resume();
+    expect(context.sources).toHaveLength(1);
+    setGameplayAllowed(h.coordinator, true);
+    expect(context.sources).toHaveLength(1);
+    expect(h.coordinator.snapshot().controller?.audio.status).toBe('paused');
+
+    await h.coordinator.resume();
+    expect(context.sources).toHaveLength(2);
+    await h.coordinator.returnToBrowser();
+    expect(h.coordinator.snapshot().songId).toBeNull();
+  });
+
+  it('cancels an in-flight startup when orientation becomes blocked and requires explicit resume', async () => {
+    const fetchGate = deferred<ArrayBuffer>();
+    const context = new TestContext();
+    const coordinator = createPerformanceCoordinator({
+      createAudioContext: () => context,
+      fetchAudio: () => fetchGate.promise,
+    });
+    const h = harness();
+    const pending = coordinator.prepare(h.song, 'normal');
+    await Promise.resolve();
+    setGameplayAllowed(coordinator, false);
+    fetchGate.resolve(new ArrayBuffer(8));
+    await pending;
+    await coordinator.markGameplayReady();
+
+    expect(context.sources).toHaveLength(0);
+    setGameplayAllowed(coordinator, true);
+    await coordinator.markGameplayReady();
+    expect(context.sources).toHaveLength(0);
+    await coordinator.resume();
+    expect(context.sources).toHaveLength(1);
+    await coordinator.returnToBrowser();
+  });
+
   it('exposes the active audio clock as a read-only rendering value', async () => {
     const h = harness();
     expect(h.coordinator.snapshot().audioNow).toBeNull();

@@ -23,9 +23,21 @@ export interface UIActions {
   readonly restart: () => void;
   readonly returnToBrowser: () => void;
   readonly onRendererRetry?: () => void;
+  readonly onLaneDown?: (lane: 0 | 1 | 2 | 3) => void;
+  readonly onLaneUp?: (lane: 0 | 1 | 2 | 3) => void;
+  readonly onPause?: () => void;
+  readonly onOrientationBlocked?: () => void;
+}
+
+export interface TouchPresentation {
+  readonly eligible: boolean;
+  readonly portrait: boolean;
+  readonly enabled: boolean;
+  readonly showGuard: boolean;
 }
 
 export interface GameUI {
+  setTouchPresentation(presentation: TouchPresentation): void;
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
   setRendererStatus(status: BrightvaleRendererStatus, message?: string): void;
@@ -376,6 +388,7 @@ export function createGameUI(
           <p class="chart-notice" data-chart-notice></p>
           <p class="loading-message" data-busy hidden></p>
           <p class="error-message" data-error role="alert" hidden></p>
+          <button class="primary-button" type="button" data-action="start" disabled>Start performance</button>
           <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
 
@@ -411,6 +424,20 @@ export function createGameUI(
           <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
         <span class="sr-only" data-gameplay-status role="status" aria-live="polite" aria-atomic="true"></span>
+        <div class="touch-controls" data-touch-controls hidden aria-label="Touch lanes">
+          <button class="touch-pause" type="button" data-action="pause" aria-label="Pause performance">Pause</button>
+          <div class="touch-lanes">
+            <button class="touch-lane" type="button" data-touch-lane="0" aria-label="Lane 1, D" disabled><span>D</span></button>
+            <button class="touch-lane" type="button" data-touch-lane="1" aria-label="Lane 2, F" disabled><span>F</span></button>
+            <button class="touch-lane" type="button" data-touch-lane="2" aria-label="Lane 3, J" disabled><span>J</span></button>
+            <button class="touch-lane" type="button" data-touch-lane="3" aria-label="Lane 4, K" disabled><span>K</span></button>
+          </div>
+        </div>
+        <section class="touch-rotate-guard" data-touch-guard role="region" aria-label="Portrait gameplay required" hidden>
+          <h2>Turn your phone upright</h2>
+          <p>The song will wait. When you're ready, choose Resume.</p>
+          <button class="secondary-button" type="button" data-action="return">Return to songs</button>
+        </section>
       </div>`;
 
   shell.activate('gameplay');
@@ -449,6 +476,114 @@ export function createGameUI(
   const actionButtons = [
     ...root.querySelectorAll<HTMLButtonElement>('[data-action]'),
   ];
+  const touchControls = root.querySelector<HTMLElement>(
+    '[data-touch-controls]',
+  );
+  const touchGuard = root.querySelector<HTMLElement>('[data-touch-guard]');
+  const touchPads = [
+    ...root.querySelectorAll<HTMLButtonElement>('[data-touch-lane]'),
+  ];
+  const touchPause = root.querySelector<HTMLButtonElement>(
+    '[data-action="pause"]',
+  );
+  let touch: TouchPresentation = {
+    eligible: false,
+    portrait: true,
+    enabled: false,
+    showGuard: false,
+  };
+  let touchDisposed = false;
+  let lastReady = true;
+  const pointers = new Map<
+    number,
+    { lane: 0 | 1 | 2 | 3; target: HTMLButtonElement }
+  >();
+  const laneReferences = [0, 0, 0, 0];
+  function releasePointer(pointerId: number): void {
+    const owned = pointers.get(pointerId);
+    if (!owned) return;
+    pointers.delete(pointerId);
+    laneReferences[owned.lane]!--;
+    if (laneReferences[owned.lane] === 0) {
+      owned.target.classList.remove('is-pressed');
+      actions.onLaneUp?.(owned.lane);
+    }
+    if (owned.target.hasPointerCapture(pointerId))
+      owned.target.releasePointerCapture(pointerId);
+  }
+  function resetTouch(): void {
+    for (const pointerId of [...pointers.keys()]) releasePointer(pointerId);
+  }
+  function setTouchPresentation(next: TouchPresentation): void {
+    if (touchDisposed) return;
+    const becameBlocked = next.showGuard && !touch.showGuard;
+    touch = next;
+    const enabled =
+      next.eligible && next.portrait && next.enabled && !next.showGuard;
+    if (!enabled) resetTouch();
+    if (touchControls) touchControls.hidden = !enabled;
+    if (touchGuard) touchGuard.hidden = !next.showGuard;
+    for (const pad of touchPads) pad.disabled = !enabled;
+    if (touchPause) touchPause.disabled = !enabled;
+    if (lastReady) {
+      for (const button of actionButtons) {
+        if (button.dataset.action === 'start')
+          button.disabled =
+            next.showGuard ||
+            pendingPlaybackRequests ||
+            busyMessage !== null ||
+            rendererStatus !== 'rendered';
+      }
+    }
+    setText(
+      root,
+      '#lane-instructions',
+      next.eligible
+        ? 'Tap the four targets with your thumbs to hit notes at the line. D, F, J, and K also work. Use Pause to hold the song.'
+        : 'Use the D, F, J, and K keys shown on the four lane fronts to hit notes at the line. Escape pauses the performance.',
+    );
+    if (becameBlocked) actions.onOrientationBlocked?.();
+  }
+  function onTouchDown(event: PointerEvent): void {
+    if (
+      touchDisposed ||
+      !touch.enabled ||
+      !touch.eligible ||
+      !touch.portrait ||
+      touch.showGuard ||
+      pointers.has(event.pointerId)
+    )
+      return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const target =
+      event.target instanceof Element
+        ? event.target.closest<HTMLButtonElement>('[data-touch-lane]')
+        : null;
+    if (!target || target.disabled) return;
+    const lane = Number(target.dataset.touchLane);
+    if (lane !== 0 && lane !== 1 && lane !== 2 && lane !== 3) return;
+    event.preventDefault();
+    target.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, { lane, target });
+    laneReferences[lane] = (laneReferences[lane] ?? 0) + 1;
+    target.classList.add('is-pressed');
+    if (laneReferences[lane] === 1) actions.onLaneDown?.(lane);
+  }
+  function onTouchEnd(event: PointerEvent): void {
+    releasePointer(event.pointerId);
+  }
+  function onTouchInterruption(): void {
+    setTouchPresentation({ ...touch, enabled: false });
+  }
+  function onTouchVisibility(): void {
+    if (document.visibilityState === 'hidden') onTouchInterruption();
+  }
+  root.addEventListener('pointerdown', onTouchDown);
+  root.addEventListener('pointerup', onTouchEnd);
+  root.addEventListener('pointercancel', onTouchEnd);
+  root.addEventListener('lostpointercapture', onTouchEnd);
+  window.addEventListener('blur', onTouchInterruption);
+  window.addEventListener('visibilitychange', onTouchVisibility);
   let busyMessage: string | null = null;
   let fatalMessage: string | null = null;
   let rendererStatus: BrightvaleRendererStatus = 'loading';
@@ -590,6 +725,11 @@ export function createGameUI(
     if (button === null || button.disabled) return;
     const action = button.dataset.action;
     if (
+      touch.showGuard &&
+      ['start', 'resume', 'restart'].includes(action ?? '')
+    )
+      return;
+    if (
       pendingPlaybackRequests &&
       ['start', 'resume', 'restart'].includes(action ?? '')
     )
@@ -600,8 +740,12 @@ export function createGameUI(
       previousScoreFrame = null;
       if (action === 'start') actions.start();
       else actions.restart();
-    } else if (action === 'resume') actions.resume();
-    else if (action === 'return') {
+    } else if (action === 'resume') {
+      if (!touch.showGuard) actions.resume();
+    } else if (action === 'pause') {
+      onTouchInterruption();
+      actions.onPause?.();
+    } else if (action === 'return') {
       scoreEchoes.clear();
       actions.returnToBrowser();
     } else if (action === 'renderer-retry') actions.onRendererRetry?.();
@@ -658,8 +802,10 @@ export function createGameUI(
       !isResults;
     const isStarting = audio.status === 'starting';
     const isPlaying = audio.status === 'playing' && game.status === 'playing';
+    if (!isPlaying || pendingPlaybackRequests || isError) onTouchInterruption();
     const isReady =
       !isPaused && !isPlaying && !isStarting && !isError && !isResults;
+    lastReady = isReady;
     const echoesActive =
       isPlaying &&
       !isError &&
@@ -696,7 +842,11 @@ export function createGameUI(
       const action = actionButton.dataset.action;
       const disabled =
         action === 'start'
-          ? !isError
+          ? (!isError && !isReady) ||
+            pendingPlaybackRequests ||
+            rendererStatus !== 'rendered' ||
+            busyMessage !== null ||
+            touch.showGuard
           : action === 'renderer-retry'
             ? rendererStatus !== 'unavailable' ||
               actions.onRendererRetry === undefined
@@ -870,6 +1020,7 @@ export function createGameUI(
   }
 
   return {
+    setTouchPresentation,
     render,
     setBusy(message) {
       busyMessage = message;
@@ -904,6 +1055,14 @@ export function createGameUI(
       if (message !== null) showPanel('error');
     },
     destroy() {
+      if (!touchDisposed) resetTouch();
+      touchDisposed = true;
+      root.removeEventListener('pointerdown', onTouchDown);
+      root.removeEventListener('pointerup', onTouchEnd);
+      root.removeEventListener('pointercancel', onTouchEnd);
+      root.removeEventListener('lostpointercapture', onTouchEnd);
+      window.removeEventListener('blur', onTouchInterruption);
+      window.removeEventListener('visibilitychange', onTouchVisibility);
       scoreTransitions.dispose();
       scoreEchoes.destroy();
       motionPreference?.removeEventListener('change', onMotionPreferenceChange);

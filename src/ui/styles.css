@@ -168,6 +168,99 @@ a:focus-visible {
   pointer-events: none;
 }
 
+/* Independent thumb targets: never resize the canvas or its measured HUD. */
+.touch-controls {
+  position: absolute;
+  z-index: 4;
+  inset-inline: max(12px, env(safe-area-inset-left))
+    max(12px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+.touch-lanes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  gap: 6px;
+}
+.touch-lane {
+  --lane-color: #65d8ff;
+  display: grid;
+  min-height: clamp(80px, 12dvh, 104px);
+  padding: 12px 4px;
+  place-items: end center;
+  border: 1px solid color-mix(in srgb, var(--lane-color) 65%, transparent);
+  border-radius: 12px 12px 8px 8px;
+  background: rgb(6 13 32 / 35%);
+  color: var(--lane-color);
+  font-weight: 700;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.touch-lane:nth-child(2) {
+  --lane-color: #e98bc8;
+  margin-right: 3px;
+}
+.touch-lane:nth-child(3) {
+  --lane-color: #ffd475;
+  margin-left: 3px;
+}
+.touch-lane:nth-child(4) {
+  --lane-color: #91e6b0;
+}
+.touch-lane.is-pressed {
+  background: color-mix(in srgb, var(--lane-color) 30%, rgb(6 13 32 / 65%));
+  border-color: var(--lane-color);
+}
+.touch-pause {
+  display: block;
+  min-width: 76px;
+  min-height: 44px;
+  margin: 0 0 8px auto;
+  padding: 8px 14px;
+  border: 1px solid rgb(244 240 223 / 55%);
+  border-radius: 999px;
+  background: rgb(6 13 32 / 75%);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.touch-rotate-guard {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 12px;
+  overflow: auto;
+  padding: max(18px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  background: rgb(6 13 32 / 96%);
+  text-align: center;
+}
+.touch-rotate-guard h2,
+.touch-rotate-guard p {
+  margin: 0;
+}
+.touch-rotate-guard h2 {
+  color: var(--gold);
+  font-size: 1.5rem;
+}
+.touch-rotate-guard p {
+  max-width: 34ch;
+}
+.touch-rotate-guard .secondary-button {
+  min-height: 44px;
+}
+.touch-controls[hidden],
+.touch-rotate-guard[hidden] {
+  display: none;
+}
+
 .experience-screen-stack {
   position: absolute;
   z-index: 2;

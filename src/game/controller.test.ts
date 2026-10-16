@@ -157,6 +157,20 @@ function createHarness(audio = new FakeAudio()): Harness {
   return { audio, controller, games, render };
 }
 
+function invokeTouchLane(
+  controller: ReturnType<typeof createGameController>,
+  method: 'laneDown' | 'laneUp',
+  lane: ChartLane,
+): ControllerSnapshot {
+  const operation = Reflect.get(controller, method);
+  // Missing touch actions are deliberate no-ops here: the judgment and held
+  // state assertions below expose missing behavior instead of failing on API
+  // shape alone.
+  return typeof operation === 'function'
+    ? operation.call(controller, lane)
+    : controller.snapshot();
+}
+
 function setPlaying(audio: FakeAudio, position: number): void {
   audio.state = { ...audio.state, status: 'playing', position };
 }
@@ -246,6 +260,108 @@ describe('game controller', () => {
     expect(harness.controller.snapshot().game.notes[1]?.outcome).toBe(
       'perfect',
     );
+  });
+
+  it('accepts simultaneous touch lanes independently across all four chart lanes', () => {
+    const laneChart: ChartConfig = {
+      ...chart,
+      twilightAt: 3.5,
+      notes: [
+        { id: 'touch-0', time: 0.5, lane: 0 },
+        { id: 'touch-1', time: 1, lane: 1 },
+        { id: 'touch-2', time: 1.5, lane: 2 },
+        { id: 'touch-3', time: 2, lane: 3 },
+      ],
+    };
+    const audio = new FakeAudio();
+    const controller = createGameController({
+      audio,
+      createGame: (inputOffset) => createGame(laneChart, inputOffset),
+    });
+
+    for (const [index, lane] of ([0, 1, 2, 3] as const).entries()) {
+      setPlaying(audio, laneChart.notes[index]!.time);
+      invokeTouchLane(controller, 'laneDown', lane);
+    }
+
+    expect(
+      controller.snapshot().game.notes.map((note) => note.outcome),
+    ).toEqual(['perfect', 'perfect', 'perfect', 'perfect']);
+    for (const lane of [0, 1, 2, 3] as const)
+      invokeTouchLane(controller, 'laneUp', lane);
+  });
+
+  it('keeps keyboard and touch ownership independent for the same lane', () => {
+    const sharedLaneNotes: ChartConfig['notes'] = [0.5, 1, 1.5, 2, 2.5].map(
+      (time, index) => ({
+        id: `shared-lane-${index}`,
+        time,
+        lane: 0,
+      }),
+    );
+    const laneChart: ChartConfig = {
+      ...chart,
+      twilightAt: 3.5,
+      notes: sharedLaneNotes,
+    };
+    const audio = new FakeAudio();
+    const controller = createGameController({
+      audio,
+      createGame: (inputOffset) => createGame(laneChart, inputOffset),
+    });
+
+    setPlaying(audio, 0.5);
+    invokeTouchLane(controller, 'laneDown', 0);
+    setPlaying(audio, 1);
+    controller.keyDown('KeyD');
+    controller.keyUp('KeyD');
+
+    setPlaying(audio, 1.5);
+    invokeTouchLane(controller, 'laneDown', 0);
+    expect(controller.snapshot().game.notes[2]?.outcome).toBeNull();
+    invokeTouchLane(controller, 'laneUp', 0);
+    invokeTouchLane(controller, 'laneDown', 0);
+    expect(controller.snapshot().game.notes[2]?.outcome).toBe('perfect');
+
+    setPlaying(audio, 2);
+    controller.keyDown('KeyD');
+    invokeTouchLane(controller, 'laneUp', 0);
+    setPlaying(audio, 2.5);
+    controller.keyDown('KeyD');
+    expect(controller.snapshot().game.notes[4]?.outcome).toBeNull();
+    controller.keyUp('KeyD');
+    controller.keyDown('KeyD');
+    expect(
+      controller.snapshot().game.notes.map((note) => note.outcome),
+    ).toEqual(Array(5).fill('perfect'));
+  });
+
+  it('clears held touch ownership on pause and restart so lanes cannot stick', async () => {
+    const laneChart: ChartConfig = {
+      ...chart,
+      notes: [
+        { id: 'reset-touch-1', time: 0.5, lane: 0 },
+        { id: 'reset-touch-2', time: 1, lane: 0 },
+      ],
+    };
+    const audio = new FakeAudio();
+    const controller = createGameController({
+      audio,
+      createGame: (inputOffset) => createGame(laneChart, inputOffset),
+    });
+
+    setPlaying(audio, 0.5);
+    invokeTouchLane(controller, 'laneDown', 0);
+    controller.pause();
+    await controller.resume();
+    setPlaying(audio, 1);
+    invokeTouchLane(controller, 'laneDown', 0);
+    expect(controller.snapshot().game.notes[1]?.outcome).toBe('perfect');
+
+    await controller.restart();
+    setPlaying(audio, 0.5);
+    invokeTouchLane(controller, 'laneDown', 0);
+    expect(controller.snapshot().game.notes[0]?.outcome).toBe('perfect');
   });
 
   it('ignores unsupported keys and leaves unmatched lanes without penalties', () => {
