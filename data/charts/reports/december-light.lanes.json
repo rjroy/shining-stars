@@ -25,96 +25,96 @@
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.5128205128205128,
+      "baselineExtractedF0DirectionAgreement": 0.3942307692307692,
       "baselineHandCounts": [
-        87,
-        86
+        125,
+        125
       ],
       "baselineLaneCounts": [
-        44,
-        43,
-        43,
-        43
+        63,
+        62,
+        63,
+        62
       ],
       "baselineLaneShares": [
-        0.2543352601156069,
-        0.24855491329479767,
-        0.24855491329479767,
-        0.24855491329479767
+        0.252,
+        0.248,
+        0.252,
+        0.248
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.782051282051282,
+      "candidateExtractedF0DirectionAgreement": 0.7788461538461539,
       "candidateHandCounts": [
-        87,
-        86
+        125,
+        125
       ],
       "candidateLaneCounts": [
-        42,
-        45,
-        43,
-        43
+        62,
+        63,
+        63,
+        62
       ],
       "candidateLaneShares": [
-        0.24277456647398843,
-        0.26011560693641617,
-        0.24855491329479767,
-        0.24855491329479767
+        0.248,
+        0.252,
+        0.252,
+        0.248
       ],
       "candidateLongestLaneRun": 3,
       "candidateWorstRolling32Concentration": 0.34375,
-      "noteCount": 173,
+      "noteCount": 250,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 123,
-      "stablePitchCoverage": 0.7109826589595376,
-      "stableUnequalPitchAdjacentPairs": 78,
-      "unknownPitchCount": 50
+      "stablePitchCount": 172,
+      "stablePitchCoverage": 0.688,
+      "stableUnequalPitchAdjacentPairs": 104,
+      "unknownPitchCount": 78
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.5142857142857142,
+      "baselineExtractedF0DirectionAgreement": 0.458128078817734,
       "baselineHandCounts": [
-        265,
-        265
+        251,
+        250
       ],
       "baselineLaneCounts": [
-        133,
-        132,
-        133,
-        132
+        126,
+        125,
+        125,
+        125
       ],
       "baselineLaneShares": [
-        0.2509433962264151,
-        0.2490566037735849,
-        0.2509433962264151,
-        0.2490566037735849
+        0.25149700598802394,
+        0.249500998003992,
+        0.249500998003992,
+        0.249500998003992
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7714285714285715,
+      "candidateExtractedF0DirectionAgreement": 0.7536945812807881,
       "candidateHandCounts": [
-        265,
-        265
+        250,
+        251
       ],
       "candidateLaneCounts": [
-        132,
-        133,
-        133,
-        132
+        125,
+        125,
+        126,
+        125
       ],
       "candidateLaneShares": [
-        0.2490566037735849,
-        0.2509433962264151,
-        0.2509433962264151,
-        0.2490566037735849
+        0.249500998003992,
+        0.249500998003992,
+        0.25149700598802394,
+        0.249500998003992
       ],
       "candidateLongestLaneRun": 3,
       "candidateWorstRolling32Concentration": 0.375,
-      "noteCount": 530,
+      "noteCount": 501,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 367,
-      "stablePitchCoverage": 0.6924528301886792,
-      "stableUnequalPitchAdjacentPairs": 210,
-      "unknownPitchCount": 163
+      "stablePitchCount": 347,
+      "stablePitchCoverage": 0.6926147704590818,
+      "stableUnequalPitchAdjacentPairs": 203,
+      "unknownPitchCount": 154
     },
     "normal": {
       "baselineExtractedF0DirectionAgreement": 0.4537037037037037,

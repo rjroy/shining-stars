@@ -18,17 +18,17 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 120,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
-          "minimum_delta": 64,
+          "minimum_delta": 90,
           "stride": 2
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 120,
           "stride": 1
         }
       }
@@ -50,8 +50,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -60,7 +60,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -82,8 +82,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -92,7 +92,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -114,8 +114,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -124,7 +124,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -146,8 +146,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -156,7 +156,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -178,8 +178,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -188,7 +188,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -210,8 +210,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -220,7 +220,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -242,8 +242,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -252,7 +252,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -274,8 +274,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -284,7 +284,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -306,8 +306,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -316,7 +316,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -338,8 +338,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -348,7 +348,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -370,8 +370,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -380,7 +380,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -402,8 +402,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -412,7 +412,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -434,8 +434,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -444,7 +444,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -466,8 +466,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -476,7 +476,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -498,8 +498,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -508,7 +508,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -530,8 +530,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -540,7 +540,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -562,8 +562,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -572,7 +572,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -594,8 +594,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -604,7 +604,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -626,8 +626,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -636,7 +636,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -658,8 +658,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -668,7 +668,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -690,8 +690,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -700,7 +700,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -722,8 +722,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -732,7 +732,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -754,8 +754,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -764,7 +764,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -786,8 +786,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -796,7 +796,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -818,17 +818,17 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
-          "minimum_delta": 64,
+          "minimum_delta": 70,
           "stride": 2
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -850,8 +850,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -860,7 +860,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -882,8 +882,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -892,7 +892,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }
@@ -914,8 +914,8 @@
       "difficulties": {
         "easy": {
           "twilight_strength": 70,
-          "minimum_delta": 64,
-          "stride": 3
+          "minimum_delta": 90,
+          "stride": 2
         },
         "normal": {
           "twilight_strength": 80,
@@ -924,7 +924,7 @@
         },
         "hard": {
           "twilight_strength": 90,
-          "minimum_delta": 50,
+          "minimum_delta": 90,
           "stride": 1
         }
       }

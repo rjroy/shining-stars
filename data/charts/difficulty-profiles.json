@@ -19,7 +19,7 @@
       }
     },
     "hard": {
-      "timing": { "perfect_ms": 50, "good_ms": 100 },
+      "timing": { "perfect_ms": 55, "good_ms": 105 },
       "audience": { "perfect": 5, "good": 3, "miss": -1 },
       "twilight": {
         "perfect": { "personal_cost": 0, "damage": 5 },

@@ -25,96 +25,96 @@
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.48,
+      "baselineExtractedF0DirectionAgreement": 0.4909090909090909,
       "baselineHandCounts": [
-        121,
-        120
+        178,
+        178
       ],
       "baselineLaneCounts": [
-        61,
-        60,
-        60,
-        60
+        89,
+        89,
+        89,
+        89
       ],
       "baselineLaneShares": [
-        0.25311203319502074,
-        0.24896265560165975,
-        0.24896265560165975,
-        0.24896265560165975
+        0.25,
+        0.25,
+        0.25,
+        0.25
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.808,
+      "candidateExtractedF0DirectionAgreement": 0.8363636363636363,
       "candidateHandCounts": [
-        123,
-        118
+        179,
+        177
       ],
       "candidateLaneCounts": [
-        62,
-        61,
-        60,
-        58
+        90,
+        89,
+        89,
+        88
       ],
       "candidateLaneShares": [
-        0.2572614107883817,
-        0.25311203319502074,
-        0.24896265560165975,
-        0.24066390041493776
+        0.25280898876404495,
+        0.25,
+        0.25,
+        0.24719101123595505
       ],
       "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.34375,
-      "noteCount": 241,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 356,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 185,
-      "stablePitchCoverage": 0.7676348547717843,
-      "stableUnequalPitchAdjacentPairs": 125,
-      "unknownPitchCount": 56
+      "stablePitchCount": 272,
+      "stablePitchCoverage": 0.7640449438202247,
+      "stableUnequalPitchAdjacentPairs": 165,
+      "unknownPitchCount": 84
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.4575757575757576,
+      "baselineExtractedF0DirectionAgreement": 0.5510835913312694,
       "baselineHandCounts": [
-        367,
-        367
+        356,
+        356
       ],
       "baselineLaneCounts": [
-        184,
-        183,
-        184,
-        183
+        178,
+        178,
+        178,
+        178
       ],
       "baselineLaneShares": [
-        0.2506811989100817,
-        0.24931880108991825,
-        0.2506811989100817,
-        0.24931880108991825
+        0.25,
+        0.25,
+        0.25,
+        0.25
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8181818181818182,
+      "candidateExtractedF0DirectionAgreement": 0.8235294117647058,
       "candidateHandCounts": [
-        367,
-        367
+        358,
+        354
       ],
       "candidateLaneCounts": [
-        183,
-        184,
-        184,
-        183
+        179,
+        179,
+        178,
+        176
       ],
       "candidateLaneShares": [
-        0.24931880108991825,
-        0.2506811989100817,
-        0.2506811989100817,
-        0.24931880108991825
+        0.25140449438202245,
+        0.25140449438202245,
+        0.25,
+        0.24719101123595505
       ],
       "candidateLongestLaneRun": 3,
       "candidateWorstRolling32Concentration": 0.40625,
-      "noteCount": 734,
+      "noteCount": 712,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 569,
-      "stablePitchCoverage": 0.7752043596730245,
-      "stableUnequalPitchAdjacentPairs": 330,
-      "unknownPitchCount": 165
+      "stablePitchCount": 557,
+      "stablePitchCoverage": 0.7823033707865169,
+      "stableUnequalPitchAdjacentPairs": 323,
+      "unknownPitchCount": 155
     },
     "normal": {
       "baselineExtractedF0DirectionAgreement": 0.520618556701031,
