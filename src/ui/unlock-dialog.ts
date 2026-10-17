@@ -19,6 +19,48 @@ export function purchaseUnlock(
   };
 }
 
+export function createUnlockController(
+  progression: SaveStore['progression'],
+  request: ProgressionPurchaseRequest,
+) {
+  type Phase = 'confirm' | 'error' | 'confirm-temporary' | 'result';
+  const temporaryWarning =
+    'This unlock will not be saved on this device. It lasts for this session only. Download a backup before leaving. Confirm the temporary unlock to spend credits.';
+  let phase: Phase =
+    progression.snapshot().persistence === 'session'
+      ? 'confirm-temporary'
+      : 'confirm';
+  let notice = phase === 'confirm-temporary' ? temporaryWarning : '';
+  return {
+    snapshot: () => ({ phase, notice, canOfferTemporary: phase === 'error' }),
+    requestTemporary() {
+      if (phase !== 'error') return;
+      phase = 'confirm-temporary';
+      notice = temporaryWarning;
+    },
+    back() {
+      if (phase !== 'confirm-temporary') return;
+      phase = 'error';
+      notice =
+        'Nothing changed. No credits were spent. Retry saving or explicitly choose a temporary unlock.';
+    },
+    confirm() {
+      if (phase === 'result') return;
+      const target = phase === 'confirm-temporary' ? 'session' : 'local';
+      try {
+        const result = purchaseUnlock(progression, request, target);
+        phase = result.done ? 'result' : 'error';
+        notice = result.done
+          ? result.notice
+          : `Nothing changed. No credits were spent; nothing was unlocked. ${result.notice}`;
+      } catch (error) {
+        phase = 'error';
+        notice = `Nothing changed. No credits were spent; nothing was unlocked. ${error instanceof Error ? error.message : 'The purchase could not finish.'}`;
+      }
+    },
+  };
+}
+
 /** Protected confirmation: a failed local purchase never becomes a session purchase. */
 export function createUnlockDialog(
   host: HTMLElement,
@@ -33,8 +75,7 @@ export function createUnlockDialog(
   let request: ProgressionPurchaseRequest | null = null;
   let title = '';
   let cost = 0;
-  let notice = '';
-  let done = false;
+  let flow: ReturnType<typeof createUnlockController> | null = null;
   const close = () => {
     dialog.close();
     if (opener?.isConnected) opener.focus();
@@ -46,11 +87,18 @@ export function createUnlockDialog(
         ?.focus();
   };
   function render() {
+    if (flow === null) return;
+    const state = flow.snapshot();
+    const done = state.phase === 'result';
     dialog.replaceChildren();
     const heading = document.createElement('h2');
     heading.id = 'unlock-title';
     heading.tabIndex = -1;
-    heading.textContent = done ? 'Unlocked' : `Unlock ${title}?`;
+    heading.textContent = done
+      ? 'Unlocked'
+      : state.phase === 'confirm-temporary'
+        ? `Temporarily unlock ${title}?`
+        : `Unlock ${title}?`;
     const copy = document.createElement('p');
     const balance = store.progression.snapshot().balance;
     copy.textContent = done
@@ -62,7 +110,7 @@ export function createUnlockDialog(
     status.className = 'save-data-notice';
     status.setAttribute('role', 'status');
     status.textContent =
-      notice ||
+      state.notice ||
       (balance < cost
         ? `You need ${cost - balance} more credits. Win on a new difficulty to earn credits; higher victories also credit lower difficulties.`
         : '');
@@ -79,22 +127,36 @@ export function createUnlockDialog(
     };
     button(done ? 'Done' : 'Cancel', close);
     if (!done && balance >= cost) {
-      button(`Unlock · ${cost} credits · save on device`, () => buy('local'));
-      button(`Unlock · ${cost} credits · session only`, () => buy('session'));
+      const price = `${cost} ${cost === 1 ? 'credit' : 'credits'}`;
+      button(
+        state.phase === 'confirm-temporary'
+          ? `Confirm temporary unlock · ${price}`
+          : state.phase === 'error'
+            ? 'Retry unlock'
+            : `Unlock · ${price}`,
+        buy,
+      );
+      if (state.canOfferTemporary)
+        button('Use temporary unlock…', () => {
+          flow?.requestTemporary();
+          render();
+        });
+      if (
+        state.phase === 'confirm-temporary' &&
+        store.progression.snapshot().persistence === 'local'
+      )
+        button('Back', () => {
+          flow?.back();
+          render();
+        });
     }
     dialog.append(heading, copy, status, actions);
     if (dialog.open) heading.focus();
   }
-  function buy(target: SaveImportTarget) {
-    if (request === null || done) return;
-    try {
-      const result = purchaseUnlock(store.progression, request, target);
-      done = result.done;
-      notice = result.notice;
-      onChanged();
-    } catch (error) {
-      notice = `Nothing changed. ${error instanceof Error ? error.message : 'The purchase could not finish.'}`;
-    }
+  function buy() {
+    if (flow === null) return;
+    flow.confirm();
+    onChanged();
     render();
   }
   const cancel = (event: Event) => {
@@ -114,8 +176,7 @@ export function createUnlockDialog(
       request = next;
       title = name;
       cost = price;
-      notice = '';
-      done = false;
+      flow = createUnlockController(store.progression, next);
       render();
       dialog.showModal();
       dialog.querySelector<HTMLElement>('h2')?.focus();

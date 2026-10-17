@@ -111,6 +111,10 @@ def load_difficulty_profiles(path=None):
         if not all(isinstance(value, dict) for value in (timing, audience, twilight)):
             raise ValueError(f"difficulty profile {difficulty} has an invalid shape")
 
+        strength_percent = _finite_number(profile.get("twilight_strength"), "twilight_strength")
+        if not 0 < strength_percent <= 100:
+            raise ValueError(f"difficulty profile {difficulty} has invalid twilight_strength")
+
         perfect_ms = _finite_number(timing.get("perfect_ms"), "perfect_ms")
         good_ms = _finite_number(timing.get("good_ms"), "good_ms")
         if perfect_ms <= 0 or good_ms < perfect_ms:
@@ -135,6 +139,7 @@ def load_difficulty_profiles(path=None):
                 "damage": damage,
             }
         validated[difficulty] = {
+            "twilight_strength": strength_percent,
             "timing": {"perfect_ms": perfect_ms, "good_ms": good_ms},
             "audience": parsed_audience,
             "twilight": parsed_twilight,
@@ -495,7 +500,13 @@ def load_song_config(path=DEFAULT_SONG_CONFIG, song_id=DEFAULT_SONG_ID):
 
 
 def _profile_file_hash(path=None):
-    return _sha256_file(path or DEFAULT_DIFFICULTY_PROFILES)
+    document = json.loads(Path(path or DEFAULT_DIFFICULTY_PROFILES).read_text(encoding="utf-8"))
+    profiles = document.get("profiles", {})
+    for profile in profiles.values():
+        if isinstance(profile, dict):
+            profile.pop("twilight_strength", None)
+    payload = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
@@ -528,14 +539,18 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             choice = choices[difficulty]
             if not isinstance(choice, dict):
                 raise ValueError(f"song {song_id!r} has invalid {difficulty} settings")
-            expected = set(DIFFICULTY_AUTHORING[difficulty])
+            if "twilight_strength" in choice:
+                raise ValueError(
+                    f"song {song_id!r} {difficulty} twilight_strength is no longer "
+                    "authorable; set profiles.<difficulty>.twilight_strength instead"
+                )
+            expected = {"minimum_delta", "stride"}
             if not expected <= set(choice) or set(choice) - expected - {"lane_mapping"}:
                 raise ValueError(f"song {song_id!r} has invalid {difficulty} settings")
             _validate_difficulty_lane_mapping(song_id, difficulty, choice)
-            strength = _finite_number(choice["twilight_strength"], "twilight_strength")
             delta = _finite_number(choice["minimum_delta"], "minimum_delta")
             stride = choice["stride"]
-            if not 0 < strength <= 100 or delta < 0 or isinstance(stride, bool) or not isinstance(stride, int) or stride <= 0:
+            if delta < 0 or isinstance(stride, bool) or not isinstance(stride, int) or stride <= 0:
                 raise ValueError(f"song {song_id!r} has invalid {difficulty} difficulty values")
     return songs
 
@@ -720,9 +735,6 @@ def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, s
     count = sum(note["relative_time"] > twilight_at for note in notes)
     if count == 0:
         raise ValueError(f"zeroTwilight: {song_id}/{difficulty} has no twilight notes")
-    strength = math.ceil(count * profile["twilight"]["perfect"]["damage"] * choice["twilight_strength"] / 100)
-    if strength <= 0:
-        raise ValueError(f"zeroTwilight: {song_id}/{difficulty} computes zero twilight strength")
     # Construct the runtime ChartConfig shape directly; percentages and provenance
     # remain in authoring/onset data, never in runtime chart values.
     counters = {"a": 0, "t": 0}
@@ -733,7 +745,7 @@ def _difficulty_chart(onsets, settings, duration_seconds, profile, difficulty, s
         chart_notes.append({"id": f"{kind}{counters[kind]:02d}", "time": note["relative_time"], "lane": note["lane"]})
     chart = {
         "sourceStart": excerpt_start, "duration": excerpt_duration,
-        "twilightAt": twilight_at, "twilightStrength": strength,
+        "twilightAt": twilight_at,
         "allowedDifficulties": [difficulty],
         "notes": chart_notes,
     }

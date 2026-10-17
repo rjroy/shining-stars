@@ -2878,8 +2878,7 @@
         }
       ],
       "sourceStart": 0.0,
-      "twilightAt": 181.4599895,
-      "twilightStrength": 418
+      "twilightAt": 181.4599895
     },
     "hard": {
       "allowedDifficulties": [
@@ -8629,8 +8628,7 @@
         }
       ],
       "sourceStart": 0.0,
-      "twilightAt": 181.4599895,
-      "twilightStrength": 2678
+      "twilightAt": 181.4599895
     },
     "normal": {
       "allowedDifficulties": [
@@ -11585,13 +11583,12 @@
         }
       ],
       "sourceStart": 0.0,
-      "twilightAt": 181.4599895,
-      "twilightStrength": 735
+      "twilightAt": 181.4599895
     }
   },
   "schemaVersion": 1,
   "scoring": {
-    "chartFingerprint": "4634f2df9b84c29d4f15908ed20ea1a1e1ff56c87b52690ac0bf03102ddc48d1",
+    "chartFingerprint": "06d686138d9846a24f1ccaddb53cc1f86a6ee7588c7349e1781fbb781d740b12",
     "fiveGoldTarget": 256050,
     "normalMaximum": 284500,
     "version": 1

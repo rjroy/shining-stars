@@ -166,6 +166,7 @@ describe('shared score presentation contract', () => {
           renown: 80,
           personalStrength: 60,
           twilightStrength: victory ? 0 : 40,
+          initialTwilightStrength: 100,
           difficulty: 'normal',
           notes: [],
           result: null,

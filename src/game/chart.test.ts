@@ -4,15 +4,15 @@ import {
   type ChartIssueCode,
   type ChartLane,
   type ChartNote,
+  getInitialTwilightStrength,
   validateChart,
 } from './chart';
-import { maximumGoodWindowSeconds } from './game-balance';
+import { DIFFICULTY_PROFILES, maximumGoodWindowSeconds } from './game-balance';
 
 const validConfig: ChartConfig = {
   sourceStart: 107.1,
   duration: 65.8,
   twilightAt: 39.2,
-  twilightStrength: 100,
   allowedDifficulties: ['normal', 'hard'],
   notes: [
     { id: 'audience-note', time: 10, lane: 0 },
@@ -69,22 +69,52 @@ describe('validateChart', () => {
     },
   );
 
-  it.each([
-    0,
-    -1,
-    Number.NaN,
-    Number.POSITIVE_INFINITY,
-    Number.NEGATIVE_INFINITY,
-  ])(
-    'requires a finite positive initial Twilight Strength (%s)',
-    (twilightStrength) => {
-      const invalidConfig = {
-        ...validConfig,
-        twilightStrength,
-      } as unknown as ChartConfig;
-      expectIssue(invalidConfig, 'invalid-twilight-strength' as ChartIssueCode);
-    },
-  );
+  it('derives Twilight Strength from difficulty, Twilight-phase notes and Perfect damage', () => {
+    for (const difficulty of ['easy', 'normal', 'hard'] as const) {
+      const profile = DIFFICULTY_PROFILES[difficulty];
+      const twilightNoteCount = validConfig.notes.filter(
+        ({ time }) => time >= validConfig.twilightAt,
+      ).length;
+      const independentlyDerivedStrength = Math.ceil(
+        twilightNoteCount *
+          profile.twilight.perfect.damage *
+          (profile.twilightStrengthPercent / 100),
+      );
+
+      expect(getInitialTwilightStrength(validConfig, difficulty)).toBe(
+        independentlyDerivedStrength,
+      );
+    }
+  });
+
+  it('counts only notes assigned to Twilight and rounds fractional strength up', () => {
+    const chart = withConfig({
+      notes: [
+        { id: 'before', time: validConfig.twilightAt - 0.001, lane: 0 },
+        { id: 'at-boundary', time: validConfig.twilightAt, lane: 1 },
+      ],
+    });
+    expect(getInitialTwilightStrength(chart, 'normal')).toBe(3);
+    expect(
+      getInitialTwilightStrength(withConfig({ notes: [] }), 'normal'),
+    ).toBe(0);
+  });
+
+  it('uses the selected difficulty profile when deriving the initial strength', () => {
+    const chart = withConfig({
+      notes: [{ id: 'twilight', time: validConfig.twilightAt, lane: 0 }],
+    });
+
+    // The boundary belongs to Twilight; Hard damage and its configured
+    // strength percentage produce a fractional value that rounds upward.
+    const hardProfile = DIFFICULTY_PROFILES.hard;
+    expect(getInitialTwilightStrength(chart, 'hard')).toBe(
+      Math.ceil(
+        hardProfile.twilight.perfect.damage *
+          (hardProfile.twilightStrengthPercent / 100),
+      ),
+    );
+  });
 
   it.each([
     -0.01,

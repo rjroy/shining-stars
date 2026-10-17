@@ -1,7 +1,8 @@
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
-import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import { defaultDifficulty, getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import { getInitialTwilightStrength } from '../game/chart';
 import {
   GOLD_STAR_THRESHOLDS,
   NORMAL_STAR_THRESHOLDS,
@@ -458,7 +459,7 @@ export function createGameUI(
     '[data-song-description]',
     song.segmentKind === 'excerpt'
       ? 'This is a short demo excerpt. Follow the notes to the line; the song carries you through Audience and Twilight.'
-      : `Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${chart.twilightStrength} Twilight Strength. A missed note is not surrender.`,
+       : `Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${getInitialTwilightStrength(chart, defaultDifficulty(chart.allowedDifficulties))} Twilight Strength. A missed note is not surrender.`,
   );
   setText(
     root,

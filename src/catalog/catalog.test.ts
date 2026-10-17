@@ -11,12 +11,10 @@ import { canStartSong, selectSongs } from './selectors';
 
 const chart = (
   difficulty: 'easy' | 'normal' | 'hard',
-  strength = 80,
 ): ChartConfig => ({
   sourceStart: 0,
   duration: 20,
   twilightAt: 10,
-  twilightStrength: strength,
   allowedDifficulties: [difficulty],
   notes: [{ id: `${difficulty}-note`, time: 4, lane: 0 }],
 });
@@ -61,7 +59,7 @@ const generated: Readonly<Record<string, GeneratedSongCharts>> = {
       fiveGoldTarget: 90,
       chartFingerprint: 'a'.repeat(64),
     },
-    charts: { normal: chart('normal', 72), hard: chart('hard', 94) },
+    charts: { normal: chart('normal'), hard: chart('hard') },
   },
   'easy-song.charts.json': {
     schemaVersion: 1,
@@ -73,7 +71,7 @@ const generated: Readonly<Record<string, GeneratedSongCharts>> = {
       fiveGoldTarget: null,
       chartFingerprint: null,
     },
-    charts: { easy: chart('easy', 60) },
+    charts: { easy: chart('easy') },
   },
 };
 const audio = {
@@ -86,8 +84,8 @@ describe('song catalog runtime', () => {
     const catalog = createSongCatalog(metadata, generated, audio);
     const mixed = catalog.songs[0]!;
     expect(getSongDifficulties(mixed)).toEqual(['normal', 'hard']);
-    expect(getSongChart(mixed, 'normal').twilightStrength).toBe(72);
-    expect(getSongChart(mixed, 'hard').twilightStrength).toBe(94);
+    expect(getSongChart(mixed, 'normal')).toEqual(chart('normal'));
+    expect(getSongChart(mixed, 'hard')).toEqual(chart('hard'));
     expect(mixed.scoring).toEqual({
       version: 1,
       normalMaximum: 100,
@@ -209,7 +207,6 @@ describe('song catalog runtime', () => {
             sourceStart: 0,
             duration: 20,
             twilightAt: 10,
-            twilightStrength: 80,
             allowedDifficulties: ['normal'],
           },
         }),

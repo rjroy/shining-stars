@@ -1,4 +1,9 @@
-import { validateChart, type ChartConfig, type ChartLane } from './chart';
+import {
+  getInitialTwilightStrength,
+  validateChart,
+  type ChartConfig,
+  type ChartLane,
+} from './chart';
 import {
   defaultDifficulty,
   getDifficultyProfile,
@@ -50,6 +55,7 @@ export interface GameSnapshot {
   readonly renown: number;
   readonly personalStrength: number;
   readonly twilightStrength: number;
+  readonly initialTwilightStrength: number;
   readonly difficulty: Difficulty;
   readonly score: number;
   readonly combo: number;
@@ -290,7 +296,8 @@ export function createGame(
   let victory = false;
   let renown = 0;
   let personalStrength = 0;
-  let twilightStrength = chart.twilightStrength;
+  const initialTwilightStrength = getInitialTwilightStrength(chart, difficulty);
+  let twilightStrength = initialTwilightStrength;
   let score = 0;
   let combo = 0;
   let boundaryProcessed = false;
@@ -448,6 +455,7 @@ export function createGame(
       renown,
       personalStrength,
       twilightStrength,
+      initialTwilightStrength,
       difficulty,
       score,
       combo,

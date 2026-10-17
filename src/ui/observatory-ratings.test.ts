@@ -16,7 +16,6 @@ const chart = (duration: number, difficulty: Difficulty) => ({
   sourceStart: 0,
   duration,
   twilightAt: duration / 2,
-  twilightStrength: 100,
   allowedDifficulties: [difficulty],
   notes: [],
 });

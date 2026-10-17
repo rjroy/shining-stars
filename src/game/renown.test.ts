@@ -6,7 +6,6 @@ import { getDifficultyProfile } from './game-balance';
 interface RenownChartOptions {
   readonly duration?: number;
   readonly twilightAt?: number;
-  readonly twilightStrength?: number;
 }
 
 function chart(
@@ -17,14 +16,23 @@ function chart(
     sourceStart: 0,
     duration: options.duration ?? 12,
     twilightAt: options.twilightAt ?? 5,
-    twilightStrength: options.twilightStrength ?? 100,
     allowedDifficulties: ['normal'],
     notes,
-  } as unknown as ChartConfig;
+  };
 }
 
 function note(id: string, time: number, lane: ChartLane = 0): ChartNote {
   return { id, time, lane };
+}
+
+function deriveInitialStrength(notes: readonly ChartNote[]): number {
+  const profile = getDifficultyProfile('normal');
+  const twilightNotes = notes.filter(({ time }) => time >= 5).length;
+  return Math.ceil(
+    twilightNotes *
+      profile.twilight.perfect.damage *
+      (profile.twilightStrengthPercent / 100),
+  );
 }
 
 describe('Renown and Twilight Strength model', () => {
@@ -43,12 +51,9 @@ describe('Renown and Twilight Strength model', () => {
     expect(game.snapshot().renown).toBe(120);
   });
 
-  it('hands off all audience Renown as Personal Strength and starts configured Twilight Strength', () => {
-    const game = createGame(
-      chart([note('audience', 2), note('twilight', 7)], {
-        twilightStrength: 137,
-      }),
-    );
+  it('hands off all audience Renown as Personal Strength and starts derived Twilight Strength', () => {
+    const chartNotes = [note('audience', 2), note('twilight', 7)];
+    const game = createGame(chart(chartNotes));
     game.press(0, 2);
 
     expect(game.snapshot().renown).toBe(3);
@@ -57,7 +62,7 @@ describe('Renown and Twilight Strength model', () => {
     expect(game.snapshot()).toMatchObject({
       phase: 'twilight',
       personalStrength: 3,
-      twilightStrength: 137,
+      twilightStrength: deriveInitialStrength(chartNotes),
     });
   });
 
@@ -72,11 +77,8 @@ describe('Renown and Twilight Strength model', () => {
   });
 
   it('applies Twilight miss, good, and perfect effects to separate strengths', () => {
-    const missed = createGame(
-      chart([note('audience', 2), note('twilight-miss', 7)], {
-        twilightStrength: 5,
-      }),
-    );
+    const missChartNotes = [note('audience', 2), note('twilight-miss', 7)];
+    const missed = createGame(chart(missChartNotes));
     missed.press(0, 2);
     missed.advanceTo(5);
     missed.advanceTo(7.151);
@@ -84,35 +86,32 @@ describe('Renown and Twilight Strength model', () => {
       personalStrength: 0,
       twilightStrength: Math.max(
         0,
-        5 - getDifficultyProfile('normal').twilight.miss.damage,
+        deriveInitialStrength(missChartNotes) -
+          getDifficultyProfile('normal').twilight.miss.damage,
       ),
       result: { outcome: 'defeat' },
     });
 
-    const good = createGame(
-      chart(
-        [
-          note('audience-one', 2),
-          note('audience-two', 3),
-          note('twilight-good', 7),
-        ],
-        { twilightStrength: 5 },
-      ),
-    );
+    const goodChartNotes = [
+      note('audience-one', 2),
+      note('audience-two', 3),
+      note('twilight-good', 7),
+    ];
+    const good = createGame(chart(goodChartNotes));
     good.press(0, 2);
     good.press(0, 3);
     good.advanceTo(5);
     good.press(0, 7.1);
     expect(good.snapshot()).toMatchObject({
       personalStrength: 3,
-      twilightStrength: 3,
+      twilightStrength:
+        deriveInitialStrength(goodChartNotes) -
+        getDifficultyProfile('normal').twilight.good.damage,
       status: 'playing',
     });
 
     const perfect = createGame(
-      chart([note('audience', 2), note('twilight-perfect', 7)], {
-        twilightStrength: 3,
-      }),
+      chart([note('audience', 2), note('twilight-perfect', 7)]),
     );
     perfect.press(0, 2);
     perfect.advanceTo(5);
@@ -129,21 +128,38 @@ describe('Renown and Twilight Strength model', () => {
   });
 
   it('uses victory precedence when good hits deplete both strengths together', () => {
+    const combatNotes = [
+      note('twilight-perfect-one', 6),
+      note('twilight-perfect-two', 6.5),
+      note('twilight-good-one', 7),
+      note('twilight-good-two', 9),
+    ];
     const game = createGame(
-      chart(
-        [
-          note('audience-perfect-one', 2),
-          note('audience-perfect-two', 3),
-          note('twilight-good-one', 7),
-          note('twilight-good-two', 9),
-        ],
-        { twilightStrength: 4 },
-      ),
+      chart([
+        note('audience-perfect-one', 2),
+        note('audience-perfect-two', 3),
+        ...combatNotes,
+      ]),
     );
     game.press(0, 2);
     game.press(0, 3); // Two Perfect hits provide six strength for two Good costs.
     game.advanceTo(5);
+    game.press(0, 6);
+    game.press(0, 6.5);
+    const initialStrength = deriveInitialStrength(combatNotes);
+    const profile = getDifficultyProfile('normal');
+    expect(game.snapshot()).toMatchObject({
+      personalStrength: 6,
+      twilightStrength: initialStrength - 2 * profile.twilight.perfect.damage,
+    });
     game.press(0, 7.1);
+    expect(game.snapshot()).toMatchObject({
+      personalStrength: 3,
+      twilightStrength:
+        initialStrength -
+        2 * profile.twilight.perfect.damage -
+        profile.twilight.good.damage,
+    });
     game.press(0, 9.1);
 
     expect(game.snapshot()).toMatchObject({
@@ -158,65 +174,78 @@ describe('Renown and Twilight Strength model', () => {
   });
 
   it('defeats a run with zero Renown at handoff', () => {
-    const game = createGame(
-      chart([note('future-twilight', 7)], { twilightStrength: 100 }),
-    );
+    const game = createGame(chart([note('future-twilight', 7)]));
     game.advanceTo(5);
+    expect(game.snapshot().twilightStrength).toBe(
+      deriveInitialStrength([note('future-twilight', 7)]),
+    );
 
     expect(game.snapshot()).toMatchObject({
       phase: 'twilight',
       status: 'results',
       victory: false,
       personalStrength: 0,
-      twilightStrength: 100,
+      twilightStrength: deriveInitialStrength([note('future-twilight', 7)]),
       result: { outcome: 'defeat' },
       notes: [{ id: 'future-twilight', outcome: null }],
     });
   });
 
   it('ends naturally as survived when both strengths remain', () => {
-    const game = createGame(
-      chart([note('audience', 2)], {
-        duration: 12,
-        twilightStrength: 100,
-      }),
-    );
+    const survivalNotes = [
+      note('audience-one', 2),
+      note('audience-two', 3),
+      note('combat-miss', 7),
+    ];
+    const game = createGame(chart(survivalNotes, { duration: 12 }));
     game.press(0, 2);
+    game.press(0, 3);
     game.advanceTo(5);
     game.advanceTo(12);
 
     expect(game.snapshot()).toMatchObject({
       status: 'results',
-      personalStrength: 3,
-      twilightStrength: 100,
-      notes: [{ id: 'audience', outcome: 'perfect' }],
+      renown: 6,
+      personalStrength: 2,
+      twilightStrength:
+        deriveInitialStrength(survivalNotes) -
+        getDifficultyProfile('normal').twilight.miss.damage,
+      notes: [
+        { id: 'audience-one', outcome: 'perfect' },
+        { id: 'audience-two', outcome: 'perfect' },
+        { id: 'combat-miss', outcome: 'miss' },
+      ],
       result: {
         outcome: 'survived',
-        twilight: { perfect: 0, good: 0, miss: 0, accuracy: null },
-        overall: { perfect: 1, miss: 0, accuracy: 100 },
+        twilight: { perfect: 0, good: 0, miss: 1, accuracy: 0 },
+        overall: { perfect: 2, miss: 1, accuracy: (2 / 3) * 100 },
       },
     });
   });
 
   it('continues judging after combat victory, freezes strengths, then wins at excerpt end', () => {
-    const game = createGame(
-      chart(
-        [
-          note('audience', 2),
-          note('victory-hit', 7),
-          note('post-victory-hit', 8, 1),
-          note('post-victory-miss', 9, 2),
-        ],
-        { twilightStrength: 3 },
+    const chartNotes = [
+      note('audience', 2),
+      ...Array.from({ length: 7 }, (_, index) =>
+        note(`setup-${index}`, 6 + index * 0.25),
       ),
-    );
+      note('victory-hit', 7.75),
+      note('post-victory-hit', 9, 1),
+      note('post-victory-miss', 10, 2),
+    ];
+    const game = createGame(chart(chartNotes));
     expect(game.snapshot()).toMatchObject({
       victory: false,
       status: 'playing',
     });
     game.press(0, 2);
     game.advanceTo(5);
-    game.press(0, 7);
+    const initialStrength = deriveInitialStrength(chartNotes);
+    expect(game.snapshot().twilightStrength).toBe(initialStrength);
+    for (let index = 0; index < 7; index += 1) {
+      game.press(0, 6 + index * 0.25);
+    }
+    game.press(0, 7.75);
     expect(game.snapshot()).toMatchObject({
       victory: true,
       phase: 'twilight',
@@ -226,11 +255,11 @@ describe('Renown and Twilight Strength model', () => {
       result: null,
     });
 
-    expect(game.press(1, 8.1)).toMatchObject({
+    expect(game.press(1, 9.1)).toMatchObject({
       noteId: 'post-victory-hit',
       quality: 'good',
     });
-    game.advanceTo(9.151);
+    game.advanceTo(10.151);
     const afterVictoryMiss = game.snapshot();
     expect(afterVictoryMiss).toMatchObject({
       victory: true,
@@ -240,6 +269,10 @@ describe('Renown and Twilight Strength model', () => {
       twilightStrength: 0,
       notes: [
         { id: 'audience', outcome: 'perfect' },
+        ...Array.from({ length: 7 }, (_, index) => ({
+          id: `setup-${index}`,
+          outcome: 'perfect',
+        })),
         { id: 'victory-hit', outcome: 'perfect' },
         { id: 'post-victory-hit', outcome: 'good' },
         { id: 'post-victory-miss', outcome: 'miss' },
@@ -259,7 +292,7 @@ describe('Renown and Twilight Strength model', () => {
         outcome: 'victory',
         personalStrength: 3,
         twilightStrength: 0,
-        twilight: { perfect: 1, good: 1, miss: 1 },
+        twilight: { perfect: 8, good: 1, miss: 1 },
       },
     });
 

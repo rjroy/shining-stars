@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSongCatalog } from '../catalog/catalog';
 import type { ChartConfig } from '../game/chart';
+import { getInitialTwilightStrength } from '../game/chart';
 import type {
   AudioBufferPort,
   AudioContextPort,
@@ -17,13 +18,11 @@ function testChart(difficulty: 'easy' | 'normal' | 'hard'): ChartConfig {
     sourceStart: 0,
     duration: 20,
     twilightAt: 10,
-    twilightStrength:
-      difficulty === 'easy' ? 60 : difficulty === 'normal' ? 80 : 110,
     allowedDifficulties: [difficulty],
     notes: [
       {
         id: `${difficulty}-chart-note`,
-        time: difficulty === 'hard' ? 5 : 1.5,
+        time: difficulty === 'hard' ? 15 : 1.5,
         lane: 0,
       },
     ],
@@ -72,7 +71,7 @@ function victorySong(song: SongCatalogEntry): SongCatalogEntry {
   return {
     ...song,
     charts: {
-      normal: { ...testChart('normal'), twilightStrength: 1, notes },
+      normal: { ...testChart('normal'), notes },
     },
     scoring: {
       ...song.scoring,
@@ -436,13 +435,21 @@ describe('performance coordinator', () => {
     const h = harness();
     await h.coordinator.prepare(h.song, 'hard');
     const initial = h.coordinator.snapshot().controller?.game;
-    expect(initial).toMatchObject({ twilightStrength: 110 });
+    expect(initial).toMatchObject({
+      twilightStrength: getInitialTwilightStrength(
+        h.song.charts.hard ?? testChart('hard'),
+        'hard',
+      ),
+    });
     expect(initial?.notes.map((note) => note.id)).toEqual(['hard-chart-note']);
     expect(h.coordinator.snapshot().difficulty).toBe('hard');
     await h.coordinator.markGameplayReady();
     await h.coordinator.restart();
     expect(h.coordinator.snapshot().controller?.game).toMatchObject({
-      twilightStrength: 110,
+      twilightStrength: getInitialTwilightStrength(
+        h.song.charts.hard ?? testChart('hard'),
+        'hard',
+      ),
       notes: [{ id: 'hard-chart-note', outcome: null }],
     });
   });
@@ -531,7 +538,6 @@ describe('performance coordinator', () => {
         charts: {
           normal: {
             ...testChart('normal'),
-            twilightStrength: outcome === 'victory' ? 1 : 110,
             notes,
           },
         },
@@ -592,7 +598,6 @@ describe('performance coordinator', () => {
       charts: {
         normal: {
           ...testChart('normal'),
-          twilightStrength: 1,
           notes: [
             { id: 'audience-note', time: 1.5, lane: 0 },
             { id: 'twilight-note', time: 11.5, lane: 0 },

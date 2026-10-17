@@ -71,19 +71,16 @@ class PitchChartWorkflowTests(unittest.TestCase):
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
             "difficulties": {
                 "easy": {
-                    "twilight_strength": 70,
                     "minimum_delta": 10,
                     "stride": 1,
                     "lane_mapping": {"pitch_following": 0},
                 },
                 "normal": {
-                    "twilight_strength": 80,
                     "minimum_delta": 10,
                     "stride": 1,
                     "lane_mapping": {"pitch_following": 1},
                 },
                 "hard": {
-                    "twilight_strength": 90,
                     "minimum_delta": 10,
                     "stride": 1,
                     "lane_mapping": {"pitch_following": 4},
@@ -373,10 +370,7 @@ class PitchChartWorkflowTests(unittest.TestCase):
             first_bundle["charts"]["normal"]["notes"],
             second_bundle["charts"]["normal"]["notes"],
         )
-        self.assertNotEqual(
-            first_bundle["charts"]["normal"]["twilightStrength"],
-            second_bundle["charts"]["normal"]["twilightStrength"],
-        )
+        self.assertNotIn("twilightStrength", second_bundle["charts"]["normal"])
         self.assertNotEqual(first_report, second_report)
 
     def test_source_recipe_arguments_and_tool_identity_each_change_analysis_key(self):

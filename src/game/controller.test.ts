@@ -8,7 +8,6 @@ const chart: ChartConfig = {
   sourceStart: 0,
   duration: 4,
   twilightAt: 2,
-  twilightStrength: 100,
   allowedDifficulties: ['normal', 'hard'],
   notes: [
     { id: 'a1', time: 0.5, lane: 0 },

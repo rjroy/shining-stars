@@ -10,7 +10,6 @@ const chart: ChartConfig = {
   sourceStart: 0,
   duration: 20,
   twilightAt: 10,
-  twilightStrength: 100,
   allowedDifficulties: ['easy', 'normal', 'hard'],
   notes: [{ id: 'wide-note', lane: 3, time: 12 }],
 };
@@ -34,6 +33,7 @@ const snapshot: ControllerSnapshot = {
     renown: 0,
     personalStrength: 100,
     twilightStrength: 100,
+    initialTwilightStrength: 100,
     difficulty: 'easy',
     score: 0,
     combo: 0,

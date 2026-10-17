@@ -34,6 +34,9 @@ export function getResourceBars(
   return {
     audience: bar(game.renown, maximumRenown),
     personal: bar(game.personalStrength, game.renown),
-    twilight: bar(game.twilightStrength, chart.twilightStrength),
+    twilight: bar(
+      game.twilightStrength,
+      game.initialTwilightStrength,
+    ),
   };
 }
