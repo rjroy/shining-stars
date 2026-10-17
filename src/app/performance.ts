@@ -74,6 +74,10 @@ export interface PerformanceDependencies<
     readonly songId: string;
     readonly result: GameResult;
   }) => void;
+  readonly onTwilightDefeated?: (event: {
+    readonly songId: string;
+    readonly difficulty: Difficulty;
+  }) => void;
 }
 
 export interface PerformanceCoordinator {
@@ -123,6 +127,7 @@ interface ActivePerformance<
   operationError: string | null;
   recoveryRequired: boolean;
   completionReported: boolean;
+  readonly twilightDefeatRunsReported: Set<number>;
   needsExplicitPlaybackAction: boolean;
 }
 
@@ -293,6 +298,28 @@ export function createPerformanceCoordinator<
         const currentRecord = recordRef.current;
         const result = controllerSnapshot.game.result;
         if (currentRecord !== null && isCurrent(currentRecord)) {
+          if (
+            controllerSnapshot.game.victory &&
+            !currentRecord.twilightDefeatRunsReported.has(controllerSnapshot.runId ?? 1)
+          ) {
+            currentRecord.twilightDefeatRunsReported.add(controllerSnapshot.runId ?? 1);
+            if (dependencies.onTwilightDefeated !== undefined) {
+              const event = {
+                songId: currentRecord.song.id,
+                difficulty: controllerSnapshot.game.difficulty,
+              };
+              console.info('[Performance] Twilight defeat callback attempt', event);
+              try {
+                dependencies.onTwilightDefeated(event);
+                console.info('[Performance] Twilight defeat callback succeeded', event);
+              } catch (error) {
+                console.error('[Performance] Twilight defeat callback failed', {
+                  ...event,
+                  error: errorMessage(error),
+                });
+              }
+            }
+          }
           if (controllerSnapshot.game.status !== 'results') {
             currentRecord.completionReported = false;
           } else if (result !== null && !currentRecord.completionReported) {
@@ -388,6 +415,7 @@ export function createPerformanceCoordinator<
       operationError: null,
       recoveryRequired: false,
       completionReported: false,
+      twilightDefeatRunsReported: new Set(),
       needsExplicitPlaybackAction: false,
     };
     recordRef.current = activeRecord;

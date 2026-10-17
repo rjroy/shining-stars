@@ -8,7 +8,6 @@ const easyChart: ChartConfig = {
   sourceStart: 0,
   duration: 12,
   twilightAt: 8,
-  twilightStrength: 100,
   allowedDifficulties: ['easy'],
   notes: [{ id: 'easy-late', lane: 0, time: 2 }],
 };

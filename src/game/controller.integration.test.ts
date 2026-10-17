@@ -8,6 +8,7 @@ import {
 import { createGameController, type ControllerSnapshot } from './controller';
 import type { ChartConfig } from './chart';
 import { createGame } from './game';
+import { getDifficultyProfile } from './game-balance';
 
 class TestBuffer implements AudioBufferPort {
   constructor(readonly duration: number) {}
@@ -68,7 +69,6 @@ const chart: ChartConfig = {
   sourceStart: 0,
   duration: 10,
   twilightAt: 5,
-  twilightStrength: 100,
   allowedDifficulties: ['normal'],
   notes: [{ id: 'early-note', time: 0.5, lane: 0 }],
 };
@@ -170,17 +170,36 @@ describe('audio and controller timing integration', () => {
 
   it('continues playback and judging after victory until natural end, then restarts cleanly', async () => {
     const context = new TestContext();
+    const profile = getDifficultyProfile('normal');
+    const setupCount = Array.from(
+      { length: 100 },
+      (_, index) => index + 1,
+    ).find(
+      (count) =>
+        Math.ceil((count + 5) * (profile.twilightStrengthPercent / 100)) ===
+        count + 1,
+    );
+    if (setupCount === undefined) {
+      throw new Error(
+        'Could not construct a pre-victory setup for this profile.',
+      );
+    }
+    const chartNotes: ChartConfig['notes'] = [
+      { id: 'audience', time: 1, lane: 0 },
+      ...Array.from({ length: setupCount }, (_, index) => ({
+        id: `setup-${index}`,
+        time: 6.5 - (setupCount - index - 1) * 0.25,
+        lane: 0 as const,
+      })),
+      { id: 'victory-hit', time: 6.75, lane: 0 },
+      { id: 'post-victory-hit', time: 7.25, lane: 1 },
+      { id: 'post-victory-miss', time: 7.75, lane: 2 },
+      { id: 'post-recovery-hit', time: 8.5, lane: 3 },
+      { id: 'final-miss', time: 9, lane: 0 },
+    ];
     const { audio, controller } = createIntegrationController(
       context,
-      [
-        { id: 'audience', time: 1, lane: 0 },
-        { id: 'victory-hit', time: 3, lane: 0 },
-        { id: 'post-victory-hit', time: 4, lane: 1 },
-        { id: 'post-victory-miss', time: 5, lane: 2 },
-        { id: 'post-recovery-hit', time: 8, lane: 3 },
-        { id: 'final-miss', time: 9, lane: 0 },
-      ],
-      3,
+      chartNotes,
     );
     await beginPlayback(context, controller);
 
@@ -188,8 +207,23 @@ describe('audio and controller timing integration', () => {
     controller.keyDown('KeyD');
     controller.keyUp('KeyD');
     context.currentTime = 4; // Handoff at transport time 2.
-    controller.update();
-    context.currentTime = 5; // Victory note at transport time 3.
+    const handoff = controller.update();
+    const expectedInitialStrength = Math.ceil(
+      (setupCount + 5) *
+        profile.twilight.perfect.damage *
+        (profile.twilightStrengthPercent / 100),
+    );
+    expect(handoff.game.twilightStrength).toBe(expectedInitialStrength);
+    for (const setupNote of chartNotes.slice(1, setupCount + 1)) {
+      context.currentTime = setupNote.time + 2;
+      controller.keyDown('KeyD');
+      controller.keyUp('KeyD');
+    }
+    expect(controller.snapshot().game).toMatchObject({
+      victory: false,
+      twilightStrength: profile.twilight.perfect.damage,
+    });
+    context.currentTime = 8.75; // Victory note at transport time 6.75.
     const afterVictory = controller.keyDown('KeyD');
 
     expect(afterVictory.game).toMatchObject({
@@ -197,7 +231,6 @@ describe('audio and controller timing integration', () => {
       status: 'playing',
       phase: 'twilight',
       personalStrength: 3,
-      twilightStrength: 0,
       result: null,
     });
     expect(audio.snapshot()).toMatchObject({
@@ -208,9 +241,9 @@ describe('audio and controller timing integration', () => {
     expect(context.sources[0]?.stopCalls).toBe(0);
 
     controller.keyUp('KeyD');
-    context.currentTime = 6.1; // Good post-victory judgment at position 4.1.
+    context.currentTime = 9.35; // Good post-victory judgment at position 7.35.
     const postVictoryHit = controller.keyDown('KeyF');
-    expect(postVictoryHit.game.notes[2]?.outcome).toBe('good');
+    expect(postVictoryHit.game.notes[setupCount + 2]?.outcome).toBe('good');
     expect(postVictoryHit.feedback).toMatchObject([
       { noteId: 'victory-hit', lane: 0, quality: 'perfect' },
       { noteId: 'post-victory-hit', lane: 1, quality: 'good' },
@@ -219,17 +252,15 @@ describe('audio and controller timing integration', () => {
       victory: true,
       status: 'playing',
       personalStrength: 3,
-      twilightStrength: 0,
     });
     controller.keyUp('KeyF');
 
-    context.currentTime = 7.151; // Miss the note at position 5.
+    context.currentTime = 9.901; // Miss the note at position 7.75.
     const postVictoryMiss = controller.update();
     expect(postVictoryMiss.game).toMatchObject({
       victory: true,
       status: 'playing',
       personalStrength: 3,
-      twilightStrength: 0,
     });
     expect(postVictoryMiss.game.notes).toEqual(
       expect.arrayContaining([
@@ -261,7 +292,6 @@ describe('audio and controller timing integration', () => {
       victory: true,
       status: 'playing',
       personalStrength: 3,
-      twilightStrength: 0,
     });
     expect(audio.snapshot().status).toBe('paused');
     expect(context.sources[0]?.stopCalls).toBe(1);
@@ -269,14 +299,13 @@ describe('audio and controller timing integration', () => {
     const resumedSchedule = audio.snapshot().scheduledWhen;
     if (resumedSchedule === null)
       throw new Error('Expected a scheduled source after victory resume.');
-    context.currentTime = resumedSchedule + (8.1 - audio.snapshot().position);
+    context.currentTime = resumedSchedule + (8.6 - audio.snapshot().position);
     const resumedHit = controller.keyDown('KeyK');
-    expect(resumedHit.game.notes[4]?.outcome).toBe('good');
+    expect(resumedHit.game.notes[setupCount + 4]?.outcome).toBe('good');
     expect(resumedHit.game).toMatchObject({
       victory: true,
       status: 'playing',
       personalStrength: 3,
-      twilightStrength: 0,
     });
     controller.keyUp('KeyK');
 
@@ -288,7 +317,6 @@ describe('audio and controller timing integration', () => {
       victory: true,
       status: 'playing',
       personalStrength: 3,
-      twilightStrength: 0,
     });
     expect(context.sources[1]?.stopCalls).toBe(1);
     await controller.resume();
@@ -303,12 +331,10 @@ describe('audio and controller timing integration', () => {
       phase: 'twilight',
       status: 'results',
       personalStrength: 3,
-      twilightStrength: 0,
       result: {
         outcome: 'victory',
         personalStrength: 3,
-        twilightStrength: 0,
-        twilight: { perfect: 1, good: 2, miss: 2 },
+        twilight: { perfect: setupCount + 1, good: 2, miss: 2 },
       },
     });
     expect(completed.audio).toMatchObject({
@@ -324,15 +350,7 @@ describe('audio and controller timing integration', () => {
       status: 'playing',
       renown: 0,
       personalStrength: 0,
-      twilightStrength: 3,
-      notes: [
-        { id: 'audience', outcome: null },
-        { id: 'victory-hit', outcome: null },
-        { id: 'post-victory-hit', outcome: null },
-        { id: 'post-victory-miss', outcome: null },
-        { id: 'post-recovery-hit', outcome: null },
-        { id: 'final-miss', outcome: null },
-      ],
+      notes: chartNotes.map(({ id }) => ({ id, outcome: null })),
     });
     expect(restarted.audio.hasActiveSource).toBe(true);
     expect(context.sources).toHaveLength(4);
@@ -404,7 +422,6 @@ describe('audio and controller timing integration', () => {
     const { audio, controller, rendered } = createIntegrationController(
       context,
       [{ id: 'pending-load-note', time: 1, lane: 0 }],
-      100,
       () => fetch.promise,
     );
     const pendingStart = controller.start();
@@ -540,14 +557,12 @@ describe('audio and controller timing integration', () => {
 function createIntegrationController(
   context: TestContext,
   notes: ChartConfig['notes'],
-  twilightStrength = 100,
   fetchAudio: () => Promise<ArrayBuffer> = async () => new ArrayBuffer(8),
 ) {
   const chart: ChartConfig = {
     sourceStart: 0,
     duration: 10,
     twilightAt: 2,
-    twilightStrength,
     allowedDifficulties: ['normal'],
     notes,
   };

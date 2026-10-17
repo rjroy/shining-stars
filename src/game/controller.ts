@@ -3,6 +3,7 @@ import { isDifficulty, type Difficulty } from './game-balance';
 import type { GameSession, GameSnapshot } from './game';
 
 export interface ControllerSnapshot {
+  readonly runId?: number;
   readonly audio: AudioTransportSnapshot;
   readonly game: GameSnapshot;
   readonly inputOffset: number;
@@ -85,6 +86,7 @@ export function createGameController(
     return {
       audio: dependencies.audio.snapshot(),
       game: game.snapshot(),
+      runId,
       inputOffset,
       visualOffset,
       selectedDifficulty,

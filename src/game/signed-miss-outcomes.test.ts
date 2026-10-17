@@ -5,6 +5,7 @@ const profileJsonPath = '../../data/charts/difficulty-profiles.json';
 
 function profileDocument() {
   const makeProfile = (miss: number) => ({
+    twilight_strength: 80,
     timing: { perfect_ms: 65, good_ms: 125 },
     audience: { perfect: 3, good: 2, miss },
     twilight: {
@@ -54,7 +55,6 @@ describe('signed miss outcomes', () => {
       sourceStart: 0,
       duration: 10,
       twilightAt: 4,
-      twilightStrength: 20,
       allowedDifficulties: ['normal'],
       notes: [
         { id: 'audience-perfect', time: 1, lane: 0 },
@@ -63,6 +63,7 @@ describe('signed miss outcomes', () => {
       ],
     };
     const session = game.createGame(chart, 0, 'normal');
+    expect(session.snapshot().initialTwilightStrength).toBe(3);
     expect(session.press(0, 1)?.quality).toBe('perfect');
     session.advanceTo(2 + 0.125 + 0.001);
     expect(session.snapshot().renown).toBe(2);
@@ -71,7 +72,7 @@ describe('signed miss outcomes', () => {
     session.advanceTo(5 + 0.125 + 0.001);
     expect(session.snapshot()).toMatchObject({
       personalStrength: 4,
-      twilightStrength: 24,
+      twilightStrength: 7,
     });
   });
 
@@ -83,7 +84,6 @@ describe('signed miss outcomes', () => {
       sourceStart: 0,
       duration: 5,
       twilightAt: 2,
-      twilightStrength: 10,
       allowedDifficulties: ['normal'],
       notes: [{ id: 'audience-miss', time: 1, lane: 0 }],
     };
@@ -105,4 +105,47 @@ describe('signed miss outcomes', () => {
       /must be finite/i,
     );
   });
+
+  it('uses the loaded profile percentage for an unchanged chart', async () => {
+    const raw = profileDocument();
+    raw.profiles.normal.twilight_strength = 50;
+    const { game } = await loadGameWithProfiles(raw);
+    const chart: ChartConfig = {
+      sourceStart: 0,
+      duration: 10,
+      twilightAt: 4,
+      allowedDifficulties: ['normal'],
+      notes: [{ id: 'twilight', time: 5, lane: 0 }],
+    };
+
+    // One note × 3 Perfect damage × 50%, rounded up. No chart regeneration
+    // is involved when the runtime difficulty profile changes.
+    expect(
+      game.createGame(chart, 0, 'normal').snapshot().initialTwilightStrength,
+    ).toBe(2);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -0.01, 100.01])(
+    'rejects Twilight strength percentages outside finite 0..100 (%s)',
+    async (twilightStrength) => {
+      const raw = profileDocument();
+      raw.profiles.normal.twilight_strength = twilightStrength;
+      await expect(loadGameWithProfiles(raw)).rejects.toThrow(
+        /twilight_strength/i,
+      );
+    },
+  );
+
+  it.each([0, 100])(
+    'accepts Twilight strength percentage %s at the boundary',
+    async (twilightStrength) => {
+      const raw = profileDocument();
+      raw.profiles.normal.twilight_strength = twilightStrength;
+      const { balance } = await loadGameWithProfiles(raw);
+
+      expect(
+        balance.getDifficultyProfile('normal').twilightStrengthPercent,
+      ).toBe(twilightStrength);
+    },
+  );
 });

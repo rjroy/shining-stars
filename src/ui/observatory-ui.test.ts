@@ -19,7 +19,6 @@ const chart = (
   sourceStart: 0,
   duration: 10,
   twilightAt: 5,
-  twilightStrength: 100,
   allowedDifficulties,
   notes: [],
 });

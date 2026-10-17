@@ -7,7 +7,6 @@ const CHART: ChartConfig = {
   sourceStart: 0,
   duration: 65.8,
   twilightAt: 39.2,
-  twilightStrength: 100,
   allowedDifficulties: ['normal', 'hard'],
   notes: [
     { id: 'audience-one', time: 1.214102, lane: 0 },
@@ -47,8 +46,8 @@ describe('resource bar display ranges', () => {
     const twilight = getResourceBars(runChart, game.snapshot());
     expect(twilight.personal).toEqual({ value: 6, maximum: 6, fraction: 1 });
     expect(twilight.twilight).toEqual({
-      value: 100,
-      maximum: 100,
+      value: 3,
+      maximum: 3,
       fraction: 1,
     });
 
@@ -56,9 +55,9 @@ describe('resource bar display ranges', () => {
     const afterHit = getResourceBars(runChart, game.snapshot());
     expect(afterHit.personal).toEqual({ value: 6, maximum: 6, fraction: 1 });
     expect(afterHit.twilight).toEqual({
-      value: 97,
-      maximum: 100,
-      fraction: 0.97,
+      value: 0,
+      maximum: 3,
+      fraction: 0,
     });
   });
 
@@ -78,7 +77,6 @@ describe('resource bar display ranges', () => {
       ...snapshot,
       renown: 4,
       personalStrength: 7,
-      twilightStrength: 125,
     });
     expect(bars.audience.fraction).toBeGreaterThan(0);
     expect(bars.personal.fraction).toBe(1);

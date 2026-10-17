@@ -16,7 +16,6 @@ const chart = (duration: number, difficulty: Difficulty) => ({
   sourceStart: 0,
   duration,
   twilightAt: duration / 2,
-  twilightStrength: 100,
   allowedDifficulties: [difficulty],
   notes: [],
 });
@@ -188,7 +187,7 @@ describe('Observatory return-time rating refresh policy', () => {
     syncStorageNotice: () => void,
   ) {
     const match = source.match(
-      /setPlayStatus\(status, message = ''\) \{([\s\S]*?)\n    \},\n    focusSelectedSong/,
+      /setPlayStatus\(status, message = ''\) \{([\s\S]*?)\n {4}\},\n {4}focusSelectedSong/,
     );
     if (match === null) throw new Error('Production setPlayStatus method was not found');
     const body = match[1];
@@ -197,9 +196,14 @@ describe('Observatory return-time rating refresh policy', () => {
       'renderDetail',
       'syncStorageNotice',
       'setNotice',
+      'render',
       `let playStatus, playMessage; return function(status, message = '') {${body}}`,
     );
-    invoke(renderRows, renderDetail, syncStorageNotice, vi.fn())('idle');
+    invoke(renderRows, renderDetail, syncStorageNotice, vi.fn(), () => {
+      renderRows();
+      renderDetail();
+      syncStorageNotice();
+    })('idle');
   }
 
   function combineNotices(

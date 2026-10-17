@@ -57,6 +57,71 @@
 .observatory-save-entry[hidden] {
   display: none;
 }
+.observatory-save-utility {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.observatory-credits {
+  max-width: 12ch;
+  color: #ffe3a1;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.credited-seals {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+.credited-seal {
+  display: inline-grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 1px solid #a99ac0;
+  border-radius: 4px;
+  color: #c8bddb;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+}
+.credited-seal.is-credited {
+  border-color: #cfb9f2;
+  background: #cfb9f2;
+  color: #19142c;
+}
+.song-credited-victories {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: #e2d5f9;
+  font-size: 0.76rem;
+}
+.song-achievement > .song-credited-victories {
+  grid-column: 1 / -1;
+  margin-top: 3px;
+  font-size: 0.67rem;
+}
+.song-row-rating .credited-seals {
+  margin-left: 4px;
+}
+.song-row-rating .credited-seal {
+  width: 15px;
+  height: 15px;
+  font-size: 9px;
+}
+.unlock-dialog h2 {
+  margin: 0 0 16px;
+  color: #ffe3a1;
+}
+.unlock-dialog .save-data-notice:empty {
+  display: none;
+}
 .save-data-dialog {
   box-sizing: border-box;
   width: min(560px, calc(100vw - 24px));
@@ -1209,7 +1274,9 @@
   .song-detail-panel {
     align-self: stretch;
   }
-  @container song-browser (max-height: 560px) {
+  /* Long titles, credited seals and unlock guidance need the compact layout
+     even on wide monitors when the actual detail region is under 700px. */
+  @container song-browser (max-height: 700px) {
     .song-detail-panel {
       padding: 16px 18px;
     }
@@ -1272,6 +1339,7 @@
   }
   @container song-browser (max-height: 440px) {
     .song-detail-panel {
+      padding: 12px 18px;
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(100px, 0.8fr);
       align-content: safe center;

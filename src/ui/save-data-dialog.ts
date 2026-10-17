@@ -4,6 +4,7 @@ import {
   type SaveImportMode,
   type SaveImportPreview,
   type SaveImportStatus,
+  type ProgressionImportMode,
 } from '../app/save-data';
 
 type Phase =
@@ -16,7 +17,11 @@ type Phase =
   | 'result'
   | 'error';
 interface FlowOptions {
-  previewImport(text: string, mode: SaveImportMode): SaveImportPreview;
+  previewImport(
+    text: string,
+    mode: SaveImportMode,
+    progressionMode?: ProgressionImportMode,
+  ): SaveImportPreview;
   applyImport(
     preview: SaveImportPreview,
     target: 'local' | 'session',
@@ -29,6 +34,7 @@ const MAX_FILE_BYTES = 2 * 1024 * 1024;
 export function createSaveDataController(options: FlowOptions) {
   let phase: Phase = 'closed';
   let mode: SaveImportMode = 'merge';
+  let progressionMode: ProgressionImportMode = 'keep-current';
   let notice: string | null = null;
   let preview: SaveImportPreview | null = null;
   let text = '';
@@ -39,11 +45,14 @@ export function createSaveDataController(options: FlowOptions) {
   const emit = () => options.onChange?.();
   function validate() {
     try {
-      preview = options.previewImport(text, mode);
+      preview =
+        progressionMode === 'keep-current'
+          ? options.previewImport(text, mode)
+          : options.previewImport(text, mode, progressionMode);
       phase = 'preview';
       notice = preview.hasChanges
         ? null
-        : 'No changes to stars or favorites. Importing can save your current data on this device without changing those records.';
+        : 'No changes to player data. Importing can save your current data on this device without changing those records.';
     } catch (error) {
       preview = null;
       phase = 'error';
@@ -86,6 +95,7 @@ export function createSaveDataController(options: FlowOptions) {
     snapshot: () => ({
       phase,
       mode,
+      progressionMode,
       notice,
       preview,
       filename,
@@ -97,6 +107,7 @@ export function createSaveDataController(options: FlowOptions) {
       generation++;
       phase = 'choose';
       mode = 'merge';
+      progressionMode = 'keep-current';
       notice = null;
       preview = null;
       text = '';
@@ -146,13 +157,18 @@ export function createSaveDataController(options: FlowOptions) {
     },
     requestImport() {
       if (phase !== 'preview' || preview === null) return;
-      if (mode === 'replace') {
+      if (mode === 'replace' || progressionMode === 'replace') {
         phase = 'confirm-replace';
         emit();
       } else apply('local');
     },
     confirmReplace() {
       if (phase === 'confirm-replace') apply('local');
+    },
+    setProgressionMode(next: ProgressionImportMode) {
+      if (phase !== 'preview') return;
+      progressionMode = next;
+      validate();
     },
     requestSessionImport() {
       if (phase === 'error' && sessionAvailable && preview) {
@@ -191,10 +207,11 @@ export function createSaveDataDialog(
   host.append(dialog);
   let opener: HTMLElement | null = null;
   let unknownCount = 0;
+  let legacyBackup = false;
   let lastPhase: Phase = 'closed';
   let disposed = false;
   const controller = createSaveDataController({
-    previewImport(text, mode) {
+    previewImport(text, mode, progressionMode = 'keep-current') {
       let decoded: unknown;
       try {
         decoded = JSON.parse(text);
@@ -209,7 +226,8 @@ export function createSaveDataDialog(
         'format' in decoded &&
         decoded.format === 'shining-stars-save' &&
         'schemaVersion' in decoded &&
-        decoded.schemaVersion !== SAVE_SCHEMA_VERSION
+        decoded.schemaVersion !== SAVE_SCHEMA_VERSION &&
+        decoded.schemaVersion !== 1
       ) {
         throw new Error(
           `Backup version ${String(decoded.schemaVersion).slice(0, 40)} is not supported by this version of Shining Stars.`,
@@ -217,7 +235,7 @@ export function createSaveDataDialog(
       }
       let preview: SaveImportPreview;
       try {
-        preview = store.previewImport(text, mode);
+        preview = store.previewImport(text, mode, progressionMode);
       } catch {
         throw new Error(
           'This file is not a valid Shining Stars backup. Choose another file.',
@@ -225,9 +243,11 @@ export function createSaveDataDialog(
       }
       // Core has validated the complete envelope before this display-only read.
       const data = JSON.parse(text) as {
+        schemaVersion: number;
         favorites: string[];
         ratings: Record<string, unknown>;
       };
+      legacyBackup = data.schemaVersion === 1;
       unknownCount = new Set(
         [...data.favorites, ...Object.keys(data.ratings)].filter(
           (id) => !knownSongIds.has(id),
@@ -319,7 +339,7 @@ export function createSaveDataDialog(
     dialog.append(header);
     dialog.append(
       paragraph(
-        'Download a backup or import one on this device. Includes all saved stars and favorites.',
+        'Download a backup or import one on this device. Includes stars, favorites, credited victories, credits and unlocks.',
       ),
     );
     const snapshot = store.snapshot();
@@ -346,7 +366,7 @@ export function createSaveDataDialog(
       dialog.append(
         paragraph(
           state.phase === 'confirm-replace'
-            ? 'Current stars and favorites will be replaced by this backup. Records missing from the backup will be removed. This cannot be undone here. Download your current backup first if you want to keep it.'
+            ? `The selected domains will be replaced: ${state.mode === 'replace' ? 'stars and favorites' : ''}${state.mode === 'replace' && state.progressionMode === 'replace' ? '; ' : ''}${state.progressionMode === 'replace' ? 'all credited victories, credits and unlocks' : ''}. Missing records will be removed. Download your current backup first. This cannot be undone here.`
             : 'This import will change this session only. The save stored on this device will not be overwritten. Reopening the game may restore older data. Download a backup after importing to keep these changes.',
         ),
       );
@@ -355,6 +375,19 @@ export function createSaveDataDialog(
       dialog.append(paragraph(state.filename, 'save-data-filename'));
     if (state.preview) {
       const changes = state.preview.changes;
+      const progress = changes.progression;
+      dialog.append(
+        paragraph(
+          `Progression before → after: Credits ${progress.before.balance} → ${progress.after.balance}; credited difficulty marks ${progress.before.marks} → ${progress.after.marks}; collection unlocks ${progress.before.collectionPurchases} → ${progress.after.collectionPurchases}; song unlocks ${progress.before.songPurchases} → ${progress.after.songPurchases}.`,
+        ),
+      );
+      if (legacyBackup)
+        dialog.append(
+          paragraph(
+            'Version 1 backups contain no progression. Replacing progression resets all credited victories, credits and unlocks to zero. Keep current progression to preserve them.',
+            'save-data-notice',
+          ),
+        );
       dialog.append(
         paragraph(
           `Favorites: ${changes.favorites.added} added, ${changes.favorites.removed} removed. Songs played: ${changes.ratings.added} added, ${changes.ratings.improved} improved, ${changes.ratings.removed} removed, ${changes.ratings.downgraded} lowered.`,
@@ -371,7 +404,7 @@ export function createSaveDataDialog(
     if (state.phase === 'preview') {
       const fieldset = document.createElement('fieldset');
       const legend = document.createElement('legend');
-      legend.textContent = 'How to import';
+      legend.textContent = 'Stars and favorites';
       fieldset.append(legend);
       for (const mode of ['merge', 'replace'] as const) {
         const label = document.createElement('label');
@@ -398,6 +431,36 @@ export function createSaveDataDialog(
           state.mode === 'merge'
             ? 'Keeps favorites from both saves and the better whole star rating for each song.'
             : 'Uses this backup exactly. Local-only records will be removed and star ratings may be lowered.',
+        ),
+      );
+      const progressionFields = document.createElement('fieldset');
+      const progressionLegend = document.createElement('legend');
+      progressionLegend.textContent = 'Credits, credited victories and unlocks';
+      progressionFields.append(progressionLegend);
+      for (const value of ['keep-current', 'replace'] as const) {
+        const label = document.createElement('label');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'save-progression-mode';
+        radio.checked = state.progressionMode === value;
+        radio.dataset.saveFocus = `progression-${value}`;
+        radio.addEventListener('change', () =>
+          controller.setProgressionMode(value),
+        );
+        label.append(
+          radio,
+          document.createTextNode(
+            value === 'keep-current'
+              ? 'Keep current progression'
+              : 'Replace all progression from backup',
+          ),
+        );
+        progressionFields.append(label);
+      }
+      dialog.append(
+        progressionFields,
+        paragraph(
+          'Progression is kept or replaced as one whole record. Credits and unlocks are never merged or added together.',
         ),
       );
     }

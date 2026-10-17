@@ -11,7 +11,6 @@ import { getDifficultyProfile, type Difficulty } from './game-balance';
 interface ChartOptions {
   readonly duration?: number;
   readonly twilightAt?: number;
-  readonly twilightStrength?: number;
   readonly allowedDifficulties?: readonly TestDifficulty[];
 }
 
@@ -31,7 +30,6 @@ function makeChart(
     sourceStart: 0,
     duration: options.duration ?? 10,
     twilightAt: options.twilightAt ?? 5,
-    twilightStrength: options.twilightStrength ?? 100,
     allowedDifficulties: options.allowedDifficulties ?? ['normal'],
     notes,
   };
@@ -224,7 +222,9 @@ describe('game model', () => {
     });
 
     const missGame = createGameWithDifficulty(
-      makeChart([note('miss-deadline', 2)], { allowedDifficulties: ['normal'] }),
+      makeChart([note('miss-deadline', 2)], {
+        allowedDifficulties: ['normal'],
+      }),
       inputOffset,
       'normal',
     );
@@ -275,10 +275,7 @@ describe('game model', () => {
     expect(game.snapshot().result).toMatchObject({
       renown: 3,
       personalStrength: 0,
-      twilightStrength: Math.max(
-        0,
-        100 - getDifficultyProfile('normal').twilight.miss.damage,
-      ),
+      twilightStrength: 4,
       outcome: 'defeat',
     });
   });
@@ -310,10 +307,7 @@ describe('game model', () => {
       result: {
         renown: 3,
         personalStrength: 0,
-        twilightStrength: Math.max(
-          0,
-          100 - getDifficultyProfile('normal').twilight.miss.damage,
-        ),
+        twilightStrength: 4,
         outcome: 'defeat',
       },
     });
@@ -339,7 +333,6 @@ describe('game model', () => {
     expect(game.snapshot().result).toMatchObject({
       renown: 180,
       personalStrength: 180,
-      twilightStrength: 100,
       outcome: 'survived',
     });
   });
@@ -354,21 +347,35 @@ describe('game model', () => {
     const game = makeGame([...audienceNotes, ...twilightNotes], 0, {
       duration: 40,
       twilightAt: 20,
-      twilightStrength: 100,
     });
 
     for (const audienceNote of audienceNotes) {
       game.press(0, audienceNote.time);
     }
     game.advanceTo(20);
+    const normalProfile = getDifficultyProfile('normal');
+    const expectedInitialTwilightStrength = Math.ceil(
+      twilightNotes.length *
+        normalProfile.twilight.perfect.damage *
+        (normalProfile.twilightStrengthPercent / 100),
+    );
     expect(game.snapshot().personalStrength).toBe(60);
-    expect(game.snapshot().twilightStrength).toBe(100);
+    expect(game.snapshot().twilightStrength).toBe(
+      expectedInitialTwilightStrength,
+    );
 
-    for (const twilightNote of twilightNotes) {
+    for (const twilightNote of twilightNotes.slice(0, 10)) {
       game.press(0, twilightNote.time);
     }
     expect(game.snapshot().personalStrength).toBe(60);
-    expect(game.snapshot().twilightStrength).toBe(55);
+    expect(game.snapshot().twilightStrength).toBe(
+      Math.max(
+        0,
+        expectedInitialTwilightStrength -
+          10 * normalProfile.twilight.perfect.damage,
+      ),
+    );
+    expect(game.snapshot().victory).toBe(false);
   });
 
   it('defeats an all-miss run at the zero-Renown handoff', () => {
@@ -380,7 +387,6 @@ describe('game model', () => {
       status: 'results',
       renown: 0,
       personalStrength: 0,
-      twilightStrength: 100,
       result: { outcome: 'defeat' },
       notes: [
         { id: 'audience-miss', phase: 'audience', outcome: 'miss' },
@@ -454,7 +460,7 @@ describe('game model', () => {
       status: 'playing',
       renown: 0,
       personalStrength: 0,
-      twilightStrength: 100,
+      twilightStrength: 0,
       notes: [{ id: 'audience', phase: 'audience', outcome: null }],
     });
   });
@@ -471,7 +477,7 @@ describe('game model', () => {
         [good, 'good'],
       ] as const) {
         const game = makeDifficultyGame([note('edge', 2)], difficulty);
-        expect(game.snapshot().twilightStrength).toBe(100);
+        expect(game.snapshot().twilightStrength).toBe(0);
         expect(game.press(0, 2 + error)).toMatchObject({
           noteId: 'edge',
           quality,
@@ -568,10 +574,13 @@ describe('game model', () => {
       expect(game.snapshot()).toMatchObject({
         renown: expectedRenown,
         personalStrength: Math.max(0, expectedRenown - goodCost - missCost),
-        twilightStrength: Math.max(
-          0,
-          100 - goodDamage - perfectDamage - profile.twilight.miss.damage,
-        ),
+        twilightStrength:
+          Math.ceil(
+            3 * perfectDamage * (profile.twilightStrengthPercent / 100),
+          ) -
+          goodDamage -
+          perfectDamage -
+          profile.twilight.miss.damage,
         notes: [
           { id: 'audience-perfect', outcome: 'perfect' },
           { id: 'audience-good', outcome: 'good' },
@@ -642,9 +651,7 @@ describe('game model', () => {
       );
       const game = makeGame(notes, 0, { duration: 10, twilightAt: 8 });
 
-      notes.slice(0, 10).forEach((chartNote) =>
-        game.press(0, chartNote.time),
-      );
+      notes.slice(0, 10).forEach((chartNote) => game.press(0, chartNote.time));
       game.press(0, notes[10]!.time + goodError);
 
       expect(scoringState(game.snapshot())).toMatchObject({
@@ -690,7 +697,10 @@ describe('game model', () => {
       game.press(0, 1);
       game.press(0, 2 + 0.095);
 
-      expect(scoringState(game.snapshot())).toMatchObject({ score: 150, combo: 2 });
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 150,
+        combo: 2,
+      });
     });
 
     it('scores 60 Perfect hits for 20,000 and retains the completed combo', () => {
@@ -710,7 +720,11 @@ describe('game model', () => {
     });
 
     it('awards no points for a Miss and resets the successful-hit streak', () => {
-      const notes = [note('first', 1), note('missed', 2), note('after-miss', 3)];
+      const notes = [
+        note('first', 1),
+        note('missed', 2),
+        note('after-miss', 3),
+      ];
       const game = makeGame(notes);
 
       game.press(0, 1);
@@ -732,37 +746,53 @@ describe('game model', () => {
       const game = makeGame(
         [
           note('audience', 2),
-          note('twilight-victory', 6),
-          note('radiant', 7),
+          ...Array.from({ length: 7 }, (_, index) =>
+            note(`setup-${index}`, 6 + index * 0.25),
+          ),
+          note('twilight-victory', 7.75),
+          note('radiant', 8.25),
           note('final', 8.9),
         ],
         0,
-        { twilightAt: 5, twilightStrength: 1 },
+        { twilightAt: 5 },
       );
 
       game.press(0, 2);
-      expect(scoringState(game.snapshot())).toMatchObject({ score: 100, combo: 1 });
-      game.press(0, 6);
-      expect(game.snapshot()).toMatchObject({ phase: 'twilight', victory: true });
-      expect(scoringState(game.snapshot())).toMatchObject({ score: 200, combo: 2 });
-      game.press(0, 7);
-      expect(scoringState(game.snapshot())).toMatchObject({ score: 300, combo: 3 });
+      for (let index = 0; index < 7; index += 1) {
+        game.press(0, 6 + index * 0.25);
+      }
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 800,
+        combo: 8,
+      });
+      game.press(0, 7.75);
+      expect(game.snapshot()).toMatchObject({
+        phase: 'twilight',
+        victory: true,
+      });
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 900,
+        combo: 9,
+      });
+      game.press(0, 8.25);
+      expect(scoringState(game.snapshot())).toMatchObject({
+        score: 1000,
+        combo: 10,
+      });
       game.press(0, 8.9);
       const completed = game.advanceTo(10);
 
       expect(completed).toMatchObject({ status: 'results', victory: true });
-      expect(scoringState(completed)).toMatchObject({ score: 400, combo: 4 });
+      expect(scoringState(completed)).toMatchObject({ score: 1200, combo: 11 });
       expect(scoringState(completed.result)).toMatchObject({
-        score: 400,
-        combo: 4,
-        multiplier: 1,
-        normalMaximum: 400,
+        score: 1200,
+        combo: 11,
+        multiplier: 2,
+        normalMaximum: 1200,
       });
       expect(completed.notes.map(({ outcome }) => outcome)).toEqual([
         'perfect',
-        'perfect',
-        'perfect',
-        'perfect',
+        ...Array.from({ length: 10 }, () => 'perfect'),
       ]);
     });
   });

@@ -24,19 +24,14 @@ Every song entry contains:
   and Twilight must be below 100. The generator converts these to seconds.
 - `lane_rules`: a non-empty lane pattern containing only `0`, `1`, `2`, `3`.
 - `difficulties`: exactly `easy`, `normal`, and `hard`. Each specifies a
-  Twilight Strength percentage, a minimum onset delta in milliseconds, and a
-  positive integer stride. Current starting values are Easy `70% / 64 ms / 3`,
-  Normal `80% / 64 ms / 2`, and Hard `90% / 50 ms / 1`.
+  minimum onset delta in milliseconds and a positive integer stride. Twilight
+  Strength percentages are global difficulty-profile values, not per-song data.
 
-Those are per-song/per-difficulty authoring inputs, not runtime chart aliases.
 For each difficulty, the generator filters detections using that difficulty's
-delta and stride and emits its own singleton-difficulty chart. Initial
-Twilight Strength is derived as:
-
-```text
-ceil(twilight_note_count * difficulty_profile_twilight_perfect_damage
-     * authored_twilight_strength_percent / 100)
-```
+delta and stride and emits its own singleton-difficulty chart. Runtime computes
+Twilight Strength as `ceil(eligible Twilight note count * Perfect damage *
+profile percentage / 100)`. Changing a profile percentage changes runtime
+strength immediately and does not require chart regeneration.
 
 The shared gameplay profiles are in
 `data/charts/difficulty-profiles.json`. Do not change that user-owned file as a
@@ -56,9 +51,8 @@ zero floor and has no upper cap, so these negative deltas can raise a resource
 above its starting value. They are not clamped to the original Renown or
 Twilight Strength.
 
-Generated chart `twilightStrength` is still derived from the number of Twilight
-notes, the profile's Perfect damage, and the authored percentage. Signed miss
-outcomes do not alter that initial-strength calculation. Do not reinterpret a
+Generated charts contain no baked `twilightStrength`. Signed miss outcomes do
+not alter runtime initial-strength calculation. Do not reinterpret a
 negative personal cost as damage or a negative damage delta as a personal cost.
 
 Runtime catalog metadata lives separately in `data/catalog.json` (schema
@@ -104,8 +98,8 @@ The generated outputs are:
 - `data/charts/generated/<song-id>.charts.json`: schema version 1, `songId`,
   exact source path string, and `charts.easy`, `charts.normal`, `charts.hard`.
   Every chart is a runtime `ChartConfig` with its own singleton
-  `allowedDifficulties`, seconds-based timing, notes, and derived final
-  `twilightStrength`. The bundle also has `scoring` metadata, version 1:
+  `allowedDifficulties`, seconds-based timing, and notes. The bundle also has
+  `scoring` metadata, version 1:
   `normalMaximum` is the theoretical all-Perfect score for the Normal chart,
   `fiveGoldTarget` is `ceil(normalMaximum * 0.9)`, and `chartFingerprint` is
   the SHA-256 of the scoring version plus canonical Normal chart data. When a
@@ -131,9 +125,11 @@ content-addressed pitch caches may remain. The pitch-cache key includes the
 full-source audio SHA-256, normalized extraction recipe/version, and tool
 identity. Changes to lane controls, difficulty stride/minimum delta, excerpt
 projection, or gameplay profiles reuse extracted F0 and recompute the affected
-charts/reports. Changes to the Normal chart or scoring-version rules also
-refresh the generated Normal maximum, 90% target, and fingerprint. Regenerate
-after authoring or profile changes.
+charts/reports. Changes to the Normal chart or generated scoring-metadata inputs
+(scoring version, maximum-score calculation, five-gold-target calculation, or
+fingerprint canonicalization) also refresh the generated Normal maximum, 90%
+target, and fingerprint. A normal-star threshold-only change does not affect
+these metadata inputs and does not require chart regeneration. Regenerate after chart-affecting authoring or timing/profile changes.
 
 `chart:check` runs no FFmpeg or aubio command and does not resolve the currently
 installed pitch-tool identity. It verifies the current source hash, validates

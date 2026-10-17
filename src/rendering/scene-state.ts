@@ -49,8 +49,8 @@ export function projectSceneState(
     : phase === 'audience'
       ? clamp01(audiencePotential === 0 ? 0 : game.renown / audiencePotential)
       : clamp01(
-          (chart.twilightStrength - game.twilightStrength) /
-            chart.twilightStrength,
+          (game.initialTwilightStrength - game.twilightStrength) /
+            game.initialTwilightStrength,
         );
   const transitionProgress = reducedMotion
     ? phase === 'twilight'

@@ -180,7 +180,6 @@ const chart: ChartConfig = {
   sourceStart: 0,
   duration: 60,
   twilightAt: 30,
-  twilightStrength: 100,
   allowedDifficulties: ['normal'],
   notes: [],
 };

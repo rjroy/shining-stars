@@ -25,16 +25,62 @@
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.5360824742268041,
+      "baselineExtractedF0DirectionAgreement": 0.5091575091575091,
       "baselineHandCounts": [
-        196,
-        196
+        287,
+        287
       ],
       "baselineLaneCounts": [
-        98,
-        98,
-        98,
-        98
+        144,
+        143,
+        144,
+        143
+      ],
+      "baselineLaneShares": [
+        0.2508710801393728,
+        0.24912891986062718,
+        0.2508710801393728,
+        0.24912891986062718
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.25,
+      "candidateExtractedF0DirectionAgreement": 0.8058608058608059,
+      "candidateHandCounts": [
+        289,
+        285
+      ],
+      "candidateLaneCounts": [
+        144,
+        145,
+        144,
+        141
+      ],
+      "candidateLaneShares": [
+        0.2508710801393728,
+        0.25261324041811845,
+        0.2508710801393728,
+        0.2456445993031359
+      ],
+      "candidateLongestLaneRun": 3,
+      "candidateWorstRolling32Concentration": 0.4375,
+      "noteCount": 574,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 484,
+      "stablePitchCoverage": 0.8432055749128919,
+      "stableUnequalPitchAdjacentPairs": 273,
+      "unknownPitchCount": 90
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.4579831932773109,
+      "baselineHandCounts": [
+        574,
+        574
+      ],
+      "baselineLaneCounts": [
+        287,
+        287,
+        287,
+        287
       ],
       "baselineLaneShares": [
         0.25,
@@ -44,77 +90,31 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7474226804123711,
+      "candidateExtractedF0DirectionAgreement": 0.8067226890756303,
       "candidateHandCounts": [
-        198,
-        194
+        574,
+        574
       ],
       "candidateLaneCounts": [
-        98,
-        100,
-        98,
-        96
+        286,
+        288,
+        288,
+        286
       ],
       "candidateLaneShares": [
-        0.25,
-        0.25510204081632654,
-        0.25,
-        0.24489795918367346
+        0.24912891986062718,
+        0.2508710801393728,
+        0.2508710801393728,
+        0.24912891986062718
       ],
-      "candidateLongestLaneRun": 4,
+      "candidateLongestLaneRun": 5,
       "candidateWorstRolling32Concentration": 0.40625,
-      "noteCount": 392,
+      "noteCount": 1148,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 324,
-      "stablePitchCoverage": 0.826530612244898,
-      "stableUnequalPitchAdjacentPairs": 194,
-      "unknownPitchCount": 68
-    },
-    "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.4810379241516966,
-      "baselineHandCounts": [
-        601,
-        601
-      ],
-      "baselineLaneCounts": [
-        301,
-        300,
-        301,
-        300
-      ],
-      "baselineLaneShares": [
-        0.2504159733777038,
-        0.24958402662229617,
-        0.2504159733777038,
-        0.24958402662229617
-      ],
-      "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8043912175648703,
-      "candidateHandCounts": [
-        602,
-        600
-      ],
-      "candidateLaneCounts": [
-        300,
-        302,
-        301,
-        299
-      ],
-      "candidateLaneShares": [
-        0.24958402662229617,
-        0.2512479201331115,
-        0.2504159733777038,
-        0.24875207986688852
-      ],
-      "candidateLongestLaneRun": 4,
-      "candidateWorstRolling32Concentration": 0.46875,
-      "noteCount": 1202,
-      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 1013,
-      "stablePitchCoverage": 0.8427620632279534,
-      "stableUnequalPitchAdjacentPairs": 501,
-      "unknownPitchCount": 189
+      "stablePitchCount": 966,
+      "stablePitchCoverage": 0.8414634146341463,
+      "stableUnequalPitchAdjacentPairs": 476,
+      "unknownPitchCount": 182
     },
     "normal": {
       "baselineExtractedF0DirectionAgreement": 0.47058823529411764,

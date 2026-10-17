@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSongCatalog } from '../catalog/catalog';
 import type { ChartConfig } from '../game/chart';
+import { getInitialTwilightStrength } from '../game/chart';
 import type {
   AudioBufferPort,
   AudioContextPort,
@@ -17,13 +18,11 @@ function testChart(difficulty: 'easy' | 'normal' | 'hard'): ChartConfig {
     sourceStart: 0,
     duration: 20,
     twilightAt: 10,
-    twilightStrength:
-      difficulty === 'easy' ? 60 : difficulty === 'normal' ? 80 : 110,
     allowedDifficulties: [difficulty],
     notes: [
       {
         id: `${difficulty}-chart-note`,
-        time: difficulty === 'hard' ? 5 : 1.5,
+        time: difficulty === 'hard' ? 15 : 1.5,
         lane: 0,
       },
     ],
@@ -59,6 +58,25 @@ function songWithDifferentChartLengths(
       ...song.scoring,
       normalMaximum: getTheoreticalMaximumScore(3),
       fiveGoldTarget: Math.ceil(getTheoreticalMaximumScore(3) * 0.9),
+    },
+  };
+}
+
+function victorySong(song: SongCatalogEntry): SongCatalogEntry {
+  const notes: ChartConfig['notes'] = [
+    { id: 'audience-note', time: 1.5, lane: 0 },
+    { id: 'twilight-note', time: 11.5, lane: 0 },
+  ];
+  const maximum = getTheoreticalMaximumScore(notes.length);
+  return {
+    ...song,
+    charts: {
+      normal: { ...testChart('normal'), notes },
+    },
+    scoring: {
+      ...song.scoring,
+      normalMaximum: maximum,
+      fiveGoldTarget: Math.ceil(maximum * 0.9),
     },
   };
 }
@@ -233,8 +251,11 @@ function harness() {
     },
   });
   const song = testCatalog.songs[0];
+  const catalogReplacement = testCatalog.songs[1];
   if (song === undefined) throw new Error('Expected a catalog song fixture.');
-  return { coordinator, contexts, fetched, song };
+  if (catalogReplacement === undefined)
+    throw new Error('Expected a replacement song fixture.');
+  return { coordinator, contexts, fetched, song, catalogReplacement };
 }
 
 function callCoordinatorLane(
@@ -414,13 +435,21 @@ describe('performance coordinator', () => {
     const h = harness();
     await h.coordinator.prepare(h.song, 'hard');
     const initial = h.coordinator.snapshot().controller?.game;
-    expect(initial).toMatchObject({ twilightStrength: 110 });
+    expect(initial).toMatchObject({
+      twilightStrength: getInitialTwilightStrength(
+        h.song.charts.hard ?? testChart('hard'),
+        'hard',
+      ),
+    });
     expect(initial?.notes.map((note) => note.id)).toEqual(['hard-chart-note']);
     expect(h.coordinator.snapshot().difficulty).toBe('hard');
     await h.coordinator.markGameplayReady();
     await h.coordinator.restart();
     expect(h.coordinator.snapshot().controller?.game).toMatchObject({
-      twilightStrength: 110,
+      twilightStrength: getInitialTwilightStrength(
+        h.song.charts.hard ?? testChart('hard'),
+        'hard',
+      ),
       notes: [{ id: 'hard-chart-note', outcome: null }],
     });
   });
@@ -509,7 +538,6 @@ describe('performance coordinator', () => {
         charts: {
           normal: {
             ...testChart('normal'),
-            twilightStrength: outcome === 'victory' ? 1 : 110,
             notes,
           },
         },
@@ -551,6 +579,164 @@ describe('performance coordinator', () => {
       await coordinator.dispose();
     },
   );
+
+  it('reports Twilight defeat immediately once per run, including before terminal results', async () => {
+    const h = harness();
+    const events: Array<{ songId: string; difficulty: string }> = [];
+    const coordinator = createPerformanceCoordinator({
+      createAudioContext: () => {
+        const context = new TestContext();
+        h.contexts.push(context);
+        return context;
+      },
+      fetchAudio: async () => new ArrayBuffer(8),
+      onTwilightDefeated: (event) => events.push(event),
+    });
+    const base = songWithDifferentChartLengths(h.song);
+    const song: SongCatalogEntry = {
+      ...base,
+      charts: {
+        normal: {
+          ...testChart('normal'),
+          notes: [
+            { id: 'audience-note', time: 1.5, lane: 0 },
+            { id: 'twilight-note', time: 11.5, lane: 0 },
+          ],
+        },
+      },
+    };
+
+    await coordinator.prepare(song, 'normal');
+    await coordinator.markGameplayReady();
+    const context = h.contexts.at(-1);
+    if (!context) throw new Error('Expected an audio context.');
+    context.currentTime = 3.5;
+    coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    context.currentTime = 13.5;
+    const victory = coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    expect(victory?.game).toMatchObject({ victory: true, status: 'playing' });
+    expect(events).toEqual([{ songId: song.id, difficulty: 'normal' }]);
+
+    coordinator.update();
+    coordinator.pause();
+    await coordinator.resume();
+    coordinator.update();
+    expect(events).toHaveLength(1);
+
+    await coordinator.restart();
+    expect(events).toHaveLength(1);
+    expect(coordinator.snapshot().controller?.runId).toBe(2);
+    context.currentTime = 17;
+    coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    context.currentTime = 27;
+    const restartedVictory = coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    expect(restartedVictory?.game).toMatchObject({
+      victory: true,
+      status: 'playing',
+    });
+    expect(events).toHaveLength(2);
+    await coordinator.dispose();
+  });
+
+  it('contains a Twilight callback failure and keeps gameplay running', async () => {
+    const h = harness();
+    const coordinator = createPerformanceCoordinator({
+      createAudioContext: () => {
+        const context = new TestContext();
+        h.contexts.push(context);
+        return context;
+      },
+      fetchAudio: async () => new ArrayBuffer(8),
+      onTwilightDefeated: () => {
+        throw new Error('save write failed');
+      },
+    });
+    const song = victorySong(h.song);
+    await coordinator.prepare(song, 'normal');
+    await coordinator.markGameplayReady();
+    const context = h.contexts.at(-1);
+    if (!context) throw new Error('Expected an audio context.');
+    context.currentTime = 3.5;
+    coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    context.currentTime = 13.5;
+    const victory = coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    expect(victory?.game).toMatchObject({ victory: true, status: 'playing' });
+    context.currentTime = 22;
+    expect(coordinator.update()?.game.status).toBe('results');
+    await coordinator.dispose();
+  });
+
+  it('reports a Twilight defeat before a renderer failure can interrupt publication', async () => {
+    const h = harness();
+    const events: string[] = [];
+    const coordinator = createPerformanceCoordinator({
+      createAudioContext: () => {
+        const context = new TestContext();
+        h.contexts.push(context);
+        return context;
+      },
+      fetchAudio: async () => new ArrayBuffer(8),
+      render: (snapshot) => {
+        if (snapshot.game.victory) throw new Error('renderer failed');
+      },
+      onTwilightDefeated: ({ songId }) => events.push(songId),
+    });
+    await coordinator.prepare(victorySong(h.song), 'normal');
+    await coordinator.markGameplayReady();
+    const context = h.contexts.at(-1);
+    if (!context) throw new Error('Expected an audio context.');
+    context.currentTime = 3.5;
+    coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    context.currentTime = 13.5;
+    const victory = coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    expect(victory?.game.victory).toBe(true);
+    expect(events).toEqual([h.song.id]);
+    expect(coordinator.snapshot().recoveryRequired).toBe(true);
+    await coordinator.dispose();
+  });
+
+  it('does not award from a retired performance after a replacement is active', async () => {
+    const h = harness();
+    const events: string[] = [];
+    const coordinator = createPerformanceCoordinator({
+      createAudioContext: () => {
+        const context = new TestContext();
+        h.contexts.push(context);
+        return context;
+      },
+      fetchAudio: async () => new ArrayBuffer(8),
+      onTwilightDefeated: ({ songId }) => events.push(songId),
+    });
+    await coordinator.prepare(victorySong(h.song), 'normal');
+    await coordinator.markGameplayReady();
+    const retiredContext = h.contexts.at(-1);
+    if (!retiredContext) throw new Error('Expected the first audio context.');
+
+    await coordinator.prepare(victorySong(h.catalogReplacement), 'normal');
+    await coordinator.markGameplayReady();
+    retiredContext.currentTime = 13.5;
+    coordinator.update();
+    expect(events).toEqual([]);
+
+    const activeContext = h.contexts.at(-1);
+    if (!activeContext) throw new Error('Expected the replacement context.');
+    activeContext.currentTime = 3.5;
+    coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    activeContext.currentTime = 13.5;
+    coordinator.keyDown('KeyD');
+    coordinator.keyUp('KeyD');
+    expect(events).toEqual([h.catalogReplacement.id]);
+    await coordinator.dispose();
+  });
 
   it('does not report an unfinished run on restart or return, and reports a later completed run', async () => {
     const h = harness();

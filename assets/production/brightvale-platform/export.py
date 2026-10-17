@@ -1,4 +1,4 @@
-"""Export original approved platform, never the study's reference copy."""
+"""Export the approved maintained platform revision, never a study/reference copy."""
 from pathlib import Path
 import sys
 sys.dont_write_bytecode=True

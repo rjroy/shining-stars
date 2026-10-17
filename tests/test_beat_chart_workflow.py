@@ -573,7 +573,6 @@ class GeneratedScoringMetadataTests(unittest.TestCase):
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
             "difficulties": {
                 difficulty: {
-                    "twilight_strength": 80,
                     "minimum_delta": 64,
                     "stride": 1,
                 }
@@ -855,7 +854,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
             with self.subTest(difficulty=difficulty):
                 raw = profile_document["profiles"][difficulty]
                 runtime = loaded[difficulty]
-                self.assertEqual(set(raw), {"timing", "audience", "twilight"})
+                self.assertEqual(set(raw), {"twilight_strength", "timing", "audience", "twilight"})
                 self.assertEqual(set(raw["timing"]), {"perfect_ms", "good_ms"})
                 self.assertEqual(set(raw["audience"]), {"perfect", "good", "miss"})
                 self.assertEqual(set(raw["twilight"]), {"perfect", "good", "miss"})
@@ -863,6 +862,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 self.assertEqual(runtime["timing"]["good_ms"], raw["timing"]["good_ms"])
                 self.assertEqual(runtime["audience"], raw["audience"])
                 self.assertEqual(runtime["twilight"], raw["twilight"])
+                self.assertEqual(runtime["twilight_strength"], raw["twilight_strength"])
 
     def test_shared_profile_loader_rejects_invalid_timing_and_balance_values(self):
         original = json.loads(
@@ -907,7 +907,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         beat_chart.load_difficulty_profiles(path)
 
-    def test_profile_pipeline_accepts_signed_miss_outcomes_and_chart_strength_uses_perfect_damage(self):
+    def test_profile_pipeline_accepts_signed_miss_and_chart_has_no_baked_strength(self):
         original = json.loads(
             (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
             .read_text(encoding="utf-8")
@@ -932,7 +932,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
             "twilight_time": 50,
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
             "difficulties": {
-                "normal": {"twilight_strength": 80, "minimum_delta": 0, "stride": 1}
+                "normal": {"minimum_delta": 0, "stride": 1}
             },
         }
         chart, _, count = beat_chart._difficulty_chart(
@@ -944,10 +944,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
             "signed-miss-fixture",
             "a" * 64,
         )
-        self.assertEqual(
-            chart["twilightStrength"],
-            math.ceil(count * profile["twilight"]["perfect"]["damage"] * 0.8),
-        )
+        self.assertNotIn("twilightStrength", chart)
 
     def test_loads_selected_song_from_collection_with_requested_settings(self):
         with tempfile.TemporaryDirectory() as directory:

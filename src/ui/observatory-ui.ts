@@ -14,6 +14,13 @@ import {
 } from '../catalog/selectors';
 import type { FavoriteStore } from '../catalog/favorites';
 import type { SaveStore } from '../app/save-data';
+import { createProgressionMembership } from '../catalog/progression-catalog';
+import type {
+  ProgressionMembership,
+  ProgressionState,
+  ProgressionPurchaseRequest,
+} from '../catalog/progression';
+import { createUnlockDialog } from './unlock-dialog';
 import { createSaveDataDialog } from './save-data-dialog';
 import type { SongRating } from '../catalog/song-ratings';
 import { ensureExperienceShell } from './experience-shell';
@@ -148,6 +155,27 @@ export function getObservatorySongPresentation(
 
 const escapeKey = 'Escape';
 
+export function getSongUnlockRequest(
+  songId: string,
+  state: ProgressionState,
+  membership: ProgressionMembership,
+): ProgressionPurchaseRequest | null {
+  const parent = membership.songs.get(songId);
+  if (parent === undefined || membership.collections.get(parent) === null)
+    return null;
+  if (!Object.hasOwn(state.collectionPurchases, parent))
+    return { kind: 'collection', collectionId: parent };
+  return Object.hasOwn(state.songPurchases, songId)
+    ? null
+    : { kind: 'song', songId };
+}
+
+export function getCreditedSealsMarkup(mark?: Difficulty): string {
+  const tiers = ['easy', 'normal', 'hard'] as const;
+  const level = mark === undefined ? -1 : tiers.indexOf(mark);
+  return `<span class="credited-seals" aria-label="Credited victories">${tiers.map((tier, index) => `<span class="credited-seal${index <= level ? ' is-credited' : ''}" aria-label="${tier[0]!.toUpperCase() + tier.slice(1)}: ${index <= level ? 'credited' : 'not credited'}" title="${tier}: ${index <= level ? 'credited' : 'not credited'}">${tier[0]!.toUpperCase()}</span>`).join('')}</span>`;
+}
+
 function createSvgIcon(name: 'heart' | 'search' | 'filter' | 'back'): string {
   const paths = {
     heart:
@@ -225,7 +253,8 @@ export function createObservatoryUI(
           <span class="wordmark-seal" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="18"/><path d="M24 5v38M5 24h38M11 11l26 26M37 11 11 37"/><path d="m24 12 3.2 8.8L36 24l-8.8 3.2L24 36l-3.2-8.8L12 24l8.8-3.2L24 12Z"/></svg></span>
           <span class="wordmark-copy"><strong>Shining Stars</strong><small>Observatory</small></span>
         </div>
-        <button class="observatory-save-entry" type="button" data-action="save-data">Save data</button>
+        <div class="observatory-save-utility"><span class="observatory-credits" data-credits></span>
+        <button class="observatory-save-entry" type="button" data-action="save-data">Save data</button></div>
         <nav class="observatory-tools" aria-label="Song navigation">
           <button class="observatory-nav-button is-active" type="button" data-action="all-songs">All Songs</button>
           <label class="observatory-search">
@@ -335,6 +364,39 @@ export function createObservatoryUI(
   let playMessage = '';
   let projectedAnchors: readonly ObservatoryAnchor[] = [];
   let disposed = false;
+  const membership =
+    options.saveStore === undefined
+      ? null
+      : createProgressionMembership(catalog);
+  const unlockRequest = (songId: string) =>
+    options.saveStore === undefined || membership === null
+      ? null
+      : getSongUnlockRequest(
+          songId,
+          options.saveStore.progression.snapshot(),
+          membership,
+        );
+  const unlockDialog =
+    options.saveStore === undefined
+      ? null
+      : createUnlockDialog(root, options.saveStore, refreshSavedData);
+  function openUnlock(request: ProgressionPurchaseRequest) {
+    if (membership === null) return;
+    const collection =
+      request.kind === 'collection'
+        ? catalog.collections.find((item) => item.id === request.collectionId)
+        : null;
+    const title =
+      request.kind === 'collection'
+        ? collection?.title
+        : catalog.songs.find((song) => song.id === request.songId)?.title;
+    const cost =
+      request.kind === 'collection'
+        ? membership.collections.get(request.collectionId)
+        : (membership.songPrice ?? 1);
+    if (cost === null || cost === undefined) return;
+    unlockDialog?.open(request, title ?? 'Selection', cost);
+  }
   const saveDialog =
     options.saveStore === undefined
       ? null
@@ -529,6 +591,9 @@ export function createObservatoryUI(
           : song.availability === 'unavailable'
             ? `Unavailable · ${presentation.durationText}`
             : `Play-test chart · ${presentation.durationText}`;
+      const locked = unlockRequest(song.id);
+      if (locked !== null)
+        status.textContent = `Locked · ${locked.kind === 'collection' ? 'Unlock collection first' : 'Unlock song · 1 credit'} · ${presentation.durationText}`;
       const best = document.createElement('span');
       best.className = 'song-row-rating';
       best.dataset.songBest = song.id;
@@ -537,6 +602,13 @@ export function createObservatoryUI(
       bestCopy.textContent = presentation.bestText;
       best.append(bestCopy);
       text.append(title, status, best);
+      if (options.saveStore !== undefined) {
+        const seals = document.createElement('span');
+        seals.innerHTML = getCreditedSealsMarkup(
+          options.saveStore.progression.snapshot().victoryMarks[song.id],
+        );
+        best.append(seals);
+      }
       select.append(text);
       const favorite = createButton(
         favoriteStore.isFavorite(song.id)
@@ -632,6 +704,12 @@ export function createObservatoryUI(
     basis.className = 'song-target-basis';
     basis.textContent = presentation.targetBasisText;
     achievement.append(bestLabel, bestStars, bestCopy, target, basis);
+    if (options.saveStore !== undefined) {
+      const seals = document.createElement('div');
+      seals.className = 'song-credited-victories';
+      seals.innerHTML = `<span>Credited victories</span>${getCreditedSealsMarkup(options.saveStore.progression.snapshot().victoryMarks[song.id])}`;
+      achievement.append(seals);
+    }
 
     const difficultyLabel = document.createElement('label');
     difficultyLabel.className = 'song-difficulty-label';
@@ -658,8 +736,19 @@ export function createObservatoryUI(
       '<svg aria-hidden="true" viewBox="0 0 20 20"><path d="M5 3.5 16 10 5 16.5z" fill="currentColor"/></svg>',
     );
     const rendererReady = rendererStatus === 'rendered';
+    const locked = unlockRequest(song.id);
     const valid = canStartSong(catalog, song, currentSelection.runDifficulty);
     play.disabled = !valid || !rendererReady || playStatus === 'preparing';
+    if (locked !== null) {
+      play.dataset.action = 'unlock';
+      play.replaceChildren(
+        document.createTextNode(
+          locked.kind === 'collection' ? 'Unlock collection…' : 'Unlock song…',
+        ),
+      );
+      play.disabled =
+        song.availability === 'unavailable' || playStatus === 'preparing';
+    }
     const reason =
       song.availability === 'unavailable'
         ? 'This song is unavailable.'
@@ -675,10 +764,23 @@ export function createObservatoryUI(
     help.id = 'song-play-help';
     help.className = 'song-play-help';
     help.textContent = playStatus === 'error' ? playMessage : reason;
+    if (locked !== null && song.availability !== 'unavailable')
+      help.textContent =
+        locked.kind === 'collection'
+          ? `Collection: ${membership?.collections.get(locked.collectionId) ?? 0} credits first; then 1 credit per song. Browsing and favorites stay available.`
+          : 'Unlock for 1 credit. You can choose Play afterward.';
     detail.append(heading, status, achievement, difficultyLabel, play, help);
   }
 
   function render(): void {
+    const progress = options.saveStore?.progression.snapshot();
+    setNotice(
+      '[data-credits]',
+      progress === undefined
+        ? ''
+        : `${progress.balance} credits${progress.persistence === 'session' ? ' · session only' : ''}`,
+      progress !== undefined,
+    );
     overview.hidden = screen !== 'overview';
     browser.hidden = screen !== 'browser';
     const browserTitle = getObservatoryBrowserTitle(
@@ -730,6 +832,17 @@ export function createObservatoryUI(
       `${currentCollection()?.songIds.length ?? 0} songs`;
     root.querySelector<HTMLElement>('.collection-story')!.textContent =
       `${currentCollection()?.songIds.length ?? 0} songs in the current collection.`;
+    if (collection !== null && membership !== null && progress !== undefined) {
+      const price = membership.collections.get(collection.id);
+      if (
+        price !== null &&
+        price !== undefined &&
+        !Object.hasOwn(progress.collectionPurchases, collection.id)
+      ) {
+        root.querySelector<HTMLElement>('.collection-story')!.textContent =
+          `Locked collection · ${price} credits. Browse every song before unlocking. Songs cost 1 credit each after the collection unlock.`;
+      }
+    }
     syncFilterControls();
     renderAnchors();
     renderRows();
@@ -843,6 +956,7 @@ export function createObservatoryUI(
       if (
         !canStartSong(catalog, song, currentSelection.runDifficulty) ||
         song === null ||
+        unlockRequest(song.id) !== null ||
         rendererStatus !== 'rendered'
       )
         return;
@@ -853,6 +967,10 @@ export function createObservatoryUI(
         songId: song.id,
         difficulty: currentSelection.runDifficulty!,
       });
+    } else if (action === 'unlock') {
+      const song = currentSong();
+      const request = song === null ? null : unlockRequest(song.id);
+      if (request !== null) openUnlock(request);
     } else if (action === 'renderer-retry') {
       actions.onRendererRetry?.();
     }
@@ -963,8 +1081,7 @@ export function createObservatoryUI(
       playStatus = status;
       playMessage = message;
       if (status === 'idle') {
-        renderRows();
-        syncStorageNotice();
+        render();
       }
       renderDetail();
       setNotice(
@@ -991,6 +1108,7 @@ export function createObservatoryUI(
       if (disposed) return;
       disposed = true;
       saveDialog?.destroy();
+      unlockDialog?.destroy();
       root.removeEventListener('click', onClick);
       root.removeEventListener('input', onInput);
       root.removeEventListener('change', onChange);

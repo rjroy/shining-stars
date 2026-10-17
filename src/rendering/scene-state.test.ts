@@ -11,7 +11,6 @@ const chart: ChartConfig = {
   sourceStart: 0,
   duration: 20,
   twilightAt: 10,
-  twilightStrength: 100,
   allowedDifficulties: ['normal'],
   notes: [1, 2, 3, 4].map((time, index) => ({
     id: `a${index}`,
@@ -30,7 +29,8 @@ function makeSnapshot(
     victory: false,
     renown: 0,
     personalStrength: 0,
-    twilightStrength: chart.twilightStrength,
+    twilightStrength: 100,
+    initialTwilightStrength: 100,
     difficulty: 'normal',
     score: 0,
     combo: 0,

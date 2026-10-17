@@ -14,7 +14,7 @@ from mathutils import Matrix, Quaternion, Vector
 ROOT = Path(__file__).resolve().parent
 AUTHORING = ROOT.parents[1] / 'authoring'
 SOURCES = {
- 'platform': ('neon-twilight-platform/platform.blend','ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af'),
+ 'platform': ('neon-twilight-platform/platform-slot-cues.blend','72ba506b25c7ddfc61541dc9cc54bd65880fa112ad1e51dd839a0fa794befe26'),
  'highway': ('brightvale-scene-review/scene-review.blend','fb630ac23fc576c42ebe4961b917b207fefb4894f9bbfc0b812bb6bf7329046b'),
  'framing': ('brightvale-outer-framing/framing.blend','cd17e3162c434ce4054f6c32d86d4b6a885e9dbad44c1841b563513fffd75542')}
 AXES = Matrix(((1,0,0,0),(0,0,1,0),(0,-1,0,0),(0,0,0,1)))
@@ -68,7 +68,15 @@ def load(kind, source=None):
  bpy.ops.wm.open_mainfile(filepath=str(source));bpy.context.view_layer.update()
  if kind=='platform':
   objects=[o for o in bpy.context.scene.objects if o.type in ('MESH','CURVE') and not o.name.startswith('Studio')]
-  assert len(objects)==53 and not any(o.parent for o in objects)
+  assert len(objects)==52 and not any(o.parent for o in objects)
+  assert 'Timing | thin transverse light rule' not in {o.name for o in objects},'False timing cue restored'
+  borders={f'Lane {i} | substantial continuous profiled border':f'Slot border | {color} 75 lane 25 gold'
+           for i,color in enumerate(('cyan','magenta','amber','green'),1)}
+  for name,role in borders.items():
+   obj=bpy.data.objects[name]
+   assert len(obj.data.materials)==1 and obj.data.materials[0].name==role,'Dedicated slot tint lost'
+   assert [o.name for o in objects if role in [m.name for m in o.data.materials]]==[name],'Slot tint leaked to protected geometry'
+  assert sum(o.name.startswith('Hit bar ') for o in objects)==12,'Actual hit target component lost'
  elif kind=='highway':
   objects=[o for o in bpy.context.scene.objects if o.get('review_asset')=='highway']
   assert len(objects)==14 and all(o.type=='MESH' for o in objects)
@@ -239,6 +247,22 @@ def negative_tests(doc,binary,expected,values,package,existing):
   try:inspect(bad,binary,expected,values)
   except AssertionError:result[name+'_rejected']=True
   else:raise AssertionError('Negative test accepted '+name)
+ if 'Lane 1 | substantial continuous profiled border' in expected:
+  bad=copy.deepcopy(doc);bad['nodes'].append({'name':'Timing | thin transverse light rule'})
+  try:inspect(bad,binary,expected,values)
+  except AssertionError:result['restored_false_timing_cue_rejected']=True
+  else:raise AssertionError('Restored timing cue accepted')
+  for role in ('Slot border | cyan 75 lane 25 gold','Gold | brushed warm alloy'):
+   bad=copy.deepcopy(doc)
+   material=next(m for m in bad['materials'] if m['name']==role)
+   material['pbrMetallicRoughness']['baseColorFactor']=[.1,.1,.1,1]
+   try:inspect(bad,binary,expected,values)
+   except AssertionError:result[role+'_retint_rejected']=True
+   else:raise AssertionError('Incorrect slot/shared-gold tint accepted')
+  bad=copy.deepcopy(doc);bad['nodes']=[n for n in bad['nodes'] if n['name']!='Hit bar 1 | flush machined gold bezel']
+  try:inspect(bad,binary,expected,values)
+  except AssertionError:result['missing_real_hit_bezel_rejected']=True
+  else:raise AssertionError('Missing actual hit bezel accepted')
  records=next(iter(expected.values()))['triangles'];bad=list(records);role,p,n=bad[0];bad[0]=(role,p,-n)
  try:compare_triangles(records,bad)
  except AssertionError:result['flipped_normals_rejected']=True

@@ -6,6 +6,7 @@ export type Difficulty = (typeof DIFFICULTIES)[number];
 type OutcomeValues = Readonly<Record<'perfect' | 'good' | 'miss', number>>;
 
 export interface DifficultyProfile {
+  readonly twilightStrengthPercent: number;
   readonly timing: {
     readonly perfectWindowSeconds: number;
     readonly goodWindowSeconds: number;
@@ -32,6 +33,7 @@ interface RawTwilightValues {
 }
 
 interface RawDifficultyProfile {
+  readonly twilight_strength: number;
   readonly timing: {
     readonly perfect_ms: number;
     readonly good_ms: number;
@@ -78,6 +80,13 @@ function parseProfile(raw: unknown, difficulty: Difficulty): DifficultyProfile {
   const timing = raw.timing as unknown as RawDifficultyProfile['timing'];
   const audience = raw.audience as unknown as RawOutcomeValues;
   const twilight = raw.twilight as unknown as RawTwilightValues;
+  const twilightStrengthPercent = finiteNonNegative(
+    (raw as Record<string, unknown>).twilight_strength,
+    `${difficulty}.twilight_strength`,
+  );
+  if (twilightStrengthPercent > 100) {
+    throw new TypeError(`Difficulty profile ${difficulty}.twilight_strength must be between 0 and 100.`);
+  }
   const perfectWindowMilliseconds = finiteNonNegative(
     timing.perfect_ms,
     `${difficulty}.timing.perfect_ms`,
@@ -137,6 +146,7 @@ function parseProfile(raw: unknown, difficulty: Difficulty): DifficultyProfile {
   });
 
   return Object.freeze({
+    twilightStrengthPercent,
     timing: Object.freeze({
       perfectWindowSeconds: perfectWindowMilliseconds / 1000,
       goodWindowSeconds: goodWindowMilliseconds / 1000,

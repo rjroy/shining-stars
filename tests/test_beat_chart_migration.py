@@ -54,15 +54,7 @@ class V2AuthoringTests(unittest.TestCase):
                 self.assertEqual(envelope["charts"][difficulty], chart)
                 self.assertEqual(report["controls"][difficulty], analysis["controls"])
                 self.assertEqual(report["metrics"][difficulty], analysis["metrics"])
-                self.assertEqual(
-                    chart["twilightStrength"],
-                    math.ceil(
-                        twilight_count
-                        * profiles[difficulty]["twilight"]["perfect"]["damage"]
-                        * settings["difficulties"][difficulty]["twilight_strength"]
-                        / 100
-                    ),
-                )
+                self.assertNotIn("twilightStrength", chart)
                 self.assertTrue(any(note["relative_time"] > chart["twilightAt"] for note in notes))
                 expected_difficulties[difficulty] = json.dumps(chart, sort_keys=True)
                 total_charts += 1
@@ -79,9 +71,9 @@ class V2AuthoringTests(unittest.TestCase):
         self.assertEqual(
             song["difficulties"],
             {
-                "easy": {"twilight_strength": 70, "minimum_delta": 64, "stride": 3},
-                "normal": {"twilight_strength": 80, "minimum_delta": 64, "stride": 2},
-                "hard": {"twilight_strength": 90, "minimum_delta": 50, "stride": 1},
+                "easy": {"minimum_delta": 90, "stride": 2},
+                "normal": {"minimum_delta": 64, "stride": 2},
+                "hard": {"minimum_delta": 90, "stride": 1},
             },
         )
 
@@ -115,11 +107,11 @@ class V2AuthoringTests(unittest.TestCase):
                 self.assertTrue(any(time > chart["twilightAt"] for time in note_times))
                 self.assertGreater(max(note_times), measured_duration * 0.9)
 
-    def test_twilight_strength_formula_uses_ceiling_and_profile_damage(self):
+    def test_generated_chart_does_not_bake_runtime_twilight_strength(self):
         settings = {
             "start_time": 0, "duration": 100, "twilight_time": 50,
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
-            "difficulties": {"easy": {"twilight_strength": 70, "minimum_delta": 0, "stride": 1}},
+            "difficulties": {"easy": {"minimum_delta": 0, "stride": 1}},
         }
         chart, notes, count = beat_chart._difficulty_chart(
             [i * 0.5 for i in range(200)], settings, 100,
@@ -127,7 +119,7 @@ class V2AuthoringTests(unittest.TestCase):
             "easy", "sample", hashlib.sha256(b"song").hexdigest(),
         )
         self.assertGreater(count, 0)
-        self.assertEqual(chart["twilightStrength"], __import__("math").ceil(count * 2 * 0.70))
+        self.assertNotIn("twilightStrength", chart)
         self.assertEqual(chart["allowedDifficulties"], ["easy"])
         self.assertEqual(len(notes), len(chart["notes"]))
 
@@ -135,7 +127,7 @@ class V2AuthoringTests(unittest.TestCase):
         settings = {
             "start_time": 0, "duration": 10, "twilight_time": 50,
             "lane_rules": {"type": "pattern", "data": [0]},
-            "difficulties": {"easy": {"twilight_strength": 70, "minimum_delta": 0, "stride": 1}},
+            "difficulties": {"easy": {"minimum_delta": 0, "stride": 1}},
         }
         with self.assertRaisesRegex(ValueError, "zeroTwilight"):
             beat_chart._difficulty_chart(
@@ -152,7 +144,7 @@ class V2WorkflowTests(unittest.TestCase):
             "source": str(source), "start_time": 0, "duration": 100,
             "twilight_time": 50, "lane_rules": {"type": "pattern", "data": [0, 1]},
             "difficulties": {
-                name: {"twilight_strength": strength, "minimum_delta": delta, "stride": stride}
+                name: {"minimum_delta": delta, "stride": stride}
                 for name, strength, delta, stride in (("easy", 70, 64, 3), ("normal", 80, 64, 2), ("hard", 90, 50, 1))
             },
         }
@@ -179,6 +171,24 @@ class V2WorkflowTests(unittest.TestCase):
                     self.assertEqual(runner_calls, [])
                     self.assertFalse((root / "a.json").exists())
                     self.assertFalse((root / "c.json").exists())
+
+    def test_authoring_rejects_stale_per_song_strength_override(self):
+        song = self.v2_song("song.mp3")
+        song["difficulties"]["normal"]["twilight_strength"] = 80
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "authoring.json"
+            path.write_text(json.dumps({"schema_version": 2, "songs": {"one": song}}))
+            with self.assertRaisesRegex(ValueError, "no longer authorable"):
+                beat_chart.load_authoring_collection(path)
+
+    def test_profile_percentage_only_change_does_not_stale_generated_inputs(self):
+        profiles = json.loads(beat_chart.DEFAULT_DIFFICULTY_PROFILES.read_text())
+        original_hash = beat_chart._profile_file_hash()
+        profiles["profiles"]["normal"]["twilight_strength"] = 37
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "profiles.json"
+            path.write_text(json.dumps(profiles))
+            self.assertEqual(beat_chart._profile_file_hash(path), original_hash)
 
     def test_current_and_legacy_cache_reuse_reject_malformed_provenance(self):
         with tempfile.TemporaryDirectory() as tmp:

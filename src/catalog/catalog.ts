@@ -168,7 +168,6 @@ function isChartConfig(value: unknown): value is ChartConfig {
     typeof value.sourceStart === 'number' &&
     typeof value.duration === 'number' &&
     typeof value.twilightAt === 'number' &&
-    typeof value.twilightStrength === 'number' &&
     Array.isArray(value.allowedDifficulties) &&
     value.allowedDifficulties.every(isDifficulty) &&
     Array.isArray(value.notes) &&

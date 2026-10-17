@@ -589,23 +589,20 @@
   ],
   "pitch_analysis_key": "df8a0832c851e88d73ddb07979e611d4699a8c6b076d1d308497f7323b28cc44",
   "projection": {
-    "profile_sha256": "d1fb0c33ec7eb4c8759df3e236ecabf847891b851b5e874bb0faec3cbf6ab145",
+    "profile_sha256": "a1571310427f6ff595a75847429d36aff3e179d4834ab3ce89bd9bdaefe96da0",
     "song": {
       "difficulties": {
         "easy": {
-          "minimum_delta": 64,
-          "stride": 3,
-          "twilight_strength": 70
+          "minimum_delta": 90,
+          "stride": 2
         },
         "hard": {
-          "minimum_delta": 50,
-          "stride": 1,
-          "twilight_strength": 90
+          "minimum_delta": 90,
+          "stride": 1
         },
         "normal": {
           "minimum_delta": 64,
-          "stride": 2,
-          "twilight_strength": 80
+          "stride": 2
         }
       },
       "duration": 100,

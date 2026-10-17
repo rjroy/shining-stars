@@ -1,6 +1,7 @@
 {
   "profiles": {
     "easy": {
+      "twilight_strength": 60,
       "timing": { "perfect_ms": 75, "good_ms": 150 },
       "audience": { "perfect": 2, "good": 1, "miss": 0 },
       "twilight": {
@@ -10,6 +11,7 @@
       }
     },
     "normal": {
+      "twilight_strength": 75,
       "timing": { "perfect_ms": 65, "good_ms": 125 },
       "audience": { "perfect": 3, "good": 2, "miss": -1 },
       "twilight": {
@@ -19,7 +21,8 @@
       }
     },
     "hard": {
-      "timing": { "perfect_ms": 50, "good_ms": 100 },
+      "twilight_strength": 75,
+      "timing": { "perfect_ms": 55, "good_ms": 105 },
       "audience": { "perfect": 5, "good": 3, "miss": -1 },
       "twilight": {
         "perfect": { "personal_cost": 0, "damage": 5 },

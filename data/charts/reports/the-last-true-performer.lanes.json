@@ -25,62 +25,62 @@
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.5,
+      "baselineExtractedF0DirectionAgreement": 0.4114285714285714,
       "baselineHandCounts": [
-        93,
-        92
+        137,
+        136
       ],
       "baselineLaneCounts": [
-        47,
-        46,
-        46,
-        46
+        69,
+        68,
+        68,
+        68
       ],
       "baselineLaneShares": [
-        0.25405405405405407,
-        0.24864864864864866,
-        0.24864864864864866,
-        0.24864864864864866
+        0.25274725274725274,
+        0.2490842490842491,
+        0.2490842490842491,
+        0.2490842490842491
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7818181818181819,
+      "candidateExtractedF0DirectionAgreement": 0.8114285714285714,
       "candidateHandCounts": [
-        92,
-        93
+        138,
+        135
       ],
       "candidateLaneCounts": [
-        45,
-        47,
-        47,
-        46
+        68,
+        70,
+        69,
+        66
       ],
       "candidateLaneShares": [
-        0.24324324324324326,
-        0.25405405405405407,
-        0.25405405405405407,
-        0.24864864864864866
+        0.2490842490842491,
+        0.2564102564102564,
+        0.25274725274725274,
+        0.24175824175824176
       ],
       "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.34375,
-      "noteCount": 185,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 273,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 155,
-      "stablePitchCoverage": 0.8378378378378378,
-      "stableUnequalPitchAdjacentPairs": 110,
-      "unknownPitchCount": 30
+      "stablePitchCount": 238,
+      "stablePitchCoverage": 0.8717948717948718,
+      "stableUnequalPitchAdjacentPairs": 175,
+      "unknownPitchCount": 35
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.5431309904153354,
+      "baselineExtractedF0DirectionAgreement": 0.49508196721311476,
       "baselineHandCounts": [
-        280,
-        280
+        272,
+        272
       ],
       "baselineLaneCounts": [
-        140,
-        140,
-        140,
-        140
+        136,
+        136,
+        136,
+        136
       ],
       "baselineLaneShares": [
         0.25,
@@ -90,31 +90,31 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7507987220447284,
+      "candidateExtractedF0DirectionAgreement": 0.7737704918032787,
       "candidateHandCounts": [
-        281,
-        279
+        272,
+        272
       ],
       "candidateLaneCounts": [
-        139,
-        142,
-        141,
-        138
+        135,
+        137,
+        137,
+        135
       ],
       "candidateLaneShares": [
-        0.24821428571428572,
-        0.25357142857142856,
-        0.2517857142857143,
-        0.24642857142857144
+        0.24816176470588236,
+        0.25183823529411764,
+        0.25183823529411764,
+        0.24816176470588236
       ],
-      "candidateLongestLaneRun": 3,
+      "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.40625,
-      "noteCount": 560,
+      "noteCount": 544,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
-      "stablePitchCount": 459,
-      "stablePitchCoverage": 0.8196428571428571,
-      "stableUnequalPitchAdjacentPairs": 313,
-      "unknownPitchCount": 101
+      "stablePitchCount": 445,
+      "stablePitchCoverage": 0.8180147058823529,
+      "stableUnequalPitchAdjacentPairs": 305,
+      "unknownPitchCount": 99
     },
     "normal": {
       "baselineExtractedF0DirectionAgreement": 0.5786163522012578,

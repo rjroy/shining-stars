@@ -3,7 +3,8 @@
 ## Back up or move your progress
 
 Open **Save data** in the Observatory to download a backup or choose a backup
-file. The file includes your favorites and earned song stars. It does not
+file. The file includes favorites, earned song stars, and progression (victory
+marks, spendable credits, and purchased collections and songs). It does not
 include settings.
 
 Before importing, choose how to use the backup:
@@ -14,6 +15,18 @@ Before importing, choose how to use the backup:
 - **Replace** uses the backup exactly. Favorites and ratings missing from the
   file are removed, and a rating can be lowered. Review the preview and confirm
   before replacing.
+
+Choose progression separately when importing:
+
+- **Keep current progression** leaves the current victory marks, balance, and
+  purchases unchanged. This is the default, including when merging.
+- **Replace progression** uses the backup's complete progression as a whole.
+  Victory marks, credits, and unlocks are never unioned across saves.
+
+Favorites and ratings still follow the selected Merge or Replace behavior,
+independently of the progression choice. A session-only import or change is held
+in memory and is not durable on the device; the save store reports this through
+its persistence status and notice.
 
 Song IDs that are not in the current catalog are kept in the backup and in
 saved data, even though they do not appear in song lists.
@@ -30,12 +43,12 @@ between browsers or devices automatically.
 
 ## Save file format
 
-Save files are JSON with this version-1 envelope:
+Save files are JSON with this version-2 envelope:
 
 ```json
 {
   "format": "shining-stars-save",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "favorites": ["song-id"],
   "ratings": {
     "song-id": {
@@ -43,6 +56,12 @@ Save files are JSON with this version-1 envelope:
       "normalStars": 5,
       "goldStars": 2
     }
+  },
+  "progression": {
+    "balance": 0,
+    "victoryMarks": {},
+    "collectionPurchases": {},
+    "songPurchases": {}
   }
 }
 ```
@@ -50,7 +69,19 @@ Save files are JSON with this version-1 envelope:
 `favorites` is an array of song-ID strings. Each rating records a completed
 song, including a zero-star result. Star counts are integers from 0 to 5; gold
 stars require all five normal stars. The derived achievement ordinal is not
-stored. The format has no timestamp or settings fields.
+stored. Progression stores a nonnegative integer `balance`; `victoryMarks` maps
+song IDs to their highest credited difficulty (`easy`, `normal`, or `hard`);
+`collectionPurchases` maps collection IDs to the paid cost; and
+`songPurchases` maps song IDs to their parent collection IDs. The save store
+validates credit conservation: balance plus recorded purchase costs must match
+the credits earned from victory marks. The format has no timestamp or settings
+fields.
+
+Version-1 saves are still accepted. Migration preserves all valid favorites and
+ratings and initializes progression with zero victory marks, zero balance, no
+purchases, and access to the free Lyra of Brightvale collection. It does not
+infer victories from old scores or stars. A later save write exports schema
+version 2.
 
 Imports validate the complete file before applying it. The format identifier
 and schema version must be supported; unexpected fields, non-string favorite

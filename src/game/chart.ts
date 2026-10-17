@@ -21,18 +21,31 @@ export interface ChartConfig {
   readonly duration: number;
   /** Audience-to-Twilight boundary, relative to the excerpt. */
   readonly twilightAt: number;
-  /** Initial Twilight Strength for this song. */
-  readonly twilightStrength: number;
   /** Difficulties permitted for this song, in preferred fallback order. */
   readonly allowedDifficulties: readonly Difficulty[];
   readonly notes: readonly ChartNote[];
+}
+
+/** Derive the enemy's starting strength for a run from Twilight notes and difficulty. */
+export function getInitialTwilightStrength(
+  chart: ChartConfig,
+  difficulty: Difficulty,
+): number {
+  const twilightNoteCount = chart.notes.filter(
+    (note) => note.time >= chart.twilightAt,
+  ).length;
+  const profile = DIFFICULTY_PROFILES[difficulty];
+  return Math.ceil(
+    twilightNoteCount *
+      profile.twilight.perfect.damage *
+      (profile.twilightStrengthPercent / 100),
+  );
 }
 
 export type ChartIssueCode =
   | 'invalid-source-start'
   | 'invalid-duration'
   | 'invalid-twilight'
-  | 'invalid-twilight-strength'
   | 'invalid-allowed-difficulties'
   | 'duplicate-note-id'
   | 'non-finite-note-time'
@@ -100,15 +113,6 @@ export function validateChart(chart: ChartConfig): readonly ChartIssue[] {
       issue(
         'invalid-twilight',
         'Twilight boundary must be finite and strictly inside the excerpt.',
-      ),
-    );
-  }
-
-  if (!Number.isFinite(chart.twilightStrength) || chart.twilightStrength <= 0) {
-    issues.push(
-      issue(
-        'invalid-twilight-strength',
-        'Initial Twilight Strength must be finite and positive.',
       ),
     );
   }
