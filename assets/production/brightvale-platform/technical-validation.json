@@ -3,16 +3,16 @@
   "kind": "platform",
   "blender": "5.2.1 LTS",
   "exporter": "5.2.40",
-  "source": "neon-twilight-platform/platform.blend",
-  "source_sha256": "ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af",
-  "glb_sha256": "dd540482fbb77616b93b900f563da1520f65e81f35a60365741d2b362f9e7571",
-  "transfer_bytes": 970376,
+  "source": "neon-twilight-platform/platform-slot-cues.blend",
+  "source_sha256": "72ba506b25c7ddfc61541dc9cc54bd65880fa112ad1e51dd839a0fa794befe26",
+  "glb_sha256": "1ad2308e0a73dd245feb18e6e5567e0664ac9d45ff09aeefc1c0a2647709e9f1",
+  "transfer_bytes": 970300,
   "geometry_simplified": false,
   "glb": {
-    "nodes": 53,
-    "triangles": 24446,
-    "primitives": 66,
-    "decoded_primitive_vertices": 32512,
+    "nodes": 52,
+    "triangles": 24426,
+    "primitives": 65,
+    "decoded_primitive_vertices": 32492,
     "bounds_gltf": {
       "min": [
         -6.0,
@@ -626,7 +626,7 @@
         "max_corner_normal_error": 6.556510925292969e-05,
         "inherited_near_zero_area_triangles": 0,
         "triangles_by_role": {
-          "Gold | brushed warm alloy": 768
+          "Slot border | cyan 75 lane 25 gold": 768
         },
         "source_type": "MESH",
         "source_evaluated_vertices": 384,
@@ -742,7 +742,7 @@
         "max_corner_normal_error": 6.192922592163086e-05,
         "inherited_near_zero_area_triangles": 0,
         "triangles_by_role": {
-          "Gold | brushed warm alloy": 768
+          "Slot border | magenta 75 lane 25 gold": 768
         },
         "source_type": "MESH",
         "source_evaluated_vertices": 384,
@@ -858,7 +858,7 @@
         "max_corner_normal_error": 6.556510925292969e-05,
         "inherited_near_zero_area_triangles": 0,
         "triangles_by_role": {
-          "Gold | brushed warm alloy": 768
+          "Slot border | amber 75 lane 25 gold": 768
         },
         "source_type": "MESH",
         "source_evaluated_vertices": 384,
@@ -974,7 +974,7 @@
         "max_corner_normal_error": 6.330013275146484e-05,
         "inherited_near_zero_area_triangles": 0,
         "triangles_by_role": {
-          "Gold | brushed warm alloy": 768
+          "Slot border | green 75 lane 25 gold": 768
         },
         "source_type": "MESH",
         "source_evaluated_vertices": 384,
@@ -1022,23 +1022,6 @@
           "BEVEL",
           "WEIGHTED_NORMAL"
         ],
-        "origin_gltf": [
-          0.0,
-          0.0,
-          0.0
-        ]
-      },
-      "Timing | thin transverse light rule": {
-        "triangles": 20,
-        "max_position_error": 0.0,
-        "max_corner_normal_error": 2.7388334274291992e-05,
-        "inherited_near_zero_area_triangles": 0,
-        "triangles_by_role": {
-          "Gold | illuminated edge": 20
-        },
-        "source_type": "CURVE",
-        "source_evaluated_vertices": 20,
-        "source_modifiers": [],
         "origin_gltf": [
           0.0,
           0.0,
@@ -1722,6 +1705,102 @@
           1.0
         ],
         "double_sided": true
+      },
+      "Slot border | amber 75 lane 25 gold": {
+        "base": [
+          0.8924999833106995,
+          0.21000000834465027,
+          0.019500000402331352,
+          1.0
+        ],
+        "metallic": 0.8199999928474426,
+        "roughness": 0.23000000417232513,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.8924999833106995,
+          0.21000000834465027,
+          0.019500000402331352,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Slot border | cyan 75 lane 25 gold": {
+        "base": [
+          0.1807500123977661,
+          0.2175000011920929,
+          0.6787499785423279,
+          1.0
+        ],
+        "metallic": 0.8199999928474426,
+        "roughness": 0.23000000417232513,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.1807500123977661,
+          0.2175000011920929,
+          0.6787499785423279,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Slot border | green 75 lane 25 gold": {
+        "base": [
+          0.1807500123977661,
+          0.6299999952316284,
+          0.04874999821186066,
+          1.0
+        ],
+        "metallic": 0.8199999928474426,
+        "roughness": 0.23000000417232513,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.1807500123977661,
+          0.6299999952316284,
+          0.04874999821186066,
+          1.0
+        ],
+        "double_sided": true
+      },
+      "Slot border | magenta 75 lane 25 gold": {
+        "base": [
+          0.7950000166893005,
+          0.09075000137090683,
+          0.1537500023841858,
+          1.0
+        ],
+        "metallic": 0.8199999928474426,
+        "roughness": 0.23000000417232513,
+        "emission": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "strength": 0.0,
+        "procedural_fallback": false,
+        "role_color": [
+          0.7950000166893005,
+          0.09075000137090683,
+          0.1537500023841858,
+          1.0
+        ],
+        "double_sided": true
       }
     },
     "extensions": [
@@ -1757,6 +1836,10 @@
     "negative_scale_rejected": true,
     "base_change_rejected": true,
     "compression_rejected": true,
+    "restored_false_timing_cue_rejected": true,
+    "Slot border | cyan 75 lane 25 gold_retint_rejected": true,
+    "Gold | brushed warm alloy_retint_rejected": true,
+    "missing_real_hit_bezel_rejected": true,
     "flipped_normals_rejected": true,
     "existing_output_rejected": true,
     "source_output_rejected": true,

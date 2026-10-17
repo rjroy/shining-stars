@@ -1,0 +1,363 @@
+{
+  "pass": true,
+  "candidate": "platform-slot-cues.blend",
+  "candidate_sha256": "72ba506b25c7ddfc61541dc9cc54bd65880fa112ad1e51dd839a0fa794befe26",
+  "approved_sha256_unchanged": "ff0238b76c7373f6ccc595d14dd3b01a179e92805d1c8cfd0af0f9c920ba52af",
+  "removed_only": "Timing | thin transverse light rule",
+  "protected_objects_exact": [
+    "Platform | continuous sculpted chassis",
+    "Underside | inset shadow keel",
+    "Inset lane 1 | mineral glass and recessed hit well",
+    "Lane 1 | fine luminous inner seam -1",
+    "Lane 1 | fine luminous inner seam 1",
+    "Lane 1 | sculpted front apron surround",
+    "Lane 1 | elongated faceted star inlay",
+    "Lane 1 | apron diamond",
+    "Hit bar 1 | flush machined gold bezel",
+    "Hit bar 1 | fine colored luminous perimeter",
+    "Hit bar 1 | recessed luminous center",
+    "Inset lane 2 | mineral glass and recessed hit well",
+    "Lane 2 | fine luminous inner seam -1",
+    "Lane 2 | fine luminous inner seam 1",
+    "Lane 2 | sculpted front apron surround",
+    "Lane 2 | elongated faceted star inlay",
+    "Lane 2 | apron diamond",
+    "Hit bar 2 | flush machined gold bezel",
+    "Hit bar 2 | fine colored luminous perimeter",
+    "Hit bar 2 | recessed luminous center",
+    "Inset lane 3 | mineral glass and recessed hit well",
+    "Lane 3 | fine luminous inner seam -1",
+    "Lane 3 | fine luminous inner seam 1",
+    "Lane 3 | sculpted front apron surround",
+    "Lane 3 | elongated faceted star inlay",
+    "Lane 3 | apron diamond",
+    "Hit bar 3 | flush machined gold bezel",
+    "Hit bar 3 | fine colored luminous perimeter",
+    "Hit bar 3 | recessed luminous center",
+    "Inset lane 4 | mineral glass and recessed hit well",
+    "Lane 4 | fine luminous inner seam -1",
+    "Lane 4 | fine luminous inner seam 1",
+    "Lane 4 | sculpted front apron surround",
+    "Lane 4 | elongated faceted star inlay",
+    "Lane 4 | apron diamond",
+    "Hit bar 4 | flush machined gold bezel",
+    "Hit bar 4 | fine colored luminous perimeter",
+    "Hit bar 4 | recessed luminous center",
+    "Perimeter | broad continuous profiled gold frame",
+    "Corner forging | -1 -1",
+    "Corner forging | -1 1",
+    "Corner forging | 1 -1",
+    "Corner forging | 1 1",
+    "Crest | solid shaped midnight shield backing",
+    "Crest | narrow arched concave shield gold edging",
+    "Crest junction | -1 tapered apron gold shoulder",
+    "Crest junction | 1 tapered apron gold shoulder",
+    "Crest | raised elongated faceted compass star",
+    "Studio ground (render only)",
+    "Studio key | soft warmbox",
+    "Studio fill | cool sky",
+    "Studio rim | violet",
+    "Studio front strip",
+    "Camera | concept v4 comparison"
+  ],
+  "slot_ring_geometry_normals_transforms_exact": [
+    "Lane 1 | substantial continuous profiled border",
+    "Lane 2 | substantial continuous profiled border",
+    "Lane 3 | substantial continuous profiled border",
+    "Lane 4 | substantial continuous profiled border"
+  ],
+  "all_original_materials_exact": 28,
+  "added_materials": [
+    "Slot border | amber 75 lane 25 gold",
+    "Slot border | cyan 75 lane 25 gold",
+    "Slot border | green 75 lane 25 gold",
+    "Slot border | magenta 75 lane 25 gold"
+  ],
+  "camera_lights_world_compositor_render_exact": true,
+  "bounds_unchanged": {
+    "min": [
+      -6.0,
+      -2.799999952316284,
+      -0.44999998807907104
+    ],
+    "max": [
+      6.0,
+      2.700000047683716,
+      0.6949999928474426
+    ]
+  },
+  "retained_mesh_checks_exact": [
+    {
+      "object": "Platform | continuous sculpted chassis",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 38.236667198026375
+    },
+    {
+      "object": "Underside | inset shadow keel",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 10.517101801524555
+    },
+    {
+      "object": "Inset lane 1 | mineral glass and recessed hit well",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 2.296034823458246
+    },
+    {
+      "object": "Lane 1 | substantial continuous profiled border",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.2875751024063764
+    },
+    {
+      "object": "Lane 1 | sculpted front apron surround",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.09165032250631434
+    },
+    {
+      "object": "Lane 1 | elongated faceted star inlay",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.007516814655648885
+    },
+    {
+      "object": "Lane 1 | apron diamond",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0011176810541600288
+    },
+    {
+      "object": "Hit bar 1 | flush machined gold bezel",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.021106046830853344
+    },
+    {
+      "object": "Hit bar 1 | fine colored luminous perimeter",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0020378508808117798
+    },
+    {
+      "object": "Hit bar 1 | recessed luminous center",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.03504034482008141
+    },
+    {
+      "object": "Inset lane 2 | mineral glass and recessed hit well",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 2.2960329771097974
+    },
+    {
+      "object": "Lane 2 | substantial continuous profiled border",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.2875751621255095
+    },
+    {
+      "object": "Lane 2 | sculpted front apron surround",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.07717835324625216
+    },
+    {
+      "object": "Lane 2 | elongated faceted star inlay",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.007516820662872221
+    },
+    {
+      "object": "Lane 2 | apron diamond",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0011176805663943607
+    },
+    {
+      "object": "Hit bar 2 | flush machined gold bezel",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.021106035825215336
+    },
+    {
+      "object": "Hit bar 2 | fine colored luminous perimeter",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0020378519335039883
+    },
+    {
+      "object": "Hit bar 2 | recessed luminous center",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.03504034482008141
+    },
+    {
+      "object": "Inset lane 3 | mineral glass and recessed hit well",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 2.296058427441309
+    },
+    {
+      "object": "Lane 3 | substantial continuous profiled border",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.28757515915423415
+    },
+    {
+      "object": "Lane 3 | sculpted front apron surround",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.07717835347031413
+    },
+    {
+      "object": "Lane 3 | elongated faceted star inlay",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.007516820699310631
+    },
+    {
+      "object": "Lane 3 | apron diamond",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0011176806275569199
+    },
+    {
+      "object": "Hit bar 3 | flush machined gold bezel",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.02110603565491802
+    },
+    {
+      "object": "Hit bar 3 | fine colored luminous perimeter",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0020378522347117268
+    },
+    {
+      "object": "Hit bar 3 | recessed luminous center",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.03504034482008141
+    },
+    {
+      "object": "Inset lane 4 | mineral glass and recessed hit well",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 2.2960348132174
+    },
+    {
+      "object": "Lane 4 | substantial continuous profiled border",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.287575104769819
+    },
+    {
+      "object": "Lane 4 | sculpted front apron surround",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.09165032265796827
+    },
+    {
+      "object": "Lane 4 | elongated faceted star inlay",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.007516816098480988
+    },
+    {
+      "object": "Lane 4 | apron diamond",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0011176810972542638
+    },
+    {
+      "object": "Hit bar 4 | flush machined gold bezel",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.021106045020834126
+    },
+    {
+      "object": "Hit bar 4 | fine colored luminous perimeter",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.0020378507601671995
+    },
+    {
+      "object": "Hit bar 4 | recessed luminous center",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.03504034482008141
+    },
+    {
+      "object": "Perimeter | broad continuous profiled gold frame",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.8864247857894697
+    },
+    {
+      "object": "Corner forging | -1 -1",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.17773963118587396
+    },
+    {
+      "object": "Corner forging | -1 1",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.17773963097367804
+    },
+    {
+      "object": "Corner forging | 1 -1",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.17773963097367804
+    },
+    {
+      "object": "Corner forging | 1 1",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.17773963118587396
+    },
+    {
+      "object": "Crest | solid shaped midnight shield backing",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.22992614923761204
+    },
+    {
+      "object": "Crest | narrow arched concave shield gold edging",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.04051053282742697
+    },
+    {
+      "object": "Crest junction | -1 tapered apron gold shoulder",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.02484033505256095
+    },
+    {
+      "object": "Crest junction | 1 tapered apron gold shoulder",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.02484033505256102
+    },
+    {
+      "object": "Crest | raised elongated faceted compass star",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 0.04477822020297934
+    },
+    {
+      "object": "Studio ground (render only)",
+      "nonmanifold_edges": 0,
+      "zero_area_faces": 0,
+      "signed_volume": 5999.680214829288
+    }
+  ],
+  "independent_regeneration_exact": true,
+  "all_pairs_intersections_tested": false
+}
