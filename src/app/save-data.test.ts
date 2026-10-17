@@ -68,9 +68,10 @@ const legacyRatings = (ratings: Record<string, unknown>) =>
   JSON.stringify({ schemaVersion: 1, ratings });
 const save = (favorites: string[], ratings: Record<string, unknown>) => ({
   format: 'shining-stars-save',
-  schemaVersion: 1,
+  schemaVersion: 2,
   favorites,
   ratings,
+  progression: { balance: 0, victoryMarks: {}, collectionPurchases: {}, songPurchases: {} },
 });
 const completed = { score: 0, normalMaximum: 10_000, outcome: 'defeat' as const, difficulty: 'normal' as const };
 const throwingLegacyCases: Array<{

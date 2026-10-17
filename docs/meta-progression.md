@@ -48,13 +48,48 @@ changes the rules for score, stars, Renown, Personal Strength, or Twilight
 Strength. In particular, Renown and scoring remain unchanged by this
 meta-progression system.
 
-## Policies not yet specified
+## Award timing and existing saves
 
-The approved rules do not settle these implementation policies; they should be
-decided separately rather than inferred here:
+Credit victory marks as soon as Twilight is defeated, even if the player later
+quits during the Radiant phase. Do not wait for song completion or a terminal
+result. Award the defeated difficulty and any uncredited lower tiers according
+to the table above. This event does not create or change a score, performance,
+or star record.
 
-- The exact persistence moment for awarding victory marks relative to Twilight's
-  defeat, song completion, and quitting.
-- Migration of existing saves and whether/how historical victory evidence can
-  establish credited marks.
-- Validation rules for collection/song purchases and save data.
+When an existing save is first read by the progression system, retain its
+existing stars and favorites. Initialize it with zero victory marks, zero
+spendable credits, no purchased collections or songs, and the free Lyra of
+Brightvale collection. Do not infer historical victories or fabricate marks
+from scores or stars.
+
+## Import and merge behavior
+
+Continue to support merging imported favorites and song-star records with the
+current save. Progression is not merged: when an import supplies progression,
+the player must explicitly choose either to keep current progression or replace
+it with the imported progression. Never union victory marks, spendable credits,
+or collection/song unlocks across saves. Replacing progression uses the
+imported progression as a whole; keeping it leaves the current progression
+unchanged.
+
+## Player-facing rules
+
+- Show credited difficulty marks compactly as **E / N / H**, separate from the
+  song's star rating. Only credited marks are shown as earned.
+- Show the spendable credit balance near **Save data**.
+- Keep locked songs and collections visible, selectable, and searchable so
+  players can discover what they can unlock and what it costs.
+- Before a purchase, show its explicit credit cost and the player's current
+  balance, then ask for confirmation. Never autoplay a song after a purchase or
+  unlock.
+- Unlocking a collection does not unlock the songs in it; each collection song
+  is unlocked separately at its stated cost.
+- Keep this information usable within existing desktop and portrait layouts.
+
+## Implementation status
+
+The progression domain, catalog pricing adapter, save persistence, validation,
+and import-preview/apply behavior are implemented. Runtime victory-credit
+awarding and locked-song playback checks are wired to the save store. Player
+interface integration and final validation remain in progress; implementation
+of the foundation does not mean the complete player experience is finished.

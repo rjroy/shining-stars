@@ -2,13 +2,14 @@ import './ui/styles.css';
 import { createBrowserAudioContextAdapter } from './audio/browser-audio';
 import { parseSongOutputVolume } from './audio/song-volume';
 import { getSongChart, SONG_CATALOG } from './catalog/catalog';
+import { createProgressionMembership } from './catalog/progression-catalog';
 import { createSaveStore } from './app/save-data';
 import type { ChartConfig } from './game/chart';
 import type { Difficulty } from './game/game-balance';
 import { projectGameplayFrame } from './rendering/gameplay-frame';
 import { createBrightvaleScene, type BrightvaleScene } from './rendering/scene';
 import { projectSceneState } from './rendering/scene-state';
-import { createObservatoryUI, type ObservatoryUI } from './ui/observatory-ui';
+import { createObservatoryUI } from './ui/observatory-ui';
 import { createGameUI, type GameUI } from './ui/ui';
 import { ensureExperienceShell } from './ui/experience-shell';
 import {
@@ -27,9 +28,9 @@ const reducedMotionQuery = window.matchMedia(
 );
 let reducedMotion = reducedMotionQuery.matches;
 let scene: BrightvaleScene | null = null;
-let observatory: ObservatoryUI;
 const saveStore = createSaveStore();
 const songRatings = saveStore.songRatings;
+const progressionMembership = createProgressionMembership(SONG_CATALOG);
 let gameplay: GameUI | null = null;
 let performance: PerformanceCoordinator | null = null;
 let activeSongId: string | null = null;
@@ -216,6 +217,14 @@ function onPlay(request: {
     observatory.setPlayStatus('error', 'This song is not available to play.');
     return;
   }
+  if (!isSongUnlocked(song.id)) {
+    console.info('[Brightvale] blocked locked song play request', {
+      songId: song.id,
+      difficulty: request.difficulty,
+    });
+    observatory.setPlayStatus('error', 'Unlock this song before playing it.');
+    return;
+  }
   activeSongId = song.id;
   activeDifficulty = request.difficulty;
   activeChart = getSongChart(song, request.difficulty);
@@ -257,9 +266,24 @@ function onPlay(request: {
   beginSelectedPerformance();
 }
 
+function isSongUnlocked(songId: string): boolean {
+  const parentCollection = progressionMembership.songs.get(songId);
+  if (parentCollection === undefined) return false;
+  if (parentCollection === 'lyra-of-brightvale') return true;
+  return saveStore.progression.snapshot().songPurchases[songId] === parentCollection;
+}
+
 function beginSelectedPerformance(): void {
   const song = SONG_CATALOG.songs.find((entry) => entry.id === activeSongId);
   if (song === undefined || activeDifficulty === null) return;
+  if (!isSongUnlocked(song.id)) {
+    console.info('[Brightvale] blocked locked song playback setup', {
+      songId: song.id,
+      difficulty: activeDifficulty,
+    });
+    observatory.setPlayStatus('error', 'Unlock this song before playing it.');
+    return;
+  }
   if (performance === null) {
     performance = createPerformanceCoordinator({
       createAudioContext: () => {
@@ -316,6 +340,29 @@ function beginSelectedPerformance(): void {
             songId,
             difficulty: result.difficulty,
             outcome: result.outcome,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      },
+      onTwilightDefeated: ({ songId, difficulty }) => {
+        console.info('[Brightvale] victory credit write attempt', {
+          songId,
+          difficulty,
+        });
+        try {
+          const mutation = saveStore.progression.recordVictory(songId, difficulty);
+          console.info('[Brightvale] victory credit write outcome', {
+            songId,
+            difficulty,
+            changed: mutation.changed,
+            status: mutation.status,
+            persistence: mutation.persistence,
+            notice: mutation.notice,
+          });
+        } catch (error) {
+          console.error('[Brightvale] victory credit write failed', {
+            songId,
+            difficulty,
             error: error instanceof Error ? error.message : String(error),
           });
         }
@@ -477,7 +524,7 @@ function frame(now: number): void {
   animationFrame = requestAnimationFrame(frame);
 }
 
-observatory = createObservatoryUI(
+const observatory = createObservatoryUI(
   applicationRoot,
   SONG_CATALOG,
   {

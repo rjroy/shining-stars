@@ -20,9 +20,10 @@ const implementation = existsSync(moduleUrl)
 const SAVE_KEY = 'shining-stars.save';
 const save = (favorites: string[], ratings: Record<string, unknown>) => ({
   format: 'shining-stars-save',
-  schemaVersion: 1,
+  schemaVersion: 2,
   favorites,
   ratings,
+  progression: { balance: 0, victoryMarks: {}, collectionPurchases: {}, songPurchases: {} },
 });
 type Mode = 'merge' | 'replace';
 type Target = 'local' | 'session';
@@ -175,7 +176,7 @@ describe('player save import preview and apply contract', () => {
   it.each([
     '{bad json',
     JSON.stringify({ ...save([], {}), extra: true }),
-    JSON.stringify({ ...save([], {}), schemaVersion: 2 }),
+    JSON.stringify({ ...save([], {}), progression: { balance: 1, victoryMarks: {}, collectionPurchases: {}, songPurchases: {} } }),
     JSON.stringify(save([], { bad: { played: true, normalStars: 2, goldStars: 1 } })),
     JSON.stringify(save([], { bad: { played: true, normalStars: 0, goldStars: 0, extra: 1 } })),
   ])('rejects an invalid complete import without changing state or storage: %s', async (text) => {
