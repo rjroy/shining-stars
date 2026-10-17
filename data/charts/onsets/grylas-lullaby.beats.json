@@ -1478,17 +1478,17 @@
     "song": {
       "difficulties": {
         "easy": {
-          "minimum_delta": 90,
+          "minimum_delta": 120,
           "stride": 2,
           "twilight_strength": 70
         },
         "hard": {
-          "minimum_delta": 90,
+          "minimum_delta": 120,
           "stride": 1,
           "twilight_strength": 90
         },
         "normal": {
-          "minimum_delta": 64,
+          "minimum_delta": 80,
           "stride": 2,
           "twilight_strength": 80
         }
