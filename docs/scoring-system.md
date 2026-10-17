@@ -69,23 +69,23 @@ Display **five stars**, not ten. They progressively fill as normal stars, then t
 
 | Completed star | Normal threshold | Gold threshold |
 | -------------- | ---------------- | -------------- |
-| 1              | 20%              | 70%            |
-| 2              | 30%              | 75%            |
-| 3              | 40%              | 80%            |
-| 4              | 50%              | 85%            |
+| 1              |  8%              | 70%            |
+| 2              | 18%              | 75%            |
+| 3              | 30%              | 80%            |
+| 4              | 44%              | 85%            |
 | 5              | 60%              | 90%            |
 
 Percentages refer to the song’s Normal maximum.
 
 Filling is continuous between thresholds, like two successive progress bars:
 
-- From 0% to 20%, the first normal star fills.
-- Each subsequent normal star fills over the next 10 percentage points, reaching five full normal stars at 60%.
+- The first normal star fills from 0% to 8%.
+- The second fills from 8% to 18%, the third from 18% to 30%, the fourth from 30% to 44%, and the fifth from 44% to 60%.
 - From 60% to 70%, the first star progressively turns gold.
 - Each subsequent gold star fills over the next 5 percentage points, reaching five full gold stars at 90%.
 - Above 90%, the display remains five gold stars while score can continue increasing.
 
-Examples: at 10%, the first normal star is half filled. At 65%, all five normal stars are full and the first has a half-filled gold overlay. At 75%, two stars are gold and three remain normal.
+Examples: at 10%, the first normal star is full and the second is 20% filled. At 65%, all five normal stars are full and the first has a half-filled gold overlay. At 75%, two stars are gold and three remain normal.
 
 For the 20,000-point example, five normal stars require 12,000 points and five gold stars require 18,000 points.
 
@@ -118,9 +118,12 @@ five-gold target (`ceil(normalMaximum × 0.9)`), and a SHA-256 fingerprint of th
 scoring version and canonical Normal chart. Bundles without a Normal chart use
 `null` for all three values. The runtime catalog validates and exposes this
 metadata so target presentation can use the generated target instead of
-scanning charts at startup. Regenerate and run `chart:check` after Normal-chart
-or scoring-rule changes; the check verifies the generated target and fingerprint
-are current.
+scanning charts at startup. Regenerate and run `chart:check` when the Normal
+chart or an input to this generated metadata changes (the scoring-version,
+maximum-score calculation, five-gold-target calculation, or fingerprint
+canonicalization); the check verifies the generated target and fingerprint are
+current. A change to the normal-star thresholds alone does not affect these
+metadata inputs and does not require chart regeneration.
 
 The unified save store provides localStorage-backed best earned normal/gold
 counts keyed by stable song ID alongside favorites. A missing rating entry means **unplayed**;

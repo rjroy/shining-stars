@@ -1,6 +1,10 @@
 import type { GameResult } from '../game/game';
 import { type FavoriteStorage, type FavoritePersistence } from './favorites';
 import { isDifficulty } from '../game/game-balance';
+import {
+  GOLD_STAR_THRESHOLDS,
+  NORMAL_STAR_THRESHOLDS,
+} from '../game/star-thresholds';
 
 export interface SongRating {
   readonly played: true;
@@ -36,8 +40,6 @@ const STORAGE_KEY = 'shining-stars.song-ratings';
 const STORAGE_VERSION = 1;
 const FALLBACK_NOTICE =
   'Song ratings are available for this session only because local storage is unavailable.';
-const NORMAL_THRESHOLDS = [0.2, 0.3, 0.4, 0.5, 0.6] as const;
-const GOLD_THRESHOLDS = [0.7, 0.75, 0.8, 0.85, 0.9] as const;
 
 export interface StoredRating {
   readonly played: true;
@@ -139,9 +141,9 @@ export function ratingForResult(result: CompletedSongResult): StoredRating {
     result.normalMaximum > 0 ? result.score / result.normalMaximum : 0;
   return {
     played: true,
-    normalStars: NORMAL_THRESHOLDS.filter((threshold) => ratio >= threshold)
+    normalStars: NORMAL_STAR_THRESHOLDS.filter((threshold) => ratio >= threshold)
       .length,
-    goldStars: GOLD_THRESHOLDS.filter((threshold) => ratio >= threshold).length,
+    goldStars: GOLD_STAR_THRESHOLDS.filter((threshold) => ratio >= threshold).length,
   };
 }
 

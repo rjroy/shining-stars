@@ -106,10 +106,10 @@ describe('saved song rating storage contract (proposed)', () => {
   });
 
   it.each([
-    [2_000, 1, 0],
-    [3_000, 2, 0],
-    [4_000, 3, 0],
-    [5_000, 4, 0],
+    [800, 1, 0],
+    [1_800, 2, 0],
+    [3_000, 3, 0],
+    [4_400, 4, 0],
     [6_000, 5, 0],
     [7_000, 5, 1],
     [7_500, 5, 2],
@@ -125,6 +125,50 @@ describe('saved song rating storage contract (proposed)', () => {
       ).toMatchObject({ normalStars, goldStars });
     },
   );
+
+  it.each([
+    [6_999, 0], [7_000, 1], [7_001, 1],
+    [7_499, 1], [7_500, 2], [7_501, 2],
+    [7_999, 2], [8_000, 3], [8_001, 3],
+    [8_499, 3], [8_500, 4], [8_501, 4],
+    [8_999, 4], [9_000, 5], [9_001, 5],
+  ] as const)(
+    'preserves gold-star boundary at score %i as G%i',
+    async (score, goldStars) => {
+      const store = await createStore(memoryStorage());
+      expect(store.recordCompletedResult('song-a', result(score))).toMatchObject({
+        normalStars: 5,
+        goldStars,
+      });
+    },
+  );
+
+  it.each([
+    [799, 0], [800, 1], [801, 1],
+    [1_799, 1], [1_800, 2], [1_801, 2],
+    [2_999, 2], [3_000, 3], [3_001, 3],
+    [4_399, 3], [4_400, 4], [4_401, 4],
+    [5_999, 4], [6_000, 5], [6_001, 5],
+  ] as const)(
+    'counts the normal-star boundary at score %i as N%i',
+    async (score, normalStars) => {
+      const store = await createStore(memoryStorage());
+      expect(store.recordCompletedResult('song-a', result(score))).toMatchObject({
+        normalStars,
+        goldStars: 0,
+      });
+    },
+  );
+
+  it('preserves historical stored rating counts without recalculating thresholds', async () => {
+    const storage = memoryStorage(JSON.stringify({
+      schemaVersion: 1,
+      ratings: { 'old-song': { played: true, normalStars: 3, goldStars: 0 } },
+    }));
+    const store = await createStore(storage);
+    expect(store.get('old-song')).toMatchObject({ normalStars: 3, goldStars: 0 });
+    expect(storage.writes).toBe(0);
+  });
 
   it('retains the best achievement across runs and orders gold as a tie-break', async () => {
     const store = await createStore(memoryStorage());
@@ -186,7 +230,7 @@ describe('saved song rating storage contract (proposed)', () => {
       const store = await createStore(memoryStorage());
       expect(
         store.recordCompletedResult('song-a', result(2_000, outcome)),
-      ).toMatchObject({ played: true, normalStars: 1, goldStars: 0 });
+      ).toMatchObject({ played: true, normalStars: 2, goldStars: 0 });
     },
   );
 
@@ -236,7 +280,7 @@ describe('saved song rating storage contract (proposed)', () => {
     expect(corrupt.get('song-a')).toBeNull();
     expect(
       corrupt.recordCompletedResult('song-a', result(2_000)),
-    ).toMatchObject({ played: true, normalStars: 1 });
+    ).toMatchObject({ played: true, normalStars: 2 });
 
     const deniedRead: FavoriteStorage = {
       getItem() {

@@ -131,9 +131,12 @@ content-addressed pitch caches may remain. The pitch-cache key includes the
 full-source audio SHA-256, normalized extraction recipe/version, and tool
 identity. Changes to lane controls, difficulty stride/minimum delta, excerpt
 projection, or gameplay profiles reuse extracted F0 and recompute the affected
-charts/reports. Changes to the Normal chart or scoring-version rules also
-refresh the generated Normal maximum, 90% target, and fingerprint. Regenerate
-after authoring or profile changes.
+charts/reports. Changes to the Normal chart or generated scoring-metadata inputs
+(scoring version, maximum-score calculation, five-gold-target calculation, or
+fingerprint canonicalization) also refresh the generated Normal maximum, 90%
+target, and fingerprint. A normal-star threshold-only change does not affect
+these metadata inputs and does not require chart regeneration. Regenerate after
+authoring or profile changes.
 
 `chart:check` runs no FFmpeg or aubio command and does not resolve the currently
 installed pitch-tool identity. It verifies the current source hash, validates

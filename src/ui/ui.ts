@@ -2,6 +2,10 @@ import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
 import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import {
+  GOLD_STAR_THRESHOLDS,
+  NORMAL_STAR_THRESHOLDS,
+} from '../game/star-thresholds';
 import { getResourceBars } from './resource-bars';
 import {
   createFeedbackAnnouncementTracker,
@@ -94,8 +98,11 @@ export function getScorePresentation(fields: ScoreFields) {
   const ratio =
     fields.normalMaximum > 0 ? fields.score / fields.normalMaximum : 0;
   const clamp = (value: number) => Math.max(0, Math.min(1, value));
-  const normalEdges = [0, 0.2, 0.3, 0.4, 0.5, 0.6];
-  const goldEdges = [0.6, 0.7, 0.75, 0.8, 0.85, 0.9];
+  const normalEdges = [0, ...NORMAL_STAR_THRESHOLDS];
+  const goldEdges = [
+    NORMAL_STAR_THRESHOLDS[NORMAL_STAR_THRESHOLDS.length - 1]!,
+    ...GOLD_STAR_THRESHOLDS,
+  ];
   const stars = Array.from({ length: 5 }, (_, index) => ({
     normalFill: clamp(
       (ratio - normalEdges[index]!) /
@@ -155,8 +162,8 @@ export function createScoreTransitionTracker() {
         const oldRatio = before.score / state.normalMaximum;
         const ratio = state.score / state.normalMaximum;
         for (const [track, thresholds] of [
-          ['normal', [0.2, 0.3, 0.4, 0.5, 0.6]],
-          ['gold', [0.7, 0.75, 0.8, 0.85, 0.9]],
+          ['normal', NORMAL_STAR_THRESHOLDS],
+          ['gold', GOLD_STAR_THRESHOLDS],
         ] as const) {
           thresholds.forEach((threshold, index) => {
             if (oldRatio < threshold && ratio >= threshold)

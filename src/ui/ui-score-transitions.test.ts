@@ -77,10 +77,10 @@ describe('score milestone echo transitions', () => {
   });
 
   it.each([
-    [20, 0],
-    [30, 1],
-    [40, 2],
-    [50, 3],
+    [8, 0],
+    [18, 1],
+    [30, 2],
+    [44, 3],
     [60, 4],
   ] as const)(
     'emits one pearl echo when normal star %s%% completes',
@@ -114,7 +114,7 @@ describe('score milestone echo transitions', () => {
   it('does not echo partial normal/gold filling or every successful hit', () => {
     const t = tracker();
     t.update(state(0), playing);
-    for (const percent of [1, 5, 10, 19.995]) {
+    for (const percent of [1, 4, 7.995]) {
       expect(t.update(state(percent, { combo: 2 }), playing)).toEqual([]);
     }
     t.reset();
@@ -126,7 +126,7 @@ describe('score milestone echo transitions', () => {
 
   it('reports every completed milestone crossed in a single update, once and in track order', () => {
     const t = tracker();
-    t.update(state(19), playing);
+    t.update(state(7), playing);
     expect(t.update(state(86), playing)).toEqual([
       ...[0, 1, 2, 3, 4].map((index) => star(index, 'normal')),
       ...[0, 1, 2, 3].map((index) => star(index, 'gold')),
@@ -169,10 +169,11 @@ describe('score milestone echo transitions', () => {
 
   it('keeps multiplier and several star completions in the same update', () => {
     const t = tracker();
-    t.update(state(19, { multiplier: 1 }), playing);
+    t.update(state(7, { multiplier: 1 }), playing);
     expect(t.update(state(31, { multiplier: 2 }), playing)).toEqual([
       star(0, 'normal'),
       star(1, 'normal'),
+      star(2, 'normal'),
       { kind: 'multiplier', from: 1, to: 2, direction: 'grow', text: '×2' },
     ]);
   });
@@ -182,7 +183,7 @@ describe('score milestone echo transitions', () => {
     t.update(state(90, { multiplier: 5 }), playing);
     t.reset();
     expect(t.update(state(0, { transportTime: 0 }), playing)).toEqual([]);
-    expect(t.update(state(20, { transportTime: 2 }), playing)).toEqual([
+    expect(t.update(state(10, { transportTime: 2 }), playing)).toEqual([
       star(0, 'normal'),
     ]);
   });
@@ -195,18 +196,18 @@ describe('score milestone echo transitions', () => {
     ).toEqual([]);
     expect(
       t.update(state(30, { multiplier: 2, transportTime: 6 }), playing),
-    ).toEqual([star(1, 'normal')]);
+    ).toEqual([star(2, 'normal')]);
   });
 
   it('rebaselines a changed Normal maximum instead of celebrating a different chart', () => {
     const t = tracker();
-    t.update(state(19), playing);
+    t.update(state(7), playing);
     expect(t.update(state(19, { normalMaximum: 1000 }), playing)).toEqual([]);
   });
 
   it('does not replay results or inactive/count-in updates on reactivation', () => {
     const t = tracker();
-    t.update(state(19), playing);
+    t.update(state(7), playing);
     expect(
       t.update(state(90, { multiplier: 5, status: 'results' }), playing),
     ).toEqual([]);
@@ -214,17 +215,17 @@ describe('score milestone echo transitions', () => {
       t.update(state(90, { multiplier: 5, status: 'results' }), quiet),
     ).toEqual([]);
     t.reset();
-    expect(t.update(state(19), quiet)).toEqual([]);
-    expect(t.update(state(20, { multiplier: 2 }), quiet)).toEqual([]);
-    expect(t.update(state(20, { multiplier: 2 }), playing)).toEqual([]);
-    expect(t.update(state(30, { multiplier: 2 }), playing)).toEqual([
+    expect(t.update(state(7), quiet)).toEqual([]);
+    expect(t.update(state(8, { multiplier: 2 }), quiet)).toEqual([]);
+    expect(t.update(state(8, { multiplier: 2 }), playing)).toEqual([]);
+    expect(t.update(state(18, { multiplier: 2 }), playing)).toEqual([
       star(1, 'normal'),
     ]);
   });
 
   it('consumes reduced-motion milestones without animating or replaying when motion returns', () => {
     const t = tracker();
-    t.update(state(19), playing);
+    t.update(state(7), playing);
     expect(
       t.update(state(75, { multiplier: 4 }), {
         active: true,
@@ -239,16 +240,16 @@ describe('score milestone echo transitions', () => {
 
   it('does not treat Audience → Twilight → Radiant as a run reset or an echo trigger', () => {
     const t = tracker();
-    t.update(state(19), playing);
-    expect(t.update(state(19, { phase: 'twilight' }), playing)).toEqual([]);
-    expect(t.update(state(20, { phase: 'twilight' }), playing)).toEqual([
+    t.update(state(7), playing);
+    expect(t.update(state(7, { phase: 'twilight' }), playing)).toEqual([]);
+    expect(t.update(state(8, { phase: 'twilight' }), playing)).toEqual([
       star(0, 'normal'),
     ]);
     expect(
-      t.update(state(20, { phase: 'twilight', victory: true }), playing),
+      t.update(state(8, { phase: 'twilight', victory: true }), playing),
     ).toEqual([]);
     expect(
-      t.update(state(30, { phase: 'twilight', victory: true }), playing),
+      t.update(state(18, { phase: 'twilight', victory: true }), playing),
     ).toEqual([star(1, 'normal')]);
   });
 

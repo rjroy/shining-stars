@@ -78,15 +78,13 @@ describe('shared score presentation contract', () => {
   });
 
   it.each([
-    [10, [0.5, 0, 0, 0, 0]],
-    [20, [1, 0, 0, 0, 0]],
-    [25, [1, 0.5, 0, 0, 0]],
-    [30, [1, 1, 0, 0, 0]],
-    [35, [1, 1, 0.5, 0, 0]],
-    [40, [1, 1, 1, 0, 0]],
-    [45, [1, 1, 1, 0.5, 0]],
-    [50, [1, 1, 1, 1, 0]],
-    [55, [1, 1, 1, 1, 0.5]],
+    [7.99, [0.99875, 0, 0, 0, 0]],
+    [8, [1, 0, 0, 0, 0]],
+    [10, [1, 0.2, 0, 0, 0]],
+    [17.99, [1, 0.99875, 0, 0, 0]],
+    [18, [1, 1, 0, 0, 0]],
+    [30, [1, 1, 1, 0, 0]],
+    [44, [1, 1, 1, 1, 0]],
     [60, [1, 1, 1, 1, 1]],
   ] as const)('progressively fills normal silhouettes at %s%%', (percent, normal) => {
     expectFills(atPercent(percent), normal, [0, 0, 0, 0, 0]);
@@ -108,10 +106,14 @@ describe('shared score presentation contract', () => {
     expectFills(atPercent(percent), [1, 1, 1, 1, 1], gold);
   });
 
+  it('continues normal filling at its 60% endpoint before gold begins', () => {
+    expectFills(atPercent(65), [1, 1, 1, 1, 1], [0.5, 0, 0, 0, 0]);
+  });
+
   it('uses the supplied Normal baseline, not a difficulty-specific ceiling', () => {
     expectFills(
       present({ score: 1000, normalMaximum: 10_000, combo: 1, multiplier: 1 }),
-      [0.5, 0, 0, 0, 0],
+      [1, 0.2, 0, 0, 0],
       [0, 0, 0, 0, 0],
     );
   });
@@ -123,7 +125,7 @@ describe('shared score presentation contract', () => {
   });
 
   it('provides non-live accessible text describing BOTH partial progress tracks', () => {
-    const halfwayNormal = atPercent(10);
+    const halfwayNormal = atPercent(4);
     const halfwayGold = atPercent(65);
     expect(halfwayNormal.starSummary).toMatch(/normal.*0\.5.*5/i);
     expect(halfwayNormal.starSummary).toMatch(/gold.*0.*5/i);
