@@ -1,0 +1,42 @@
+{
+  "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "artifact_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "artifact_bytes": 167035476,
+  "repeat_artifact_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "byte_identical": true,
+  "semantic_sha256": "02ed297f463c5546c406d9140c2690bed68d3910913523298f8e0de2222aaee8",
+  "material_map_byte_identical": true,
+  "scope": "Two fresh Blender 5.2.1 LTS / glTF 5.2.40 processes, same machine and pinned inputs. Not a cross-version or cross-platform guarantee.",
+  "cwd": "/tmp/opencode/brightvale-city-production-transfer",
+  "threads": 8,
+  "timeout_seconds_each": 240,
+  "exit_codes": [
+    0,
+    0
+  ],
+  "commands": [
+    "timeout 240 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/produce.py -- --output-dir /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city",
+    "timeout 240 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/produce.py -- --output-dir /tmp/opencode/brightvale-city-production-transfer/repeat"
+  ],
+  "recipe_inputs_sha256": {
+    "produce.py": "0369d0581e477bde21166a8664b6c23bb796563d185b28f1ada9ae3c30c870f7",
+    "glb_checks.py": "a7e1427a669a1d7a7ef20d6add25d4bc7f643cbeb13e28e440d93b6fdf32fcd1",
+    "source-inventory.json": "a8d80114640641e46bd8aff484f22dbb8fd0624e743afa52ab358c61425586e2"
+  },
+  "unit_tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp/opencode/brightvale-city-production-transfer python3 /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/test_transfer.py",
+    "passed": 10,
+    "exit_code": 0
+  },
+  "blender_validation": {
+    "command": "timeout 300 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/validate.py",
+    "exit_code": 0,
+    "report": "validation.json"
+  },
+  "scratch": "Temporary initial and repeat artifacts are not deliverables; removed after durable reports and evidence are verified.",
+  "verification_helpers_sha256": {
+    "validate.py": "68f44199659ab63e804bcdc97978845498cba9d2cb38b159e06517d31ea4e9ab",
+    "render_transfer.py": "a649cb1db205761c1afca3fda9459314a576222487b704885392de063b7cad64",
+    "test_transfer.py": "aa1593b6212978c30eb0ae332f22d4deef640797c8339cf52062303bc564324f"
+  }
+}

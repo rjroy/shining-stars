@@ -1,0 +1,30 @@
+{
+  "archive_directory": "assets/experiments/brightvale-city/production-intermediates/ (gitignored local history)",
+  "purpose": "Preserve large prior stages without shipping them or making the maintained reproduction depend on them.",
+  "files": [
+    {
+      "archived_as": "city-full-baseline.glb",
+      "former_path": "assets/production/brightvale-city/city.glb",
+      "bytes": 167035476,
+      "sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c"
+    },
+    {
+      "archived_as": "city-optimized.glb",
+      "former_path": "assets/production/brightvale-city/city-optimized.glb",
+      "bytes": 136641564,
+      "sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff"
+    },
+    {
+      "archived_as": "city-optimized-spatial.glb",
+      "former_path": "assets/production/brightvale-city/city-optimized-spatial.glb",
+      "bytes": 135037616,
+      "sha256": "73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff"
+    },
+    {
+      "archived_as": "city-meshopt-candidate-original.glb",
+      "former_path": "assets/production/brightvale-city/city-meshopt-candidate.glb",
+      "bytes": 59559056,
+      "sha256": "db79454415423002bf87eb36d845a427f2c6c3e2dc4a3e63a05e4b2ded1be878"
+    }
+  ]
+}

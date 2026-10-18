@@ -1,0 +1,252 @@
+{
+  "status": "Candidate construction and Blender inspection complete; independent actual-consumer review pending",
+  "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "full_baseline_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "artifact_sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff",
+  "artifact_bytes": 136641564,
+  "source_and_full_baseline_unchanged": true,
+  "placement": "Accepted .35/(0,3.9,-55), existing game camera/highway/cropping/occlusion; no changes or reframing.",
+  "repeat": {
+    "artifact_byte_identical": true,
+    "semantic_sha256": "38a8ddca960327cb45731ebd54127c4d181e5b38f5db84783bcd4a32e67c67b3",
+    "staged_glb_byte_identical": true,
+    "manifest_and_coverage_byte_identical": true,
+    "scope": "Two independent native evaluations and reductions; final packing repeated from staged geometry and independently through complete recipe. Same machine/pinned versions; not cross-version guarantee."
+  },
+  "tests": {
+    "passed": 16,
+    "exit_code": 0,
+    "command": "timeout 90 blender -b --threads 4 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/test_optimization.py"
+  },
+  "commands": {
+    "produce": "timeout 900 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/produce_optimized.py -- --scratch /tmp/opencode/brightvale-city-reduction",
+    "repeat": "timeout 900 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/produce_optimized.py -- --output-dir /tmp/opencode/brightvale-city-reduction/repeat-output --scratch /tmp/opencode/brightvale-city-reduction/repeat-stage",
+    "validate": "timeout 600 blender -b --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/validate_optimized.py -- --stage /tmp/opencode/brightvale-city-reduction/city-reduced-unbatched.glb",
+    "render": "timeout 1800 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/render_optimized.py"
+  },
+  "cwd": "/tmp/opencode/brightvale-city-reduction",
+  "final_exit_codes": {
+    "produce": 0,
+    "repeat": 0,
+    "validate": 0,
+    "render": 0
+  },
+  "recipe_and_helper_sha256": {
+    "produce_optimized.py": "e60f0e968f721e9db34d86687077968fb83529fe4966ed7d5346019e75a286bc",
+    "optimization_core.py": "130bec31c9c704686c4c67d8647915ffac74adeb46ca7dd25405fb664cb0bb4d",
+    "validate_optimized.py": "bc183159d8512b9f147a67025d3c131192cd41630112187b2bfe0091e02a9eec",
+    "render_optimized.py": "e0adc22bd5bd2f1f178e73f7c6839fa9da424cec13100000a53b68c28962109a",
+    "test_optimization.py": "377be8513eba80b387950a21d95152253fe828491f79e71285a35c6838a6ee6b",
+    "glb_checks.py": "a7e1427a669a1d7a7ef20d6add25d4bc7f643cbeb13e28e440d93b6fdf32fcd1",
+    "material-map.json": "ee242e3962565b6d94e6d99816ba75d76189deae2ae84676dabfcdaf47d607d3",
+    "manifest.json": "586fccb359069fa9ae1bd78ba3708875b9681bf43b68d6faeba2ca0a9d86c36d",
+    "evidence/consumer/report.json": "579d009964044a3bcd9c3a61bc5c814405bd88208745d5394abe7c74adf20fb5"
+  },
+  "images": [
+    {
+      "path": "evidence/optimized/baseline-game-camera-audience.png",
+      "sha256": "af4a338f4c6eb6682d178b40161059297289796ddcec309c86bcb5bae5e1c7eb",
+      "bytes": 1707800,
+      "decoded_dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "visually_inspected": true
+    },
+    {
+      "path": "evidence/optimized/baseline-game-camera-twilight.png",
+      "sha256": "6adfc5908cd82527241ef8ab4911a8c387ebe1df92c1c78633e1845663e7eb6f",
+      "bytes": 1633580,
+      "decoded_dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "visually_inspected": true
+    },
+    {
+      "path": "evidence/optimized/optimized-game-camera-audience.png",
+      "sha256": "7e06dd450c84ef4416469de20ec0110546e02cd77b8306ff8235ce7d27aeff94",
+      "bytes": 1707872,
+      "decoded_dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "visually_inspected": true
+    },
+    {
+      "path": "evidence/optimized/optimized-game-camera-twilight.png",
+      "sha256": "22eb0356e6aad250e1b5271c853e361bcd620f7df2cbdb4640cbd77c84432be2",
+      "bytes": 1633117,
+      "decoded_dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "visually_inspected": true
+    },
+    {
+      "path": "evidence/optimized/optimized-whole-city-audience.png",
+      "sha256": "4c8c8c364c659edf1670e0488b23dc49999c0c9ca36e04e634c5765afcb56774",
+      "bytes": 2396468,
+      "decoded_dimensions": [
+        1792,
+        1008
+      ],
+      "channels": "srgba",
+      "visually_inspected": true
+    }
+  ],
+  "comparisons": [
+    {
+      "view": "Audience",
+      "baseline": "evidence/optimized/baseline-game-camera-audience.png",
+      "candidate": "evidence/optimized/optimized-game-camera-audience.png",
+      "metrics": [
+        {
+          "crop": "full image",
+          "normalized_rmse": 0.00188315,
+          "output": "123.412 (0.00188315)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/baseline-game-camera-audience.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-audience.png",
+            "null:"
+          ]
+        },
+        {
+          "crop": "1300x650+50+0",
+          "normalized_rmse": 0.00230457,
+          "output": "151.03 (0.00230457)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "-extract",
+            "1300x650+50+0",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/baseline-game-camera-audience.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-audience.png",
+            "null:"
+          ]
+        }
+      ]
+    },
+    {
+      "view": "Twilight",
+      "baseline": "evidence/optimized/baseline-game-camera-twilight.png",
+      "candidate": "evidence/optimized/optimized-game-camera-twilight.png",
+      "metrics": [
+        {
+          "crop": "full image",
+          "normalized_rmse": 0.00144639,
+          "output": "94.7891 (0.00144639)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/baseline-game-camera-twilight.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-twilight.png",
+            "null:"
+          ]
+        },
+        {
+          "crop": "1300x650+50+0",
+          "normalized_rmse": 0.00177102,
+          "output": "116.063 (0.00177102)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "-extract",
+            "1300x650+50+0",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/baseline-game-camera-twilight.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-twilight.png",
+            "null:"
+          ]
+        }
+      ]
+    },
+    {
+      "view": "Whole-city study",
+      "baseline": "evidence/glb-city-audience.png",
+      "candidate": "evidence/optimized/optimized-whole-city-audience.png",
+      "metrics": [
+        {
+          "crop": "full image",
+          "normalized_rmse": 0.00236042,
+          "output": "154.69 (0.00236042)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/glb-city-audience.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-whole-city-audience.png",
+            "null:"
+          ]
+        },
+        {
+          "crop": "1600x600+100+400",
+          "normalized_rmse": 0.00317253,
+          "output": "207.912 (0.00317253)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "-extract",
+            "1600x600+100+400",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/glb-city-audience.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-whole-city-audience.png",
+            "null:"
+          ]
+        }
+      ]
+    }
+  ],
+  "visual_observation": "No new missing/repositioned landmark, disconnected roof, closed bridge opening, displaced water route, or lost foliage mass observed. Close crop shows subtle leaflet/facet and trim shading differences, not pixel identity. Accepted spire crop remains; no framing adjustment.",
+  "comparison_context": "Isolated city under original Blender PBR mood rig, matched gameplay-camera projection and separate original Camera.Reference study. No highway/UI/Toon simulation. The existing actual-app placement evidence is retained separately. Blender importer duplicate-face cleanup is disclosed in optimized-validation.json.",
+  "close_crop_inspected": {
+    "source": "evidence/glb-city-audience.png",
+    "candidate": "evidence/optimized/optimized-whole-city-audience.png",
+    "crop": "500x320+90+500",
+    "resize": "200%",
+    "layout": "baseline left, candidate right",
+    "retention": "Temporary inspection sheet removed after full input images and report retained."
+  },
+  "resources": {
+    "index_accessors_by_component_type": {
+      "5123": 1105,
+      "5125": 11
+    },
+    "serialized_binary_bytes": 135587080,
+    "unique_position_accessor_entries": 4891684,
+    "limit": "Not draw calls, frame triangles, decoded GPU memory or hardware performance."
+  },
+  "remaining": "Parent/designer actual-app paired-mode and observatory comparison at accepted placement, plus measured renderer/resource/performance results; no shipping/user appearance approval.",
+  "scratch": "Owned rejected/staged/repeat candidates, logs and inspection crop removed after durable verification; source/full baseline and all prior evidence retained.",
+  "retained_study_baseline": {
+    "path": "evidence/glb-city-audience.png",
+    "sha256": "8198e68d00892c991eb727c6e63a506ff88b85d4a4ce9480c883da656e72c530",
+    "decoded_dimensions": [
+      1792,
+      1008
+    ],
+    "visually_inspected": true,
+    "retained_without_copy": true
+  }
+}

@@ -26,7 +26,7 @@ import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';
 import type { SceneStateProjection } from '../scene-state';
 
 const productionFiles: Readonly<Record<BrightvaleAssetName, string>> = {
-  city: '../../../assets/production/brightvale-distant-city/city.glb',
+  city: '../../../assets/production/brightvale-city/city-meshopt.glb',
   highway: '../../../assets/production/brightvale-highway/highway.glb',
   platform: '../../../assets/production/brightvale-platform/platform.glb',
   endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',
@@ -234,6 +234,10 @@ describe('Brightvale production composition', () => {
     const assets = requireAssets();
     const scene = new THREE.Scene();
     const layout = BRIGHTVALE_RUNTIME_LAYOUT;
+    expect(layout.city.matrixColumnMajor).toEqual([
+      0.3499999940395355, 0, 0, 0, 0, 0.3499999940395355, 0, 0, 0, 0,
+      0.3499999940395355, 0, 0, 3.8999998569488525, -55, 1,
+    ]);
     const composition = createBrightvaleComposition(assets, layout, scene);
     const root = composition.root;
     root.updateMatrixWorld(true);
@@ -370,10 +374,10 @@ describe('Brightvale production composition', () => {
     const cityBatches = instancesIn(cityGroup);
     const framingBatches = instancesIn(framingGroup);
     const crowdBatches = instancesIn(crowdGroup);
-    expect(cityBatches).toHaveLength(288);
+    expect(cityBatches).toHaveLength(2304);
     expect(framingBatches).toHaveLength(10);
     expect(crowdBatches).toHaveLength(98);
-    expect(cityBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(1080);
+    expect(cityBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(2304);
     expect(framingBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(
       266,
     );

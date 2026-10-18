@@ -1,0 +1,77 @@
+{
+  "status": "Reduced + spatially batched candidate; independent visual/consumer acceptance pending",
+  "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "baseline_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "artifact": "city-optimized.glb",
+  "artifact_sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff",
+  "artifact_bytes": 136641564,
+  "semantic_sha256": "38a8ddca960327cb45731ebd54127c4d181e5b38f5db84783bcd4a32e67c67b3",
+  "baseline_bytes": 167035476,
+  "baseline_triangles": 2946548,
+  "counts": {
+    "unique_meshes": 1116,
+    "referenced_meshes": 1116,
+    "unique_triangles": 2589764,
+    "placed_triangles": 2589764,
+    "mesh_nodes": 1116,
+    "mesh_placements": 1116,
+    "gpu_instanced_nodes": 0,
+    "materials": 107
+  },
+  "reduced_unbatched_counts": {
+    "unique_meshes": 5368,
+    "referenced_meshes": 5368,
+    "unique_triangles": 2589764,
+    "placed_triangles": 2589764,
+    "mesh_nodes": 5368,
+    "mesh_placements": 5368,
+    "gpu_instanced_nodes": 0,
+    "materials": 107
+  },
+  "reduced_unbatched_sha256": "0231c58abb20c4306f6a0d27e852492bd169ea5f71cc81d4edebc8e3f8ec9c4d",
+  "reduced_unbatched_bytes": 145948180,
+  "family_totals": {
+    "07": {
+      "before": 958118,
+      "after": 647074
+    },
+    "01": {
+      "before": 234688,
+      "after": 234688
+    },
+    "02": {
+      "before": 1094388,
+      "after": 1048648
+    },
+    "04": {
+      "before": 75554,
+      "after": 75554
+    },
+    "06": {
+      "before": 93400,
+      "after": 93400
+    },
+    "05": {
+      "before": 84804,
+      "after": 84804
+    },
+    "03": {
+      "before": 405596,
+      "after": 405596
+    }
+  },
+  "protected_triangle_corners_bitwise_verified": 5403612,
+  "all_source_object_transforms_verified": true,
+  "materials_exactly_unchanged": true,
+  "source_and_baseline_unchanged": true,
+  "blender_version": "5.2.1 LTS",
+  "exporter_version": [
+    5,
+    2,
+    40
+  ],
+  "policy": "Only UV-free/custom-normal-free foliage surfaces collapse to 0.5; district/skyline trim limited dissolve 2 degrees with boundary/normal/material/seam/sharp/UV delimiters. All other geometry protected. No component or material region may disappear.",
+  "batching": "Exact original material + family + 32-BU 3D cell + UV layout. All transformed triangle attributes checked exactly; normals inverse-transpose. No game transform baked, no axis conversion after the one exporter conversion.",
+  "placement_approval": "User: The placement is perfect, but I agree that the geometry reduction needs to occur. Existing .35/(0,3.9,-55), game camera/highway, cropping and occlusion accepted; not broader appearance/performance acceptance.",
+  "loss_caveat": "Leaf octahedra become tetrahedra without dropping connected components; subtle leaflet shape/facet loss. Trim curvature within limited-dissolve threshold coarsens. Culling granularity becomes spatial batches, not individual pieces. No shipping/performance claim."
+}

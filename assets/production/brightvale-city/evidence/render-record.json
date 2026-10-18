@@ -1,0 +1,62 @@
+[
+  {
+    "path": "source-water-neutral.png",
+    "geometry": "approved native source",
+    "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+    "glb_sha256": null,
+    "camera": "Camera.LandscapeWater",
+    "mode": "Neutral",
+    "resolution": [
+      1600,
+      1100
+    ],
+    "renderer": "Cycles",
+    "samples": 24,
+    "lighting": "Original authoring study rig, including source fog in mood views. Rig is inspection context, not part of GLB."
+  },
+  {
+    "path": "glb-city-audience.png",
+    "geometry": "reimported GLB",
+    "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+    "glb_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+    "camera": "Camera.Reference",
+    "mode": "Audience",
+    "resolution": [
+      1792,
+      1008
+    ],
+    "renderer": "Cycles",
+    "samples": 24,
+    "lighting": "Original authoring study rig, including source fog in mood views. Rig is inspection context, not part of GLB."
+  },
+  {
+    "path": "glb-city-twilight.png",
+    "geometry": "reimported GLB",
+    "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+    "glb_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+    "camera": "Camera.Reference",
+    "mode": "Twilight",
+    "resolution": [
+      1792,
+      1008
+    ],
+    "renderer": "Cycles",
+    "samples": 24,
+    "lighting": "Original authoring study rig, including source fog in mood views. Rig is inspection context, not part of GLB."
+  },
+  {
+    "path": "glb-water-neutral.png",
+    "geometry": "reimported GLB",
+    "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+    "glb_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+    "camera": "Camera.LandscapeWater",
+    "mode": "Neutral",
+    "resolution": [
+      1600,
+      1100
+    ],
+    "renderer": "Cycles",
+    "samples": 24,
+    "lighting": "Original authoring study rig, including source fog in mood views. Rig is inspection context, not part of GLB."
+  }
+]

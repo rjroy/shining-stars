@@ -1,0 +1,52 @@
+{
+  "status": "PASS; reproducible production stages and normal-route browser verification passed; no target-device performance claim",
+  "run_workspace": "/tmp/opencode/brightvale-city-production-repro-20261017",
+  "run_workspace_cleanup": "Owned scratch removed after recording and checking every stage hash; ignored historical archive was kept.",
+  "command": "node assets/production/brightvale-city/reproduce-city.mjs /tmp/opencode/brightvale-city-production-repro-20261017",
+  "environment": {
+    "blender": "5.2.1 LTS",
+    "gltf_exporter": "5.2.40",
+    "node": "26.12.0",
+    "meshoptimizer": "1.1.1",
+    "three": "0.186.1"
+  },
+  "immutable_authoring_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "stages": [
+    {
+      "artifact": "full/city.glb",
+      "bytes": 167035476,
+      "sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c"
+    },
+    {
+      "artifact": "reduced/city-optimized.glb",
+      "bytes": 136641564,
+      "sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff"
+    },
+    {
+      "artifact": "scratch/city-reduced-unbatched.glb",
+      "bytes": 145948180,
+      "sha256": "0231c58abb20c4306f6a0d27e852492bd169ea5f71cc81d4edebc8e3f8ec9c4d"
+    },
+    {
+      "artifact": "spatial/city-optimized-spatial.glb",
+      "bytes": 135037616,
+      "sha256": "73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff"
+    },
+    {
+      "artifact": "delivery/city-meshopt.glb",
+      "bytes": 59559056,
+      "sha256": "db79454415423002bf87eb36d845a427f2c6c3e2dc4a3e63a05e4b2ded1be878"
+    }
+  ],
+  "lossless_delivery_check": {
+    "all_encoded_buffer_views_decoded_byte_identically": true,
+    "non_compression_gltf_json_unchanged": true,
+    "three_gltfloader_graph_equal": true,
+    "mesh_nodes": 2304,
+    "triangles": 2589764,
+    "materials": 107,
+    "delivery_size_gate_bytes": 94371840
+  },
+  "source_and_authoring_unchanged": true,
+  "actual_browser_verification": "passed; see evidence/consumer-compressed/REVIEW.md and verification.json"
+}

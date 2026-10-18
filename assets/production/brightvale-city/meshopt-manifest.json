@@ -1,0 +1,29 @@
+{
+  "artifact": "city-meshopt.glb",
+  "artifact_bytes": 59559056,
+  "artifact_sha256": "db79454415423002bf87eb36d845a427f2c6c3e2dc4a3e63a05e4b2ded1be878",
+  "status": "Selected runtime delivery; normal-route browser verification passed; no target-device performance claim",
+  "source_artifact": "city-optimized-spatial.glb",
+  "source_archive_path": "assets/experiments/brightvale-city/production-intermediates/city-optimized-spatial.glb (gitignored)",
+  "source_bytes": 135037616,
+  "source_sha256": "73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff",
+  "extension": "EXT_meshopt_compression",
+  "extension_required": true,
+  "uncompressed_fallback": false,
+  "encoder": {
+    "package": "meshoptimizer",
+    "version": "1.1.1",
+    "vertex_codec_version": 0,
+    "attribute_views": 4643,
+    "index_views": 2304,
+    "index_mode": "INDICES",
+    "filters": []
+  },
+  "consumer_decoder": "Three.js 0.186.1 bundled MeshoptDecoder",
+  "integrity": {
+    "mesh_nodes": 2304,
+    "triangles": 2589764,
+    "materials": 107,
+    "source_equivalent": true
+  }
+}

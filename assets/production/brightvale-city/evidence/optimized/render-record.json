@@ -1,0 +1,123 @@
+{
+  "source_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "baseline_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "artifact_sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff",
+  "renders": [
+    {
+      "path": "baseline-game-camera-audience.png",
+      "sha256": "af4a338f4c6eb6682d178b40161059297289796ddcec309c86bcb5bae5e1c7eb",
+      "dimensions": [
+        1440,
+        900
+      ],
+      "camera": {
+        "position": [
+          0,
+          15.980390877850041,
+          18.503289237504333
+        ],
+        "quaternion": [
+          -0.05740672067761869,
+          0,
+          0,
+          0.9983508744029035
+        ],
+        "near": 0.10000000149011612,
+        "far": 5000,
+        "fov": 39.760704729285294
+      },
+      "mode": "Audience",
+      "context": "Isolated city, original Blender PBR lighting/world/mist; no game highway or UI. Actual accepted game placement/camera unchanged in app."
+    },
+    {
+      "path": "baseline-game-camera-twilight.png",
+      "sha256": "6adfc5908cd82527241ef8ab4911a8c387ebe1df92c1c78633e1845663e7eb6f",
+      "dimensions": [
+        1440,
+        900
+      ],
+      "camera": {
+        "position": [
+          0,
+          15.980390877850041,
+          18.503289237504333
+        ],
+        "quaternion": [
+          -0.05740672067761869,
+          0,
+          0,
+          0.9983508744029035
+        ],
+        "near": 0.10000000149011612,
+        "far": 5000,
+        "fov": 39.760704729285294
+      },
+      "mode": "Twilight",
+      "context": "Isolated city, original Blender PBR lighting/world/mist; no game highway or UI. Actual accepted game placement/camera unchanged in app."
+    },
+    {
+      "path": "optimized-game-camera-audience.png",
+      "sha256": "7e06dd450c84ef4416469de20ec0110546e02cd77b8306ff8235ce7d27aeff94",
+      "dimensions": [
+        1440,
+        900
+      ],
+      "camera": {
+        "position": [
+          0,
+          15.980390877850041,
+          18.503289237504333
+        ],
+        "quaternion": [
+          -0.05740672067761869,
+          0,
+          0,
+          0.9983508744029035
+        ],
+        "near": 0.10000000149011612,
+        "far": 5000,
+        "fov": 39.760704729285294
+      },
+      "mode": "Audience",
+      "context": "Isolated city, original Blender PBR lighting/world/mist; no game highway or UI. Actual accepted game placement/camera unchanged in app."
+    },
+    {
+      "path": "optimized-game-camera-twilight.png",
+      "sha256": "22eb0356e6aad250e1b5271c853e361bcd620f7df2cbdb4640cbd77c84432be2",
+      "dimensions": [
+        1440,
+        900
+      ],
+      "camera": {
+        "position": [
+          0,
+          15.980390877850041,
+          18.503289237504333
+        ],
+        "quaternion": [
+          -0.05740672067761869,
+          0,
+          0,
+          0.9983508744029035
+        ],
+        "near": 0.10000000149011612,
+        "far": 5000,
+        "fov": 39.760704729285294
+      },
+      "mode": "Twilight",
+      "context": "Isolated city, original Blender PBR lighting/world/mist; no game highway or UI. Actual accepted game placement/camera unchanged in app."
+    },
+    {
+      "path": "optimized-whole-city-audience.png",
+      "sha256": "4c8c8c364c659edf1670e0488b23dc49999c0c9ca36e04e634c5765afcb56774",
+      "dimensions": [
+        1792,
+        1008
+      ],
+      "camera": "Camera.Reference",
+      "mode": "Audience",
+      "context": "Isolated city, original Blender PBR lighting/world/mist; no game highway or UI. Actual accepted game placement/camera unchanged in app."
+    }
+  ],
+  "source_and_baseline_unchanged": true
+}
