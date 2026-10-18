@@ -17,7 +17,7 @@ assert(!currentPbr || (integratedSmoke && controlled), 'Current PBR verification
 assert(!spatialComparison || controlled, 'Spatial comparison requires the identical controlled fixtures');
 assert(!integratedSmoke || (controlled && variant === 'meshopt'), 'Integrated smoke uses selected compressed artifact and controlled scenes');
 assert(variant !== 'spatial' || spatialComparison || integratedSmoke, 'Spatial artifact requires separate evidence output');
-const output = `${root}assets/production/brightvale-city/evidence/${currentPbr?'consumer-city-pbr':integratedSmoke?'consumer-compressed':controlled?(spatialComparison?'consumer-spatial/':'consumer-optimized/')+variant:'consumer'}`;
+const output = `${root}test-results/brightvale-city/${currentPbr?'consumer-city-pbr':integratedSmoke?'consumer-compressed':controlled?(spatialComparison?'consumer-spatial/':'consumer-optimized/')+variant:'consumer'}`;
 const artifact = `${root}${variant==='meshopt'?'assets/production/brightvale-city/city-meshopt.glb':variant==='spatial'?'assets/experiments/brightvale-city/production-intermediates/city-optimized-spatial.glb':variant==='optimized'?'assets/experiments/brightvale-city/production-intermediates/city-optimized.glb':'assets/experiments/brightvale-city/production-intermediates/city-full-baseline.glb'}`;
 const expectedHash = variant==='meshopt'?'db79454415423002bf87eb36d845a427f2c6c3e2dc4a3e63a05e4b2ded1be878':variant==='spatial'?'73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff':variant==='optimized'?'7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff':'fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c';
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

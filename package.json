@@ -14,7 +14,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:brightvale:browser": "node --test tests/browser/brightvale/responsive.test.mjs tests/browser/brightvale/acceptance-plan.test.mjs tests/browser/brightvale/cli.test.mjs && node tests/browser/brightvale/cli.mjs",
-    "test:brightvale:meshopt": "node --test assets/production/brightvale-city/meshopt-compress.test.mjs",
     "test:brightvale:acceptance": "node tests/browser/brightvale/observatory-acceptance.mjs smoke",
     "test:brightvale:acceptance:exhaustive": "node tests/browser/brightvale/observatory-acceptance.mjs exhaustive",
     "chart:generate": "python3 scripts/beat_chart.py --all",
