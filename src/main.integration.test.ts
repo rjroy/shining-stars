@@ -516,7 +516,7 @@ describe('real app Observatory-to-gameplay integration', () => {
       await evaluate(
         "document.querySelector('[data-timing-legend]')?.textContent",
       ),
-    ).toContain('Good ±100 ms');
+    ).toBe('');
     await waitFor(
       async () =>
         await evaluate(

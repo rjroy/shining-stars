@@ -288,19 +288,7 @@ async function waitForGameplayStart(song, difficulty) {
       'The excerpt must stay explicitly labeled.',
     );
 
-  const profile = difficultyProfiles.profiles[difficulty];
-  const cue = [
-    `Good ±${profile.timing.good_ms} ms`,
-    `Perfect ±${profile.timing.perfect_ms} ms`,
-  ];
-  assert.ok(
-    state.legend.includes(cue[0]),
-    `Expected ${difficulty} timing cue: ${state.legend}`,
-  );
-  assert.ok(
-    state.legend.includes(cue[1]),
-    `Expected ${difficulty} timing cue: ${state.legend}`,
-  );
+  assert.equal(state.legend, '', 'Timing-window copy belongs only to results.');
   return state;
 }
 

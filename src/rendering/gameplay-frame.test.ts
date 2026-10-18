@@ -81,6 +81,35 @@ function snapshot(
 }
 
 describe('shared gameplay timing geometry', () => {
+  it.each(['easy', 'normal', 'hard'] as const)(
+    'omits timing-window copy in every active phase at %s difficulty',
+    (difficulty) => {
+      const base = snapshot();
+      for (const [phase, victory] of [
+        ['audience', false],
+        ['twilight', false],
+        ['twilight', true],
+      ] as const) {
+        const frame = projectGameplayFrame(
+          snapshot({ game: { ...base.game, difficulty, phase, victory } }),
+          chart,
+          layout,
+          false,
+        );
+        expect(frame.legendLabel).toBe('');
+        expect(frame.layout).toBe(layout);
+        expect(frame.timingWindows).toEqual(
+          projectGameplayFrame(
+            snapshot({ game: { ...base.game, difficulty } }),
+            chart,
+            layout,
+            false,
+          ).timingWindows,
+        );
+      }
+    },
+  );
+
   it('passes the measured viewport through without fitting a legacy board', () => {
     const projected = projectGameplayFrame(snapshot(), chart, layout, false);
     expect(projected.layout).toBe(layout);

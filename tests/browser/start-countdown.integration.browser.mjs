@@ -13,6 +13,7 @@ import { createServer } from 'vite';
 for (const [name, width, height] of [
   ['desktop', 1280, 757],
   ['portrait', 390, 844],
+  ['timing-legend-phases', 1280, 757],
 ])
   test(
     'real song playback begins when the single five-second countdown completes: ' +
@@ -32,6 +33,39 @@ for (const [name, width, height] of [
       try {
         server = await createServer({
           server: { host: '127.0.0.1', port: 0, strictPort: true },
+          // A short chart drives every phase through the real app, native audio,
+          // controller and renderer. Production assets/audio stay unchanged.
+          plugins:
+            name === 'timing-legend-phases'
+              ? [
+                  {
+                    name: 'short-phase-chart',
+                    enforce: 'pre',
+                    transform(code, id) {
+                      if (
+                        !id.endsWith(
+                          '/data/charts/generated/the-first-shining-star.charts.json',
+                        )
+                      )
+                        return;
+                      const metadata = JSON.parse(code);
+                      metadata.charts = {
+                        normal: {
+                          sourceStart: 0,
+                          duration: 10,
+                          twilightAt: 5,
+                          allowedDifficulties: ['normal'],
+                          notes: [
+                            { id: 'audience-test', lane: 0, time: 1 },
+                            { id: 'twilight-test', lane: 0, time: 7 },
+                          ],
+                        },
+                      };
+                      return { code: JSON.stringify(metadata), map: null };
+                    },
+                  },
+                ]
+              : [],
         });
         await server.listen();
         port = server.httpServer.address().port;
@@ -164,8 +198,13 @@ for (const [name, width, height] of [
         });
         await command('Page.addScriptToEvaluateOnNewDocument', {
           source: `
-      window.__countdownEvidence = { contexts: [], starts: [], samples: [] };
+      window.__countdownEvidence = { contexts: [], starts: [], samples: [], phases: [], timingDraws: [], hits: [] };
       const evidence = window.__countdownEvidence;
+      const fillText = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function(text, ...args) {
+        if (/(?:Good|Perfect)\\s*±/.test(String(text))) evidence.timingDraws.push(String(text));
+        return fillText.call(this, text, ...args);
+      };
       const NativeContext = window.AudioContext;
       window.AudioContext = new Proxy(NativeContext, { construct(target, args) {
         const context = Reflect.construct(target, args);
@@ -186,6 +225,18 @@ for (const [name, width, height] of [
         const overlay = document.querySelector('[data-countdown]');
         const context = evidence.contexts.at(-1);
         if (overlay && context) {
+          const mode = document.querySelector('[data-mode-label]')?.textContent;
+          if (mode && evidence.phases.at(-1) !== mode) evidence.phases.push(mode);
+          if (${JSON.stringify(name === 'timing-legend-phases')} && evidence.starts.length) {
+            const position = context.currentTime - evidence.starts.at(-1).when;
+            for (const onset of [1, 7]) {
+              if (position >= onset - 0.02 && !evidence.hits.includes(onset)) {
+                evidence.hits.push(onset);
+                window.dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyD', key: 'd', bubbles: true}));
+                window.dispatchEvent(new KeyboardEvent('keyup', {code: 'KeyD', key: 'd', bubbles: true}));
+              }
+            }
+          }
           const visible = !overlay.hidden;
           const number = overlay.querySelector('[data-countdown-number]')?.textContent ?? '';
           const previous = evidence.samples.at(-1);
@@ -244,12 +295,50 @@ for (const [name, width, height] of [
           `document.querySelector('[data-time]')?.textContent && document.querySelector('[data-time]').textContent !== '00:00'`,
           'advancing gameplay time',
         );
+        if (name === 'timing-legend-phases') {
+          await waitFor(
+            `window.__countdownEvidence.phases.some(phase => phase.startsWith('Twilight'))`,
+            'real Twilight phase',
+          );
+          await waitFor(
+            `window.__countdownEvidence.phases.some(phase => phase.startsWith('Radiant'))`,
+            'real Radiant victory phase',
+          );
+          if (process.env.IF3_SCREENSHOT_PATH) {
+            const capture = await command('Page.captureScreenshot', {
+              format: 'png',
+            });
+            await writeFile(
+              process.env.IF3_SCREENSHOT_PATH + '-radiant.png',
+              Buffer.from(capture.data, 'base64'),
+              { flag: 'wx' },
+            );
+          }
+          await waitFor(
+            `document.querySelector('[data-panel="results"]')?.hidden === false`,
+            'real summary screen',
+          );
+          const results = await evaluate(`(async () => {
+            const { getDifficultyProfile } = await import('/src/game/game-balance.ts');
+            const timing = getDifficultyProfile('normal').timing;
+            return { text: document.querySelector('[data-panel="results"]').textContent,
+              perfect: Math.round(timing.perfectWindowSeconds * 1000), good: Math.round(timing.goodWindowSeconds * 1000),
+              phases: window.__countdownEvidence.phases, hits: window.__countdownEvidence.hits };
+          })()`);
+          assert.ok(
+            results.text.includes('Perfect ±' + results.perfect + ' ms'),
+          );
+          assert.ok(results.text.includes('Good ±' + results.good + ' ms'));
+          assert.deepEqual(results.hits, [1, 7]);
+          console.log('Real app phase coverage:', results.phases);
+        }
         const evidence = await evaluate(`(() => {
       const evidence = window.__countdownEvidence;
       const canvas = document.querySelector('canvas');
       const context = evidence.contexts.at(-1);
       return { starts: evidence.starts, samples: evidence.samples, audioState: context.state,
-        now: context.currentTime, canvas: !!canvas, rendererError: document.querySelector('[data-panel="error"]')?.hidden === false };
+        now: context.currentTime, canvas: !!canvas, timingDraws: evidence.timingDraws,
+        rendererError: document.querySelector('[data-panel="error"]')?.hidden === false };
     })()`);
         assert.equal(evidence.rendererError, false);
         assert.equal(
@@ -258,6 +347,11 @@ for (const [name, width, height] of [
           'actual city/highway canvas exists',
         );
         assert.equal(evidence.audioState, 'running');
+        assert.deepEqual(
+          evidence.timingDraws,
+          [],
+          'no timing-window text reaches real canvas texture drawing',
+        );
         assert.equal(
           evidence.starts.length,
           1,
