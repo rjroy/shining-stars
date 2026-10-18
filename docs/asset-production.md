@@ -72,6 +72,19 @@ toon treatment deliberately did not reproduce PBR metallic/roughness response.
 Local SwiftShader metrics are not hardware benchmarks. Frustum intersection
 alone does not establish that a crowd figure is visible or unobstructed.
 
+## Current Brightvale city material decision
+
+The later full city delivery is `assets/production/brightvale-city/city-meshopt.glb`.
+The user selected imported standard/PBR city materials after an actual-app A/B
+comparison, replacing **city-only** Toon conversion. Actual-app checks confirmed
+the normal route matches the selected B appearance. Owned clones retain authored
+properties/maps and isolate dynamic `emissive_window` brightness from borrowed
+source materials shared with Observatory. Other game materials remain Toon;
+lighting, cameras and approved placement are unchanged. This supersedes the city
+Toon treatment only, not the historical findings above. See the
+[current city contract](../assets/production/brightvale-city/README.md#materials-and-excluded-presentation).
+No baking, normal-map asset creation or automatic performance claim follows.
+
 ## Reference documents
 
 - [Approved visual direction and mockup context](asset-direction.md), plus the

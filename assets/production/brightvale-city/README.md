@@ -1,6 +1,8 @@
 # Brightvale city — native authoring and compressed runtime delivery
 
-**Current runtime selection; normal-route browser verification passed.** The app loads [`city-meshopt.glb`](city-meshopt.glb), a losslessly Meshopt-compressed delivery of the spatially batched city. Parent/designer verified the unmodified route and decoder plus Observatory, Audience, and settled Twilight views; the captured images match the prior spatial version pixel-for-pixel. This changes no geometry, placement, camera, highway, materials, or shadow policy. It makes no target-device performance or release approval claim.
+**Current runtime selection; imported CITY PBR materials approved.** The app loads [`city-meshopt.glb`](city-meshopt.glb), a losslessly Meshopt-compressed delivery of the spatially batched city. Compression changed no geometry, placement, camera, highway, source materials, or shadow policy. The subsequent city-only material decision is recorded below; no target-device performance or release approval is implied.
+
+**Current material decision:** after an actual-app A/B comparison, the user explicitly selected **B, imported standard/PBR city materials**, rejecting the city Toon conversion. The normal runtime now uses owned clones of imported city materials. Actual-app verification confirmed Audience and settled Twilight match B and Observatory remains unchanged. Other game surfaces remain Toon; lights, renderer settings, camera, placement and highway are unchanged.
 
 ### Approved scope and preserved decisions
 
@@ -12,7 +14,7 @@ The user explicitly stated: **“The placement is perfect, but I agree that the 
 
 The full, reduced, spatial, and initial compressed intermediate GLBs are retained locally under `assets/experiments/brightvale-city/production-intermediates/`; their exact hashes and former paths are listed in [`archived-intermediates.json`](archived-intermediates.json). That directory is gitignored. The committed reproduction pipeline does not depend on those local copies.
 
-Superseded comparison renders are likewise preserved under `assets/experiments/brightvale-city/production-intermediates/evidence/`; [`archived-evidence.json`](archived-evidence.json) lists original/archive paths, sizes and hashes. Only the current compressed browser screenshots and the two placement-approval screenshots are kept in this package; historical reports and numeric comparisons remain alongside them.
+Superseded production comparison renders are preserved under `assets/experiments/brightvale-city/production-intermediates/evidence/`; [`archived-evidence.json`](archived-evidence.json) lists original/archive paths, sizes and hashes. The later material A/B decision evidence and current imported-PBR runtime screenshots remain in this package alongside historical reports and numeric comparisons. Historical screenshots/reports describe the consumer at capture time, not the current city shading contract.
 
 ## Deliverable and authority
 
@@ -55,7 +57,11 @@ The installed exporter omitted extras on two evaluated material copies and gated
 
 Excluded from the physical GLB: **30 cameras, 18 studio/local lights, all world shaders, and `Low.ravine.mist.volume`** (12-triangle volume container). Authoring world gradients, fog, area lights, AgX and Cycles illumination are presentation, not portable material graphs. Their omission is explicit, not a claim that GLB alone reproduces the source mood. No unsupported procedural **surface** graph was flattened.
 
-The current consumer maps materials to Toon, preserving imported color/emission/intensity/side while ignoring metallic/roughness. Thus successful PBR transfer does **not** prove every material or atmosphere treatment in every context. The compressed normal-route screenshots and material observations are recorded in [consumer-compressed](evidence/consumer-compressed/REVIEW.md). The runtime selection is reversible; archived historical intermediates remain available locally.
+**Current city consumer contract:** `city.*` and `emissive_window` imported standard/physical materials retain their authored properties and maps through appearance-owned clones. Same-source reuse is cached; separate source materials are not collapsed by a Toon color signature. Borrowed source materials/textures remain untouched and undisposed, including those shared with Observatory. Nine window variants retain source emission strength multiplied by projected city brightness across Audience, Twilight and Radiant. All 107 city materials remain represented (104 standard, 3 physical); other game surfaces retain their existing Toon mapper and signature sharing.
+
+Normal, roughness, metalness, AO, base-color and emissive maps on future imported city materials are retained by cloning; this asset currently has no image/normal maps. This removes the old CITY Toon-mapper forwarding limitation, not the need to validate future bake UVs, tangent conventions and actual appearance. No baking or lighting retuning is included. Standard/PBR response under the app lights is not a promise to reproduce Blender atmosphere or studio illumination.
+
+[consumer-compressed](evidence/consumer-compressed/REVIEW.md) records the earlier decoder/compression check while gameplay city materials were still Toon. The selected PBR behavior was verified on the normal runtime path; no A/B capture harness or generated comparison artifacts are retained.
 
 ## Historical full-baseline verification
 
@@ -90,12 +96,12 @@ The workspace must not already exist; the script refuses to place outputs inside
 
 ## Verification boundary
 
-Parent/designer actual-browser verification of the compressed normal route passed. Reproduce that bounded smoke with:
+Actual-browser verification of the normal compressed route and approved city PBR behavior passed. Reproduce that bounded controlled smoke without a material override:
 
 ```bash
-CITY_REVIEW_CONTROLLED=1 CITY_REVIEW_INTEGRATED_SMOKE=1 \
+CITY_REVIEW_CONTROLLED=1 CITY_REVIEW_INTEGRATED_SMOKE=1 CITY_REVIEW_CURRENT_PBR=1 \
   CITY_REVIEW_VARIANT=meshopt timeout 150 \
   node tests/browser/brightvale/city-production-review.mjs
 ```
 
-Placement, camera, highway, materials, shadows and scene transforms remain unchanged. No renderer-performance gain is claimed from compression, and the smoke was not a target-device benchmark. Existing raised/narrow right approach, static water and inherited local contacts remain as disclosed by the approved authoring source; this conversion neither repairs nor certifies them. This package is not a collision, navigation, hydrology or engineering certification.
+Placement, camera, highway, source materials, shadows and scene transforms remain unchanged. Gameplay city shading now uses the explicitly approved imported PBR response instead of Toon; historical checks must not be read as saying the consumer was always PBR. No renderer-performance gain is claimed from compression or this material selection, and the smoke was not a target-device benchmark. Existing raised/narrow right approach, static water and inherited local contacts remain as disclosed by the approved authoring source; this conversion neither repairs nor certifies them. This package is not a collision, navigation, hydrology or engineering certification.

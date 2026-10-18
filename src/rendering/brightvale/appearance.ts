@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import type { SceneStateProjection } from '../scene-state';
 
+/** Physical materials inherit MeshStandardMaterial; non-city surfaces remain Toon. */
+export type BrightvaleSurfaceMaterial =
+  THREE.MeshStandardMaterial | THREE.MeshToonMaterial;
+
 /** Shared source-material mapping and mode lighting for one Brightvale scene. */
 export interface BrightvaleAppearance {
-  /** Return the appearance-owned toon replacement for a borrowed source material. */
-  materialFor(source: THREE.Material): THREE.MeshToonMaterial;
+  /** Return an owned city PBR clone or non-city Toon replacement. */
+  materialFor(source: THREE.Material): BrightvaleSurfaceMaterial;
   /** Apply the existing projected mode/brightness state without rebuilding resources. */
   update(state: SceneStateProjection): void;
   /** Release only resources created by this appearance; safe to call repeatedly. */
@@ -97,7 +101,7 @@ function lerpColor(
   target.copy(from).lerp(to, amount);
 }
 
-/** Shared review-matched toon material mapping and state-driven lighting. */
+/** Approved city PBR/non-city Toon mapping and unchanged state-driven lighting. */
 export function createBrightvaleAppearance(
   scene: THREE.Scene,
   sourceRoots: readonly THREE.Object3D[],
@@ -126,10 +130,10 @@ export function createBrightvaleAppearance(
   ramp.colorSpace = THREE.NoColorSpace;
   ramp.needsUpdate = true;
 
-  const materialBySource = new Map<THREE.Material, THREE.MeshToonMaterial>();
+  const materialBySource = new Map<THREE.Material, BrightvaleSurfaceMaterial>();
   const materialBySignature = new Map<string, THREE.MeshToonMaterial>();
-  const ownedMaterials = new Set<THREE.MeshToonMaterial>();
-  const cityEmissionBaselines = new Map<THREE.MeshToonMaterial, number>();
+  const ownedMaterials = new Set<BrightvaleSurfaceMaterial>();
+  const cityEmissionBaselines = new Map<BrightvaleSurfaceMaterial, number>();
   const groundMaterials = new Map<THREE.MeshToonMaterial, 'city' | 'plaza'>();
   const hemisphere = new THREE.HemisphereLight(
     PRESETS.audience.sky,
@@ -212,6 +216,26 @@ export function createBrightvaleAppearance(
 
       const properties = sourceProperties(source);
       const role = roleOf(source);
+      // City surfaces preserve the approved imported PBR response.
+      if (
+        (role.startsWith('city.') || role === 'emissive_window') &&
+        source instanceof THREE.MeshStandardMaterial
+      ) {
+        // Keep authored properties/maps and isolate mode updates from borrowed
+        // materials shared with Observatory. Cache by source, not Toon signature:
+        // equal colors do not imply equal roughness, metalness or normal maps.
+        const material = source.clone();
+        material.userData.brightvaleRole = role;
+        materialBySource.set(source, material);
+        ownedMaterials.add(material);
+        if (role === 'emissive_window') {
+          cityEmissionBaselines.set(material, source.emissiveIntensity);
+          material.emissiveIntensity =
+            source.emissiveIntensity * currentCityBrightness;
+        }
+        return material;
+      }
+      // Non-city surfaces keep the existing Toon mapping.
       const color = properties.color?.clone() ?? new THREE.Color(0xffffff);
       const emissive =
         properties.emissive?.clone() ?? new THREE.Color(0x000000);
