@@ -145,7 +145,10 @@ interface Harness {
   ): void;
 }
 
-function createHarness(log?: (entry: AudioLogEntry) => void): Harness {
+function createHarness(
+  log?: (entry: AudioLogEntry) => void,
+  audioConfig: AudioTransportConfig = config,
+): Harness {
   const context = new FakeContext();
   let fetchCount = 0;
   let fetchBehavior: (
@@ -155,7 +158,7 @@ function createHarness(log?: (entry: AudioLogEntry) => void): Harness {
     void sourceUrl;
     return new ArrayBuffer(8);
   };
-  const transport = createAudioTransport(config, {
+  const transport = createAudioTransport(audioConfig, {
     context,
     fetchAudio(sourceUrl, signal) {
       fetchCount += 1;
@@ -216,6 +219,53 @@ describe('audio transport', () => {
     expect(harness.transport.snapshot().status).toBe('ready');
     expect(harness.fetchCalls()).toBe(2);
     expect(harness.context.decodeCalls).toBe(2);
+  });
+
+  it('accepts the half-microsecond metadata rounding gap for nonzero source offsets', async () => {
+    const audioConfig: AudioTransportConfig = {
+      sourceUrl: 'synthetic://rounded-duration',
+      sourceStart: 100,
+      duration: 174.567188,
+    };
+    const harness = createHarness(undefined, audioConfig);
+    harness.context.bufferDuration = 274.5671875;
+
+    await expect(harness.transport.load()).resolves.toMatchObject({
+      status: 'ready',
+      loaded: true,
+    });
+  });
+
+  it('accepts the reported rounded duration at a zero source offset', async () => {
+    const audioConfig: AudioTransportConfig = {
+      sourceUrl: 'synthetic://rounded-duration',
+      sourceStart: 0,
+      duration: 274.567188,
+    };
+    const harness = createHarness(undefined, audioConfig);
+    harness.context.bufferDuration = 274.5671875;
+
+    await expect(harness.transport.load()).resolves.toMatchObject({
+      status: 'ready',
+      loaded: true,
+    });
+  });
+
+  it('rejects coverage below the metadata rounding bound and non-finite durations', async () => {
+    const audioConfig: AudioTransportConfig = {
+      sourceUrl: 'synthetic://rounded-duration',
+      sourceStart: 100,
+      duration: 174.567188,
+    };
+    const harness = createHarness(undefined, audioConfig);
+
+    harness.context.bufferDuration = 274.567187499;
+    await expect(harness.transport.load()).rejects.toThrow(/duration/i);
+
+    for (const invalidDuration of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      harness.context.bufferDuration = invalidDuration;
+      await expect(harness.transport.load()).rejects.toThrow(/duration/i);
+    }
   });
 
   it('can retry after a fetch error without decoding the failed response', async () => {

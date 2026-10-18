@@ -98,6 +98,10 @@ interface ActiveSource<TSource> {
 
 const COUNTDOWN_SECONDS = 2;
 const MAX_INPUT_TIME_ULPS = 8;
+// FFprobe reports this song's source duration to six decimal places; its 100%
+// authoring interval inherits that rounding. Allow half of the reported 1 µs
+// unit when comparing chart metadata with the decoded buffer duration.
+const SOURCE_DURATION_ROUNDING_TOLERANCE_SECONDS = 0.5e-6;
 
 function compareClockValues(left: number, right: number): -1 | 0 | 1 {
   const difference = left - right;
@@ -359,7 +363,8 @@ export function createAudioTransport<
       const requiredSourceEnd = config.sourceStart + config.duration;
       if (
         !Number.isFinite(buffer.duration) ||
-        buffer.duration < requiredSourceEnd
+        buffer.duration <
+          requiredSourceEnd - SOURCE_DURATION_ROUNDING_TOLERANCE_SECONDS
       ) {
         throw new Error(
           `Decoded audio duration ${buffer.duration}s is shorter than the requested source interval ending at ${requiredSourceEnd}s.`,
