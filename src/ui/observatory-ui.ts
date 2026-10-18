@@ -921,7 +921,12 @@ export function createObservatoryUI(
           .find((item) => item.dataset.collectionId === id)
           ?.focus();
       }
-    } else if (action === 'favorites' || action === 'overview-favorites') {
+    } else if (action === 'favorites') {
+      favoritesOnly = !favoritesOnly;
+      screen = 'browser';
+      reconcile();
+      render();
+    } else if (action === 'overview-favorites') {
       favoritesOnly = true;
       openBrowser(undefined);
     } else if (action === 'toggle-favorite') {
