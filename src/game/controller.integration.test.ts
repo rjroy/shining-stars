@@ -130,7 +130,7 @@ describe('audio and controller timing integration', () => {
     expect(controller.snapshot().game.notes[0]?.outcome).toBeNull();
 
     controller.keyUp('KeyD');
-    context.currentTime = 2.5;
+    context.currentTime = 5.5;
     controller.keyDown('KeyD');
 
     expect(controller.snapshot().game.notes[0]?.outcome).toBe('perfect');
@@ -146,7 +146,7 @@ describe('audio and controller timing integration', () => {
       { id: 'pending-two', time: 4, lane: 0 },
     ]);
     await beginPlayback(context, controller);
-    context.currentTime = 4; // Excerpt-relative transport time 2: Twilight handoff.
+    context.currentTime = 7; // Excerpt-relative transport time 2: Twilight handoff.
 
     const terminal = controller.update();
 
@@ -158,7 +158,7 @@ describe('audio and controller timing integration', () => {
     expect(audio.snapshot().hasActiveSource).toBe(false);
     expect(context.sources[0]?.stopCalls).toBe(1);
 
-    context.currentTime = 8;
+    context.currentTime = 11;
     controller.update();
     controller.keyDown('KeyD');
     controller.pause();
@@ -203,10 +203,10 @@ describe('audio and controller timing integration', () => {
     );
     await beginPlayback(context, controller);
 
-    context.currentTime = 3; // Audience note at transport time 1.
+    context.currentTime = 6; // Audience note at transport time 1.
     controller.keyDown('KeyD');
     controller.keyUp('KeyD');
-    context.currentTime = 4; // Handoff at transport time 2.
+    context.currentTime = 7; // Handoff at transport time 2.
     const handoff = controller.update();
     const expectedInitialStrength = Math.ceil(
       (setupCount + 5) *
@@ -215,7 +215,7 @@ describe('audio and controller timing integration', () => {
     );
     expect(handoff.game.twilightStrength).toBe(expectedInitialStrength);
     for (const setupNote of chartNotes.slice(1, setupCount + 1)) {
-      context.currentTime = setupNote.time + 2;
+      context.currentTime = setupNote.time + 5;
       controller.keyDown('KeyD');
       controller.keyUp('KeyD');
     }
@@ -223,7 +223,7 @@ describe('audio and controller timing integration', () => {
       victory: false,
       twilightStrength: profile.twilight.perfect.damage,
     });
-    context.currentTime = 8.75; // Victory note at transport time 6.75.
+    context.currentTime = 11.75; // Victory note at transport time 6.75.
     const afterVictory = controller.keyDown('KeyD');
 
     expect(afterVictory.game).toMatchObject({
@@ -241,7 +241,7 @@ describe('audio and controller timing integration', () => {
     expect(context.sources[0]?.stopCalls).toBe(0);
 
     controller.keyUp('KeyD');
-    context.currentTime = 9.35; // Good post-victory judgment at position 7.35.
+    context.currentTime = 12.35; // Good post-victory judgment at position 7.35.
     const postVictoryHit = controller.keyDown('KeyF');
     expect(postVictoryHit.game.notes[setupCount + 2]?.outcome).toBe('good');
     expect(postVictoryHit.feedback).toMatchObject([
@@ -255,7 +255,7 @@ describe('audio and controller timing integration', () => {
     });
     controller.keyUp('KeyF');
 
-    context.currentTime = 9.901; // Miss the note at position 7.75.
+    context.currentTime = 12.901; // Miss the note at position 7.75.
     const postVictoryMiss = controller.update();
     expect(postVictoryMiss.game).toMatchObject({
       victory: true,
@@ -369,12 +369,12 @@ describe('audio and controller timing integration', () => {
     ]);
     await beginPlayback(context, controller);
 
-    context.currentTime = 3;
+    context.currentTime = 6;
     controller.keyDown('KeyD');
     controller.keyUp('KeyD');
-    context.currentTime = 4;
+    context.currentTime = 7;
     controller.update();
-    context.currentTime = 5.151; // Past the 150 ms miss deadline at position 3.
+    context.currentTime = 8.151; // Past the 150 ms miss deadline at position 3.
     const terminal = controller.update();
 
     expect(terminal.game.result).toMatchObject({ outcome: 'defeat' });
@@ -386,7 +386,7 @@ describe('audio and controller timing integration', () => {
     expect(audio.snapshot().hasActiveSource).toBe(false);
     expect(context.sources[0]?.stopCalls).toBe(1);
 
-    context.currentTime = 7;
+    context.currentTime = 10;
     controller.update();
     controller.keyDown('KeyD');
     controller.pause();
@@ -403,9 +403,9 @@ describe('audio and controller timing integration', () => {
     ]);
     await beginPlayback(context, controller);
 
-    context.currentTime = 3;
+    context.currentTime = 6;
     controller.keyDown('KeyD');
-    context.currentTime = 12; // Natural end at excerpt position 10.
+    context.currentTime = 15; // Natural end at excerpt position 10.
     const completed = controller.update();
 
     expect(completed.game.result).toMatchObject({ outcome: 'survived' });
@@ -591,7 +591,7 @@ async function beginPlayback(
   controller: ReturnType<typeof createGameController>,
 ): Promise<void> {
   await controller.start();
-  context.currentTime = 2;
+  context.currentTime = 5;
   controller.update();
   expect(controller.snapshot().audio.status).toBe('playing');
 }

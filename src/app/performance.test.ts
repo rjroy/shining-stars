@@ -307,7 +307,7 @@ describe('performance coordinator', () => {
     const context = h.contexts[0];
     if (context === undefined) throw new Error('Expected an audio context.');
     for (const note of chart.notes) {
-      context.currentTime = note.time + 2;
+      context.currentTime = note.time + 5;
       callCoordinatorLane(h.coordinator, 'laneDown', note.lane);
       callCoordinatorLane(h.coordinator, 'laneUp', note.lane);
     }
@@ -556,16 +556,16 @@ describe('performance coordinator', () => {
       if (context === undefined) throw new Error('Expected an audio context.');
 
       if (outcome !== 'defeat') {
-        context.currentTime = 3.5;
+        context.currentTime = 6.5;
         coordinator.keyDown('KeyD');
         coordinator.keyUp('KeyD');
       }
       if (outcome === 'victory') {
-        context.currentTime = 13.5;
+        context.currentTime = 16.5;
         coordinator.keyDown('KeyD');
         coordinator.keyUp('KeyD');
       }
-      context.currentTime = 22;
+      context.currentTime = 25;
       const terminal = coordinator.update();
       expect(terminal?.game.result?.outcome).toBe(outcome);
       expect(completions).toHaveLength(1);
@@ -610,10 +610,10 @@ describe('performance coordinator', () => {
     await coordinator.markGameplayReady();
     const context = h.contexts.at(-1);
     if (!context) throw new Error('Expected an audio context.');
-    context.currentTime = 3.5;
+    context.currentTime = 6.5;
     coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
-    context.currentTime = 13.5;
+    context.currentTime = 16.5;
     const victory = coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
     expect(victory?.game).toMatchObject({ victory: true, status: 'playing' });
@@ -628,10 +628,10 @@ describe('performance coordinator', () => {
     await coordinator.restart();
     expect(events).toHaveLength(1);
     expect(coordinator.snapshot().controller?.runId).toBe(2);
-    context.currentTime = 17;
+    context.currentTime = 23;
     coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
-    context.currentTime = 27;
+    context.currentTime = 33;
     const restartedVictory = coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
     expect(restartedVictory?.game).toMatchObject({
@@ -660,14 +660,14 @@ describe('performance coordinator', () => {
     await coordinator.markGameplayReady();
     const context = h.contexts.at(-1);
     if (!context) throw new Error('Expected an audio context.');
-    context.currentTime = 3.5;
+    context.currentTime = 6.5;
     coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
-    context.currentTime = 13.5;
+    context.currentTime = 16.5;
     const victory = coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
     expect(victory?.game).toMatchObject({ victory: true, status: 'playing' });
-    context.currentTime = 22;
+    context.currentTime = 25;
     expect(coordinator.update()?.game.status).toBe('results');
     await coordinator.dispose();
   });
@@ -691,10 +691,10 @@ describe('performance coordinator', () => {
     await coordinator.markGameplayReady();
     const context = h.contexts.at(-1);
     if (!context) throw new Error('Expected an audio context.');
-    context.currentTime = 3.5;
+    context.currentTime = 6.5;
     coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
-    context.currentTime = 13.5;
+    context.currentTime = 16.5;
     const victory = coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
     expect(victory?.game.victory).toBe(true);
@@ -722,16 +722,16 @@ describe('performance coordinator', () => {
 
     await coordinator.prepare(victorySong(h.catalogReplacement), 'normal');
     await coordinator.markGameplayReady();
-    retiredContext.currentTime = 13.5;
+    retiredContext.currentTime = 16.5;
     coordinator.update();
     expect(events).toEqual([]);
 
     const activeContext = h.contexts.at(-1);
     if (!activeContext) throw new Error('Expected the replacement context.');
-    activeContext.currentTime = 3.5;
+    activeContext.currentTime = 6.5;
     coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
-    activeContext.currentTime = 13.5;
+    activeContext.currentTime = 16.5;
     coordinator.keyDown('KeyD');
     coordinator.keyUp('KeyD');
     expect(events).toEqual([h.catalogReplacement.id]);
@@ -767,13 +767,13 @@ describe('performance coordinator', () => {
     await coordinator.markGameplayReady();
     const context = h.contexts.at(-1);
     if (context === undefined) throw new Error('Expected an audio context.');
-    context.currentTime = 22;
+    context.currentTime = 25;
     expect(coordinator.update()?.game.result?.outcome).toBe('defeat');
     expect(completions).toHaveLength(1);
 
     await coordinator.restart();
     expect(completions).toHaveLength(1);
-    context.currentTime = 44;
+    context.currentTime = 47;
     expect(coordinator.update()?.game.result?.outcome).toBe('defeat');
     expect(completions).toHaveLength(2);
     await coordinator.returnToBrowser();
@@ -945,7 +945,7 @@ describe('performance coordinator', () => {
     expect(context.sources).toHaveLength(2);
     await coordinator.resume();
     expect(context.sources[2]?.buffer).not.toBeNull();
-    context.currentTime = 4;
+    context.currentTime = 7;
     coordinator.update();
     const progress = coordinator.snapshot().controller?.game.notes;
     expect(progress?.some((note) => note.outcome !== null)).toBe(true);
@@ -1024,7 +1024,7 @@ describe('performance coordinator', () => {
     const initial = h.coordinator.snapshot().controller?.game;
     if (initial === undefined)
       throw new Error('Expected a selected game snapshot.');
-    context.currentTime = 4;
+    context.currentTime = 7;
     h.coordinator.update();
     expect(
       h.coordinator
