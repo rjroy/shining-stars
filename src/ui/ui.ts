@@ -384,6 +384,7 @@ export function createGameUI(
             <span data-track-state>Onset-derived chart · play-test timing</span>
             <span class="stage-time" data-time>00:00</span>
           </div>
+          <!-- Keep this empty spacer so the playfield layout does not shift. -->
           <p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>
           <div class="countdown-row" aria-hidden="true"><span data-countdown></span></div>
           <span class="sr-only" id="lane-instructions">Use the D, F, J, and K keys shown on the four lane fronts to hit notes at the line. Escape pauses the performance.</span>
@@ -991,19 +992,6 @@ export function createGameUI(
       const ariaHidden = String(!isStarting);
       if (countdown.getAttribute('aria-hidden') !== ariaHidden)
         countdown.setAttribute('aria-hidden', ariaHidden);
-    }
-    const timingLegend = root.querySelector<HTMLElement>(
-      '[data-timing-legend]',
-    );
-    if (timingLegend !== null) {
-      const profile = getDifficultyProfile(game.difficulty);
-      const toMilliseconds = (seconds: number) => Math.round(seconds * 1000);
-      setElementText(
-        timingLegend,
-        `Good ±${toMilliseconds(profile.timing.goodWindowSeconds)} ms · ` +
-          `Perfect ±${toMilliseconds(profile.timing.perfectWindowSeconds)} ms` +
-          ' — centered on the hit line; unresolved notes continue past it.',
-      );
     }
     const feedbackAnnouncement = feedbackAnnouncements.update(
       snapshot.feedback,
