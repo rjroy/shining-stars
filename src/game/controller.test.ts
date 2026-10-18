@@ -428,12 +428,18 @@ describe('game controller', () => {
     const harness = createHarness();
     setPlaying(harness.audio, 0.6);
     harness.controller.keyDown('KeyD');
+    expect(harness.controller.snapshot().game.bestCombo).toBe(1);
 
     await harness.controller.restart();
 
     expect(harness.audio.calls).toContain('restart');
     expect(harness.games).toHaveLength(2);
     expect(harness.controller.snapshot().game.notes[0]?.outcome).toBeNull();
+    expect(harness.controller.snapshot().game).toMatchObject({
+      combo: 0,
+      bestCombo: 0,
+      bestComboMultiplier: 1,
+    });
   });
 
   it('allows allowed profile changes only while idle or at results, freezing each run', async () => {

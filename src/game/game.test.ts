@@ -68,13 +68,17 @@ function note(id: string, time: number, lane: ChartLane = 0): ChartNote {
 function scoringState(value: unknown): {
   score?: number;
   combo?: number;
+  bestCombo?: number;
   multiplier?: number;
+  bestComboMultiplier?: number;
   normalMaximum?: number;
 } {
   return value as {
     score?: number;
     combo?: number;
+    bestCombo?: number;
     multiplier?: number;
+    bestComboMultiplier?: number;
     normalMaximum?: number;
   };
 }
@@ -742,6 +746,42 @@ describe('game model', () => {
       });
     });
 
+    it('freezes best combo in the result when a late miss breaks the final streak', () => {
+      const notes = [
+        ...Array.from({ length: 11 }, (_, index) =>
+          note(`best-${index}`, 1 + index * 0.5),
+        ),
+        note('late-miss', 7),
+      ];
+      const game = makeGame(notes, 0, { duration: 9, twilightAt: 8 });
+
+      for (const chartNote of notes.slice(0, 11))
+        game.press(chartNote.lane, chartNote.time);
+      expect(scoringState(game.snapshot())).toMatchObject({
+        combo: 11,
+        bestCombo: 11,
+        bestComboMultiplier: 2,
+      });
+
+      game.advanceTo(7.126);
+      const brokenStreak = game.snapshot();
+      expect(scoringState(brokenStreak)).toMatchObject({
+        combo: 0,
+        bestCombo: 11,
+        multiplier: 1,
+        bestComboMultiplier: 2,
+      });
+      const completed = game.advanceTo(9);
+      expect(scoringState(completed.result)).toMatchObject({
+        combo: 0,
+        bestCombo: 11,
+        multiplier: 1,
+        bestComboMultiplier: 2,
+      });
+      expect(completed.result).toEqual(game.snapshot().result);
+      expect(completed).toMatchObject({ combo: 0, bestCombo: 11 });
+    });
+
     it('keeps score and combo across Audience, Twilight, Radiant, and the final hit', () => {
       const game = makeGame(
         [
@@ -764,6 +804,7 @@ describe('game model', () => {
       expect(scoringState(game.snapshot())).toMatchObject({
         score: 800,
         combo: 8,
+        bestCombo: 8,
       });
       game.press(0, 7.75);
       expect(game.snapshot()).toMatchObject({
@@ -773,6 +814,7 @@ describe('game model', () => {
       expect(scoringState(game.snapshot())).toMatchObject({
         score: 900,
         combo: 9,
+        bestCombo: 9,
       });
       game.press(0, 8.25);
       expect(scoringState(game.snapshot())).toMatchObject({
@@ -783,7 +825,11 @@ describe('game model', () => {
       const completed = game.advanceTo(10);
 
       expect(completed).toMatchObject({ status: 'results', victory: true });
-      expect(scoringState(completed)).toMatchObject({ score: 1200, combo: 11 });
+      expect(scoringState(completed)).toMatchObject({
+        score: 1200,
+        combo: 11,
+        bestCombo: 11,
+      });
       expect(scoringState(completed.result)).toMatchObject({
         score: 1200,
         combo: 11,

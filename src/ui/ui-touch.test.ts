@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGameUI, type GameUI } from './ui';
 import type { SongCatalogEntry } from '../catalog/catalog';
 import type { ChartConfig } from '../game/chart';
+import { createGame } from '../game/game';
+import type { ControllerSnapshot } from '../game/controller';
 
 // No DOM package is installed. This small DOM double mounts the REAL UI and
 // parses its REAL markup. It supplies events/capture bookkeeping, never input
@@ -283,6 +285,58 @@ afterEach(() => {
 });
 
 describe('real gameplay UI thumb controls', () => {
+  it('binds the actual result summary to the frozen best combo, not final combo', () => {
+    const summaryChart: ChartConfig = {
+      sourceStart: 0,
+      duration: 60,
+      twilightAt: 59,
+      allowedDifficulties: ['normal'],
+      notes: [
+        { id: 'hit-one', time: 1, lane: 0 },
+        { id: 'hit-two', time: 2, lane: 0 },
+        { id: 'hit-three', time: 3, lane: 0 },
+        { id: 'late-miss', time: 50, lane: 0 },
+      ],
+    };
+    const run = createGame(summaryChart, 0);
+    run.press(0, 1);
+    run.press(0, 2);
+    run.press(0, 3);
+    run.advanceTo(50.126);
+    const completed = run.advanceTo(60);
+    expect(completed).toMatchObject({
+      combo: 0,
+      bestCombo: 3,
+      status: 'results',
+    });
+
+    ui.render(
+      {
+        audio: {
+          status: 'results',
+          position: 60,
+          duration: 60,
+          scheduledWhen: null,
+          hasActiveSource: false,
+          loaded: true,
+          disposed: false,
+          error: null,
+        },
+        game: completed,
+        inputOffset: 0,
+        visualOffset: 0,
+        selectedDifficulty: 'normal',
+        feedback: [],
+        pendingPlaybackRequests: false,
+      } as ControllerSnapshot,
+      0,
+    );
+
+    expect(
+      shellMock.root.querySelector('[data-result-score-combo]')?.textContent,
+    ).toBe('3');
+  });
+
   it('provides four ordered, labeled targets without changing keyboard actions', () => {
     const targets = shellMock.root.querySelectorAll('[data-touch-lane]');
     expect(targets.map((target) => target.dataset.touchLane)).toEqual([

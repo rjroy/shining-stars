@@ -3,14 +3,13 @@ import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
 import { getTheoreticalMaximumScore } from '../game/game';
-import {
-  projectGameplayFrame,
-  VISIBLE_NOTE_SECONDS,
-} from './gameplay-frame';
+import { projectGameplayFrame, VISIBLE_NOTE_SECONDS } from './gameplay-frame';
 import type { BrightvaleViewportLayout } from './brightvale/viewport';
 
 const chartNotes = [{ id: 'target', lane: 0, time: 2 }] as const;
-const states = [{ id: 'target', lane: 0 as const, phase: 'audience' as const, outcome: null }];
+const states = [
+  { id: 'target', lane: 0 as const, phase: 'audience' as const, outcome: null },
+];
 const chart: ChartConfig = {
   sourceStart: 0,
   duration: 20,
@@ -57,7 +56,9 @@ function makeSnapshot(
       difficulty,
       score: 0,
       combo: 0,
+      bestCombo: 0,
       multiplier: 1,
+      bestComboMultiplier: 1,
       normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
       notes: states,
       result: null,
@@ -93,12 +94,8 @@ describe('difficulty timing-window projection', () => {
 
   it('keeps Perfect nested inside Good and preserves Easy/Normal/Hard ratios', () => {
     const halfProgress = (difficulty: Difficulty) =>
-      projectGameplayFrame(
-        makeSnapshot(difficulty),
-        chart,
-        layout,
-        false,
-      ).timingWindows;
+      projectGameplayFrame(makeSnapshot(difficulty), chart, layout, false)
+        .timingWindows;
     const easy = halfProgress('easy');
     const normal = halfProgress('normal');
     const hard = halfProgress('hard');
@@ -152,8 +149,7 @@ describe('difficulty timing-window projection', () => {
 
     const hardGoodWindow =
       getDifficultyProfile('hard').timing.goodWindowSeconds;
-    const lateTransportTime =
-      chartNotes[0].time + hardGoodWindow + 0.05;
+    const lateTransportTime = chartNotes[0].time + hardGoodWindow + 0.05;
     const late = projectGameplayFrame(
       makeSnapshot('hard', lateTransportTime),
       chart,
