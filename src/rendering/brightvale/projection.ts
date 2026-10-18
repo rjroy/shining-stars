@@ -68,6 +68,42 @@ function overlaps(
   );
 }
 
+function occludesViewport(
+  rects: readonly BrightvaleViewportLayout['persistentHudExclusions'][number][],
+  width: number,
+  height: number,
+): boolean {
+  const clipped = rects.flatMap((rect) => {
+    const left = Math.max(0, rect.x);
+    const right = Math.min(width, rect.x + rect.width);
+    const top = Math.max(0, rect.y);
+    const bottom = Math.min(height, rect.y + rect.height);
+    return right > left && bottom > top ? [{ left, right, top, bottom }] : [];
+  });
+  const xEdges = [
+    ...new Set([
+      0,
+      width,
+      ...clipped.flatMap(({ left, right }) => [left, right]),
+    ]),
+  ].sort((left, right) => left - right);
+
+  for (let index = 0; index < xEdges.length - 1; index += 1) {
+    const x = (xEdges[index]! + xEdges[index + 1]!) / 2;
+    const vertical = clipped
+      .filter((rect) => rect.left <= x && rect.right >= x)
+      .sort((left, right) => left.top - right.top);
+    let coveredThrough = 0;
+    for (const rect of vertical) {
+      if (rect.top > coveredThrough) break;
+      coveredThrough = Math.max(coveredThrough, rect.bottom);
+      if (coveredThrough >= height) break;
+    }
+    if (coveredThrough < height) return false;
+  }
+  return true;
+}
+
 function surfaceRayHeight(
   roots: readonly SurfaceRoot[],
   localX: number,
@@ -491,6 +527,15 @@ export function createBrightvaleCameraProjection(
           ![rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) ||
           rect.width < 0 ||
           rect.height < 0,
+      )
+    )
+      return false;
+
+    if (
+      occludesViewport(
+        [...nextLayout.persistentHudExclusions, ...fixedLabelRects(nextLayout)],
+        nextLayout.width,
+        nextLayout.height,
       )
     )
       return false;

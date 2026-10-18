@@ -61,12 +61,229 @@ function sceneLight<T extends THREE.Light>(
   return light as T;
 }
 
+function importedSurface(material: THREE.Material): THREE.MeshStandardMaterial {
+  expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
+  if (!(material instanceof THREE.MeshStandardMaterial)) {
+    throw new Error('Expected imported city material, not Toon');
+  }
+  return material;
+}
+
+describe('Brightvale imported city appearance', () => {
+  it('clones authored standard properties and borrows every surface map unchanged', () => {
+    const source = sourceMaterial('city.masonry');
+    const map = new THREE.Texture();
+    const normalMap = new THREE.Texture();
+    const roughnessMap = new THREE.Texture();
+    const metalnessMap = new THREE.Texture();
+    const aoMap = new THREE.Texture();
+    const emissiveMap = new THREE.Texture();
+    const alphaMap = new THREE.Texture();
+    const envMap = new THREE.Texture();
+    Object.assign(source, {
+      roughness: 0.72,
+      metalness: 0.15,
+      map,
+      normalMap,
+      roughnessMap,
+      metalnessMap,
+      aoMap,
+      emissiveMap,
+      alphaMap,
+      envMap,
+      aoMapIntensity: 0.4,
+      envMapIntensity: 0.7,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+      alphaTest: 0.2,
+      depthWrite: false,
+      flatShading: true,
+    });
+    source.normalScale.set(0.3, -0.6);
+    const { scene, root } = makeSourceScene(source);
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const material = importedSurface(appearance.materialFor(source));
+    expect(material).not.toBe(source);
+    expect(material.name).toBe(source.name);
+    expect(material.userData.brightvaleRole).toBe('city.masonry');
+    expect(source.userData.brightvaleRole).toBeUndefined();
+    expect(material.color.toArray()).toEqual(source.color.toArray());
+    expect(material.emissive.toArray()).toEqual(source.emissive.toArray());
+    expect(material.emissiveIntensity).toBe(source.emissiveIntensity);
+    for (const key of [
+      'roughness',
+      'metalness',
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+      'aoMap',
+      'emissiveMap',
+      'alphaMap',
+      'envMap',
+      'aoMapIntensity',
+      'envMapIntensity',
+      'side',
+      'transparent',
+      'opacity',
+      'alphaTest',
+      'depthWrite',
+      'flatShading',
+    ] as const)
+      expect(material[key], key).toBe(source[key]);
+    expect(material.normalScale.toArray()).toEqual([0.3, -0.6]);
+    expect(material.normalScale).not.toBe(source.normalScale);
+    material.normalScale.set(1, 1);
+    expect(source.normalScale.toArray()).toEqual([0.3, -0.6]);
+    appearance.dispose();
+  });
+
+  it('retains physical water and metal properties instead of rebuilding a standard approximation', () => {
+    const source = new THREE.MeshPhysicalMaterial({
+      color: 0x558899,
+      roughness: 0.4,
+      metalness: 0.1,
+      ior: 1.333,
+      transmission: 0,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.2,
+      reflectivity: 0.4,
+      thickness: 0.6,
+    });
+    source.userData.city_role = 'city.water.surface';
+    const clearcoatNormalMap = new THREE.Texture();
+    source.clearcoatNormalMap = clearcoatNormalMap;
+    const { scene, root } = makeSourceScene(source);
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const material = appearance.materialFor(source);
+    expect(material).toBeInstanceOf(THREE.MeshPhysicalMaterial);
+    if (!(material instanceof THREE.MeshPhysicalMaterial))
+      throw new Error('Expected physical clone');
+    for (const key of [
+      'roughness',
+      'metalness',
+      'ior',
+      'transmission',
+      'clearcoat',
+      'clearcoatRoughness',
+      'reflectivity',
+      'thickness',
+      'clearcoatNormalMap',
+    ] as const)
+      expect(material[key], key).toBe(source[key]);
+    appearance.dispose();
+  });
+
+  it('caches by city source identity without collapsing distinct authored properties', () => {
+    const first = sourceMaterial('city.roof');
+    const second = first.clone();
+    second.roughness = 0.25;
+    second.normalMap = new THREE.Texture();
+    const { scene, root } = makeSourceScene(first);
+    root.add(new THREE.Mesh(new THREE.BoxGeometry(), second));
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const firstMapped = appearance.materialFor(first);
+    const secondMapped = importedSurface(appearance.materialFor(second));
+    expect(appearance.materialFor(first)).toBe(firstMapped);
+    expect(secondMapped).not.toBe(firstMapped);
+    expect(secondMapped.roughness).toBe(0.25);
+    expect(secondMapped.normalMap).toBe(second.normalMap);
+    const other = createBrightvaleAppearance(new THREE.Scene(), [root]);
+    expect(other.materialFor(first)).not.toBe(firstMapped);
+    other.dispose();
+    appearance.dispose();
+  });
+
+  it('preserves existing non-city Toon signature sharing and isolates city mapping', () => {
+    const first = sourceMaterial('highway');
+    const second = first.clone();
+    const city = first.clone();
+    city.userData.city_role = 'city.masonry';
+    const { scene, root } = makeSourceScene(first);
+    for (const source of [second, city])
+      root.add(new THREE.Mesh(new THREE.BoxGeometry(), source));
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const mapped = appearance.materialFor(first);
+    expect(mapped).toBeInstanceOf(THREE.MeshToonMaterial);
+    expect(appearance.materialFor(second)).toBe(mapped);
+    expect(appearance.materialFor(city)).toBeInstanceOf(
+      THREE.MeshStandardMaterial,
+    );
+    appearance.dispose();
+  });
+
+  it('scales source window emission across Audience, Twilight and Radiant without mutation or accumulation', () => {
+    const source = sourceMaterial('emissive_window', {
+      emissiveIntensity: 0.65,
+    });
+    source.userData.city_role = 'emissive_window';
+    const { scene, root } = makeSourceScene(source);
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    appearance.update(projection({ cityBrightness: 0.22 }));
+    const material = importedSurface(appearance.materialFor(source));
+    expect(material.emissiveIntensity).toBeCloseTo(0.65 * 0.22);
+    for (const state of [
+      projection({ cityBrightness: 0.61 }),
+      projection({
+        phase: 'twilight',
+        transitionProgress: 1,
+        cityBrightness: 0.61,
+      }),
+      projection({ phase: 'twilight', victory: true, cityBrightness: 1 }),
+      projection({ cityBrightness: 0 }),
+      projection({ cityBrightness: Number.NaN }),
+      projection({ cityBrightness: 2 }),
+      projection({ cityBrightness: 0.61 }),
+    ]) {
+      appearance.update(state);
+      const brightness = Number.isFinite(state.cityBrightness)
+        ? Math.max(0, Math.min(1, state.cityBrightness))
+        : 0;
+      expect(material.emissiveIntensity).toBeCloseTo(0.65 * brightness);
+      expect(appearance.materialFor(source)).toBe(material);
+      expect(source.emissiveIntensity).toBe(0.65);
+      expect(source.emissive.toArray()).toEqual(material.emissive.toArray());
+    }
+    appearance.dispose();
+  });
+
+  it('disposes city clones once while leaving all borrowed materials/maps/geometry alive', () => {
+    const source = sourceMaterial('city.rock');
+    const maps = [
+      new THREE.Texture(),
+      new THREE.Texture(),
+      new THREE.Texture(),
+    ];
+    [source.map, source.normalMap, source.aoMap] = maps;
+    const { scene, root, geometry } = makeSourceScene(source);
+    const sourceDispose = vi.spyOn(source, 'dispose');
+    const geometryDispose = vi.spyOn(geometry, 'dispose');
+    const mapDisposes = maps.map((map) => vi.spyOn(map, 'dispose'));
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const material = appearance.materialFor(source);
+    const cloneDispose = vi.spyOn(material, 'dispose');
+    appearance.dispose();
+    appearance.dispose();
+    expect(cloneDispose).toHaveBeenCalledTimes(1);
+    expect(sourceDispose).not.toHaveBeenCalled();
+    expect(geometryDispose).not.toHaveBeenCalled();
+    for (const dispose of mapDisposes) expect(dispose).not.toHaveBeenCalled();
+    expect(appearance.materialFor.bind(appearance, source)).toThrow('disposed');
+    expect(appearance.update.bind(appearance, projection())).toThrow(
+      'disposed',
+    );
+  });
+});
+
 describe('Brightvale shared appearance', () => {
   it('maps borrowed source materials through the accepted three-step nearest toon ramp', () => {
     const source = sourceMaterial('stone_trim');
     const { scene, root } = makeSourceScene(source);
     const appearance = createBrightvaleAppearance(scene, [root]);
     const toon = appearance.materialFor(source);
+    if (!(toon instanceof THREE.MeshToonMaterial))
+      throw new Error('Expected non-city Toon');
     const ramp = toon.gradientMap as THREE.DataTexture | null;
 
     expect(toon).toBeInstanceOf(THREE.MeshToonMaterial);
@@ -278,10 +495,12 @@ describe('Brightvale shared appearance', () => {
   });
 
   it('reuses mapped materials, ramp, and lights across mode updates', () => {
-    const source = sourceMaterial('emissive_window');
+    const source = sourceMaterial('body');
     const { scene, root } = makeSourceScene(source);
     const appearance = createBrightvaleAppearance(scene, [root]);
     const toon = appearance.materialFor(source);
+    if (!(toon instanceof THREE.MeshToonMaterial))
+      throw new Error('Expected non-city Toon');
     const ramp = toon.gradientMap;
     const lights = [...scene.children];
 
@@ -310,6 +529,8 @@ describe('Brightvale shared appearance', () => {
     const geometryDispose = vi.spyOn(geometry, 'dispose');
     const appearance = createBrightvaleAppearance(scene, [root]);
     const toon = appearance.materialFor(source);
+    if (!(toon instanceof THREE.MeshToonMaterial))
+      throw new Error('Expected non-city Toon');
     const generatedMaterialDispose = vi.spyOn(toon, 'dispose');
     const key = sceneLight(scene, 'Brightvale.Key', THREE.DirectionalLight);
     const shadowTarget = new THREE.WebGLRenderTarget(16, 16);

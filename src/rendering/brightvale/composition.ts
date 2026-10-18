@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { BrightvaleAssets } from './assets';
-import { createBrightvaleAppearance } from './appearance';
+import {
+  createBrightvaleAppearance,
+  type BrightvaleSurfaceMaterial,
+} from './appearance';
 import { fitDirectionalShadowCamera, setShadowParticipation } from './shadows';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
@@ -85,7 +88,7 @@ function batchGeometry(source: BatchSource): THREE.BufferGeometry {
 function copyAppearanceMaterials(
   sourceRoot: THREE.Object3D,
   cloneRoot: THREE.Object3D,
-  materialFor: (material: THREE.Material) => THREE.MeshToonMaterial,
+  materialFor: (material: THREE.Material) => BrightvaleSurfaceMaterial,
 ): void {
   const originals = meshes(sourceRoot);
   const copies = meshes(cloneRoot);
@@ -232,7 +235,7 @@ export function createBrightvaleComposition(
 
     const batchSources = new Map<
       THREE.Object3D,
-      Map<THREE.BufferGeometry, Map<THREE.MeshToonMaterial, BatchSource[]>>
+      Map<THREE.BufferGeometry, Map<BrightvaleSurfaceMaterial, BatchSource[]>>
     >();
     const splitGeometryCache = new WeakMap<
       THREE.Mesh,

@@ -395,11 +395,18 @@ describe('Brightvale production composition', () => {
       THREE.DirectionalLight | undefined;
     expect(key?.castShadow).toBe(true);
     expect(key?.shadow.mapSize.toArray()).toEqual([2048, 2048]);
+    const cityMaterials = allMaterials(cityGroup);
+    expect(cityMaterials).toHaveLength(107);
+    const cityBatchSet = new Set(cityBatches);
     const geometryMaterialPairs = new Set<string>();
     for (const batch of allBatches) {
       expect(Array.isArray(batch.material)).toBe(false);
       const material = batch.material as THREE.Material;
-      expect(material).toBeInstanceOf(THREE.MeshToonMaterial);
+      expect(material).toBeInstanceOf(
+        cityBatchSet.has(batch)
+          ? THREE.MeshStandardMaterial
+          : THREE.MeshToonMaterial,
+      );
       expect(material.userData.brightvaleRole).toBeTruthy();
       const pair = `${batch.geometry.uuid}:${material.uuid}`;
       expect(geometryMaterialPairs.has(pair)).toBe(false);
@@ -464,6 +471,10 @@ describe('Brightvale production composition', () => {
     const toonDisposals = generatedMaterials.map((material) =>
       vi.spyOn(material, 'dispose'),
     );
+    const cityMaterialDisposals = allMaterials(composition.root)
+      .filter((material) => material instanceof THREE.MeshStandardMaterial)
+      .map((material) => vi.spyOn(material, 'dispose'));
+    expect(cityMaterialDisposals).toHaveLength(107);
     const ramp = (generatedMaterials[0] as THREE.MeshToonMaterial | undefined)
       ?.gradientMap;
     if (!ramp) throw new Error('generated shared toon ramp is required');
@@ -476,6 +487,8 @@ describe('Brightvale production composition', () => {
       expect(dispose).toHaveBeenCalledTimes(1);
     expect(groundDispose).toHaveBeenCalledTimes(1);
     for (const dispose of toonDisposals)
+      expect(dispose).toHaveBeenCalledTimes(1);
+    for (const dispose of cityMaterialDisposals)
       expect(dispose).toHaveBeenCalledTimes(1);
     expect(rampDispose).toHaveBeenCalledTimes(1);
     expect(borrowedGeometryDispose).not.toHaveBeenCalled();

@@ -167,6 +167,20 @@ function measuredEnvelopePoints(
 }
 
 describe('Brightvale source-geometry projection', () => {
+  it('rejects a viewport fully covered by overlapping persistent HUD regions without searching camera fits', () => {
+    const layout = viewport(1600, 900, 500, 500);
+    const projection = createBrightvaleCameraProjection(
+      createBrightvalePlayfieldContract(),
+      layout,
+      { minimum: -0.5, maximum: 1.5 },
+    );
+
+    expect(projection.usable).toBe(false);
+    expect(projection.resize(layout, { minimum: -0.5, maximum: 1.5 })).toBe(
+      false,
+    );
+  });
+
   it('derives the physical road and raised target profile from loaded GLB meshes', () => {
     const profile = createBrightvaleSurfaceProfile(assets.roots);
     const playfield = createBrightvalePlayfieldContract(profile);
