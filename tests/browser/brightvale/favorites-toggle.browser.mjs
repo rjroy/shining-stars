@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { createServer } from 'vite';
@@ -15,7 +17,9 @@ test(
     let browser;
     let socket;
     let port;
-    const profile = await mkdtemp('/tmp/opencode/favorites-toggle-');
+    const profile = await mkdtemp(
+      path.join(os.tmpdir(), 'brightvale-favorites-toggle-'),
+    );
     const previousVolume = process.env.VITE_SONG_VOLUME;
     process.env.VITE_SONG_VOLUME = '0';
     try {
@@ -168,21 +172,27 @@ test(
       assert.equal(evidence.emptyOn.pressed, 'true');
       assert.equal(evidence.emptyOff.pressed, 'false');
     } finally {
-      socket?.close();
-      if (browser && browser.exitCode === null) {
-        const exited = once(browser, 'exit');
-        browser.kill('SIGKILL');
-        await exited;
+      try {
+        socket?.close();
+        if (browser && browser.exitCode === null) {
+          const exited = once(browser, 'exit');
+          browser.kill('SIGKILL');
+          await exited;
+        }
+        await server?.close();
+        if (port)
+          await assert.rejects(
+            fetch(`http://127.0.0.1:${port}`),
+            'owned server stopped',
+          );
+      } finally {
+        try {
+          await rm(profile, { recursive: true, force: true });
+        } finally {
+          if (previousVolume === undefined) delete process.env.VITE_SONG_VOLUME;
+          else process.env.VITE_SONG_VOLUME = previousVolume;
+        }
       }
-      await server?.close();
-      if (port)
-        await assert.rejects(
-          fetch(`http://127.0.0.1:${port}`),
-          'owned server stopped',
-        );
-      await rm(profile, { recursive: true, force: true });
-      if (previousVolume === undefined) delete process.env.VITE_SONG_VOLUME;
-      else process.env.VITE_SONG_VOLUME = previousVolume;
     }
   },
 );

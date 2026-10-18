@@ -7,6 +7,7 @@ npm run test:brightvale:browser -- responsive
 npm run test:brightvale:browser -- normal # First Shining Star / Normal variant
 npm run test:brightvale:browser -- gameplay the-first-shining-star hard
 npm run test:brightvale:browser # gameplay plus responsive checks
+npm run test:brightvale:favorites # actual-app favorites toggle regression (Chromium required)
 ```
 
 The bounded gameplay harness selects a song ID and generated difficulty
