@@ -52,6 +52,16 @@ export interface GameUI {
   destroy(): void;
 }
 
+/** Read the transport's scheduled start, including resumed count-ins. */
+export function getStartCountdown(
+  audio: Pick<ControllerSnapshot['audio'], 'status' | 'scheduledWhen'>,
+  audioNow: number,
+): number | null {
+  if (audio.status !== 'starting' || audio.scheduledWhen === null) return null;
+  const remaining = audio.scheduledWhen - audioNow;
+  return remaining > 0 ? Math.ceil(remaining) : null;
+}
+
 function profileSummary(
   profile: ReturnType<typeof getDifficultyProfile>,
 ): string {
@@ -386,8 +396,14 @@ export function createGameUI(
           </div>
           <!-- Keep this empty spacer so the playfield layout does not shift. -->
           <p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>
-          <div class="countdown-row" aria-hidden="true"><span data-countdown></span></div>
+          <div class="countdown-row" aria-hidden="true"></div>
           <span class="sr-only" id="lane-instructions">Use the D, F, J, and K keys shown on the four lane fronts to hit notes at the line. Escape pauses the performance.</span>
+        </div>
+
+        <div class="start-countdown" data-countdown role="status" aria-live="polite" aria-atomic="true" hidden>
+          <span class="start-countdown-label">Starting in</span>
+          <strong class="start-countdown-number" data-countdown-number></strong>
+          <span class="sr-only" data-countdown-unit></span>
         </div>
 
         <section class="dialog-panel ready-panel" data-panel="ready" aria-labelledby="ready-title">
@@ -480,7 +496,11 @@ export function createGameUI(
   const stageHeader = root.querySelector<HTMLElement>('.stage-topline');
   const timingLegend = root.querySelector<HTMLElement>('[data-timing-legend]');
   const timeSlot = root.querySelector<HTMLElement>('[data-time]');
-  const countdownSlot = root.querySelector<HTMLElement>('[data-countdown]');
+  const countdown = root.querySelector<HTMLElement>('[data-countdown]');
+  const countdownNumber = root.querySelector<HTMLElement>(
+    '[data-countdown-number]',
+  );
+  const countdownUnit = root.querySelector<HTMLElement>('[data-countdown-unit]');
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
   const actionButtons = [
     ...root.querySelectorAll<HTMLButtonElement>('[data-action]'),
@@ -693,7 +713,8 @@ export function createGameUI(
         .filter(({ rect }) => rect.width > 0 && rect.height > 0),
       labels: {
         time: readRect(timeSlot),
-        countdown: readRect(countdownSlot),
+        // The DOM overlay owns the countdown; do not also paint it in 3D.
+        countdown: readRect(null),
         legend: readRect(timingLegend),
         feedback: readRect(null),
       },
@@ -717,7 +738,6 @@ export function createGameUI(
     stageHeader,
     ...[...(playHeading?.children ?? [])],
     timeSlot,
-    countdownSlot,
     timingLegend,
   ];
   layoutElements.forEach((element) => {
@@ -981,18 +1001,22 @@ export function createGameUI(
         .padStart(2, '0')}`,
     );
 
-    const countdown = root.querySelector<HTMLElement>('[data-countdown]');
-    if (countdown !== null) {
-      const remaining =
-        audio.scheduledWhen === null ? 2 : audio.scheduledWhen - audioNow;
+    const startCountdown = getStartCountdown(audio, audioNow);
+    const showCountdown =
+      startCountdown !== null &&
+      !isError &&
+      !isResults &&
+      !pendingPlaybackRequests &&
+      !touch.showGuard;
+    if (countdown !== null && countdown.hidden === showCountdown)
+      countdown.hidden = !showCountdown;
+    if (countdownNumber !== null)
+      setElementText(countdownNumber, showCountdown ? String(startCountdown) : '');
+    if (countdownUnit !== null)
       setElementText(
-        countdown,
-        isStarting ? `Starting in ${Math.max(1, Math.ceil(remaining))}` : '',
+        countdownUnit,
+        showCountdown ? (startCountdown === 1 ? 'second' : 'seconds') : '',
       );
-      const ariaHidden = String(!isStarting);
-      if (countdown.getAttribute('aria-hidden') !== ariaHidden)
-        countdown.setAttribute('aria-hidden', ariaHidden);
-    }
     const feedbackAnnouncement = feedbackAnnouncements.update(
       snapshot.feedback,
     );

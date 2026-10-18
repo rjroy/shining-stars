@@ -323,7 +323,7 @@ describe('audio transport', () => {
     expect(harness.context.state).toBe('running');
     expect(harness.context.sources).toHaveLength(1);
     expect(sourceAt(harness.context).startCalls).toEqual([
-      { when: 2, offset: 107.1, duration: 65.8 },
+      { when: 5, offset: 107.1, duration: 65.8 },
     ]);
   });
 
@@ -359,22 +359,22 @@ describe('audio transport', () => {
     expect(harness.transport.snapshot().status).toBe('paused');
   });
 
-  it('keeps position frozen and not playing through the two-second countdown', async () => {
+  it('keeps position frozen until the five-second scheduled start boundary', async () => {
     const harness = createHarness();
     await harness.transport.load();
     await harness.transport.start();
 
-    harness.context.currentTime = 1.999;
+    harness.context.currentTime = 4.999;
     expect(harness.transport.update()).toMatchObject({
       status: 'starting',
       position: 0,
     });
-    harness.context.currentTime = 2;
+    harness.context.currentTime = 5;
     expect(harness.transport.update()).toMatchObject({
       status: 'playing',
       position: 0,
     });
-    harness.context.currentTime = 5.25;
+    harness.context.currentTime = 8.25;
     expect(harness.transport.update()).toMatchObject({
       status: 'playing',
       position: 3.25,
@@ -386,9 +386,9 @@ describe('audio transport', () => {
     await harness.transport.load();
     await harness.transport.start();
 
-    harness.context.currentTime = 2;
+    harness.context.currentTime = 5;
     harness.transport.update();
-    harness.context.currentTime = 2 + config.duration + 1;
+    harness.context.currentTime = 5 + config.duration + 1;
 
     expect(harness.transport.update()).toMatchObject({
       status: 'results',
@@ -401,9 +401,9 @@ describe('audio transport', () => {
     const harness = createHarness();
     await harness.transport.load();
     await harness.transport.start();
-    harness.context.currentTime = 2;
+    harness.context.currentTime = 5;
     harness.transport.update();
-    harness.context.currentTime = 8.25;
+    harness.context.currentTime = 11.25;
     harness.transport.update();
 
     expect(harness.transport.pause()).toMatchObject({
@@ -414,12 +414,12 @@ describe('audio transport', () => {
     expect(sourceAt(harness.context).stopCalls).toBe(1);
     expect(sourceAt(harness.context).disconnectCalls).toBe(1);
 
-    harness.context.currentTime = 8.25;
+    harness.context.currentTime = 11.25;
     await harness.transport.resume();
     expect(harness.context.sources).toHaveLength(2);
     expect(sourceAt(harness.context, 1).startCalls).toEqual([
       {
-        when: 10.25,
+        when: 16.25,
         offset: config.sourceStart + 6.25,
         duration: config.duration - 6.25,
       },
@@ -439,7 +439,7 @@ describe('audio transport', () => {
       hasActiveSource: false,
     });
     expect(source.stopCalls).toBe(1);
-    harness.context.currentTime = 4;
+    harness.context.currentTime = 7;
     harness.context.setState('running');
     expect(harness.transport.update()).toMatchObject({
       status: 'paused',
@@ -474,7 +474,7 @@ describe('audio transport', () => {
     await harness.transport.load();
     await harness.transport.start();
     const oldSource = sourceAt(harness.context);
-    harness.context.currentTime = 4;
+    harness.context.currentTime = 7;
     harness.transport.update();
     harness.transport.pause();
     await harness.transport.resume();
@@ -494,14 +494,14 @@ describe('audio transport', () => {
     await harness.transport.load();
     await harness.transport.start();
     const oldSource = sourceAt(harness.context);
-    harness.context.currentTime = 6;
+    harness.context.currentTime = 9;
     harness.transport.update();
 
     await harness.transport.restart();
     expect(harness.context.sources).toHaveLength(2);
     expect(oldSource.stopCalls).toBe(1);
     expect(sourceAt(harness.context, 1).startCalls).toEqual([
-      { when: 8, offset: config.sourceStart, duration: config.duration },
+      { when: 14, offset: config.sourceStart, duration: config.duration },
     ]);
     expect(harness.transport.snapshot()).toMatchObject({
       status: 'starting',
@@ -581,9 +581,9 @@ describe('audio transport', () => {
     await harness.transport.load();
     await harness.transport.start();
     const source = sourceAt(harness.context);
-    harness.context.currentTime = 2;
+    harness.context.currentTime = 5;
     harness.transport.update();
-    harness.context.currentTime = 3;
+    harness.context.currentTime = 6;
 
     source.finish();
 
@@ -599,7 +599,7 @@ describe('audio transport', () => {
     await harness.transport.load();
     await harness.transport.start();
     const source = sourceAt(harness.context);
-    harness.context.currentTime = 2 + config.duration;
+    harness.context.currentTime = 5 + config.duration;
 
     source.finish();
 
@@ -614,9 +614,9 @@ describe('audio transport', () => {
     const harness = createHarness();
     await harness.transport.load();
     await harness.transport.start();
-    harness.context.currentTime = 2;
+    harness.context.currentTime = 5;
     harness.transport.update();
-    harness.context.currentTime = 4.5;
+    harness.context.currentTime = 7.5;
     harness.transport.update();
 
     harness.context.setState('suspended');
@@ -655,7 +655,7 @@ describe('audio transport', () => {
     await harness.transport.load();
     await harness.transport.start();
     const source = sourceAt(harness.context);
-    harness.context.currentTime = 2;
+    harness.context.currentTime = 5;
     harness.transport.update();
 
     await harness.transport.dispose();
