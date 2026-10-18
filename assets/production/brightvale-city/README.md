@@ -22,12 +22,13 @@ release approval is implied.
 Continue city edits in [`assets/authoring/brightvale-city/production.blend`](../../authoring/brightvale-city/production.blend);
 the original high-detail [`city.blend`](../../authoring/brightvale-city/city.blend)
 remains unchanged. The shipped GLB is retained as the current runtime authority.
-There is no maintained export bridge yet: stock Blender export may quantize
-shading normals, omit IOR/emission extensions, and produce shared accessors that
-the old compressor did not support. Treat the saved `delivery_normal` attribute
-as stale after geometry/shading edits until deliberately updated. Do not replace
-the shipped GLB with an unchecked export. See the authoring README for the
-required checks and limitations; byte-identical regeneration is not required.
+Export a review candidate with `npm run export:brightvale-city`; the default path
+is ignored `test-results/brightvale-city/city-candidate.glb`. The command never
+overwrites the shipped asset. Review the candidate in-game before deliberately
+copying it into this package. It exports current mesh normals and PBR properties
+and does not force the saved `delivery_normal` attribute after edits. See the
+authoring README for the workflow and limitations; byte-identical regeneration
+is not required.
 
 The actual-app smoke remains available:
 

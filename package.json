@@ -11,6 +11,8 @@
     "build": "tsc --noEmit && vite build",
     "validate:production-subpath": "node scripts/validate-production-subpath.mjs",
     "test:production-subpath": "node --test tests/production-subpath.test.mjs",
+    "export:brightvale-city": "node assets/authoring/brightvale-city/export-production.mjs",
+    "test:brightvale-city:export": "node --test assets/authoring/brightvale-city/compress-glb.test.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:brightvale:browser": "node --test tests/browser/brightvale/responsive.test.mjs tests/browser/brightvale/acceptance-plan.test.mjs tests/browser/brightvale/cli.test.mjs && node tests/browser/brightvale/cli.mjs",
