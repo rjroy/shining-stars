@@ -19,6 +19,19 @@ const ui = readFileSync(resolve(process.cwd(), 'src/ui/ui.ts'), 'utf8');
 const main = readFileSync(resolve(process.cwd(), 'src/main.ts'), 'utf8');
 
 describe('difficulty presentation contract', () => {
+  it('keeps timing windows in results only without shifting the gameplay spacer', () => {
+    expect(ui).toContain(
+      '<p class="timing-window-legend" data-timing-legend aria-hidden="true"></p>',
+    );
+    expect(ui).toContain(
+      '${profileSummary(getDifficultyProfile(result.difficulty))}',
+    );
+    const render = ui.slice(ui.indexOf('function render(snapshot:'));
+    expect(render).not.toMatch(
+      /perfectWindowSeconds|goodWindowSeconds|Perfect ±|Good ±/,
+    );
+  });
+
   it('keeps gameplay feedback in a polite live region', () => {
     // Event ordering, deduplication, reset, and announcement wording are
     // behaviorally covered by ui-feedback.test.ts.
