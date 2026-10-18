@@ -1,0 +1,63 @@
+{
+  "scope": "Independent read-only consolidated-authoring verification; no modeling, resave, production or runtime work",
+  "date": "2026-10-17",
+  "blender": "5.2.1 LTS",
+  "working_directory": "/tmp/opencode/brightvale-authoring-independent-check",
+  "disk_preflight": "Approximately 1.3 TB free on repository filesystem and 16 GB scratch capacity; less than 5 MB owned scratch used",
+  "master_sha256_before": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "master_sha256_after": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "tests": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp/opencode/brightvale-authoring-independent-check python3 /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/test_package.py",
+    "exit": 0,
+    "passed": 5
+  },
+  "validation": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 blender --background /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/validate.py",
+    "execution_note": "Validator ran with an additional read-only --python-expr dependency audit. First supplemental expression omitted import bpy and exited 1 after validator passed; corrected invocation and subsequent audits exited 0. No packaged helper failed or was edited.",
+    "final_exit": 0,
+    "total_objects": 5417,
+    "family_01_07_meshes": 5368,
+    "recorded_bounds_match": true,
+    "manifest_checks_passed": true,
+    "linked_libraries": [],
+    "external_images_fonts_sounds_movieclips_cache_files_volumes": [],
+    "helper_import": "assets/authoring/brightvale-city/package_checks.py",
+    "helper_imports_self_contained": true,
+    "package_symlinks": []
+  },
+  "weak_reference_caveat": {
+    "materials": ["Water | falling sheets", "Water | receiving lips"],
+    "property": "library_weak_reference.filepath",
+    "value": "/home/rjroy/Projects/games/shining-stars/assets/experiments/brightvale-city/landscape/model/checkpoints/approved-skyline-city.blend",
+    "blender_property_description": "Weak reference to a data-block in another library .blend file (used to re-use already appended data instead of appending new copies)",
+    "finding": "Both materials and their two-node material trees are local (library=None). These are append-reuse provenance references, not linked-library loading dependencies. A literal claim of zero experiment path references is not true. They were not removed because the approved master must remain byte-identical.",
+    "other_path_metadata": "Saved render-output metadata is /tmp/; packaged preview overrides it in memory. Standard Blender Essentials brush identifiers are also present.",
+    "isolation_limit": "Absolute-path execution from a non-repository cwd was verified. The package was not duplicated and the experiment tree was not renamed, deleted or access-blocked."
+  },
+  "render": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 blender --background /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/preview.py -- --output-dir /tmp/opencode/brightvale-authoring-independent-check --mode both",
+    "exit": 0,
+    "timeout_ms": 240000,
+    "renderer": "CYCLES",
+    "samples": 24,
+    "camera": "Camera.Reference",
+    "dimensions": [1792, 1008],
+    "audience": {
+      "fresh_sha256": "58434e1daff778756240a16ea06d1228618fda7c0638c765294d75d91c8a0157",
+      "retained_evidence": "evidence/city-audience.png",
+      "retained_sha256": "a229aef9a5e3874be48613c5bbf6e77e47dfb8abf212f6122946ec9005834559",
+      "decoded_absolute_pixel_error": 0,
+      "decoded_rmse": 0
+    },
+    "twilight": {
+      "fresh_sha256": "118c7fb119fef23df25be13c7b6898a98acd8fe0b4185f4000da83f2bfb25bcf",
+      "retained_evidence": "evidence/city-twilight.png",
+      "retained_sha256": "3aee752ab813ba6af1eb74a05ec05729ad04df077466239ac18da48cf1f112b4",
+      "decoded_absolute_pixel_error": 0,
+      "decoded_rmse": 0
+    },
+    "comparison": "All four images fully decoded and visually inspected. ImageMagick compare -metric AE and -metric RMSE both exited 0 for both pairs. PNG file bytes differ, but decoded pixels are identical. Composition, citadel/bridge hierarchy, waterfall faces and warm/violet mood distinction match retained approved evidence.",
+    "retention": "Original approved evidence retained unchanged; redundant fresh scratch renders and owned scratch logs removed after this durable record and README entry were verified."
+  },
+  "result": "Package helpers and both actual renders verified from outside repository cwd; pixel-exact retained-evidence parity. Non-loading weak provenance references disclosed. No production started."
+}
