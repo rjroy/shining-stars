@@ -31,6 +31,9 @@ venv/
 # temporary files
 tmp/
 
+# Preserve local asset experiments without publishing their working history
+/assets/experiments/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

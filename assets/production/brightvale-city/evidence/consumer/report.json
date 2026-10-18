@@ -1,0 +1,4048 @@
+{
+  "purpose": "Disposable actual-app validation; no placement/camera/material changes",
+  "attempts": [
+    {
+      "event": "city network substitution attempt",
+      "url": "/assets/production/brightvale-distant-city/city.glb",
+      "at": "2026-10-18T01:56:13.364Z"
+    },
+    {
+      "event": "city network substitution delivered",
+      "at": "2026-10-18T01:56:13.508Z"
+    }
+  ],
+  "console": [
+    {
+      "type": "debug",
+      "args": [
+        "[vite] connecting..."
+      ]
+    },
+    {
+      "type": "debug",
+      "args": [
+        "[vite] connected."
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Save data] storage load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Save data] legacy read attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Save data] legacy read succeeded",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Save data] legacy read attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Save data] legacy read succeeded",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Save data] storage load succeeded",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell asset load attempt"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] sky textures load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] city asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] highway asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] platform asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] endcaps asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] crowd asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] framingLong asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] framingPost asset load attempt",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene renderer initialized"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell frame state changed",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] sky textures loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] highway asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] platform asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] endcaps asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] crowd asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] framingLong asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] framingPost asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] city asset loaded successfully"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell asset load succeeded"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell composition attempt"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell composition attached"
+      ]
+    },
+    {
+      "type": "warning",
+      "args": [
+        "THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead."
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell first render succeeded"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell frame state changed",
+        "Object"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell composition attempt"
+      ]
+    },
+    {
+      "type": "info",
+      "args": [
+        "[Brightvale] scene shell composition attached"
+      ]
+    }
+  ],
+  "exceptions": [],
+  "captures": [
+    {
+      "name": "observatory-existing-placement",
+      "render": {
+        "memory": {
+          "geometries": 6647,
+          "textures": 4
+        },
+        "render": {
+          "frame": 10,
+          "calls": 4353,
+          "triangles": 1804124,
+          "points": 0,
+          "lines": 0
+        },
+        "programs": [
+          {
+            "type": "ShaderMaterial",
+            "name": "",
+            "id": 0,
+            "cacheKey": "0,1,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,8388608,8519680,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "PointsMaterial",
+            "name": "",
+            "id": 1,
+            "cacheKey": "points,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,8388610,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshBasicMaterial",
+            "name": "",
+            "id": 2,
+            "cacheKey": "basic,highp,srgb,false,,uv,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,0,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,8388608,8388610,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshDepthMaterial",
+            "name": "",
+            "id": 3,
+            "cacheKey": "depth,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,3200,8388608,8530944,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshStandardMaterial",
+            "name": "Ravine detail | soil",
+            "id": 4,
+            "cacheKey": "physical,STANDARD,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,1,0,0,0,0,0,0,1,0,0,0,0,1,4,0,0,0,8388608,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 94,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshPhysicalMaterial",
+            "name": "Ravine detail | water light",
+            "id": 5,
+            "cacheKey": "physical,STANDARD,,PHYSICAL,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,1,0,0,0,0,0,0,1,0,0,0,0,1,4,0,0,0,8388608,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 3,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          }
+        ],
+        "autoReset": true
+      },
+      "camera": {
+        "position": [
+          0,
+          0,
+          16
+        ],
+        "quaternion": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "near": 0.1,
+        "far": 80
+      },
+      "cityFound": true,
+      "cityMeshes": 6644,
+      "materials": [
+        {
+          "name": "Ravine detail | soil",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.10000000149011612,
+            0.0949999988079071,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | carved champagne limestone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6100000143051147,
+            0.5,
+            0.3499999940395355
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right dark stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2199999988079071,
+            0.20499999821186066,
+            0.1899999976158142
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left dark stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2199999988079071,
+            0.20499999821186066,
+            0.1899999976158142
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Cliffs | weathered face",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2800000011920929,
+            0.27000001072883606,
+            0.30000001192092896
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Cliffs | violet grey",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.20000000298023224,
+            0.20000000298023224,
+            0.2549999952316284
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | rock light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.20499999821186066,
+            0.2280000001192093,
+            0.25999999046325684
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | rock dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11999999731779099,
+            0.14499999582767487,
+            0.17000000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | foam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6499999761581421,
+            0.7699999809265137,
+            0.7300000190734863
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | water light",
+          "type": "MeshPhysicalMaterial",
+          "color": [
+            0.25,
+            0.5299999713897705,
+            0.5600000023841858
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | slate course 0",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.04500000178813934,
+            0.10499999672174454,
+            0.17000000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | slate course 1",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.054999999701976776,
+            0.12999999523162842,
+            0.20000000298023224
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | slate course 2",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.06499999761581421,
+            0.15000000596046448,
+            0.22499999403953552
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | pale raised gold edges",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.7799999713897705,
+            0.550000011920929,
+            0.1899999976158142
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | aged golden metal",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.3400000035762787,
+            0.08500000089406967
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Window",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6299999952316284,
+            0.23000000417232513,
+            0.04500000178813934
+          ],
+          "emissive": [
+            0.6299999952316284,
+            0.23000000417232513,
+            0.04500000178813934
+          ],
+          "intensity": 0.6499999761581421,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | amber glazing 1",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3100000023841858,
+            0.14000000059604645,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0.3100000023841858,
+            0.14000000059604645,
+            0.054999999701976776
+          ],
+          "intensity": 0.18000000715255737,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | amber glazing 2",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.054999999701976776,
+            0.08500000089406967,
+            0.11500000208616257
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | smoked warm limestone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3400000035762787,
+            0.2849999964237213,
+            0.23499999940395355
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | coping",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4699999988079071,
+            0.41999998688697815,
+            0.3400000035762787
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | stone light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4300000071525574,
+            0.3799999952316284,
+            0.30000001192092896
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Circulation | warm paving",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4300000071525574,
+            0.38999998569488525,
+            0.3199999928474426
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Masonry | warm grey mass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.38999998569488525,
+            0.3199999928474426,
+            0.2800000011920929
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Street edges | pale masonry",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5699999928474426,
+            0.49000000953674316,
+            0.3799999952316284
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | rock",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.1550000011920929,
+            0.18000000715255737,
+            0.2150000035762787
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | rock light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2199999988079071,
+            0.24500000476837158,
+            0.2800000011920929
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | rock dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.10499999672174454,
+            0.13500000536441803,
+            0.1599999964237213
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | leaf deep",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.024000000208616257,
+            0.07999999821186066,
+            0.039000000804662704
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | leaf light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.125,
+            0.24500000476837158,
+            0.07000000029802322
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | leaf middle",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.054999999701976776,
+            0.1550000011920929,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | leaf warm",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.23499999940395355,
+            0.2750000059604645,
+            0.06499999761581421
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | bark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.12999999523162842,
+            0.0949999988079071,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | bark light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2199999988079071,
+            0.1599999964237213,
+            0.07500000298023224
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | coping",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6100000143051147,
+            0.5099999904632568,
+            0.3700000047683716
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.36000001430511475,
+            0.3149999976158142,
+            0.25999999046325684
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | stone dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2750000059604645,
+            0.25,
+            0.23000000417232513
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | stone light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4699999988079071,
+            0.4050000011920929,
+            0.3149999976158142
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | amber",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5299999713897705,
+            0.20999999344348907,
+            0.04500000178813934
+          ],
+          "emissive": [
+            0.5299999713897705,
+            0.20999999344348907,
+            0.04500000178813934
+          ],
+          "intensity": 0.699999988079071,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | gold",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5099999904632568,
+            0.3100000023841858,
+            0.07500000298023224
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.032999999821186066,
+            0.03500000014901161
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.04500000178813934,
+            0.10499999672174454,
+            0.1599999964237213
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | slate light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07000000029802322,
+            0.15000000596046448,
+            0.20999999344348907
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far footing",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.2800000011920929,
+            0.30000001192092896,
+            0.3199999928474426
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.1599999964237213,
+            0.1850000023841858,
+            0.20000000298023224
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far masonry",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.30000001192092896,
+            0.32499998807907104,
+            0.35499998927116394
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.10000000149011612,
+            0.125,
+            0.15000000596046448
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far roof joint",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.15000000596046448,
+            0.1850000023841858,
+            0.22499999403953552
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.125,
+            0.17000000178813934,
+            0.2199999988079071
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far trim",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3700000047683716,
+            0.38999998569488525,
+            0.4099999964237213
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Far warm glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.30000001192092896,
+            0.25,
+            0.18000000715255737
+          ],
+          "emissive": [
+            0.30000001192092896,
+            0.25,
+            0.18000000715255737
+          ],
+          "intensity": 0.019999999552965164,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | stone",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3499999940395355,
+            0.3149999976158142,
+            0.26499998569488525
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | paving",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3100000023841858,
+            0.2800000011920929,
+            0.23499999940395355
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left gold",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5199999809265137,
+            0.33500000834465027,
+            0.10000000149011612
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left paving",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.36000001430511475,
+            0.3199999928474426,
+            0.26499998569488525
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left trim",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.47999998927116394,
+            0.33500000834465027
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | bark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.14000000059604645,
+            0.10499999672174454,
+            0.0560000017285347
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | leaf",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.05999999865889549,
+            0.1599999964237213,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | leaf deep",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02500000037252903,
+            0.07999999821186066,
+            0.03799999877810478
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | leaf light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.14000000059604645,
+            0.25,
+            0.07500000298023224
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | rock",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.1599999964237213,
+            0.18000000715255737,
+            0.2150000035762787
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | soil",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.08500000089406967,
+            0.0820000022649765,
+            0.0430000014603138
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | sheen",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.25,
+            0.5,
+            0.5299999713897705
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | water",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.029999999329447746,
+            0.2199999988079071,
+            0.27000001072883606
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | foam",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6100000143051147,
+            0.7300000190734863,
+            0.699999988079071
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | stone dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.27000001072883606,
+            0.2549999952316284,
+            0.23000000417232513
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Landscape detail | fall",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11999999731779099,
+            0.3400000035762787,
+            0.3799999952316284
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left masonry",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.33000001311302185,
+            0.2849999964237213,
+            0.23999999463558197
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left soil",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11999999731779099,
+            0.10499999672174454,
+            0.06499999761581421
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left bark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.14000000059604645,
+            0.10000000149011612,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left leaf",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07500000298023224,
+            0.17499999701976776,
+            0.06499999761581421
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left leaf dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.04500000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left leaf light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.18000000715255737,
+            0.2800000011920929,
+            0.08500000089406967
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left plaster",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.44999998807907104,
+            0.4050000011920929,
+            0.3400000035762787
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left glazing",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3700000047683716,
+            0.18000000715255737,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0.3700000047683716,
+            0.18000000715255737,
+            0.054999999701976776
+          ],
+          "intensity": 0.07999999821186066,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left lit glazing",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6399999856948853,
+            0.2849999964237213,
+            0.05999999865889549
+          ],
+          "emissive": [
+            0.6399999856948853,
+            0.2849999964237213,
+            0.05999999865889549
+          ],
+          "intensity": 0.550000011920929,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02800000086426735,
+            0.03700000047683716,
+            0.0430000014603138
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03799999877810478,
+            0.09000000357627869,
+            0.14499999582767487
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Left slate light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.04800000041723251,
+            0.1120000034570694,
+            0.17000000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | recess shadow and lead",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.041999999433755875,
+            0.04699999839067459,
+            0.052000001072883606
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle footing",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.28999999165534973,
+            0.2800000011920929,
+            0.25
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11999999731779099,
+            0.15000000596046448,
+            0.1599999964237213
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle masonry",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.33000001311302185,
+            0.32499998807907104,
+            0.30000001192092896
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03999999910593033,
+            0.05999999865889549,
+            0.07500000298023224
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle roof joint",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.07800000160932541,
+            0.12999999523162842,
+            0.17000000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.06400000303983688,
+            0.11500000208616257,
+            0.1599999964237213
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle trim",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.46000000834465027,
+            0.4300000071525574,
+            0.3700000047683716
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle warm glass",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.4000000059604645,
+            0.2849999964237213,
+            0.12999999523162842
+          ],
+          "emissive": [
+            0.4000000059604645,
+            0.2849999964237213,
+            0.12999999523162842
+          ],
+          "intensity": 0.11999999731779099,
+          "side": 2
+        },
+        {
+          "name": "Skyline detail | Middle plaster",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.38999998569488525,
+            0.375,
+            0.33500000834465027
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Citadel detail | local terrace paving",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3799999952316284,
+            0.3199999928474426,
+            0.25
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right gold",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5199999809265137,
+            0.33500000834465027,
+            0.10000000149011612
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right paving",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.36000001430511475,
+            0.3199999928474426,
+            0.26499998569488525
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right trim",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5799999833106995,
+            0.47999998927116394,
+            0.33500000834465027
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | water",
+          "type": "MeshPhysicalMaterial",
+          "color": [
+            0.02500000037252903,
+            0.20499999821186066,
+            0.26499998569488525
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Ravine detail | fall water",
+          "type": "MeshPhysicalMaterial",
+          "color": [
+            0.14000000059604645,
+            0.38999998569488525,
+            0.4399999976158142
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "Water | continuing channels",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.08500000089406967,
+            0.3199999928474426,
+            0.4300000071525574
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right masonry",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.38999998569488525,
+            0.3499999940395355,
+            0.2849999964237213
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right soil",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.11999999731779099,
+            0.10499999672174454,
+            0.06499999761581421
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right bark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.14000000059604645,
+            0.10000000149011612,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right leaf",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.09000000357627869,
+            0.1899999976158142,
+            0.09000000357627869
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right leaf dark",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.04500000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right leaf light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.18000000715255737,
+            0.28999999165534973,
+            0.12999999523162842
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right plaster",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.5199999809265137,
+            0.4699999988079071,
+            0.3799999952316284
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right glazing",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.3700000047683716,
+            0.18000000715255737,
+            0.054999999701976776
+          ],
+          "emissive": [
+            0.3700000047683716,
+            0.18000000715255737,
+            0.054999999701976776
+          ],
+          "intensity": 0.07999999821186066,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right lit glazing",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.6399999856948853,
+            0.2849999964237213,
+            0.05999999865889549
+          ],
+          "emissive": [
+            0.6399999856948853,
+            0.2849999964237213,
+            0.05999999865889549
+          ],
+          "intensity": 0.550000011920929,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right recess",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.02800000086426735,
+            0.03700000047683716,
+            0.0430000014603138
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right slate",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.052000001072883606,
+            0.11999999731779099,
+            0.17000000178813934
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        },
+        {
+          "name": "District detail | Right slate light",
+          "type": "MeshStandardMaterial",
+          "color": [
+            0.06400000303983688,
+            0.14000000059604645,
+            0.1899999976158142
+          ],
+          "emissive": [
+            0,
+            0,
+            0
+          ],
+          "intensity": 1,
+          "side": 2
+        }
+      ],
+      "frameIntervals": [
+        16.599999999999994,
+        16.700000000000017,
+        16.599999999999994,
+        16.69999999999999,
+        16.700000000000017,
+        16.69999999999999,
+        16.599999999999994,
+        16.69999999999999,
+        16.600000000000023,
+        83.39999999999998,
+        16.600000000000023,
+        16.69999999999999,
+        16.69999999999999,
+        16.600000000000023,
+        16.69999999999999,
+        16.69999999999999,
+        16.700000000000045,
+        16.599999999999966,
+        16.599999999999966,
+        16.700000000000045,
+        1950,
+        799.9000000000001,
+        783.2999999999997,
+        766.6000000000004
+      ],
+      "heap": {
+        "used": 627647987,
+        "total": 682890739
+      },
+      "citySceneRenderStats": {
+        "frame": 12,
+        "calls": 4353,
+        "triangles": 1804124,
+        "points": 0,
+        "lines": 0
+      },
+      "cityConsumer": null
+    },
+    {
+      "name": "gameplay-audience-existing-placement",
+      "mode": "Audience performance",
+      "time": "00:16",
+      "render": {
+        "memory": {
+          "geometries": 6882,
+          "textures": 20
+        },
+        "render": {
+          "frame": 92,
+          "calls": 9,
+          "triangles": 18,
+          "points": 0,
+          "lines": 0
+        },
+        "programs": [
+          {
+            "type": "ShaderMaterial",
+            "name": "",
+            "id": 0,
+            "cacheKey": "0,1,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,8388608,8519680,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "PointsMaterial",
+            "name": "",
+            "id": 1,
+            "cacheKey": "points,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,8388610,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshBasicMaterial",
+            "name": "",
+            "id": 2,
+            "cacheKey": "basic,highp,srgb,false,,uv,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,0,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,8388608,8388610,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshDepthMaterial",
+            "name": "",
+            "id": 3,
+            "cacheKey": "depth,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,3200,8388608,8530944,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshStandardMaterial",
+            "name": "Ravine detail | soil",
+            "id": 4,
+            "cacheKey": "physical,STANDARD,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,1,0,0,0,0,0,0,1,0,0,0,0,1,4,0,0,0,8388608,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 94,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshPhysicalMaterial",
+            "name": "Ravine detail | water light",
+            "id": 5,
+            "cacheKey": "physical,STANDARD,,PHYSICAL,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,1,0,0,0,0,0,0,1,0,0,0,0,1,4,0,0,0,8388608,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 3,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshDepthMaterial",
+            "name": "",
+            "id": 6,
+            "cacheKey": "depth,highp,srgb-linear,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,3200,8388609,8530944,srgb,onBeforeCompile() {}",
+            "usedTimes": 1,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshToonMaterial",
+            "name": "Gold | illuminated edge | Gold | illuminated edge | Brightvale toon",
+            "id": 7,
+            "cacheKey": "toon,TOON,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,4,0,0,0,10485760,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 41,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshToonMaterial",
+            "name": "Review.Ground.Material | Review.Ground.Material | Brightvale toon",
+            "id": 8,
+            "cacheKey": "toon,TOON,,highp,srgb,false,,uv,false,false,false,false,false,false,uv,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,4,0,0,0,10485760,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 2,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshToonMaterial",
+            "name": "Ravine detail | soil | city.soil | Brightvale toon",
+            "id": 9,
+            "cacheKey": "toon,TOON,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,4,0,0,0,10485761,8522754,srgb,onBeforeCompile() {}",
+            "usedTimes": 137,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshBasicMaterial",
+            "name": "",
+            "id": 10,
+            "cacheKey": "basic,highp,srgb,false,,uv,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,0,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,8388608,8388610,srgb,onBeforeCompile() {}",
+            "usedTimes": 11,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshBasicMaterial",
+            "name": "",
+            "id": 11,
+            "cacheKey": "basic,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,0,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,8388608,8393730,srgb,onBeforeCompile() {}",
+            "usedTimes": 10,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshBasicMaterial",
+            "name": "",
+            "id": 12,
+            "cacheKey": "basic,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,0,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,8388608,8389634,srgb,onBeforeCompile() {}",
+            "usedTimes": 10,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshToonMaterial",
+            "name": "",
+            "id": 13,
+            "cacheKey": "toon,TOON,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,4,0,0,0,8388608,8393730,srgb,onBeforeCompile() {}",
+            "usedTimes": 4,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          },
+          {
+            "type": "MeshToonMaterial",
+            "name": "",
+            "id": 14,
+            "cacheKey": "toon,TOON,,highp,srgb,false,,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,,false,false,0,,0,3,1,0,0,1,0,0,1,0,0,0,0,1,4,0,0,0,8388608,8389634,srgb,onBeforeCompile() {}",
+            "usedTimes": 4,
+            "program": {},
+            "vertexShader": {},
+            "fragmentShader": {}
+          }
+        ],
+        "autoReset": true
+      },
+      "camera": {
+        "position": [
+          0,
+          15.980390877850041,
+          18.503289237504333
+        ],
+        "quaternion": [
+          -0.05740672067761869,
+          0,
+          0,
+          0.9983508744029035
+        ],
+        "near": 0.10000000149011612,
+        "far": 5000,
+        "fov": 39.760704729285294
+      },
+      "cityFound": false,
+      "cityMeshes": 0,
+      "materials": [],
+      "frameIntervals": [
+        16.599999999999994,
+        16.700000000000017,
+        16.599999999999994,
+        16.69999999999999,
+        16.700000000000017,
+        16.69999999999999,
+        16.599999999999994,
+        16.69999999999999,
+        16.600000000000023,
+        83.39999999999998,
+        16.600000000000023,
+        16.69999999999999,
+        16.69999999999999,
+        16.600000000000023,
+        16.69999999999999,
+        16.69999999999999,
+        16.700000000000045,
+        16.599999999999966,
+        16.599999999999966,
+        16.700000000000045,
+        1950,
+        799.9000000000001,
+        783.2999999999997,
+        766.6000000000004,
+        766.6999999999998,
+        783.3000000000002,
+        766.5999999999995,
+        766.6000000000004,
+        783.2999999999993,
+        783.3000000000011,
+        766.6999999999989,
+        766.7000000000007,
+        799.8999999999996,
+        800,
+        766.6000000000004,
+        766.6000000000004,
+        783.3999999999996,
+        766.6000000000004,
+        749.8999999999996,
+        3416.5999999999985,
+        33.30000000000291,
+        16.69999999999709,
+        16.700000000000728,
+        16.600000000002183,
+        16.69999999999709,
+        16.700000000000728,
+        16.600000000002183,
+        16.599999999998545,
+        16.700000000000728,
+        16.700000000000728,
+        16.599999999998545,
+        16.700000000000728,
+        16.700000000000728,
+        16.69999999999709,
+        16.700000000000728,
+        16.600000000002183,
+        16.69999999999709,
+        16.700000000000728,
+        16.600000000002183,
+        16.599999999998545,
+        3883.2000000000007,
+        2533.2999999999993,
+        1266.5999999999985,
+        1250,
+        1233.2000000000007,
+        1249.9000000000015,
+        1250.1000000000022,
+        1249.8999999999942,
+        1266.6000000000058,
+        1249.8999999999942,
+        1283.300000000003,
+        1250
+      ],
+      "heap": {
+        "used": 298401274,
+        "total": 340191682
+      },
+      "citySceneRenderStats": {
+        "frame": 94,
+        "calls": 6884,
+        "triangles": 3132464,
+        "points": 0,
+        "lines": 0
+      },
+      "cityConsumer": {
+        "batches": 6644,
+        "instances": 6644,
+        "materials": [
+          {
+            "name": "Ravine detail | soil | city.soil | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.soil",
+            "color": [
+              0.10000000149011612,
+              0.0949999988079071,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | carved champagne limestone | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.6100000143051147,
+              0.5,
+              0.3499999940395355
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right dark stone | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.2199999988079071,
+              0.20499999821186066,
+              0.1899999976158142
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Cliffs | weathered face | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.2800000011920929,
+              0.27000001072883606,
+              0.30000001192092896
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Cliffs | violet grey | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.20000000298023224,
+              0.20000000298023224,
+              0.2549999952316284
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | rock light | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.20499999821186066,
+              0.2280000001192093,
+              0.25999999046325684
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | rock dark | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.11999999731779099,
+              0.14499999582767487,
+              0.17000000178813934
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | foam | city.water.foam | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.foam",
+            "color": [
+              0.6499999761581421,
+              0.7699999809265137,
+              0.7300000190734863
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | water light | city.water.highlight | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.highlight",
+            "color": [
+              0.25,
+              0.5299999713897705,
+              0.5600000023841858
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | slate course 0 | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.04500000178813934,
+              0.10499999672174454,
+              0.17000000178813934
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | slate course 1 | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.054999999701976776,
+              0.12999999523162842,
+              0.20000000298023224
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | slate course 2 | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.06499999761581421,
+              0.15000000596046448,
+              0.22499999403953552
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | pale raised gold edges | city.metal | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.metal",
+            "color": [
+              0.7799999713897705,
+              0.550000011920929,
+              0.1899999976158142
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | aged golden metal | city.metal | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.metal",
+            "color": [
+              0.5799999833106995,
+              0.3400000035762787,
+              0.08500000089406967
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Window | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.6299999952316284,
+              0.23000000417232513,
+              0.04500000178813934
+            ],
+            "emissive": [
+              0.6299999952316284,
+              0.23000000417232513,
+              0.04500000178813934
+            ],
+            "intensity": 0.14299999475479125,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | amber glazing 1 | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.3100000023841858,
+              0.14000000059604645,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0.3100000023841858,
+              0.14000000059604645,
+              0.054999999701976776
+            ],
+            "intensity": 0.039600001573562624,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | amber glazing 2 | city.glazing | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.glazing",
+            "color": [
+              0.054999999701976776,
+              0.08500000089406967,
+              0.11500000208616257
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | smoked warm limestone | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.3400000035762787,
+              0.2849999964237213,
+              0.23499999940395355
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | coping | city.trim | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.trim",
+            "color": [
+              0.4699999988079071,
+              0.41999998688697815,
+              0.3400000035762787
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | stone light | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.4300000071525574,
+              0.3799999952316284,
+              0.30000001192092896
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Circulation | warm paving | city.paving | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.paving",
+            "color": [
+              0.4300000071525574,
+              0.38999998569488525,
+              0.3199999928474426
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Masonry | warm grey mass | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.38999998569488525,
+              0.3199999928474426,
+              0.2800000011920929
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Street edges | pale masonry | city.trim | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.trim",
+            "color": [
+              0.5699999928474426,
+              0.49000000953674316,
+              0.3799999952316284
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | rock | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.1550000011920929,
+              0.18000000715255737,
+              0.2150000035762787
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | rock light | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.2199999988079071,
+              0.24500000476837158,
+              0.2800000011920929
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | rock dark | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.10499999672174454,
+              0.13500000536441803,
+              0.1599999964237213
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | leaf deep | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.024000000208616257,
+              0.07999999821186066,
+              0.039000000804662704
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | leaf light | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.125,
+              0.24500000476837158,
+              0.07000000029802322
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | leaf middle | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.054999999701976776,
+              0.1550000011920929,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | leaf warm | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.23499999940395355,
+              0.2750000059604645,
+              0.06499999761581421
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | bark | city.wood | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.wood",
+            "color": [
+              0.12999999523162842,
+              0.0949999988079071,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | bark light | city.wood | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.wood",
+            "color": [
+              0.2199999988079071,
+              0.1599999964237213,
+              0.07500000298023224
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | coping | city.trim | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.trim",
+            "color": [
+              0.6100000143051147,
+              0.5099999904632568,
+              0.3700000047683716
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | stone | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.36000001430511475,
+              0.3149999976158142,
+              0.25999999046325684
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | stone dark | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.2750000059604645,
+              0.25,
+              0.23000000417232513
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | stone light | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.4699999988079071,
+              0.4050000011920929,
+              0.3149999976158142
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | amber | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.5299999713897705,
+              0.20999999344348907,
+              0.04500000178813934
+            ],
+            "emissive": [
+              0.5299999713897705,
+              0.20999999344348907,
+              0.04500000178813934
+            ],
+            "intensity": 0.15399999737739564,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | gold | city.metal | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.metal",
+            "color": [
+              0.5099999904632568,
+              0.3100000023841858,
+              0.07500000298023224
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | recess | city.recess | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.recess",
+            "color": [
+              0.02500000037252903,
+              0.032999999821186066,
+              0.03500000014901161
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | slate | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.04500000178813934,
+              0.10499999672174454,
+              0.1599999964237213
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | slate light | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.07000000029802322,
+              0.15000000596046448,
+              0.20999999344348907
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far footing | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.2800000011920929,
+              0.30000001192092896,
+              0.3199999928474426
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far glass | city.glazing | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.glazing",
+            "color": [
+              0.1599999964237213,
+              0.1850000023841858,
+              0.20000000298023224
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far masonry | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.30000001192092896,
+              0.32499998807907104,
+              0.35499998927116394
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far recess | city.recess | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.recess",
+            "color": [
+              0.10000000149011612,
+              0.125,
+              0.15000000596046448
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far roof joint | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.15000000596046448,
+              0.1850000023841858,
+              0.22499999403953552
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far slate | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.125,
+              0.17000000178813934,
+              0.2199999988079071
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far trim | city.trim | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.trim",
+            "color": [
+              0.3700000047683716,
+              0.38999998569488525,
+              0.4099999964237213
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Far warm glass | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.30000001192092896,
+              0.25,
+              0.18000000715255737
+            ],
+            "emissive": [
+              0.30000001192092896,
+              0.25,
+              0.18000000715255737
+            ],
+            "intensity": 0.004399999901652336,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | stone | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.3499999940395355,
+              0.3149999976158142,
+              0.26499998569488525
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | paving | city.paving | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.paving",
+            "color": [
+              0.3100000023841858,
+              0.2800000011920929,
+              0.23499999940395355
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left gold | city.metal | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.metal",
+            "color": [
+              0.5199999809265137,
+              0.33500000834465027,
+              0.10000000149011612
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left paving | city.paving | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.paving",
+            "color": [
+              0.36000001430511475,
+              0.3199999928474426,
+              0.26499998569488525
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left trim | city.trim | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.trim",
+            "color": [
+              0.5799999833106995,
+              0.47999998927116394,
+              0.33500000834465027
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | bark | city.wood | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.wood",
+            "color": [
+              0.14000000059604645,
+              0.10499999672174454,
+              0.0560000017285347
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | leaf | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.05999999865889549,
+              0.1599999964237213,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | leaf deep | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.02500000037252903,
+              0.07999999821186066,
+              0.03799999877810478
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | leaf light | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.14000000059604645,
+              0.25,
+              0.07500000298023224
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | rock | city.rock | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.rock",
+            "color": [
+              0.1599999964237213,
+              0.18000000715255737,
+              0.2150000035762787
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | soil | city.soil | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.soil",
+            "color": [
+              0.08500000089406967,
+              0.0820000022649765,
+              0.0430000014603138
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | sheen | city.water.highlight | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.highlight",
+            "color": [
+              0.25,
+              0.5,
+              0.5299999713897705
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | water | city.water.surface | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.surface",
+            "color": [
+              0.029999999329447746,
+              0.2199999988079071,
+              0.27000001072883606
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | foam | city.water.foam | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.foam",
+            "color": [
+              0.6100000143051147,
+              0.7300000190734863,
+              0.699999988079071
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | stone dark | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.27000001072883606,
+              0.2549999952316284,
+              0.23000000417232513
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Landscape detail | fall | city.water.fall | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.fall",
+            "color": [
+              0.11999999731779099,
+              0.3400000035762787,
+              0.3799999952316284
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left masonry | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.33000001311302185,
+              0.2849999964237213,
+              0.23999999463558197
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left soil | city.soil | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.soil",
+            "color": [
+              0.11999999731779099,
+              0.10499999672174454,
+              0.06499999761581421
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left bark | city.wood | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.wood",
+            "color": [
+              0.14000000059604645,
+              0.10000000149011612,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left leaf | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.07500000298023224,
+              0.17499999701976776,
+              0.06499999761581421
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left leaf dark | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.03500000014901161,
+              0.0949999988079071,
+              0.04500000178813934
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left leaf light | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.18000000715255737,
+              0.2800000011920929,
+              0.08500000089406967
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left plaster | city.plaster | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.plaster",
+            "color": [
+              0.44999998807907104,
+              0.4050000011920929,
+              0.3400000035762787
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left glazing | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.3700000047683716,
+              0.18000000715255737,
+              0.054999999701976776
+            ],
+            "emissive": [
+              0.3700000047683716,
+              0.18000000715255737,
+              0.054999999701976776
+            ],
+            "intensity": 0.017599999606609344,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left lit glazing | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.6399999856948853,
+              0.2849999964237213,
+              0.05999999865889549
+            ],
+            "emissive": [
+              0.6399999856948853,
+              0.2849999964237213,
+              0.05999999865889549
+            ],
+            "intensity": 0.12100000262260437,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left recess | city.recess | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.recess",
+            "color": [
+              0.02800000086426735,
+              0.03700000047683716,
+              0.0430000014603138
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left slate | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.03799999877810478,
+              0.09000000357627869,
+              0.14499999582767487
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Left slate light | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.04800000041723251,
+              0.1120000034570694,
+              0.17000000178813934
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | recess shadow and lead | city.recess | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.recess",
+            "color": [
+              0.041999999433755875,
+              0.04699999839067459,
+              0.052000001072883606
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle footing | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.28999999165534973,
+              0.2800000011920929,
+              0.25
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle glass | city.glazing | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.glazing",
+            "color": [
+              0.11999999731779099,
+              0.15000000596046448,
+              0.1599999964237213
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle masonry | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.33000001311302185,
+              0.32499998807907104,
+              0.30000001192092896
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle recess | city.recess | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.recess",
+            "color": [
+              0.03999999910593033,
+              0.05999999865889549,
+              0.07500000298023224
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle roof joint | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.07800000160932541,
+              0.12999999523162842,
+              0.17000000178813934
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle slate | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.06400000303983688,
+              0.11500000208616257,
+              0.1599999964237213
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle trim | city.trim | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.trim",
+            "color": [
+              0.46000000834465027,
+              0.4300000071525574,
+              0.3700000047683716
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle warm glass | emissive_window | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "emissive_window",
+            "color": [
+              0.4000000059604645,
+              0.2849999964237213,
+              0.12999999523162842
+            ],
+            "emissive": [
+              0.4000000059604645,
+              0.2849999964237213,
+              0.12999999523162842
+            ],
+            "intensity": 0.026399999409914016,
+            "side": 2
+          },
+          {
+            "name": "Skyline detail | Middle plaster | city.plaster | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.plaster",
+            "color": [
+              0.38999998569488525,
+              0.375,
+              0.33500000834465027
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Citadel detail | local terrace paving | city.paving | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.paving",
+            "color": [
+              0.3799999952316284,
+              0.3199999928474426,
+              0.25
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | water | city.water.surface | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.surface",
+            "color": [
+              0.02500000037252903,
+              0.20499999821186066,
+              0.26499998569488525
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Ravine detail | fall water | city.water.fall | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.fall",
+            "color": [
+              0.14000000059604645,
+              0.38999998569488525,
+              0.4399999976158142
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "Water | continuing channels | city.water.surface | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.water.surface",
+            "color": [
+              0.08500000089406967,
+              0.3199999928474426,
+              0.4300000071525574
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right masonry | city.masonry | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.masonry",
+            "color": [
+              0.38999998569488525,
+              0.3499999940395355,
+              0.2849999964237213
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right leaf | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.09000000357627869,
+              0.1899999976158142,
+              0.09000000357627869
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right leaf light | city.foliage | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.foliage",
+            "color": [
+              0.18000000715255737,
+              0.28999999165534973,
+              0.12999999523162842
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right plaster | city.plaster | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.plaster",
+            "color": [
+              0.5199999809265137,
+              0.4699999988079071,
+              0.3799999952316284
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right slate | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.052000001072883606,
+              0.11999999731779099,
+              0.17000000178813934
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          },
+          {
+            "name": "District detail | Right slate light | city.roof | Brightvale toon",
+            "type": "MeshToonMaterial",
+            "role": "city.roof",
+            "color": [
+              0.06400000303983688,
+              0.14000000059604645,
+              0.1899999976158142
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1,
+            "side": 2
+          }
+        ]
+      }
+    }
+  ],
+  "cleanup": {
+    "browserExited": true,
+    "serverClosed": true,
+    "profileRemoved": true,
+    "portClosed": true
+  },
+  "preflight": {
+    "memory": "MemTotal:       32480624 kB\nMemFree:         4312588 kB\nMemAvailable:   15483344 kB\nBuffers:              32 kB\nCached:         12373040 kB\nSwapCached:         4412 kB\nActive:          5602244 kB\nInactive:       13166592 kB\nActive(anon):    5040704 kB\nInactive(anon):  1423800 kB\nActive(file):     561540 kB\nInactive(file): 11742792 kB\nUnevictable:          64 kB\nMlocked:              64 kB\nSwapTotal:      32480252 kB\nSwapFree:       23562788 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:             10052 kB\nWriteback:             0 kB\nAnonPages:       6271536 kB\nMapped:          1187968 kB\nShmem:             68788 kB\nKReclaimable:     709864 kB\nSlab:            1302192 kB\nSReclaimable:     709864 kB\nSUnreclaim:       592328 kB\nKernelStack:       55008 kB\nPageTables:       139856 kB\nSecPageTables:      5664 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    48720564 kB\nCommitted_AS:   41428128 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      255360 kB\nVmallocChunk:          0 kB\nPercpu:            38400 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:   2279424 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nCmaTotal:              0 kB\nCmaFree:               0 kB\nUnaccepted:            0 kB\nBalloon:               0 kB\nGPUActive:        842316 kB\nGPUReclaim:        18532 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:     3230920 kB\nDirectMap2M:    29954048 kB\nDirectMap1G:           0 kB\n",
+    "artifactBytes": 167035476
+  },
+  "sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "url": "http://127.0.0.1:33295/",
+  "browserStderr": [
+    "\nDevTools listening on ws://127.0.0.1:46187/devtools/browser/2d8faed8-6463-4d2f-807d-6f079cb9770a\n",
+    "[1879868:1879868:1017/185613.352000:ERROR:gpu/command_buffer/service/gles2_cmd_decoder_passthrough.cc:1211] []Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.\n",
+    "[1879868:1879868:1017/185613.370071:ERROR:gpu/command_buffer/service/gl_utils.cc:427] [.WebGL-0x2d1c001b6800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels\n",
+    "[1879868:1879868:1017/185614.022214:ERROR:gpu/command_buffer/service/gl_utils.cc:427] [.WebGL-0x2d1c001b6800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels\n",
+    "[1879798:1879857:1017/185615.283762:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT\n",
+    "[1879868:1879868:1017/185615.527022:ERROR:gpu/command_buffer/service/gl_utils.cc:427] [.WebGL-0x2d1c001b6800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels\n",
+    "[1879868:1879868:1017/185616.328908:ERROR:gpu/command_buffer/service/gl_utils.cc:427] [.WebGL-0x2d1c001b6800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)\n",
+    "[1879798:1879857:1017/185644.871775:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT\n",
+    "[1879945:1879945:0100/000000.172053:ERROR:gpu/ipc/client/command_buffer_proxy_impl.cc:490] GPU state invalid after WaitForGetOffsetInRange.\n"
+  ],
+  "limit": "Audience material/placement inspection only. Earlier native-playback attempt reached defeat at transition; Twilight appearance remains unverified.",
+  "result": "captured"
+}

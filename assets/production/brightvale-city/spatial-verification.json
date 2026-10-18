@@ -1,0 +1,250 @@
+{
+  "status": "Batching-only construction and Blender checks complete; actual consumer comparison pending",
+  "artifact_sha256": "73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff",
+  "artifact_bytes": 135037616,
+  "source_optimized_sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff",
+  "source_native_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "full_baseline_sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "protected_inputs_unchanged": true,
+  "reproduction": {
+    "artifact_byte_identical": true,
+    "manifest_equal": true,
+    "coverage_byte_identical": true,
+    "semantic_sha256": "9be0dbf9fe2f31ed76e7a56473cefc574ef04625c899cb88cad169b17249f5ca",
+    "surface_digest": "68fa17ca632c75dd85f69a8bc7cc422768a6315cb36ddcd840ae074ec83d5628",
+    "scope": "Two fresh Blender Python processes, same machine/version and pinned inputs; no cross-version promise."
+  },
+  "tests": {
+    "count": 16,
+    "passed": 16,
+    "exit_code": 0
+  },
+  "commands": {
+    "tests": "timeout 90 blender -b --threads 4 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/test_spatial.py",
+    "produce": "timeout 240 blender -b --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/produce_spatial.py",
+    "repeat": "timeout 240 blender -b --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/produce_spatial.py -- --output-dir /tmp/opencode/brightvale-city-spatial/repeat",
+    "validate": "timeout 600 blender -b --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/validate_spatial.py",
+    "render": "timeout 1500 blender -b /home/rjroy/Projects/games/shining-stars/assets/authoring/brightvale-city/city.blend --threads 8 --python-exit-code 1 --python /home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/render_spatial.py"
+  },
+  "cwd": "/tmp/opencode/brightvale-city-spatial",
+  "final_exit_codes": {
+    "tests": 0,
+    "produce": 0,
+    "repeat": 0,
+    "validate": 0,
+    "render": 0
+  },
+  "helper_and_input_sha256": {
+    "produce_spatial.py": "aadc2220a36cfc5458b7e68486618695108f6304309e4a155db923bec84c1631",
+    "spatial_core.py": "a40ac530deff131a9f7b8be409d600c5fe92d0776c1535ce9ecbef5c3c5526be",
+    "spatial-config.json": "263dff866af818714e7bb4f5a4e47f37038b8636f2f83ac1c0676ac75ba30138",
+    "analyze_spatial.py": "a89bde410beb91f97777ada22e7a9c7c4e5dd141042444a9a5d07f4fc81d1dc6",
+    "validate_spatial.py": "6bae4b46d3a5ab452a2bdc651775cc230998a5b6e39c810616199534164be0bc",
+    "render_spatial.py": "7f9a50dc2a695f3f23a139c7b4fbf76ae49601977a3ad8fad4355812ec0400a8",
+    "test_spatial.py": "871ca7d84eb0d4b43e9591f2574bee1162abef7ec76119f16446322110e37e07",
+    "glb_checks.py": "a7e1427a669a1d7a7ef20d6add25d4bc7f643cbeb13e28e440d93b6fdf32fcd1",
+    "optimization_core.py": "130bec31c9c704686c4c67d8647915ffac74adeb46ca7dd25405fb664cb0bb4d",
+    "batch-coverage.json": "f2c41820dbe2964513edb955c06b8b42a2ee598c34bdd8a9fe4af5d266dd0751",
+    "evidence/consumer-optimized/optimized/report.json": "07f78780bfc09cf48c7413ee42e46e1b511b048d47268bce6d162ad04cb096cb"
+  },
+  "images": [
+    {
+      "path": "evidence/optimized/optimized-game-camera-audience.png",
+      "sha256": "7e06dd450c84ef4416469de20ec0110546e02cd77b8306ff8235ce7d27aeff94",
+      "bytes": 1707872,
+      "dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "decoded_and_visually_inspected": true
+    },
+    {
+      "path": "evidence/spatial/spatial-game-audience.png",
+      "sha256": "955d8814dd639e1b7a1ed354d5cc67c1ccd78bfcf8a5a60b059de18e0ff21010",
+      "bytes": 1707406,
+      "dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "decoded_and_visually_inspected": true
+    },
+    {
+      "path": "evidence/optimized/optimized-game-camera-twilight.png",
+      "sha256": "22eb0356e6aad250e1b5271c853e361bcd620f7df2cbdb4640cbd77c84432be2",
+      "bytes": 1633117,
+      "dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "decoded_and_visually_inspected": true
+    },
+    {
+      "path": "evidence/spatial/spatial-game-twilight.png",
+      "sha256": "6f997708131d01761dfe86763bbad60f998a1f0caa3cf224d43de160de26fa8f",
+      "bytes": 1633606,
+      "dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "decoded_and_visually_inspected": true
+    },
+    {
+      "path": "evidence/spatial/previous-observatory-neutral.png",
+      "sha256": "5ea9bb7824d6130899c169c7a44b87cd8b80e9a0a7831a6adfdf85692483bd6a",
+      "bytes": 1859899,
+      "dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "decoded_and_visually_inspected": true
+    },
+    {
+      "path": "evidence/spatial/spatial-observatory-neutral.png",
+      "sha256": "b3ad078e30f660f5ed60388f091f9c9fa7d42f2c45c2091be55731dea7b40784",
+      "bytes": 1859816,
+      "dimensions": [
+        1440,
+        900
+      ],
+      "channels": "srgba",
+      "decoded_and_visually_inspected": true
+    }
+  ],
+  "comparisons": [
+    {
+      "view": "Audience",
+      "previous": "evidence/optimized/optimized-game-camera-audience.png",
+      "spatial": "evidence/spatial/spatial-game-audience.png",
+      "metrics": [
+        {
+          "crop": "full",
+          "normalized_rmse": 0.000175285,
+          "output": "11.4873 (0.000175285)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-audience.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/spatial-game-audience.png",
+            "null:"
+          ]
+        },
+        {
+          "crop": "1300x650+50+0",
+          "normalized_rmse": 0.00021645,
+          "output": "14.185 (0.00021645)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "-extract",
+            "1300x650+50+0",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-audience.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/spatial-game-audience.png",
+            "null:"
+          ]
+        }
+      ]
+    },
+    {
+      "view": "Twilight",
+      "previous": "evidence/optimized/optimized-game-camera-twilight.png",
+      "spatial": "evidence/spatial/spatial-game-twilight.png",
+      "metrics": [
+        {
+          "crop": "full",
+          "normalized_rmse": 0.00015268,
+          "output": "10.0059 (0.00015268)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-twilight.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/spatial-game-twilight.png",
+            "null:"
+          ]
+        },
+        {
+          "crop": "1300x650+50+0",
+          "normalized_rmse": 0.000188398,
+          "output": "12.3467 (0.000188398)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "-extract",
+            "1300x650+50+0",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/optimized/optimized-game-camera-twilight.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/spatial-game-twilight.png",
+            "null:"
+          ]
+        }
+      ]
+    },
+    {
+      "view": "Observatory projection / neutral",
+      "previous": "evidence/spatial/previous-observatory-neutral.png",
+      "spatial": "evidence/spatial/spatial-observatory-neutral.png",
+      "metrics": [
+        {
+          "crop": "full",
+          "normalized_rmse": 9.73865e-05,
+          "output": "6.38222 (9.73865e-05)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/previous-observatory-neutral.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/spatial-observatory-neutral.png",
+            "null:"
+          ]
+        },
+        {
+          "crop": "900x650+250+100",
+          "normalized_rmse": 0.000108189,
+          "output": "7.09018 (0.000108189)",
+          "exit_code": 1,
+          "command": [
+            "magick",
+            "compare",
+            "-metric",
+            "RMSE",
+            "-extract",
+            "900x650+250+100",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/previous-observatory-neutral.png",
+            "/home/rjroy/Projects/games/shining-stars/assets/production/brightvale-city/evidence/spatial/spatial-observatory-neutral.png",
+            "null:"
+          ]
+        }
+      ]
+    }
+  ],
+  "visual_observation": "No visible new geometry, normal/UV seam, material, shadow-structure or placement change found in both game-projection mood pairs and close Observatory-projection neutral pair. Minor pixel differences remain; not pixel-identical. Existing crop retained.",
+  "render_context": "Actual saved-GLB reimports under original native Blender PBR rigs, not actual app/Toon/culling/performance captures. Existing reduced game-projection images reused without copying. Observatory pair is fresh, neutral/no mist, with exact 25.6-by-10 orthographic projection at1440x900 via pixel aspect1.6. Four new renders only.",
+  "proxy_limits": "spatial-analysis.json is an offline city-only loader-sphere/frustum model, not new observed draw calls, submitted frame triangles, shadow work or hardware timing.",
+  "resources": {
+    "serialized_binary_bytes": 132968900,
+    "unique_position_accessor_entries": 4891684,
+    "index_accessors_by_component_type": {
+      "5123": 2304,
+      "5125": 0
+    }
+  },
+  "remaining": "Parent/designer actual-app Audience/Twilight/Observatory comparison using unchanged accepted placement and existing harness. No runtime or performance success claim.",
+  "cleanup": "Only owned repeat GLB/log scratch is removed after durable verification; no preserved source/baseline/optimized/evidence deletion."
+}

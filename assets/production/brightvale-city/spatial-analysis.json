@@ -1,0 +1,176 @@
+{
+  "status": "Offline proxy analysis only; no candidate exports or renderer execution",
+  "source_optimized_sha256": "7afe010e17ad3dcf87c67efc63d158b96bd8d6a75cdfc313013d2bec570d5fff",
+  "method": "Installed Three GLTFLoader.js:4833-4840 uses AABB-center / half-diagonal spheres; transformed with largest axis scale for original unbaked objects. Spheres tested against recorded actual frusta. City geometry only, no shadow/overlay/other-scene work or occlusion; not measured calls, submitted triangles or timings. Original long primitives isolated, never split. Compact referenced vertices when recovering source pieces.",
+  "view_authority": "consumer-optimized/{baseline,optimized}/report.json plus read-only src/rendering/observatory-scene.ts:40-55,85-89; 1440x900. Gameplay actual float32 city matrix and reported camera. Observatory .18/(0,-2.85,-7), ortho +/-12.8 horizontal,+/-5 vertical, camera(0,0,16), near .1/far80.",
+  "results": [
+    {
+      "configuration": "full-original-primitives",
+      "groups": 6644,
+      "oversized_isolated": 0,
+      "sphere_radius_BU_percentiles": [
+        3.2504199143569235,
+        8.430874973806553,
+        28.365670839549487,
+        91.51034870968293
+      ],
+      "max_axis_span_BU_percentiles": [
+        5.023998260498047,
+        14.530416870117179,
+        52.07502052307122,
+        152.34967041015625
+      ],
+      "views": {
+        "observatory": {
+          "intersecting_groups": 4349,
+          "submitted_city_triangles_proxy": 1803775
+        },
+        "gameplay": {
+          "intersecting_groups": 6643,
+          "submitted_city_triangles_proxy": 2946528
+        }
+      }
+    },
+    {
+      "configuration": "retained-32-center-only",
+      "groups": 1116,
+      "oversized_isolated": 0,
+      "sphere_radius_BU_percentiles": [
+        13.246765617780355,
+        25.670339260633323,
+        49.03125967247515,
+        91.51034843692405
+      ],
+      "max_axis_span_BU_percentiles": [
+        21.07771110534668,
+        38.86803436279297,
+        82.71612777709959,
+        152.34967041015625
+      ],
+      "views": {
+        "observatory": {
+          "intersecting_groups": 915,
+          "submitted_city_triangles_proxy": 2395945
+        },
+        "gameplay": {
+          "intersecting_groups": 1115,
+          "submitted_city_triangles_proxy": 2589744
+        }
+      }
+    },
+    {
+      "configuration": "reduced-original-primitives",
+      "groups": 6644,
+      "oversized_isolated": 0,
+      "sphere_radius_BU_percentiles": [
+        3.2471140928747384,
+        8.430874973806553,
+        28.365670839549487,
+        91.51034843692405
+      ],
+      "max_axis_span_BU_percentiles": [
+        5.02304482460022,
+        14.530416870117179,
+        52.07502052307122,
+        152.34967041015625
+      ],
+      "views": {
+        "observatory": {
+          "intersecting_groups": 4345,
+          "submitted_city_triangles_proxy": 1585495
+        },
+        "gameplay": {
+          "intersecting_groups": 6643,
+          "submitted_city_triangles_proxy": 2589744
+        }
+      }
+    },
+    {
+      "configuration": "cell-16-maxspan-24",
+      "cell_size_BU": 16,
+      "max_group_axis_span_BU": 24,
+      "groups": 2304,
+      "oversized_isolated": 298,
+      "sphere_radius_BU_percentiles": [
+        7.9491822114789485,
+        15.563269059017056,
+        40.584309404136874,
+        91.51034843692405
+      ],
+      "max_axis_span_BU_percentiles": [
+        12.343088150024414,
+        27.10677146911623,
+        69.50551490783639,
+        152.34967041015625
+      ],
+      "views": {
+        "observatory": {
+          "intersecting_groups": 1606,
+          "submitted_city_triangles_proxy": 1740485
+        },
+        "gameplay": {
+          "intersecting_groups": 2303,
+          "submitted_city_triangles_proxy": 2589744
+        }
+      }
+    },
+    {
+      "configuration": "cell-8-maxspan-12",
+      "cell_size_BU": 8,
+      "max_group_axis_span_BU": 12,
+      "groups": 4254,
+      "oversized_isolated": 927,
+      "sphere_radius_BU_percentiles": [
+        4.903884547962954,
+        10.531934182063019,
+        33.082005379096046,
+        91.51034843692405
+      ],
+      "max_axis_span_BU_percentiles": [
+        7.6790242195129395,
+        18.45082054138185,
+        58.45875320434571,
+        152.34967041015625
+      ],
+      "views": {
+        "observatory": {
+          "intersecting_groups": 2848,
+          "submitted_city_triangles_proxy": 1626473
+        },
+        "gameplay": {
+          "intersecting_groups": 4253,
+          "submitted_city_triangles_proxy": 2589744
+        }
+      }
+    },
+    {
+      "configuration": "cell-4-maxspan-8",
+      "cell_size_BU": 4,
+      "max_group_axis_span_BU": 8,
+      "groups": 5665,
+      "oversized_isolated": 1863,
+      "sphere_radius_BU_percentiles": [
+        3.728428278127587,
+        9.30094223752771,
+        29.85976463624536,
+        91.51034843692405
+      ],
+      "max_axis_span_BU_percentiles": [
+        5.8033447265625,
+        15.94688873291017,
+        55.067001037597656,
+        152.34967041015625
+      ],
+      "views": {
+        "observatory": {
+          "intersecting_groups": 3778,
+          "submitted_city_triangles_proxy": 1603526
+        },
+        "gameplay": {
+          "intersecting_groups": 5664,
+          "submitted_city_triangles_proxy": 2589744
+        }
+      }
+    }
+  ]
+}

@@ -33,7 +33,7 @@ function makeSkyTextures() {
 }
 
 const sourceFiles: Record<BrightvaleAssetName, string> = {
-  city: 'brightvale-distant-city/city.glb',
+  city: 'brightvale-city/city-meshopt.glb',
   highway: 'brightvale-highway/highway.glb',
   platform: 'brightvale-platform/platform.glb',
   endcaps: 'brightvale-platform-endcaps/endcaps.glb',
@@ -83,7 +83,7 @@ const requiredMaterials: Record<BrightvaleAssetName, readonly string[]> = {
 };
 
 const productionFiles: Record<BrightvaleAssetName, string> = {
-  city: '../../../assets/production/brightvale-distant-city/city.glb',
+  city: '../../../assets/production/brightvale-city/city-meshopt.glb',
   highway: '../../../assets/production/brightvale-highway/highway.glb',
   platform: '../../../assets/production/brightvale-platform/platform.glb',
   endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',
@@ -160,6 +160,42 @@ function makeOverrides(): BrightvaleRuntimeOverrides {
       dispose: vi.fn(),
     })),
   };
+}
+
+function corruptFirstMeshoptView(bytes: Buffer): Buffer {
+  const jsonLength = bytes.readUInt32LE(12);
+  const json = JSON.parse(
+    bytes.toString('utf8', 20, 20 + jsonLength).trim(),
+  ) as {
+    bufferViews: Array<{
+      extensions?: {
+        EXT_meshopt_compression?: { byteOffset: number };
+      };
+    }>;
+  };
+  const compressedView = json.bufferViews.find(
+    (view) => view.extensions?.EXT_meshopt_compression,
+  );
+  if (!compressedView?.extensions?.EXT_meshopt_compression)
+    throw new Error('Compressed city fixture has no Meshopt extension');
+  compressedView.extensions.EXT_meshopt_compression.byteOffset =
+    Number.MAX_SAFE_INTEGER;
+  const jsonBytes = Buffer.from(JSON.stringify(json));
+  const jsonPaddedLength = (jsonBytes.length + 3) & ~3;
+  const oldBinHeader = 20 + jsonLength;
+  const binLength = bytes.readUInt32LE(oldBinHeader);
+  const bin = bytes.subarray(oldBinHeader, oldBinHeader + 8 + binLength);
+  const totalLength = 12 + 8 + jsonPaddedLength + bin.length;
+  const result = Buffer.alloc(totalLength);
+  result.write('glTF', 0);
+  result.writeUInt32LE(2, 4);
+  result.writeUInt32LE(totalLength, 8);
+  result.writeUInt32LE(jsonPaddedLength, 12);
+  result.writeUInt32LE(0x4e4f534a, 16);
+  result.fill(0x20, 20, 20 + jsonPaddedLength);
+  jsonBytes.copy(result, 20);
+  bin.copy(result, 20 + jsonPaddedLength);
+  return result;
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -305,10 +341,76 @@ describe('Brightvale production runtime asset boundary', () => {
       for (const name of BRIGHTVALE_ASSET_NAMES) {
         expect(assets.roots[name].children.length).toBeGreaterThan(0);
       }
+      const cityMaterials = new Map<string, THREE.Material>();
+      let cityMeshes = 0;
+      let cityTriangles = 0;
+      assets.roots.city.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        cityMeshes += 1;
+        const index = object.geometry.index;
+        cityTriangles += (index?.count ?? 0) / 3;
+        const materials = Array.isArray(object.material)
+          ? object.material
+          : [object.material];
+        for (const material of materials)
+          cityMaterials.set(material.name, material);
+      });
+      expect(cityMeshes).toBe(2304);
+      expect(cityTriangles).toBe(2_589_764);
+      expect(cityMaterials.size).toBe(107);
+      expect(cityMaterials.get('Window')).toBeDefined();
+      expect(
+        [...cityMaterials.values()].filter(
+          (material) =>
+            material.userData.city_role === 'emissive_window' &&
+            material instanceof THREE.MeshStandardMaterial &&
+            material.emissiveIntensity > 0,
+        ),
+      ).toHaveLength(9);
       expect(fetch).toHaveBeenCalledTimes(BRIGHTVALE_ASSET_NAMES.length);
     } finally {
       assets.dispose();
     }
+  });
+
+  it('rejects corrupt Meshopt payloads and releases acquired textures', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const corruptCity = corruptFirstMeshoptView(
+      await readFile(new URL(productionFiles.city, import.meta.url)),
+    );
+    const skyTextures = makeSkyTextures();
+    const groundTextures = {
+      city: new THREE.Texture(),
+      plaza: new THREE.Texture(),
+      dispose: vi.fn(),
+    };
+    const result = await loadBrightvaleRuntimeAssets(
+      new AbortController().signal,
+      {
+        fetch: async (url, _signal) => {
+          const name = BRIGHTVALE_ASSET_NAMES.find(
+            (candidate) => BRIGHTVALE_PRODUCTION_ASSET_URLS[candidate] === url,
+          );
+          if (!name) throw new Error(`Unexpected production URL: ${url}`);
+          const bytes =
+            name === 'city'
+              ? corruptCity
+              : await readFile(new URL(productionFiles[name], import.meta.url));
+          return new Response(new Uint8Array(bytes), { status: 200 });
+        },
+        loadSkyTextures: async () => skyTextures,
+        loadGroundTextures: async () => groundTextures,
+      },
+    ).then(
+      (assets) => ({ kind: 'loaded' as const, assets }),
+      (error: unknown) => ({ kind: 'failed' as const, error }),
+    );
+    if (result.kind === 'loaded') result.assets.dispose();
+    expect(result.kind).toBe('failed');
+    if (result.kind === 'failed') expect(result.error).toBeInstanceOf(Error);
+    expect(skyTextures.dispose).toHaveBeenCalledTimes(1);
+    expect(groundTextures.dispose).toHaveBeenCalledTimes(1);
   });
 
   it.each([

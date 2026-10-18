@@ -11,7 +11,7 @@ import {
 } from './assets-runtime';
 
 const PRODUCTION_FILES: Readonly<Record<BrightvaleAssetName, string>> = {
-  city: '../../../assets/production/brightvale-distant-city/city.glb',
+  city: '../../../assets/production/brightvale-city/city-meshopt.glb',
   highway: '../../../assets/production/brightvale-highway/highway.glb',
   platform: '../../../assets/production/brightvale-platform/platform.glb',
   endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',

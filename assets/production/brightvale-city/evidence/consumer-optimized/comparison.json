@@ -1,0 +1,159 @@
+{
+  "method": "FFmpeg actual screenshot RGB24 decoding; fixed non-background city crops; diagnostic differences not acceptance thresholds. Fresh sequential app/browser per artifact. Frame samples after five warmup invocations and >=16 observed city invocations.",
+  "results": [
+    {
+      "view": "observatory",
+      "cameraAndFixtureAndBackendExactlyEqual": true,
+      "mappedGameplayMaterialPropertiesExactlyEqual": null,
+      "baselineInvocation": {
+        "frame": 54,
+        "calls": 4353,
+        "triangles": 1804124,
+        "points": 0,
+        "lines": 0
+      },
+      "optimizedInvocation": {
+        "frame": 54,
+        "calls": 915,
+        "triangles": 2395945,
+        "points": 0,
+        "lines": 0
+      },
+      "baselineFrameIntervals": {
+        "sampleCount": 18,
+        "meanMs": 780.5222222222222,
+        "medianMs": 783.2999999999993,
+        "minMs": 766.6000000000004,
+        "maxMs": 800
+      },
+      "optimizedFrameIntervals": {
+        "sampleCount": 18,
+        "meanMs": 1046.25,
+        "medianMs": 1049.9000000000015,
+        "minMs": 1033.2000000000007,
+        "maxMs": 1050
+      },
+      "normalizedRgbRmseFull": 0.003042204328302872,
+      "cityCropBoxes": [
+        [
+          630,
+          150,
+          1040,
+          600
+        ]
+      ],
+      "normalizedRgbRmseCityCrops": 0.0035023732413465482,
+      "screenshots": {
+        "baseline": "285cb5c35b7785cf1c73fd9486a646bbed1ea102592105e628241fc62a524a97",
+        "optimized": "ea3cca3453bce64955383fcf5738887e2edec4c8d145137c0eff12a71aef065e"
+      }
+    },
+    {
+      "view": "audience",
+      "cameraAndFixtureAndBackendExactlyEqual": true,
+      "mappedGameplayMaterialPropertiesExactlyEqual": true,
+      "baselineInvocation": {
+        "frame": 191,
+        "calls": 6876,
+        "triangles": 3132176,
+        "points": 0,
+        "lines": 0
+      },
+      "optimizedInvocation": {
+        "frame": 189,
+        "calls": 1348,
+        "triangles": 2775392,
+        "points": 0,
+        "lines": 0
+      },
+      "baselineFrameIntervals": {
+        "sampleCount": 18,
+        "meanMs": 1251.7999999999997,
+        "medianMs": 1250,
+        "minMs": 1233.2000000000044,
+        "maxMs": 1266.699999999997
+      },
+      "optimizedFrameIntervals": {
+        "sampleCount": 18,
+        "meanMs": 1117.5500000000002,
+        "medianMs": 1116.6000000000058,
+        "minMs": 1100,
+        "maxMs": 1133.300000000003
+      },
+      "normalizedRgbRmseFull": 0.0030912184490513696,
+      "cityCropBoxes": [
+        [
+          100,
+          150,
+          565,
+          480
+        ],
+        [
+          1030,
+          120,
+          1360,
+          480
+        ]
+      ],
+      "normalizedRgbRmseCityCrops": 0.0065207233696311356,
+      "screenshots": {
+        "baseline": "0ad2fa3554902571c967033df80afa2be508c9f43aeb955d2cd1b5c15103f63f",
+        "optimized": "672d0d1baafb6f40e21ac4ed3af2933ba2e8d9a5740d89121e7d89577cbbd9d8"
+      }
+    },
+    {
+      "view": "twilight",
+      "cameraAndFixtureAndBackendExactlyEqual": true,
+      "mappedGameplayMaterialPropertiesExactlyEqual": true,
+      "baselineInvocation": {
+        "frame": 290,
+        "calls": 6876,
+        "triangles": 3132176,
+        "points": 0,
+        "lines": 0
+      },
+      "optimizedInvocation": {
+        "frame": 288,
+        "calls": 1348,
+        "triangles": 2775392,
+        "points": 0,
+        "lines": 0
+      },
+      "baselineFrameIntervals": {
+        "sampleCount": 18,
+        "meanMs": 1249.9499999999996,
+        "medianMs": 1250,
+        "minMs": 1233.199999999997,
+        "maxMs": 1283.300000000003
+      },
+      "optimizedFrameIntervals": {
+        "sampleCount": 18,
+        "meanMs": 1119.394444444444,
+        "medianMs": 1116.6000000000058,
+        "minMs": 1099.9000000000087,
+        "maxMs": 1133.4000000000087
+      },
+      "normalizedRgbRmseFull": 0.002599883409651304,
+      "cityCropBoxes": [
+        [
+          100,
+          150,
+          565,
+          480
+        ],
+        [
+          1030,
+          120,
+          1360,
+          480
+        ]
+      ],
+      "normalizedRgbRmseCityCrops": 0.005505092885028802,
+      "screenshots": {
+        "baseline": "acb169fcbfe1f1e2a93ddff4eb35b813c9020f0a63afb9be80bb950c4cf458d4",
+        "optimized": "d28a69fbb4678c4e93fc7e29c409e13c5ec1b264aaf130333b0f13ab25f3afe8"
+      }
+    }
+  ],
+  "materialDictionariesExactlyEqual": 107
+}

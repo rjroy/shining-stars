@@ -1,5 +1,6 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import cityUrl from '../../../assets/production/brightvale-distant-city/city.glb?url';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import cityUrl from '../../../assets/production/brightvale-city/city-meshopt.glb?url';
 import highwayUrl from '../../../assets/production/brightvale-highway/highway.glb?url';
 import platformUrl from '../../../assets/production/brightvale-platform/platform.glb?url';
 import endcapsUrl from '../../../assets/production/brightvale-platform-endcaps/endcaps.glb?url';
@@ -427,7 +428,7 @@ export async function loadBrightvaleRuntimeAssets(
   signal: AbortSignal,
   overrides: BrightvaleRuntimeOverrides = {},
 ): Promise<BrightvaleAssets> {
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const fetchAsset =
     overrides.fetch ??
     (async (url: string, assetSignal: AbortSignal) =>

@@ -1,0 +1,81 @@
+{
+  "purpose": "Disposable actual-app validation; no placement/camera/material changes",
+  "controlled": true,
+  "variant": "baseline",
+  "attempts": [],
+  "console": [
+    {
+      "type": "debug",
+      "args": [
+        "[vite] connecting..."
+      ]
+    },
+    {
+      "type": "debug",
+      "args": [
+        "[vite] connected."
+      ]
+    }
+  ],
+  "exceptions": [
+    {
+      "timestamp": 1792291853760.302,
+      "exceptionDetails": {
+        "exceptionId": 1,
+        "text": "Uncaught",
+        "lineNumber": 0,
+        "columnNumber": 0,
+        "scriptId": "1",
+        "url": "http://127.0.0.1:40057/",
+        "exception": {
+          "type": "object",
+          "subtype": "error",
+          "className": "TypeError",
+          "description": "TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:40057/src/main.ts",
+          "objectId": "-6418196390396734229.2.1",
+          "preview": {
+            "type": "object",
+            "subtype": "error",
+            "description": "TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:40057/src/main.ts",
+            "overflow": false,
+            "properties": [
+              {
+                "name": "stack",
+                "type": "string",
+                "value": "TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:40057/src/main.ts"
+              },
+              {
+                "name": "message",
+                "type": "string",
+                "value": "Failed to fetch dynamically imported module: http://127.0.0.1:40057/src/main.ts"
+              }
+            ]
+          }
+        },
+        "executionContextId": 2
+      }
+    }
+  ],
+  "captures": [],
+  "cleanup": {
+    "browserExited": true,
+    "serverClosed": true,
+    "profileRemoved": true,
+    "portClosed": true
+  },
+  "preflight": {
+    "memory": "MemTotal:       32480624 kB\nMemFree:         5893344 kB\nMemAvailable:   16231556 kB\nBuffers:              20 kB\nCached:         11544368 kB\nSwapCached:         1900 kB\nActive:          4847328 kB\nInactive:       11692684 kB\nActive(anon):    4379368 kB\nInactive(anon):   682160 kB\nActive(file):     467960 kB\nInactive(file): 11010524 kB\nUnevictable:         200 kB\nMlocked:             200 kB\nSwapTotal:      32480252 kB\nSwapFree:       22093052 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              1244 kB\nWriteback:             0 kB\nAnonPages:       4979888 kB\nMapped:          1114944 kB\nShmem:             65948 kB\nKReclaimable:     696468 kB\nSlab:            1285396 kB\nSReclaimable:     696468 kB\nSUnreclaim:       588928 kB\nKernelStack:       56896 kB\nPageTables:       143624 kB\nSecPageTables:      5664 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    48720564 kB\nCommitted_AS:   43199440 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      260032 kB\nVmallocChunk:          0 kB\nPercpu:            38400 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:   2013184 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nCmaTotal:              0 kB\nCmaFree:               0 kB\nUnaccepted:            0 kB\nBalloon:               0 kB\nGPUActive:        889520 kB\nGPUReclaim:         4096 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:     3273928 kB\nDirectMap2M:    29911040 kB\nDirectMap1G:           0 kB\n",
+    "artifactBytes": 167035476,
+    "scratchAvailableBytes": 16453824512
+  },
+  "sha256": "fb03e38ffd4592bd14ed2f9451d0671c1f09de3fecf779ea22d36c292928277c",
+  "url": "http://127.0.0.1:40057/",
+  "browserStderr": [
+    "\nDevTools listening on ws://127.0.0.1:43397/devtools/browser/4629e9c3-c5bc-4ed6-bec8-2663ce49b218\n",
+    "[2066147:2066173:1017/195055.890509:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT\n",
+    "[2066147:2066173:1017/195125.924672:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT\n",
+    "[2066147:2066173:1017/195222.466442:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT\n"
+  ],
+  "result": "failed",
+  "failure": "Error: Timed out: real app rendered\n    at wait (file:///home/rjroy/Projects/games/shining-stars/tests/browser/brightvale/city-production-review.mjs:23:9)\n    at async file:///home/rjroy/Projects/games/shining-stars/tests/browser/brightvale/city-production-review.mjs:103:3"
+}

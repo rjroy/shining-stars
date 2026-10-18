@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "model_path": "city.blend",
+  "approved_model_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+  "files": [
+    {
+      "path": "city.blend",
+      "bytes": 26693060,
+      "sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+      "origin": "assets/experiments/brightvale-city/finishing/model/candidate.blend",
+      "origin_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff",
+      "role": "approved native editable master"
+    },
+    {
+      "path": "references/city-reference-four-panel.webp",
+      "bytes": 259112,
+      "sha256": "220643485a5a6fe467f6bc7b98ce663d856b80ebd7e9b388d41cfba0622804af",
+      "origin": "assets/experiments/brightvale-city/reference/concept-candidate.webp",
+      "origin_sha256": "220643485a5a6fe467f6bc7b98ce663d856b80ebd7e9b388d41cfba0622804af",
+      "role": "original full-city composition reference"
+    },
+    {
+      "path": "references/citadel-approved-large-left.png",
+      "bytes": 2765963,
+      "sha256": "6ae901d060f05fdf895f9de43ec9c42d858bf632a6fe7b81ea9855ef0a251118",
+      "origin": "assets/experiments/brightvale-city/citadel/concept-candidate.png",
+      "origin_sha256": "6ae901d060f05fdf895f9de43ec9c42d858bf632a6fe7b81ea9855ef0a251118",
+      "role": "approved connected citadel concept; large-left panel authoritative"
+    },
+    {
+      "path": "references/ravine-crossing-approved-upper.png",
+      "bytes": 3319891,
+      "sha256": "2a1fdcd50153bd2098f8cb70b50529539d5c89ccf73a2e85a002ed710ea97661",
+      "origin": "assets/experiments/brightvale-city/ravine-crossing/concept-candidate.png",
+      "origin_sha256": "2a1fdcd50153bd2098f8cb70b50529539d5c89ccf73a2e85a002ed710ea97661",
+      "role": "approved ravine crossing concept; upper panel authoritative"
+    },
+    {
+      "path": "references/paired-districts-approved.png",
+      "bytes": 3313993,
+      "sha256": "fe8720d327a6ed1613726c6a6426b6b282e284c01ab91770d1081922573b637d",
+      "origin": "assets/experiments/brightvale-city/districts/concept-candidate.png",
+      "origin_sha256": "fe8720d327a6ed1613726c6a6426b6b282e284c01ab91770d1081922573b637d",
+      "role": "approved paired-district concept"
+    },
+    {
+      "path": "references/skyline-corrected-approved.png",
+      "bytes": 1502564,
+      "sha256": "5b0818efe4f3fb70c6a14ea7a88776705e537e4e4470369952b98e38a9b7ba03",
+      "origin": "assets/experiments/brightvale-city/skyline/corrected-candidate.png",
+      "origin_sha256": "5b0818efe4f3fb70c6a14ea7a88776705e537e4e4470369952b98e38a9b7ba03",
+      "role": "approved corrected subordinate skyline concept; initial rejected sheet excluded"
+    },
+    {
+      "path": "references/water-vegetation-approved.png",
+      "bytes": 3326227,
+      "sha256": "799f6a23dd19663b68f5039b613a0cfd0e2a6fb70f61e0f97398bc2161250d5b",
+      "origin": "assets/experiments/brightvale-city/water-vegetation/concept-candidate.png",
+      "origin_sha256": "799f6a23dd19663b68f5039b613a0cfd0e2a6fb70f61e0f97398bc2161250d5b",
+      "role": "approved supplemental water and vegetation concept"
+    },
+    {
+      "path": "references/lighting-direction-comparison.png",
+      "bytes": 2085946,
+      "sha256": "2ce860b4830cdfb3d75ef7ce1df7e8b1ef85f09a0987d677f7fc9ac0c3eb4dca",
+      "origin": "assets/experiments/brightvale-city/lighting/comparison.png",
+      "origin_sha256": "2ce860b4830cdfb3d75ef7ce1df7e8b1ef85f09a0987d677f7fc9ac0c3eb4dca",
+      "role": "approved lighting-direction comparison only; architecture/foliage drift disclosed"
+    },
+    {
+      "path": "evidence/city-audience.png",
+      "bytes": 2399103,
+      "sha256": "a229aef9a5e3874be48613c5bbf6e77e47dfb8abf212f6122946ec9005834559",
+      "origin": "assets/experiments/brightvale-city/finishing/model/previews/city-audience.png",
+      "origin_sha256": "a229aef9a5e3874be48613c5bbf6e77e47dfb8abf212f6122946ec9005834559",
+      "role": "actual Blender render, Audience",
+      "rendered_from_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff"
+    },
+    {
+      "path": "evidence/city-twilight.png",
+      "bytes": 2397404,
+      "sha256": "3aee752ab813ba6af1eb74a05ec05729ad04df077466239ac18da48cf1f112b4",
+      "origin": "assets/experiments/brightvale-city/finishing/model/previews/city-twilight.png",
+      "origin_sha256": "3aee752ab813ba6af1eb74a05ec05729ad04df077466239ac18da48cf1f112b4",
+      "role": "actual Blender render, Twilight",
+      "rendered_from_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff"
+    },
+    {
+      "path": "evidence/water-before-after.png",
+      "bytes": 1622619,
+      "sha256": "ceb56d93d53f2c061573b11e998cd32d6714b353e73125fbb22d330021e95b35",
+      "origin": "assets/experiments/brightvale-city/finishing/model/previews/water-before-after.png",
+      "origin_sha256": "ceb56d93d53f2c061573b11e998cd32d6714b353e73125fbb22d330021e95b35",
+      "role": "actual matched render comparison of water-side finishing",
+      "rendered_from_sha256": "edec71ce0b04189bcee6d7f98d14ad057be37ad6758bba9524a333819a34caff"
+    },
+    {
+      "path": "evidence/authoring-verification.json",
+      "bytes": 4876,
+      "sha256": "fcfc63c2b01e6fc50f611ed827599687a85e4aa709cf5daf90a8e9e64ff1335f",
+      "origin": "assets/authoring/brightvale-city/evidence/authoring-verification.json",
+      "origin_sha256": "fcfc63c2b01e6fc50f611ed827599687a85e4aa709cf5daf90a8e9e64ff1335f",
+      "role": "independent read-only verification report; discloses non-loading experiment checkpoint weak-reference metadata"
+    }
+  ]
+}

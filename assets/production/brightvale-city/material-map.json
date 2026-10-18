@@ -1,0 +1,2784 @@
+[
+  {
+    "source_material": "Circulation | warm paving",
+    "proposed_semantic_role": "city.paving",
+    "material_triangle_groups": 21,
+    "placed_triangles": 1016,
+    "base_color": [
+      0.4300000071525574,
+      0.38999998569488525,
+      0.3199999928474426,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Circulation | warm paving",
+    "city_role": "city.paving"
+  },
+  {
+    "source_material": "Citadel detail | aged golden metal",
+    "proposed_semantic_role": "city.metal",
+    "material_triangle_groups": 49,
+    "placed_triangles": 50212,
+    "base_color": [
+      0.5799999833106995,
+      0.3400000035762787,
+      0.08500000089406967,
+      1.0
+    ],
+    "metallic": 0.6499999761581421,
+    "roughness": 0.3400000035762787,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5799999833106995,
+      0.3400000035762787,
+      0.08500000089406967
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | aged golden metal",
+    "city_role": "city.metal"
+  },
+  {
+    "source_material": "Citadel detail | amber glazing 0",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 17,
+    "placed_triangles": 7344,
+    "base_color": [
+      0.6299999952316284,
+      0.23000000417232513,
+      0.04500000178813934,
+      1.0
+    ],
+    "metallic": 0.15000000596046448,
+    "roughness": 0.3499999940395355,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6299999952316284,
+      0.23000000417232513,
+      0.04500000178813934
+    ],
+    "emission_strength": 0.6499999761581421,
+    "double_sided": true,
+    "export_material": "Window",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "Citadel detail | amber glazing 1",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 15,
+    "placed_triangles": 6984,
+    "base_color": [
+      0.3100000023841858,
+      0.14000000059604645,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.15000000596046448,
+    "roughness": 0.3499999940395355,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3100000023841858,
+      0.14000000059604645,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.18000000715255737,
+    "double_sided": true,
+    "export_material": "Citadel detail | amber glazing 1",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "Citadel detail | amber glazing 2",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 15,
+    "placed_triangles": 6840,
+    "base_color": [
+      0.054999999701976776,
+      0.08500000089406967,
+      0.11500000208616257,
+      1.0
+    ],
+    "metallic": 0.15000000596046448,
+    "roughness": 0.3499999940395355,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.054999999701976776,
+      0.08500000089406967,
+      0.11500000208616257
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | amber glazing 2",
+    "city_role": "city.glazing"
+  },
+  {
+    "source_material": "Citadel detail | carved champagne limestone",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 104,
+    "placed_triangles": 85524,
+    "base_color": [
+      0.6100000143051147,
+      0.5,
+      0.3499999940395355,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.699999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6100000143051147,
+      0.5,
+      0.3499999940395355
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | carved champagne limestone",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Citadel detail | local terrace paving",
+    "proposed_semantic_role": "city.paving",
+    "material_triangle_groups": 2,
+    "placed_triangles": 24,
+    "base_color": [
+      0.3799999952316284,
+      0.3199999928474426,
+      0.25,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8999999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3799999952316284,
+      0.3199999928474426,
+      0.25
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | local terrace paving",
+    "city_role": "city.paving"
+  },
+  {
+    "source_material": "Citadel detail | pale raised gold edges",
+    "proposed_semantic_role": "city.metal",
+    "material_triangle_groups": 45,
+    "placed_triangles": 2016,
+    "base_color": [
+      0.7799999713897705,
+      0.550000011920929,
+      0.1899999976158142,
+      1.0
+    ],
+    "metallic": 0.550000011920929,
+    "roughness": 0.30000001192092896,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.7799999713897705,
+      0.550000011920929,
+      0.1899999976158142
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | pale raised gold edges",
+    "city_role": "city.metal"
+  },
+  {
+    "source_material": "Citadel detail | recess shadow and lead",
+    "proposed_semantic_role": "city.recess",
+    "material_triangle_groups": 2,
+    "placed_triangles": 144,
+    "base_color": [
+      0.041999999433755875,
+      0.04699999839067459,
+      0.052000001072883606,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8500000238418579,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.041999999433755875,
+      0.04699999839067459,
+      0.052000001072883606
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | recess shadow and lead",
+    "city_role": "city.recess"
+  },
+  {
+    "source_material": "Citadel detail | slate course 0",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 16,
+    "placed_triangles": 2456,
+    "base_color": [
+      0.04500000178813934,
+      0.10499999672174454,
+      0.17000000178813934,
+      1.0
+    ],
+    "metallic": 0.11999999731779099,
+    "roughness": 0.6499999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.04500000178813934,
+      0.10499999672174454,
+      0.17000000178813934
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | slate course 0",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Citadel detail | slate course 1",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 22,
+    "placed_triangles": 2408,
+    "base_color": [
+      0.054999999701976776,
+      0.12999999523162842,
+      0.20000000298023224,
+      1.0
+    ],
+    "metallic": 0.11999999731779099,
+    "roughness": 0.6499999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.054999999701976776,
+      0.12999999523162842,
+      0.20000000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | slate course 1",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Citadel detail | slate course 2",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 16,
+    "placed_triangles": 2108,
+    "base_color": [
+      0.06499999761581421,
+      0.15000000596046448,
+      0.22499999403953552,
+      1.0
+    ],
+    "metallic": 0.11999999731779099,
+    "roughness": 0.6499999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.06499999761581421,
+      0.15000000596046448,
+      0.22499999403953552
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | slate course 2",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Citadel detail | smoked warm limestone",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 27,
+    "placed_triangles": 68600,
+    "base_color": [
+      0.3400000035762787,
+      0.2849999964237213,
+      0.23499999940395355,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.699999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3400000035762787,
+      0.2849999964237213,
+      0.23499999940395355
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Citadel detail | smoked warm limestone",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Cliffs | violet grey",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 39,
+    "placed_triangles": 5520,
+    "base_color": [
+      0.20000000298023224,
+      0.20000000298023224,
+      0.2549999952316284,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Cliffs | violet grey",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Cliffs | weathered face",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 58,
+    "placed_triangles": 2973,
+    "base_color": [
+      0.2800000011920929,
+      0.27000001072883606,
+      0.30000001192092896,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Cliffs | weathered face",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "District detail | Left bark",
+    "proposed_semantic_role": "city.wood",
+    "material_triangle_groups": 31,
+    "placed_triangles": 30070,
+    "base_color": [
+      0.14000000059604645,
+      0.10000000149011612,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.14000000059604645,
+      0.10000000149011612,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left bark",
+    "city_role": "city.wood"
+  },
+  {
+    "source_material": "District detail | Left dark stone",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 171,
+    "placed_triangles": 39240,
+    "base_color": [
+      0.2199999988079071,
+      0.20499999821186066,
+      0.1899999976158142,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.2199999988079071,
+      0.20499999821186066,
+      0.1899999976158142
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left dark stone",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "District detail | Left glazing",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 74,
+    "placed_triangles": 63336,
+    "base_color": [
+      0.3700000047683716,
+      0.18000000715255737,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.4000000059604645,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3700000047683716,
+      0.18000000715255737,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.07999999821186066,
+    "double_sided": true,
+    "export_material": "District detail | Left glazing",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "District detail | Left gold",
+    "proposed_semantic_role": "city.metal",
+    "material_triangle_groups": 77,
+    "placed_triangles": 6456,
+    "base_color": [
+      0.5199999809265137,
+      0.33500000834465027,
+      0.10000000149011612,
+      1.0
+    ],
+    "metallic": 0.550000011920929,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5199999809265137,
+      0.33500000834465027,
+      0.10000000149011612
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left gold",
+    "city_role": "city.metal"
+  },
+  {
+    "source_material": "District detail | Left leaf",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 63,
+    "placed_triangles": 116728,
+    "base_color": [
+      0.07500000298023224,
+      0.17499999701976776,
+      0.06499999761581421,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.07500000298023224,
+      0.17499999701976776,
+      0.06499999761581421
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left leaf",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "District detail | Left leaf dark",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 63,
+    "placed_triangles": 55352,
+    "base_color": [
+      0.03500000014901161,
+      0.0949999988079071,
+      0.04500000178813934,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.03500000014901161,
+      0.0949999988079071,
+      0.04500000178813934
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left leaf dark",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "District detail | Left leaf light",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 63,
+    "placed_triangles": 22048,
+    "base_color": [
+      0.18000000715255737,
+      0.2800000011920929,
+      0.08500000089406967,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.18000000715255737,
+      0.2800000011920929,
+      0.08500000089406967
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left leaf light",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "District detail | Left lit glazing",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 74,
+    "placed_triangles": 21112,
+    "base_color": [
+      0.6399999856948853,
+      0.2849999964237213,
+      0.05999999865889549,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.4000000059604645,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6399999856948853,
+      0.2849999964237213,
+      0.05999999865889549
+    ],
+    "emission_strength": 0.550000011920929,
+    "double_sided": true,
+    "export_material": "District detail | Left lit glazing",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "District detail | Left masonry",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 79,
+    "placed_triangles": 199368,
+    "base_color": [
+      0.33000001311302185,
+      0.2849999964237213,
+      0.23999999463558197,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.33000001311302185,
+      0.2849999964237213,
+      0.23999999463558197
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left masonry",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "District detail | Left paving",
+    "proposed_semantic_role": "city.paving",
+    "material_triangle_groups": 9,
+    "placed_triangles": 7440,
+    "base_color": [
+      0.36000001430511475,
+      0.3199999928474426,
+      0.26499998569488525,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.36000001430511475,
+      0.3199999928474426,
+      0.26499998569488525
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left paving",
+    "city_role": "city.paving"
+  },
+  {
+    "source_material": "District detail | Left plaster",
+    "proposed_semantic_role": "city.plaster",
+    "material_triangle_groups": 76,
+    "placed_triangles": 94500,
+    "base_color": [
+      0.44999998807907104,
+      0.4050000011920929,
+      0.3400000035762787,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.44999998807907104,
+      0.4050000011920929,
+      0.3400000035762787
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left plaster",
+    "city_role": "city.plaster"
+  },
+  {
+    "source_material": "District detail | Left recess",
+    "proposed_semantic_role": "city.recess",
+    "material_triangle_groups": 74,
+    "placed_triangles": 4144,
+    "base_color": [
+      0.02800000086426735,
+      0.03700000047683716,
+      0.0430000014603138,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.02800000086426735,
+      0.03700000047683716,
+      0.0430000014603138
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left recess",
+    "city_role": "city.recess"
+  },
+  {
+    "source_material": "District detail | Left slate",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 74,
+    "placed_triangles": 7280,
+    "base_color": [
+      0.03799999877810478,
+      0.09000000357627869,
+      0.14499999582767487,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.03799999877810478,
+      0.09000000357627869,
+      0.14499999582767487
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left slate",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "District detail | Left slate light",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 74,
+    "placed_triangles": 2532,
+    "base_color": [
+      0.04800000041723251,
+      0.1120000034570694,
+      0.17000000178813934,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.06499999761581421,
+      0.14000000059604645,
+      0.20000000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left slate light",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "District detail | Left soil",
+    "proposed_semantic_role": "city.soil",
+    "material_triangle_groups": 16,
+    "placed_triangles": 192,
+    "base_color": [
+      0.11999999731779099,
+      0.10499999672174454,
+      0.06499999761581421,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.11999999731779099,
+      0.10499999672174454,
+      0.06499999761581421
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left soil",
+    "city_role": "city.soil"
+  },
+  {
+    "source_material": "District detail | Left trim",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 83,
+    "placed_triangles": 228648,
+    "base_color": [
+      0.5799999833106995,
+      0.47999998927116394,
+      0.33500000834465027,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5799999833106995,
+      0.47999998927116394,
+      0.33500000834465027
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Left trim",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "District detail | Right bark",
+    "proposed_semantic_role": "city.wood",
+    "material_triangle_groups": 16,
+    "placed_triangles": 15520,
+    "base_color": [
+      0.14000000059604645,
+      0.10000000149011612,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.14000000059604645,
+      0.10000000149011612,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right bark",
+    "city_role": "city.wood"
+  },
+  {
+    "source_material": "District detail | Right dark stone",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 104,
+    "placed_triangles": 19884,
+    "base_color": [
+      0.2199999988079071,
+      0.20499999821186066,
+      0.1899999976158142,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.2199999988079071,
+      0.20499999821186066,
+      0.1899999976158142
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right dark stone",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "District detail | Right glazing",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 45,
+    "placed_triangles": 31136,
+    "base_color": [
+      0.3700000047683716,
+      0.18000000715255737,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.4000000059604645,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3700000047683716,
+      0.18000000715255737,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.07999999821186066,
+    "double_sided": true,
+    "export_material": "District detail | Right glazing",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "District detail | Right gold",
+    "proposed_semantic_role": "city.metal",
+    "material_triangle_groups": 48,
+    "placed_triangles": 12300,
+    "base_color": [
+      0.5199999809265137,
+      0.33500000834465027,
+      0.10000000149011612,
+      1.0
+    ],
+    "metallic": 0.550000011920929,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5199999809265137,
+      0.33500000834465027,
+      0.10000000149011612
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right gold",
+    "city_role": "city.metal"
+  },
+  {
+    "source_material": "District detail | Right leaf",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 32,
+    "placed_triangles": 60016,
+    "base_color": [
+      0.09000000357627869,
+      0.1899999976158142,
+      0.09000000357627869,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.09000000357627869,
+      0.1899999976158142,
+      0.09000000357627869
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right leaf",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "District detail | Right leaf dark",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 32,
+    "placed_triangles": 28288,
+    "base_color": [
+      0.03500000014901161,
+      0.0949999988079071,
+      0.04500000178813934,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.03500000014901161,
+      0.0949999988079071,
+      0.04500000178813934
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right leaf dark",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "District detail | Right leaf light",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 32,
+    "placed_triangles": 11280,
+    "base_color": [
+      0.18000000715255737,
+      0.28999999165534973,
+      0.12999999523162842,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.18000000715255737,
+      0.28999999165534973,
+      0.12999999523162842
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right leaf light",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "District detail | Right lit glazing",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 45,
+    "placed_triangles": 10248,
+    "base_color": [
+      0.6399999856948853,
+      0.2849999964237213,
+      0.05999999865889549,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.4000000059604645,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6399999856948853,
+      0.2849999964237213,
+      0.05999999865889549
+    ],
+    "emission_strength": 0.550000011920929,
+    "double_sided": true,
+    "export_material": "District detail | Right lit glazing",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "District detail | Right masonry",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 48,
+    "placed_triangles": 101244,
+    "base_color": [
+      0.38999998569488525,
+      0.3499999940395355,
+      0.2849999964237213,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.38999998569488525,
+      0.3499999940395355,
+      0.2849999964237213
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right masonry",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "District detail | Right paving",
+    "proposed_semantic_role": "city.paving",
+    "material_triangle_groups": 8,
+    "placed_triangles": 8232,
+    "base_color": [
+      0.36000001430511475,
+      0.3199999928474426,
+      0.26499998569488525,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.36000001430511475,
+      0.3199999928474426,
+      0.26499998569488525
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right paving",
+    "city_role": "city.paving"
+  },
+  {
+    "source_material": "District detail | Right plaster",
+    "proposed_semantic_role": "city.plaster",
+    "material_triangle_groups": 47,
+    "placed_triangles": 47520,
+    "base_color": [
+      0.5199999809265137,
+      0.4699999988079071,
+      0.3799999952316284,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5199999809265137,
+      0.4699999988079071,
+      0.3799999952316284
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right plaster",
+    "city_role": "city.plaster"
+  },
+  {
+    "source_material": "District detail | Right recess",
+    "proposed_semantic_role": "city.recess",
+    "material_triangle_groups": 45,
+    "placed_triangles": 2520,
+    "base_color": [
+      0.02800000086426735,
+      0.03700000047683716,
+      0.0430000014603138,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.02800000086426735,
+      0.03700000047683716,
+      0.0430000014603138
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right recess",
+    "city_role": "city.recess"
+  },
+  {
+    "source_material": "District detail | Right slate",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 45,
+    "placed_triangles": 3408,
+    "base_color": [
+      0.052000001072883606,
+      0.11999999731779099,
+      0.17000000178813934,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.052000001072883606,
+      0.11999999731779099,
+      0.17000000178813934
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right slate",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "District detail | Right slate light",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 45,
+    "placed_triangles": 1152,
+    "base_color": [
+      0.06400000303983688,
+      0.14000000059604645,
+      0.1899999976158142,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.07999999821186066,
+      0.1599999964237213,
+      0.20499999821186066
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right slate light",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "District detail | Right soil",
+    "proposed_semantic_role": "city.soil",
+    "material_triangle_groups": 8,
+    "placed_triangles": 96,
+    "base_color": [
+      0.11999999731779099,
+      0.10499999672174454,
+      0.06499999761581421,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.11999999731779099,
+      0.10499999672174454,
+      0.06499999761581421
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right soil",
+    "city_role": "city.soil"
+  },
+  {
+    "source_material": "District detail | Right trim",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 53,
+    "placed_triangles": 147228,
+    "base_color": [
+      0.5799999833106995,
+      0.47999998927116394,
+      0.33500000834465027,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.7200000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5799999833106995,
+      0.47999998927116394,
+      0.33500000834465027
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "District detail | Right trim",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "Landscape detail | bark",
+    "proposed_semantic_role": "city.wood",
+    "material_triangle_groups": 62,
+    "placed_triangles": 24104,
+    "base_color": [
+      0.14000000059604645,
+      0.10499999672174454,
+      0.0560000017285347,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.14000000059604645,
+      0.10499999672174454,
+      0.0560000017285347
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | bark",
+    "city_role": "city.wood"
+  },
+  {
+    "source_material": "Landscape detail | coping",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 61,
+    "placed_triangles": 14736,
+    "base_color": [
+      0.4699999988079071,
+      0.41999998688697815,
+      0.3400000035762787,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.4699999988079071,
+      0.41999998688697815,
+      0.3400000035762787
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | coping",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "Landscape detail | fall",
+    "proposed_semantic_role": "city.water.fall",
+    "material_triangle_groups": 3,
+    "placed_triangles": 3136,
+    "base_color": [
+      0.11999999731779099,
+      0.3400000035762787,
+      0.3799999952316284,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.36000001430511475,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.11999999731779099,
+      0.3400000035762787,
+      0.3799999952316284
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | fall",
+    "city_role": "city.water.fall"
+  },
+  {
+    "source_material": "Landscape detail | foam",
+    "proposed_semantic_role": "city.water.foam",
+    "material_triangle_groups": 3,
+    "placed_triangles": 16124,
+    "base_color": [
+      0.6100000143051147,
+      0.7300000190734863,
+      0.699999988079071,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6100000143051147,
+      0.7300000190734863,
+      0.699999988079071
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | foam",
+    "city_role": "city.water.foam"
+  },
+  {
+    "source_material": "Landscape detail | leaf",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 62,
+    "placed_triangles": 220432,
+    "base_color": [
+      0.05999999865889549,
+      0.1599999964237213,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.05999999865889549,
+      0.1599999964237213,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | leaf",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Landscape detail | leaf deep",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 62,
+    "placed_triangles": 116960,
+    "base_color": [
+      0.02500000037252903,
+      0.07999999821186066,
+      0.03799999877810478,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.02500000037252903,
+      0.07999999821186066,
+      0.03799999877810478
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | leaf deep",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Landscape detail | leaf light",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 62,
+    "placed_triangles": 41008,
+    "base_color": [
+      0.14000000059604645,
+      0.25,
+      0.07500000298023224,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.14000000059604645,
+      0.25,
+      0.07500000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | leaf light",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Landscape detail | rock",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 721,
+    "placed_triangles": 54895,
+    "base_color": [
+      0.1599999964237213,
+      0.18000000715255737,
+      0.2150000035762787,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.1599999964237213,
+      0.18000000715255737,
+      0.2150000035762787
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | rock",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Landscape detail | rock dark",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 410,
+    "placed_triangles": 1650,
+    "base_color": [
+      0.11999999731779099,
+      0.14499999582767487,
+      0.17000000178813934,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.11999999731779099,
+      0.14499999582767487,
+      0.17000000178813934
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | rock dark",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Landscape detail | rock light",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 730,
+    "placed_triangles": 10322,
+    "base_color": [
+      0.20499999821186066,
+      0.2280000001192093,
+      0.25999999046325684,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.20499999821186066,
+      0.2280000001192093,
+      0.25999999046325684
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | rock light",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Landscape detail | sheen",
+    "proposed_semantic_role": "city.water.highlight",
+    "material_triangle_groups": 8,
+    "placed_triangles": 5540,
+    "base_color": [
+      0.25,
+      0.5,
+      0.5299999713897705,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.36000001430511475,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.25,
+      0.5,
+      0.5299999713897705
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | sheen",
+    "city_role": "city.water.highlight"
+  },
+  {
+    "source_material": "Landscape detail | soil",
+    "proposed_semantic_role": "city.soil",
+    "material_triangle_groups": 14,
+    "placed_triangles": 560,
+    "base_color": [
+      0.08500000089406967,
+      0.0820000022649765,
+      0.0430000014603138,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.08500000089406967,
+      0.0820000022649765,
+      0.0430000014603138
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | soil",
+    "city_role": "city.soil"
+  },
+  {
+    "source_material": "Landscape detail | stone",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 57,
+    "placed_triangles": 29304,
+    "base_color": [
+      0.3499999940395355,
+      0.3149999976158142,
+      0.26499998569488525,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3499999940395355,
+      0.3149999976158142,
+      0.26499998569488525
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | stone",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Landscape detail | stone dark",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 20,
+    "placed_triangles": 636,
+    "base_color": [
+      0.27000001072883606,
+      0.2549999952316284,
+      0.23000000417232513,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.27000001072883606,
+      0.2549999952316284,
+      0.23000000417232513
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | stone dark",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Landscape detail | stone light",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 93,
+    "placed_triangles": 18228,
+    "base_color": [
+      0.4300000071525574,
+      0.3799999952316284,
+      0.30000001192092896,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.4300000071525574,
+      0.3799999952316284,
+      0.30000001192092896
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | stone light",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Landscape detail | water",
+    "proposed_semantic_role": "city.water.surface",
+    "material_triangle_groups": 9,
+    "placed_triangles": 22084,
+    "base_color": [
+      0.029999999329447746,
+      0.2199999988079071,
+      0.27000001072883606,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.36000001430511475,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.029999999329447746,
+      0.2199999988079071,
+      0.27000001072883606
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Landscape detail | water",
+    "city_role": "city.water.surface"
+  },
+  {
+    "source_material": "Masonry | warm grey mass",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 34,
+    "placed_triangles": 1354,
+    "base_color": [
+      0.38999998569488525,
+      0.3199999928474426,
+      0.2800000011920929,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Masonry | warm grey mass",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Ravine detail | amber",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 6,
+    "placed_triangles": 3816,
+    "base_color": [
+      0.5299999713897705,
+      0.20999999344348907,
+      0.04500000178813934,
+      1.0
+    ],
+    "metallic": 0.10000000149011612,
+    "roughness": 0.4000000059604645,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5299999713897705,
+      0.20999999344348907,
+      0.04500000178813934
+    ],
+    "emission_strength": 0.699999988079071,
+    "double_sided": true,
+    "export_material": "Ravine detail | amber",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "Ravine detail | bark",
+    "proposed_semantic_role": "city.wood",
+    "material_triangle_groups": 23,
+    "placed_triangles": 19232,
+    "base_color": [
+      0.12999999523162842,
+      0.0949999988079071,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.949999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.12999999523162842,
+      0.0949999988079071,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | bark",
+    "city_role": "city.wood"
+  },
+  {
+    "source_material": "Ravine detail | bark light",
+    "proposed_semantic_role": "city.wood",
+    "material_triangle_groups": 19,
+    "placed_triangles": 2508,
+    "base_color": [
+      0.2199999988079071,
+      0.1599999964237213,
+      0.07500000298023224,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.949999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.2199999988079071,
+      0.1599999964237213,
+      0.07500000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | bark light",
+    "city_role": "city.wood"
+  },
+  {
+    "source_material": "Ravine detail | coping",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 59,
+    "placed_triangles": 28020,
+    "base_color": [
+      0.6100000143051147,
+      0.5099999904632568,
+      0.3700000047683716,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.699999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6100000143051147,
+      0.5099999904632568,
+      0.3700000047683716
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | coping",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "Ravine detail | fall water",
+    "proposed_semantic_role": "city.water.fall",
+    "material_triangle_groups": 1,
+    "placed_triangles": 6720,
+    "base_color": [
+      0.14000000059604645,
+      0.38999998569488525,
+      0.4399999976158142,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.4000000059604645,
+    "ior": 1.3329999446868896,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.14000000059604645,
+      0.38999998569488525,
+      0.4399999976158142
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | fall water",
+    "city_role": "city.water.fall"
+  },
+  {
+    "source_material": "Ravine detail | foam",
+    "proposed_semantic_role": "city.water.foam",
+    "material_triangle_groups": 2,
+    "placed_triangles": 8912,
+    "base_color": [
+      0.6499999761581421,
+      0.7699999809265137,
+      0.7300000190734863,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.75,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.6499999761581421,
+      0.7699999809265137,
+      0.7300000190734863
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | foam",
+    "city_role": "city.water.foam"
+  },
+  {
+    "source_material": "Ravine detail | gold",
+    "proposed_semantic_role": "city.metal",
+    "material_triangle_groups": 6,
+    "placed_triangles": 2080,
+    "base_color": [
+      0.5099999904632568,
+      0.3100000023841858,
+      0.07500000298023224,
+      1.0
+    ],
+    "metallic": 0.6499999761581421,
+    "roughness": 0.3799999952316284,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.5099999904632568,
+      0.3100000023841858,
+      0.07500000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | gold",
+    "city_role": "city.metal"
+  },
+  {
+    "source_material": "Ravine detail | leaf deep",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 46,
+    "placed_triangles": 41616,
+    "base_color": [
+      0.024000000208616257,
+      0.07999999821186066,
+      0.039000000804662704,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8999999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.024000000208616257,
+      0.07999999821186066,
+      0.039000000804662704
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | leaf deep",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Ravine detail | leaf light",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 50,
+    "placed_triangles": 22584,
+    "base_color": [
+      0.125,
+      0.24500000476837158,
+      0.07000000029802322,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8500000238418579,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.125,
+      0.24500000476837158,
+      0.07000000029802322
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | leaf light",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Ravine detail | leaf middle",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 50,
+    "placed_triangles": 88880,
+    "base_color": [
+      0.054999999701976776,
+      0.1550000011920929,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8999999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.054999999701976776,
+      0.1550000011920929,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | leaf middle",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Ravine detail | leaf warm",
+    "proposed_semantic_role": "city.foliage",
+    "material_triangle_groups": 19,
+    "placed_triangles": 19176,
+    "base_color": [
+      0.23499999940395355,
+      0.2750000059604645,
+      0.06499999761581421,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8500000238418579,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.23499999940395355,
+      0.2750000059604645,
+      0.06499999761581421
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | leaf warm",
+    "city_role": "city.foliage"
+  },
+  {
+    "source_material": "Ravine detail | paving",
+    "proposed_semantic_role": "city.paving",
+    "material_triangle_groups": 2,
+    "placed_triangles": 1620,
+    "base_color": [
+      0.3100000023841858,
+      0.2800000011920929,
+      0.23499999940395355,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8999999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3100000023841858,
+      0.2800000011920929,
+      0.23499999940395355
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | paving",
+    "city_role": "city.paving"
+  },
+  {
+    "source_material": "Ravine detail | recess",
+    "proposed_semantic_role": "city.recess",
+    "material_triangle_groups": 3,
+    "placed_triangles": 1728,
+    "base_color": [
+      0.02500000037252903,
+      0.032999999821186066,
+      0.03500000014901161,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8999999761581421,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.02500000037252903,
+      0.032999999821186066,
+      0.03500000014901161
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | recess",
+    "city_role": "city.recess"
+  },
+  {
+    "source_material": "Ravine detail | rock",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 71,
+    "placed_triangles": 4498,
+    "base_color": [
+      0.1550000011920929,
+      0.18000000715255737,
+      0.2150000035762787,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.949999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.1550000011920929,
+      0.18000000715255737,
+      0.2150000035762787
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | rock",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Ravine detail | rock dark",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 38,
+    "placed_triangles": 4584,
+    "base_color": [
+      0.10499999672174454,
+      0.13500000536441803,
+      0.1599999964237213,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.9700000286102295,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.10499999672174454,
+      0.13500000536441803,
+      0.1599999964237213
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | rock dark",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Ravine detail | rock light",
+    "proposed_semantic_role": "city.rock",
+    "material_triangle_groups": 71,
+    "placed_triangles": 262,
+    "base_color": [
+      0.2199999988079071,
+      0.24500000476837158,
+      0.2800000011920929,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.949999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.2199999988079071,
+      0.24500000476837158,
+      0.2800000011920929
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | rock light",
+    "city_role": "city.rock"
+  },
+  {
+    "source_material": "Ravine detail | slate",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 6,
+    "placed_triangles": 264,
+    "base_color": [
+      0.04500000178813934,
+      0.10499999672174454,
+      0.1599999964237213,
+      1.0
+    ],
+    "metallic": 0.11999999731779099,
+    "roughness": 0.699999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.04500000178813934,
+      0.10499999672174454,
+      0.1599999964237213
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | slate",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Ravine detail | slate light",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 4,
+    "placed_triangles": 132,
+    "base_color": [
+      0.07000000029802322,
+      0.15000000596046448,
+      0.20999999344348907,
+      1.0
+    ],
+    "metallic": 0.10000000149011612,
+    "roughness": 0.699999988079071,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.07000000029802322,
+      0.15000000596046448,
+      0.20999999344348907
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | slate light",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Ravine detail | soil",
+    "proposed_semantic_role": "city.soil",
+    "material_triangle_groups": 13,
+    "placed_triangles": 212,
+    "base_color": [
+      0.10000000149011612,
+      0.0949999988079071,
+      0.054999999701976776,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 1.0,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.10000000149011612,
+      0.0949999988079071,
+      0.054999999701976776
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | soil",
+    "city_role": "city.soil"
+  },
+  {
+    "source_material": "Ravine detail | stone",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 70,
+    "placed_triangles": 23508,
+    "base_color": [
+      0.36000001430511475,
+      0.3149999976158142,
+      0.25999999046325684,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8199999928474426,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.36000001430511475,
+      0.3149999976158142,
+      0.25999999046325684
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | stone",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Ravine detail | stone dark",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 8,
+    "placed_triangles": 484,
+    "base_color": [
+      0.2750000059604645,
+      0.25,
+      0.23000000417232513,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.8799999952316284,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.2750000059604645,
+      0.25,
+      0.23000000417232513
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | stone dark",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Ravine detail | stone light",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 28,
+    "placed_triangles": 3396,
+    "base_color": [
+      0.4699999988079071,
+      0.4050000011920929,
+      0.3149999976158142,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.4699999988079071,
+      0.4050000011920929,
+      0.3149999976158142
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | stone light",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Ravine detail | water",
+    "proposed_semantic_role": "city.water.surface",
+    "material_triangle_groups": 7,
+    "placed_triangles": 22540,
+    "base_color": [
+      0.02500000037252903,
+      0.20499999821186066,
+      0.26499998569488525,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.3400000035762787,
+    "ior": 1.3329999446868896,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.02500000037252903,
+      0.20499999821186066,
+      0.26499998569488525
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | water",
+    "city_role": "city.water.surface"
+  },
+  {
+    "source_material": "Ravine detail | water light",
+    "proposed_semantic_role": "city.water.highlight",
+    "material_triangle_groups": 2,
+    "placed_triangles": 8208,
+    "base_color": [
+      0.25,
+      0.5299999713897705,
+      0.5600000023841858,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.4000000059604645,
+    "ior": 1.3329999446868896,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.25,
+      0.5299999713897705,
+      0.5600000023841858
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Ravine detail | water light",
+    "city_role": "city.water.highlight"
+  },
+  {
+    "source_material": "Skyline detail | Far footing",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 92,
+    "placed_triangles": 1104,
+    "base_color": [
+      0.2800000011920929,
+      0.30000001192092896,
+      0.3199999928474426,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.2800000011920929,
+      0.30000001192092896,
+      0.3199999928474426
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far footing",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Skyline detail | Far glass",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 46,
+    "placed_triangles": 7840,
+    "base_color": [
+      0.1599999964237213,
+      0.1850000023841858,
+      0.20000000298023224,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.1599999964237213,
+      0.1850000023841858,
+      0.20000000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far glass",
+    "city_role": "city.glazing"
+  },
+  {
+    "source_material": "Skyline detail | Far masonry",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 46,
+    "placed_triangles": 37248,
+    "base_color": [
+      0.30000001192092896,
+      0.32499998807907104,
+      0.35499998927116394,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.30000001192092896,
+      0.32499998807907104,
+      0.35499998927116394
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far masonry",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Skyline detail | Far recess",
+    "proposed_semantic_role": "city.recess",
+    "material_triangle_groups": 46,
+    "placed_triangles": 1840,
+    "base_color": [
+      0.10000000149011612,
+      0.125,
+      0.15000000596046448,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.10000000149011612,
+      0.125,
+      0.15000000596046448
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far recess",
+    "city_role": "city.recess"
+  },
+  {
+    "source_material": "Skyline detail | Far roof joint",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 32,
+    "placed_triangles": 1152,
+    "base_color": [
+      0.15000000596046448,
+      0.1850000023841858,
+      0.22499999403953552,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.15000000596046448,
+      0.1850000023841858,
+      0.22499999403953552
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far roof joint",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Skyline detail | Far slate",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 46,
+    "placed_triangles": 1672,
+    "base_color": [
+      0.125,
+      0.17000000178813934,
+      0.2199999988079071,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.125,
+      0.17000000178813934,
+      0.2199999988079071
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far slate",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Skyline detail | Far trim",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 46,
+    "placed_triangles": 25016,
+    "base_color": [
+      0.3700000047683716,
+      0.38999998569488525,
+      0.4099999964237213,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.3700000047683716,
+      0.38999998569488525,
+      0.4099999964237213
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far trim",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "Skyline detail | Far warm glass",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 23,
+    "placed_triangles": 1280,
+    "base_color": [
+      0.30000001192092896,
+      0.25,
+      0.18000000715255737,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.30000001192092896,
+      0.25,
+      0.18000000715255737
+    ],
+    "emission_strength": 0.019999999552965164,
+    "double_sided": true,
+    "export_material": "Skyline detail | Far warm glass",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "Skyline detail | Middle footing",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 194,
+    "placed_triangles": 2328,
+    "base_color": [
+      0.28999999165534973,
+      0.2800000011920929,
+      0.25,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.28999999165534973,
+      0.2800000011920929,
+      0.25
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle footing",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Skyline detail | Middle glass",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 97,
+    "placed_triangles": 32880,
+    "base_color": [
+      0.11999999731779099,
+      0.15000000596046448,
+      0.1599999964237213,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.11999999731779099,
+      0.15000000596046448,
+      0.1599999964237213
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle glass",
+    "city_role": "city.glazing"
+  },
+  {
+    "source_material": "Skyline detail | Middle masonry",
+    "proposed_semantic_role": "city.masonry",
+    "material_triangle_groups": 97,
+    "placed_triangles": 160884,
+    "base_color": [
+      0.33000001311302185,
+      0.32499998807907104,
+      0.30000001192092896,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.33000001311302185,
+      0.32499998807907104,
+      0.30000001192092896
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle masonry",
+    "city_role": "city.masonry"
+  },
+  {
+    "source_material": "Skyline detail | Middle plaster",
+    "proposed_semantic_role": "city.plaster",
+    "material_triangle_groups": 19,
+    "placed_triangles": 304,
+    "base_color": [
+      0.38999998569488525,
+      0.375,
+      0.33500000834465027,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.38999998569488525,
+      0.375,
+      0.33500000834465027
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle plaster",
+    "city_role": "city.plaster"
+  },
+  {
+    "source_material": "Skyline detail | Middle recess",
+    "proposed_semantic_role": "city.recess",
+    "material_triangle_groups": 97,
+    "placed_triangles": 3880,
+    "base_color": [
+      0.03999999910593033,
+      0.05999999865889549,
+      0.07500000298023224,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.03999999910593033,
+      0.05999999865889549,
+      0.07500000298023224
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle recess",
+    "city_role": "city.recess"
+  },
+  {
+    "source_material": "Skyline detail | Middle roof joint",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 97,
+    "placed_triangles": 6180,
+    "base_color": [
+      0.07800000160932541,
+      0.12999999523162842,
+      0.17000000178813934,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.07800000160932541,
+      0.12999999523162842,
+      0.17000000178813934
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle roof joint",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Skyline detail | Middle slate",
+    "proposed_semantic_role": "city.roof",
+    "material_triangle_groups": 97,
+    "placed_triangles": 3216,
+    "base_color": [
+      0.06400000303983688,
+      0.11500000208616257,
+      0.1599999964237213,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.06400000303983688,
+      0.11500000208616257,
+      0.1599999964237213
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle slate",
+    "city_role": "city.roof"
+  },
+  {
+    "source_material": "Skyline detail | Middle trim",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 97,
+    "placed_triangles": 110332,
+    "base_color": [
+      0.46000000834465027,
+      0.4300000071525574,
+      0.3700000047683716,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.46000000834465027,
+      0.4300000071525574,
+      0.3700000047683716
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle trim",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "Skyline detail | Middle warm glass",
+    "proposed_semantic_role": "city.glazing",
+    "material_triangle_groups": 93,
+    "placed_triangles": 8440,
+    "base_color": [
+      0.4000000059604645,
+      0.2849999964237213,
+      0.12999999523162842,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      0.4000000059604645,
+      0.2849999964237213,
+      0.12999999523162842
+    ],
+    "emission_strength": 0.11999999731779099,
+    "double_sided": true,
+    "export_material": "Skyline detail | Middle warm glass",
+    "city_role": "emissive_window"
+  },
+  {
+    "source_material": "Street edges | pale masonry",
+    "proposed_semantic_role": "city.trim",
+    "material_triangle_groups": 156,
+    "placed_triangles": 2076,
+    "base_color": [
+      0.5699999928474426,
+      0.49000000953674316,
+      0.3799999952316284,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.800000011920929,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Street edges | pale masonry",
+    "city_role": "city.trim"
+  },
+  {
+    "source_material": "Water | continuing channels",
+    "proposed_semantic_role": "city.water.surface",
+    "material_triangle_groups": 6,
+    "placed_triangles": 136,
+    "base_color": [
+      0.08500000089406967,
+      0.3199999928474426,
+      0.4300000071525574,
+      1.0
+    ],
+    "metallic": 0.0,
+    "roughness": 0.25,
+    "ior": 1.5,
+    "alpha": 1.0,
+    "transmission": 0.0,
+    "emission_color": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "emission_strength": 0.0,
+    "double_sided": true,
+    "export_material": "Water | continuing channels",
+    "city_role": "city.water.surface"
+  }
+]

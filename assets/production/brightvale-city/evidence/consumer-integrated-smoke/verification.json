@@ -1,0 +1,165 @@
+{
+  "normalCityResponse": {
+    "url": "http://127.0.0.1:43539/assets/production/brightvale-city/city-optimized-spatial.glb",
+    "status": 200,
+    "contentLength": "135037616",
+    "bytes": 135037616,
+    "sha256": "73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff"
+  },
+  "networkResponses": [
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-city/city-optimized-spatial.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-highway/highway.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-platform/platform.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-platform-endcaps/endcaps.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-crowd/crowd.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-outer-framing/long.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-outer-framing/post.glb?import&url",
+      "status": 200,
+      "mimeType": "text/javascript",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-city/city-optimized-spatial.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-highway/highway.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-platform-endcaps/endcaps.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-platform/platform.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-crowd/crowd.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-outer-framing/long.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    },
+    {
+      "url": "http://127.0.0.1:43539/assets/production/brightvale-outer-framing/post.glb",
+      "status": 200,
+      "mimeType": "model/gltf-binary",
+      "fromDiskCache": false,
+      "fromServiceWorker": false
+    }
+  ],
+  "warnings": [
+    {
+      "type": "warning",
+      "args": [
+        "THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead."
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "view": "observatory",
+      "cameraFixtureSettingsBackendEqual": true,
+      "decodedRgbExactlyEqual": true,
+      "normalizedRgbRmse": 0.0,
+      "sceneInvocation": {
+        "frame": 24,
+        "calls": 1607,
+        "triangles": 1740509,
+        "points": 0,
+        "lines": 0
+      }
+    },
+    {
+      "view": "audience",
+      "cameraFixtureSettingsBackendEqual": true,
+      "decodedRgbExactlyEqual": true,
+      "normalizedRgbRmse": 0.0,
+      "sceneInvocation": {
+        "frame": 112,
+        "calls": 2536,
+        "triangles": 2775392,
+        "points": 0,
+        "lines": 0
+      }
+    },
+    {
+      "view": "twilight",
+      "cameraFixtureSettingsBackendEqual": true,
+      "decodedRgbExactlyEqual": true,
+      "normalizedRgbRmse": 0.0,
+      "sceneInvocation": {
+        "frame": 163,
+        "calls": 2536,
+        "triangles": 2775392,
+        "points": 0,
+        "lines": 0
+      }
+    }
+  ],
+  "cleanup": {
+    "browserExited": true,
+    "serverClosed": true,
+    "profileRemoved": true,
+    "portClosed": true
+  },
+  "artifactHashAfter": "73022af6f2bc45e38cd5bcbb7eb03f24cfacdd43d9b3f715e91f489fe0e464ff"
+}
