@@ -96,7 +96,7 @@ interface ActiveSource<TSource> {
   endedListener: EventListener;
 }
 
-const COUNTDOWN_SECONDS = 2;
+const COUNTDOWN_SECONDS = 5;
 const MAX_INPUT_TIME_ULPS = 8;
 // FFprobe reports this song's source duration to six decimal places; its 100%
 // authoring interval inherits that rounding. Allow half of the reported 1 µs

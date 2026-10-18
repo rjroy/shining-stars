@@ -862,14 +862,8 @@ export function createBrightvaleScene(
       pixelRatio,
       ownedTextures,
     );
-    setRectLabel(
-      label('legend'),
-      frame.gameplay.legendLabel,
-      layout.labels.legend,
-      { color: '#d7e7df', align: 'center' },
-      pixelRatio,
-      ownedTextures,
-    );
+    // Keep the reserved layout slot, but never paint timing-window copy in play.
+    label('legend').mesh.visible = false;
 
     for (const [lane, visual] of judgmentVisuals.entries()) {
       const event = frame.gameplay.feedback.find((item) => item.lane === lane);

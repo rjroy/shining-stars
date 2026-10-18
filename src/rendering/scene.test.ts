@@ -922,6 +922,16 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
   });
 
   it('fits the overlay camera to CSS pixels before projecting labels on the first rendered frame', async () => {
+    const fillText = vi.fn();
+    const context = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      fillText,
+      strokeText: vi.fn(),
+    };
+    vi.stubGlobal('document', {
+      createElement: () => ({ width: 1, height: 1, getContext: () => context }),
+    });
     const rendered = await renderWithProductionAssets();
     try {
       if (
@@ -931,7 +941,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         throw new Error('first production overlay pass was not captured');
       const layout = rendered.frame.gameplay.layout;
       rendered.overlayCamera.updateMatrixWorld(true);
-      for (const name of ['time', 'countdown', 'legend'] as const) {
+      for (const name of ['time', 'countdown'] as const) {
         const label = rendered.overlay.children.find(
           (object) => object.name === `Brightvale.Label.${name}`,
         );
@@ -950,6 +960,15 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         expect(screenX).toBeCloseTo(rect.x + rect.width / 2, 5);
         expect(screenY).toBeCloseTo(rect.y + rect.height / 2, 5);
       }
+      // makeFrame deliberately includes timing text and a nonzero legend slot.
+      // The GPU overlay must not draw it even if a caller supplies legacy copy.
+      const legend = rendered.overlay.getObjectByName('Brightvale.Label.legend');
+      expect(legend).toBeDefined();
+      expect(legend?.visible).toBe(false);
+      expect(fillText).toHaveBeenCalled();
+      expect(fillText.mock.calls.map(([text]) => text)).not.toContain(
+        rendered.frame.gameplay.legendLabel,
+      );
     } finally {
       rendered.scene.destroy();
       rendered.assets.dispose();
@@ -1345,19 +1364,26 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       expect(sameSizeTexture.version).toBeGreaterThan(originalVersion);
       expect(sameSizeDispose).not.toHaveBeenCalled();
 
-      const originalLegendTexture = textureFor('legend');
+      const originalTimeTexture = textureFor('time');
       const replacedTextureDispose = vi.fn();
-      originalLegendTexture.addEventListener('dispose', replacedTextureDispose);
+      originalTimeTexture.addEventListener('dispose', replacedTextureDispose);
+      const resizedLayout = makeLayout(1024, 768);
       const resizedFrame: SceneFrame = {
         ...changedTextFrame,
         gameplay: {
           ...changedTextFrame.gameplay,
-          layout: makeLayout(1024, 768),
+          layout: {
+            ...resizedLayout,
+            labels: {
+              ...resizedLayout.labels,
+              time: { ...resizedLayout.labels.time, width: 80 },
+            },
+          },
         },
       };
       expect(rendered.scene.updateFrame(resizedFrame)).toBe('rendered');
-      resizedTexture = textureFor('legend');
-      expect(resizedTexture).not.toBe(originalLegendTexture);
+      resizedTexture = textureFor('time');
+      expect(resizedTexture).not.toBe(originalTimeTexture);
       expect(replacedTextureDispose).toHaveBeenCalledTimes(1);
       resizedTexture.addEventListener('dispose', resizedTextureDispose);
     } finally {

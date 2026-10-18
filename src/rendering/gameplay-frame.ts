@@ -1,6 +1,6 @@
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
-import { getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import type { Difficulty } from '../game/game-balance';
 import {
   projectNotes,
   projectTimingWindowHalfProgress,
@@ -69,7 +69,6 @@ export function projectGameplayFrame(
   audioNow = 0,
 ): GameplayFrame {
   const { game, audio } = snapshot;
-  const profile = getDifficultyProfile(game.difficulty);
   const timingWindows = projectTimingWindowHalfProgress(game.difficulty);
   const playing =
     game.status === 'playing' &&
@@ -102,7 +101,6 @@ export function projectGameplayFrame(
           age: game.transportTime - event.onsetTransportTime,
         }))
     : [];
-  const milliseconds = (seconds: number) => Math.round(seconds * 1000);
 
   return {
     layout,
@@ -118,9 +116,8 @@ export function projectGameplayFrame(
     timingWindows,
     feedback,
     timeLabel: formatTime(game.transportTime),
-    legendLabel:
-      `Good ±${milliseconds(profile.timing.goodWindowSeconds)} ms · ` +
-      `Perfect ±${milliseconds(profile.timing.perfectWindowSeconds)} ms`,
+    // Timing-window explanations belong to the results screen, not the stage.
+    legendLabel: '',
     countdownLabel:
       audio.status === 'starting'
         ? `Starting in ${Math.max(
