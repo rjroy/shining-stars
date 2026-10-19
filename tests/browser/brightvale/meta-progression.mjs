@@ -18,8 +18,11 @@ const output = `${root}.lore/local/evidence/meta-progression/${phase}`;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const report = { phase, volume: 0, muted: true, measurements: [], cleanup: {} };
 report.checks = [];
-report.fixture = 'Explicit seeded valid save: Hard victories credited for 12 fixture songs, 36 earned credits. NOT earned through browser gameplay.';
-report.limitations = ['No gameplay award claim: immediate defeat → quit → reload is not exercised by this menu-focused harness.'];
+report.fixture =
+  'Explicit seeded valid save: Hard victories credited for 12 fixture songs, 36 earned credits. NOT earned through browser gameplay.';
+report.limitations = [
+  'No gameplay award claim: immediate defeat → quit → reload is not exercised by this menu-focused harness.',
+];
 let server, browser, socket, profile, port;
 let sequence = 0;
 const pending = new Map();
@@ -59,26 +62,50 @@ async function check(name, expression) {
   assert(result, name);
 }
 async function click(selector) {
-  await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('Missing '+${JSON.stringify(selector)});e.focus();e.click()})()`);
+  await evaluate(
+    `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('Missing '+${JSON.stringify(selector)});e.focus();e.click()})()`,
+  );
 }
 async function clickText(text) {
-  await evaluate(`(()=>{const e=[...document.querySelectorAll('dialog[open] button')].find(e=>e.textContent.includes(${JSON.stringify(text)}));if(!e)throw Error('Missing button '+${JSON.stringify(text)});e.click()})()`);
+  await evaluate(
+    `(()=>{const e=[...document.querySelectorAll('dialog[open] button')].find(e=>e.textContent.includes(${JSON.stringify(text)}));if(!e)throw Error('Missing button '+${JSON.stringify(text)});e.click()})()`,
+  );
 }
 async function shot(name) {
-  const capture = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  const capture = await command('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: false,
+  });
   await writeFile(`${output}/${name}.png`, Buffer.from(capture.data, 'base64'));
 }
 async function reload() {
   await evaluate('window.__metaReload = true');
   await command('Page.reload');
-  await wait(() => evaluate(`!window.__metaReload && document.readyState==='complete' && !!document.querySelector('[data-action="all-songs"]')`), 'real app reload');
+  await wait(
+    () =>
+      evaluate(
+        `!window.__metaReload && document.readyState==='complete' && !!document.querySelector('[data-action="all-songs"]')`,
+      ),
+    'real app reload',
+  );
   await click('[data-action="all-songs"]');
-  await wait(() => evaluate(`!!document.querySelector('[data-five-gold-target]')`), 'detail after reload');
+  await wait(
+    () => evaluate(`!!document.querySelector('[data-five-gold-target]')`),
+    'detail after reload',
+  );
 }
 async function importFixture(value) {
   await click('[data-action="save-data"]');
-  await evaluate(`(()=>{const input=document.querySelector('dialog[open] input[type=file]');const transfer=new DataTransfer();transfer.items.add(new File([${JSON.stringify(JSON.stringify(value))}], 'explicit-fixture.json',{type:'application/json'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}))})()`);
-  await wait(() => evaluate(`!!document.querySelector('input[name="save-progression-mode"]')`), 'real file preview');
+  await evaluate(
+    `(()=>{const input=document.querySelector('dialog[open] input[type=file]');const transfer=new DataTransfer();transfer.items.add(new File([${JSON.stringify(JSON.stringify(value))}], 'explicit-fixture.json',{type:'application/json'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}))})()`,
+  );
+  await wait(
+    () =>
+      evaluate(
+        `!!document.querySelector('input[name="save-progression-mode"]')`,
+      ),
+    'real file preview',
+  );
 }
 try {
   const memory = await readFile('/proc/meminfo', 'utf8');
@@ -155,79 +182,201 @@ try {
       ),
     'real app',
   );
-  await command('Emulation.setDeviceMetricsOverride', { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
+  await command('Emulation.setDeviceMetricsOverride', {
+    width: 1366,
+    height: 768,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
   await evaluate(`localStorage.clear()`);
   await reload();
   await wait(
     () => evaluate(`!!document.querySelector('[data-five-gold-target]')`),
     'song details',
   );
-  await click('[data-action="select-song"][data-song-id="the-first-shining-star"]');
-  await check('Fresh Lyra is free', `!!document.querySelector('[data-action="play"]') && document.querySelector('[data-credits]').textContent.includes('0 credits')`);
+  await click(
+    '[data-action="select-song"][data-song-id="the-first-shining-star"]',
+  );
+  await check(
+    'Fresh Lyra is free',
+    `!!document.querySelector('[data-action="play"]') && document.querySelector('[data-credits]').textContent.includes('0 credits')`,
+  );
   await shot('desktop-fresh-lyra');
-  const lockedId = await evaluate(`document.querySelector('.song-row small') && [...document.querySelectorAll('.song-row')].find(e=>e.querySelector('small').textContent.includes('Locked')).dataset.songId`);
+  const lockedId = await evaluate(
+    `document.querySelector('.song-row small') && [...document.querySelectorAll('.song-row')].find(e=>e.querySelector('small').textContent.includes('Locked')).dataset.songId`,
+  );
   await click(`[data-action="select-song"][data-song-id="${lockedId}"]`);
-  await check('Other collection locked but inspectable', `!!document.querySelector('[data-action="unlock"]') && !document.querySelector('[data-action="play"]')`);
+  await check(
+    'Other collection locked but inspectable',
+    `!!document.querySelector('[data-action="unlock"]') && !document.querySelector('[data-action="play"]')`,
+  );
   await click(`[data-action="toggle-favorite"][data-song-id="${lockedId}"]`);
-  await check('Locked song favorite works', `document.querySelector('[data-action="toggle-favorite"][data-song-id="${lockedId}"]').getAttribute('aria-pressed')==='true'`);
-  await evaluate(`(()=>{const e=document.querySelector('[data-search]');e.value=document.querySelector('[data-song-detail] h2').textContent;e.dispatchEvent(new Event('input',{bubbles:true}))})()`);
-  await check('Search retains inspectable locked result', `!!document.querySelector('[data-action="unlock"]') && document.querySelector('[data-song-list]').textContent.includes('Locked')`);
+  await check(
+    'Locked song favorite works',
+    `document.querySelector('[data-action="toggle-favorite"][data-song-id="${lockedId}"]').getAttribute('aria-pressed')==='true'`,
+  );
+  await evaluate(
+    `(()=>{const e=document.querySelector('[data-search]');e.value=document.querySelector('[data-song-detail] h2').textContent;e.dispatchEvent(new Event('input',{bubbles:true}))})()`,
+  );
+  await check(
+    'Search retains inspectable locked result',
+    `!!document.querySelector('[data-action="unlock"]') && document.querySelector('[data-song-list]').textContent.includes('Locked')`,
+  );
   await click('[data-action="unlock"]');
-  await check('Insufficient credits explained without purchase', `document.querySelector('dialog[open]').textContent.includes('more credits') && [...document.querySelectorAll('dialog[open] button')].length===1`);
+  await check(
+    'Insufficient credits explained without purchase',
+    `document.querySelector('dialog[open]').textContent.includes('more credits') && [...document.querySelectorAll('dialog[open] button')].length===1`,
+  );
   await shot('desktop-insufficient-credits');
-  await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
-  await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
-  await wait(() => evaluate(`!document.querySelector('dialog[open]')`), 'native Escape cancellation');
-  await check('Escape closes modal and restores unlock focus', `!document.querySelector('dialog[open]') && document.activeElement.dataset.action==='unlock'`);
-  const fixture = { format: 'shining-stars-save', schemaVersion: 2, favorites: [lockedId], ratings: { 'the-first-shining-star': { played: true, normalStars: 5, goldStars: 2 } }, progression: { balance: 36, victoryMarks: Object.fromEntries(Array.from({length:12},(_,i)=>[i === 0 ? 'the-first-shining-star' : 'explicit-earned-fixture-'+i,'hard'])), collectionPurchases: {}, songPurchases: {} } };
-  await evaluate(`localStorage.setItem('shining-stars.save',${JSON.stringify(JSON.stringify(fixture))})`);
+  await command('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: 'Escape',
+    code: 'Escape',
+    windowsVirtualKeyCode: 27,
+    nativeVirtualKeyCode: 27,
+  });
+  await command('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'Escape',
+    code: 'Escape',
+    windowsVirtualKeyCode: 27,
+    nativeVirtualKeyCode: 27,
+  });
+  await wait(
+    () => evaluate(`!document.querySelector('dialog[open]')`),
+    'native Escape cancellation',
+  );
+  await check(
+    'Escape closes modal and restores unlock focus',
+    `!document.querySelector('dialog[open]') && document.activeElement.dataset.action==='unlock'`,
+  );
+  const fixture = {
+    format: 'shining-stars-save',
+    schemaVersion: 2,
+    favorites: [lockedId],
+    ratings: {
+      'the-first-shining-star': { played: true, normalStars: 5, goldStars: 2 },
+    },
+    progression: {
+      balance: 36,
+      victoryMarks: Object.fromEntries(
+        Array.from({ length: 12 }, (_, i) => [
+          i === 0 ? 'the-first-shining-star' : 'explicit-earned-fixture-' + i,
+          'hard',
+        ]),
+      ),
+      collectionPurchases: {},
+      songPurchases: {},
+    },
+  };
+  await evaluate(
+    `localStorage.setItem('shining-stars.save',${JSON.stringify(JSON.stringify(fixture))})`,
+  );
   await reload();
   await click(`[data-action="select-song"][data-song-id="${lockedId}"]`);
   await click('[data-action="unlock"]');
-  await check('Collection confirmation shows cost and balance', `document.querySelector('dialog[open]').textContent.includes('Balance: 36') && document.querySelector('dialog[open]').textContent.includes('Songs are unlocked separately')`);
-  await check('Ordinary unlock has one confirmation and no storage destination picker', `(()=>{const d=document.querySelector('dialog[open]');const labels=[...d.querySelectorAll('button')].map(e=>e.textContent);return labels.length===2 && labels[0]==='Cancel' && labels[1].startsWith('Unlock ·') && !d.querySelector('select,input[type=radio]') && !d.textContent.includes('session only')})()`);
+  await check(
+    'Collection confirmation shows cost and balance',
+    `document.querySelector('dialog[open]').textContent.includes('Balance: 36') && document.querySelector('dialog[open]').textContent.includes('Songs are unlocked separately')`,
+  );
+  await check(
+    'Ordinary unlock has one confirmation and no storage destination picker',
+    `(()=>{const d=document.querySelector('dialog[open]');const labels=[...d.querySelectorAll('button')].map(e=>e.textContent);return labels.length===2 && labels[0]==='Cancel' && labels[1].startsWith('Unlock ·') && !d.querySelector('select,input[type=radio]') && !d.textContent.includes('session only')})()`,
+  );
   await clickText('Unlock ·');
-  await check('Collection debit only; no autoplay', `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance<36 && !!document.querySelector('[data-song-detail]') && document.querySelector('dialog[open]').textContent.includes('Collection unlocked')`);
-  const afterCollection = await evaluate(`JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance`);
-  await clickText('Done');
+  await check(
+    'Collection debit only; closes directly without autoplay',
+    `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance<36 && !!document.querySelector('[data-song-detail]') && !document.querySelector('dialog[open]') && !!document.querySelector('[data-action="unlock"]')`,
+  );
+  const afterCollection = await evaluate(
+    `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance`,
+  );
   await click('[data-action="unlock"]');
-  await check('Separate song confirmation costs one', `document.querySelector('dialog[open]').textContent.includes('Cost: 1 credit')`);
+  await check(
+    'Separate song confirmation costs one',
+    `document.querySelector('dialog[open]').textContent.includes('Cost: 1 credit')`,
+  );
   await shot('desktop-song-confirmation');
   await clickText('Unlock ·');
-  await clickText('Done');
-  await check('Song debit exactly one; Play still explicit', `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${afterCollection-1} && !!document.querySelector('[data-action="play"]') && !document.querySelector('[data-play-status]:not([hidden])')`);
+  await check(
+    'Song debit exactly one; closes directly with Play still explicit',
+    `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${afterCollection - 1} && !!document.querySelector('[data-action="play"]') && !document.querySelector('dialog[open]') && !document.querySelector('[data-play-status]:not([hidden])')`,
+  );
   await reload();
   await click(`[data-action="select-song"][data-song-id="${lockedId}"]`);
-  await check('Purchased song survives reload', `!!document.querySelector('[data-action="play"]')`);
-  const purchased = await evaluate(`JSON.parse(localStorage.getItem('shining-stars.save'))`);
+  await check(
+    'Purchased song survives reload',
+    `!!document.querySelector('[data-action="play"]')`,
+  );
+  const purchased = await evaluate(
+    `JSON.parse(localStorage.getItem('shining-stars.save'))`,
+  );
   await click('[data-action="save-data"]');
-  await command('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: output });
+  await command('Browser.setDownloadBehavior', {
+    behavior: 'allow',
+    downloadPath: output,
+  });
   await clickText('Download backup');
-  await check('Real export started', `document.querySelector('[data-download-status]').textContent==='Backup download started.'`);
+  await check(
+    'Real export started',
+    `document.querySelector('[data-download-status]').textContent==='Backup download started.'`,
+  );
   await clickText('Close');
-  const old = { format: 'shining-stars-save', schemaVersion: 1, favorites: [], ratings: {} };
+  const old = {
+    format: 'shining-stars-save',
+    schemaVersion: 1,
+    favorites: [],
+    ratings: {},
+  };
   await importFixture(old);
-  await check('v1 reset warning visible; default keeps progression', `document.querySelector('dialog[open]').textContent.includes('resets all credited victories') && document.querySelector('input[name="save-progression-mode"]').checked`);
+  await check(
+    'v1 reset warning visible; default keeps progression',
+    `document.querySelector('dialog[open]').textContent.includes('resets all credited victories') && document.querySelector('input[name="save-progression-mode"]').checked`,
+  );
   await clickText('Import backup');
-  await check('Keep-current import preserves whole progression', `JSON.stringify(JSON.parse(localStorage.getItem('shining-stars.save')).progression)===${JSON.stringify(JSON.stringify(purchased.progression))}`);
+  await check(
+    'Keep-current import preserves whole progression',
+    `JSON.stringify(JSON.parse(localStorage.getItem('shining-stars.save')).progression)===${JSON.stringify(JSON.stringify(purchased.progression))}`,
+  );
   await clickText('Close');
   await importFixture(old);
-  await evaluate(`document.querySelectorAll('input[name="save-progression-mode"]')[1].click()`);
-  await check('Preview counts cumulative difficulty marks', `document.querySelector('dialog[open]').textContent.includes('credited difficulty marks 36 → 0')`);
+  await evaluate(
+    `document.querySelectorAll('input[name="save-progression-mode"]')[1].click()`,
+  );
+  await check(
+    'Preview counts cumulative difficulty marks',
+    `document.querySelector('dialog[open]').textContent.includes('credited difficulty marks 36 → 0')`,
+  );
   await clickText('Import backup');
-  await check('Progression-only replacement needs confirmation', `document.querySelector('dialog[open] h2').textContent.includes('Replace current') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance}`);
+  await check(
+    'Progression-only replacement needs confirmation',
+    `document.querySelector('dialog[open] h2').textContent.includes('Replace current') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance}`,
+  );
   await clickText('Replace save data');
-  await check('v1 confirmed replacement resets whole progression', `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===0 && Object.keys(JSON.parse(localStorage.getItem('shining-stars.save')).progression.collectionPurchases).length===0`);
+  await check(
+    'v1 confirmed replacement resets whole progression',
+    `JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===0 && Object.keys(JSON.parse(localStorage.getItem('shining-stars.save')).progression.collectionPurchases).length===0`,
+  );
   await clickText('Close');
   await importFixture(purchased);
-  await evaluate(`document.querySelectorAll('input[name="save-progression-mode"]')[1].click()`);
+  await evaluate(
+    `document.querySelectorAll('input[name="save-progression-mode"]')[1].click()`,
+  );
   await clickText('Import backup');
   await clickText('Replace save data');
   await clickText('Close');
   await reload();
-  await check('v2 whole replacement restores purchases and credits', `JSON.stringify(JSON.parse(localStorage.getItem('shining-stars.save')).progression)===${JSON.stringify(JSON.stringify(purchased.progression))}`);
-  await click('[data-action="select-song"][data-song-id="the-first-shining-star"]');
-  await check('Stars remain separate from cumulative E/N/H credited seals', `document.querySelector('[data-song-detail] .song-best-copy').textContent==='5 normal · 2 gold' && document.querySelectorAll('[data-song-detail] .credited-seal.is-credited').length===3`);
+  await check(
+    'v2 whole replacement restores purchases and credits',
+    `JSON.stringify(JSON.parse(localStorage.getItem('shining-stars.save')).progression)===${JSON.stringify(JSON.stringify(purchased.progression))}`,
+  );
+  await click(
+    '[data-action="select-song"][data-song-id="the-first-shining-star"]',
+  );
+  await check(
+    'Stars remain separate from cumulative E/N/H credited seals',
+    `document.querySelector('[data-song-detail] .song-best-copy').textContent==='5 normal · 2 gold' && document.querySelectorAll('[data-song-detail] .credited-seal.is-credited').length===3`,
+  );
   const sizes = [
     [1600, 900],
     [1366, 768],
@@ -273,31 +422,65 @@ try {
       report.measurements.push(measurement);
     }
   }
-  await click('[data-action="select-song"][data-song-id="hymn-of-the-breathing-rebellion"]');
+  await click(
+    '[data-action="select-song"][data-song-id="hymn-of-the-breathing-rebellion"]',
+  );
   await click('[data-action="unlock"]');
-  await evaluate(`window.__originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new Error('Explicit validation fixture: denied write')}`);
+  await evaluate(
+    `window.__originalSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new Error('Explicit validation fixture: denied write')}`,
+  );
   await clickText('Unlock ·');
-  await check('Denied local write leaves unlock and balance unchanged', `document.querySelector('dialog[open]').textContent.includes('No credits were spent; nothing was unlocked') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance} && !!document.querySelector('[data-action="unlock"]')`);
+  await check(
+    'Denied local write leaves unlock and balance unchanged',
+    `document.querySelector('dialog[open]').textContent.includes('No credits were spent; nothing was unlocked') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance} && !!document.querySelector('[data-action="unlock"]')`,
+  );
   await shot('portrait-local-save-failed');
   await clickText('Retry unlock');
-  await check('Retry stays local and preserves balance when write still fails', `document.querySelector('dialog[open]').textContent.includes('No credits were spent; nothing was unlocked') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance} && !!document.querySelector('[data-action="unlock"]')`);
+  await check(
+    'Retry stays local and preserves balance when write still fails',
+    `document.querySelector('dialog[open]').textContent.includes('No credits were spent; nothing was unlocked') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance} && !!document.querySelector('[data-action="unlock"]')`,
+  );
   await evaluate(`Storage.prototype.setItem=window.__originalSetItem`);
   await clickText('Use temporary unlock');
-  await check('Temporary fallback requires separate consent before any unlock', `document.querySelector('dialog[open] h2').textContent.includes('Temporarily unlock') && document.querySelector('dialog[open]').textContent.includes('will not be saved on this device') && !!document.querySelector('[data-action="unlock"]') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance}`);
+  await check(
+    'Temporary fallback requires separate consent before any unlock',
+    `document.querySelector('dialog[open] h2').textContent.includes('Temporarily unlock') && document.querySelector('dialog[open]').textContent.includes('will not be saved on this device') && !!document.querySelector('[data-action="unlock"]') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance}`,
+  );
   await shot('portrait-temporary-confirmation');
   await clickText('Confirm temporary unlock');
-  await check('Explicit session purchase is labeled and never writes local debit', `document.querySelector('dialog[open]').textContent.includes('session only') && document.querySelector('[data-credits]').textContent.includes('session only') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance}`);
+  await check(
+    'Explicit session purchase is labeled and never writes local debit',
+    `document.querySelector('dialog[open]').textContent.includes('session only') && document.querySelector('[data-credits]').textContent.includes('session only') && JSON.parse(localStorage.getItem('shining-stars.save')).progression.balance===${purchased.progression.balance}`,
+  );
   await shot('portrait-session-unlock');
   await clickText('Done');
-  const anotherLockedId = await evaluate(`[...document.querySelectorAll('.song-row')].find(e=>e.dataset.songId!=='hymn-of-the-breathing-rebellion' && e.querySelector('small').textContent.includes('Locked')).dataset.songId`);
+  const anotherLockedId = await evaluate(
+    `[...document.querySelectorAll('.song-row')].find(e=>e.dataset.songId!=='hymn-of-the-breathing-rebellion' && e.querySelector('small').textContent.includes('Locked')).dataset.songId`,
+  );
   await click(`[data-action="select-song"][data-song-id="${anotherLockedId}"]`);
   await click('[data-action="unlock"]');
-  await check('Existing session state warns and offers only explicit temporary confirmation', `(()=>{const d=document.querySelector('dialog[open]');return d.querySelector('h2').textContent.includes('Temporarily unlock') && d.textContent.includes('will not be saved on this device') && [...d.querySelectorAll('button')].length===2 && [...d.querySelectorAll('button')].some(e=>e.textContent.startsWith('Confirm temporary unlock'))})()`);
+  await check(
+    'Existing session state warns and offers only explicit temporary confirmation',
+    `(()=>{const d=document.querySelector('dialog[open]');return d.querySelector('h2').textContent.includes('Temporarily unlock') && d.textContent.includes('will not be saved on this device') && [...d.querySelectorAll('button')].length===2 && [...d.querySelectorAll('button')].some(e=>e.textContent.startsWith('Confirm temporary unlock'))})()`,
+  );
   await clickText('Cancel');
   await reload();
-  await click('[data-action="select-song"][data-song-id="hymn-of-the-breathing-rebellion"]');
-  await check('Session-only unlock does not survive reload', `!!document.querySelector('[data-action="unlock"]')`);
-  report.layoutFailures = report.measurements.filter(m=>m.scrollHeight>m.clientHeight+1).map(m=>({width:m.width,height:m.height,songId:m.songId,clientHeight:m.clientHeight,scrollHeight:m.scrollHeight}));
+  await click(
+    '[data-action="select-song"][data-song-id="hymn-of-the-breathing-rebellion"]',
+  );
+  await check(
+    'Session-only unlock does not survive reload',
+    `!!document.querySelector('[data-action="unlock"]')`,
+  );
+  report.layoutFailures = report.measurements
+    .filter((m) => m.scrollHeight > m.clientHeight + 1)
+    .map((m) => ({
+      width: m.width,
+      height: m.height,
+      songId: m.songId,
+      clientHeight: m.clientHeight,
+      scrollHeight: m.scrollHeight,
+    }));
   if (!phase.endsWith('before')) {
     for (const m of report.measurements) {
       assert(
