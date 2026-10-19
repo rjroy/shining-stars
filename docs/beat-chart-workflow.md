@@ -23,9 +23,37 @@ Every song entry contains:
   source duration, each in `[0, 100]`; start plus duration cannot exceed 100,
   and Twilight must be below 100. The generator converts these to seconds.
 - `lane_rules`: a non-empty lane pattern containing only `0`, `1`, `2`, `3`.
-- `difficulties`: exactly `easy`, `normal`, and `hard`. Each specifies a
-  minimum onset delta in milliseconds and a positive integer stride. Twilight
+- Optional song-wide `algorithm`, `minioi`, `threshold`, and `silence` onset
+  controls. These affect the single full-song onset analysis shared by every
+  difficulty; defaults and units are documented below.
+- `difficulties`: exactly `easy`, `normal`, and `hard`. Each specifies
+  `minimum_delta` in milliseconds and a positive integer `stride`. Twilight
   Strength percentages are global difficulty-profile values, not per-song data.
+
+### Song-level onset recipe
+
+The optional song-level onset controls independently default to `algorithm:
+"complex"`, `minioi: 0.012` seconds, `threshold: 0.3`, and `silence: -90` dB.
+Supported algorithms are `default`, `energy`, `hfc`, `complex`, `phase`,
+`specdiff`, `kl`, `mkl`, and `specflux` (as listed by `aubioonset -h`).
+`minioi` must be positive, `threshold` is in `[0.1, 1]`, and `silence` must be
+non-positive. Example of partial overrides:
+
+```json
+"the-rising-star": {
+  "algorithm": "complex",
+  "minioi": 0.018,
+  "source": "data/music/The Rising Star (Remastered).mp3"
+}
+```
+
+The omitted threshold and silence independently retain their defaults. These
+fields are song-level only: placing them under a difficulty is rejected. Do not
+confuse `minioi` (aubio's seconds-based onset-detector spacing) with
+`difficulties.<name>.minimum_delta` (milliseconds-based post-processing), or
+with `stride` (post-processing thinning). `lane_rules` provides the cyclic
+baseline/fallback lane pattern; optional `lane_mapping` controls the
+pitch-informed mapper's per-difficulty preferences, not the onset detector.
 
 For each difficulty, the generator filters detections using that difficulty's
 delta and stride and emits its own singleton-difficulty chart. Runtime computes
@@ -119,8 +147,12 @@ chart bundle must match an imported MP3 asset. Do not introduce a fallback
 chart, Normal alias, or runtime-generated default when a bundle is missing or
 malformed.
 
-Generation caches onset detections in `data/charts/onsets/`. Changing source
-audio requires source-hash-matching onset and pitch analysis; old
+Generation caches onset detections in `data/charts/onsets/`. The resolved
+onset recipe is recorded in analysis-command provenance and the song projection.
+Changing an onset override invalidates that cache; an old HFC cache cannot
+satisfy the default `complex` recipe. Generation skips mismatched legacy onset
+caches and regenerates; `chart:check` remains read-only and fails on a mismatch.
+Changing source audio requires source-hash-matching onset and pitch analysis; old
 content-addressed pitch caches may remain. The pitch-cache key includes the
 full-source audio SHA-256, normalized extraction recipe/version, and tool
 identity. Changes to lane controls, difficulty stride/minimum delta, excerpt
@@ -158,7 +190,6 @@ controls retain their defaults:
 
 ```json
 "normal": {
-  "twilight_strength": 80,
   "minimum_delta": 64,
   "stride": 2,
   "lane_mapping": {
@@ -211,8 +242,8 @@ rolling-32 concentration, longest run, unknown-pitch count, and F0 direction
 agreement. `chart:check` is read-only: it validates the recorded provenance
 and recomputes expected outputs without requiring installed analysis tools. It
 does not check the currently installed tool version. Production integration
-is implemented; the full 29-song regeneration and check are being handled
-separately and are not claimed as complete here.
+and the full 29-song regeneration/check are complete for the current authoring
+collection.
 
 ## Browser validation
 

@@ -76,6 +76,10 @@ class BeatChartWorkflowTests(unittest.TestCase):
             "allowed_difficulties": ["normal", "hard"],
             "minimum_delta": 64,
             "stride": 2,
+            "algorithm": "complex",
+            "minioi": 0.012,
+            "threshold": 0.3,
+            "silence": -90,
             "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
         }
 
@@ -348,13 +352,17 @@ class BeatChartWorkflowTests(unittest.TestCase):
         self.assertEqual(self.calls, [], "check mode must not invoke external tools")
 
     def test_aubioonset_command_explicitly_sets_detector_minimum_ioi_and_silence(self):
-        _, command = beat_chart._build_commands(self.source, self.root / "analysis.wav")
+        recipe = {"algorithm": "specflux", "minioi": 0.023456789012345, "threshold": 0.456789012345, "silence": -83.25}
+        _, command = beat_chart._build_commands(self.source, self.root / "analysis.wav", recipe)
         self.assertEqual(
-            command[:8],
+            command[:5],
             [
-                "aubioonset", "-T", "seconds", "-O", "hfc", "-t0.3", "-M0.012", "-s-90",
+                "aubioonset", "-T", "seconds", "-O", "specflux",
             ],
         )
+        self.assertIn(f"-t{recipe['threshold']}", command)
+        self.assertIn(f"-M{recipe['minioi']}", command)
+        self.assertIn(f"-s{recipe['silence']}", command)
 
     def seed_outputs(self):
         self.artifact.parent.mkdir(parents=True, exist_ok=True)
@@ -393,9 +401,10 @@ class BeatChartWorkflowTests(unittest.TestCase):
         self.assertEqual(ffmpeg_call[ffmpeg_call.index("-sample_fmt") + 1], "s16")
         aubio_call = self.calls[1][0]
         self.assertEqual(aubio_call[aubio_call.index("-T") + 1], "seconds")
-        self.assertEqual(aubio_call[aubio_call.index("-O") + 1], "hfc")
-        self.assertIn("-M0.012", aubio_call)
-        self.assertIn("-s-90", aubio_call)
+        expected_recipe = beat_chart.ONSET_DEFAULTS
+        self.assertEqual(aubio_call[aubio_call.index("-O") + 1], expected_recipe["algorithm"])
+        self.assertIn(f"-M{expected_recipe['minioi']}", aubio_call)
+        self.assertIn(f"-s{expected_recipe['silence']}", aubio_call)
         wav_path = Path(aubio_call[aubio_call.index("-i") + 1])
         self.assertFalse(wav_path.exists(), "temporary WAV should be removed after tracking")
 
@@ -691,10 +700,108 @@ class GeneratedScoringMetadataTests(unittest.TestCase):
 
 
 class SongAuthoringConfigTests(unittest.TestCase):
+    @staticmethod
+    def song_fixture(source="fixture.mp3"):
+        return {
+            "source": source,
+            "start_time": 0,
+            "duration": 100,
+            "twilight_time": 45,
+            "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
+            "difficulties": {
+                difficulty: {"minimum_delta": delta, "stride": stride}
+                for difficulty, delta, stride in (("easy", 180, 3), ("normal", 96, 2), ("hard", 48, 1))
+            },
+        }
+
+    def test_onset_recipe_defaults_partial_combined_validation_and_scope(self):
+        base = self.song_fixture()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "songs.json"
+
+            def load(song):
+                path.write_text(json.dumps({"schema_version": 2, "songs": {"fixture": song}}))
+                return beat_chart.load_authoring_collection(path)["fixture"]
+
+            self.assertEqual(
+                beat_chart._resolve_onset_recipe("fixture", load(base)),
+                beat_chart.ONSET_DEFAULTS,
+            )
+            partial = beat_chart._resolve_onset_recipe("fixture", load({**base, "minioi": 0.02}))
+            self.assertEqual(partial, {**beat_chart.ONSET_DEFAULTS, "minioi": 0.02})
+            combined = {**base, "algorithm": "hfc", "minioi": 0.02, "threshold": 0.5, "silence": -60}
+            self.assertEqual(
+                beat_chart._resolve_onset_recipe("fixture", load(combined)),
+                {"algorithm": "hfc", "minioi": 0.02, "threshold": 0.5, "silence": -60.0},
+            )
+            for key, value in (("algorithm", "nope"), ("minioi", 0), ("threshold", 0.05), ("threshold", 1.1), ("silence", 1), ("threshold", float("nan"))):
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    load({**base, key: value})
+            difficulty_scoped = json.loads(json.dumps(base))
+            difficulty_scoped["difficulties"]["normal"]["minioi"] = 0.02
+            with self.assertRaisesRegex(ValueError, "invalid normal settings"):
+                load(difficulty_scoped)
+
+    def test_onset_command_and_cache_provenance_include_resolved_recipe(self):
+        recipe = {"algorithm": "hfc", "minioi": 0.025123456789012345, "threshold": 0.42012345678901234, "silence": -70.12345678901234}
+        _, command = beat_chart._build_commands("source.wav", "analysis.wav", recipe)
+        self.assertEqual(command[command.index("-O") + 1], "hfc")
+        recorded_aubio = beat_chart._recorded_commands(recipe)[1]
+        for key, flag in (("minioi", "-M"), ("threshold", "-t"), ("silence", "-s")):
+            actual = next(value for value in command if value.startswith(flag))
+            recorded = next(value for value in recorded_aubio if value.startswith(flag))
+            self.assertEqual(actual, recorded)
+            self.assertEqual(float(actual[len(flag):]), recipe[key])
+        self.assertNotEqual(beat_chart._recorded_commands(recipe), beat_chart._recorded_commands())
+        with self.assertRaisesRegex(ValueError, "analysis commands"):
+            beat_chart._validate_analysis_commands(
+                beat_chart._recorded_commands(), "fixture", "analysis commands", recipe
+            )
+
+    def test_stale_legacy_hfc_cache_is_skipped_for_generation_but_fails_check(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            legacy_path = root / "data/charts" / "fixture.beats.json"
+            legacy_path.parent.mkdir(parents=True)
+            source = root / "fixture.mp3"
+            source.write_bytes(b"source")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            legacy_commands = beat_chart._recorded_commands({**beat_chart.ONSET_DEFAULTS, "algorithm": "hfc"})
+            legacy_commands[1] = ["-s-90" if arg == "-s-90.0" else arg for arg in legacy_commands[1]]
+            legacy_path.write_text(json.dumps({
+                "schema_version": 1,
+                "source": {"path": source.relative_to(root).as_posix(), "sha256": digest},
+                "source_sha256": digest,
+                "onsets": [1.0, 2.0],
+                "commands": legacy_commands,
+                "tools": {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"},
+            }))
+            settings = {"algorithm": "complex"}
+            onset_path = root / "current.beats.json"
+            calls = []
+
+            def runner(command, **kwargs):
+                command = [str(part) for part in command]
+                calls.append(command)
+                executable = Path(command[0]).name
+                if executable == "aubioonset":
+                    return subprocess.CompletedProcess(command, 0, "1.0\n2.0\n", "")
+                return subprocess.CompletedProcess(command, 0, "", "")
+
+            with patch.object(beat_chart, "PROJECT_ROOT", root):
+                with self.assertRaisesRegex(ValueError, "cached onset artifact"):
+                    beat_chart._analysis_for_song("fixture", settings, source, digest, runner, True, onset_path)
+                calls.clear()
+                result = beat_chart._analysis_for_song("fixture", settings, source, digest, runner, False, onset_path)
+            self.assertEqual(
+                result["analysis"],
+                beat_chart._recorded_commands(beat_chart._resolve_onset_recipe("fixture", settings)),
+            )
+            self.assertEqual(Path(calls[1][0]).name, "aubioonset")
+
     def test_difficulty_lane_mapping_overrides_are_independent_and_defaulted(self):
-        source_path = beat_chart.PROJECT_ROOT / "data/charts/song-authoring.json"
-        document = json.loads(source_path.read_text(encoding="utf-8"))
-        song = document["songs"]["the-rising-star"]
+        song = self.song_fixture()
+        document = {"schema_version": 2, "songs": {"fixture": song}}
         normal_mapping = {"pitch_following": 0}
         hard_mapping = {"lane_balance": 2.5}
         song["difficulties"]["normal"]["lane_mapping"] = normal_mapping
@@ -703,11 +810,9 @@ class SongAuthoringConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "song-authoring.json"
             path.write_text(json.dumps(document), encoding="utf-8")
-            collection_song = beat_chart.load_authoring_collection(path)[
-                "the-rising-star"
-            ]
+            collection_song = beat_chart.load_authoring_collection(path)["fixture"]
             compatibility_song = beat_chart.load_song_config(
-                path, "the-rising-star"
+                path, "fixture"
             )
 
             for loaded_song in (collection_song, compatibility_song):
@@ -747,8 +852,8 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 song["difficulties"][difficulty].pop("lane_mapping", None)
             path.write_text(json.dumps(document), encoding="utf-8")
             for loaded_song in (
-                beat_chart.load_authoring_collection(path)["the-rising-star"],
-                beat_chart.load_song_config(path, "the-rising-star"),
+                beat_chart.load_authoring_collection(path)["fixture"],
+                beat_chart.load_song_config(path, "fixture"),
             ):
                 for difficulty in ("easy", "normal", "hard"):
                     self.assertNotIn(
@@ -766,8 +871,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                     )
 
     def test_difficulty_lane_mapping_override_is_strict_and_bounded(self):
-        source_path = beat_chart.PROJECT_ROOT / "data/charts/song-authoring.json"
-        document = json.loads(source_path.read_text(encoding="utf-8"))
+        document = {"schema_version": 2, "songs": {"fixture": self.song_fixture()}}
         valid = {
             "pitch_following": 0,
             "lane_balance": 4,
@@ -780,13 +884,13 @@ class SongAuthoringConfigTests(unittest.TestCase):
             path = Path(directory) / "song-authoring.json"
 
             def load_with(loader, mapping):
-                document["songs"]["the-rising-star"]["difficulties"]["normal"][
+                document["songs"]["fixture"]["difficulties"]["normal"][
                     "lane_mapping"
                 ] = mapping
                 path.write_text(json.dumps(document), encoding="utf-8")
                 if loader == "collection":
-                    return beat_chart.load_authoring_collection(path)["the-rising-star"]
-                return beat_chart.load_song_config(path, "the-rising-star")
+                    return beat_chart.load_authoring_collection(path)["fixture"]
+                return beat_chart.load_song_config(path, "fixture")
 
             valid_edges = [
                 {
@@ -968,7 +1072,11 @@ class SongAuthoringConfigTests(unittest.TestCase):
 
             selected = beat_chart.load_song_config(path, "the-first-shining-star")
 
-        self.assertEqual(selected, config["songs"]["the-first-shining-star"])
+        self.assertEqual(selected["source"], config["songs"]["the-first-shining-star"]["source"])
+        self.assertEqual(
+            {key: selected[key] for key in ("algorithm", "minioi", "threshold", "silence")},
+            beat_chart.ONSET_DEFAULTS,
+        )
 
     def test_config_loader_rejects_unknown_song_and_invalid_authoring_settings(self):
         with tempfile.TemporaryDirectory() as directory:

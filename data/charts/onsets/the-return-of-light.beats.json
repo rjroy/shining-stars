@@ -23,8 +23,8 @@
       "-O",
       "hfc",
       "-t0.3",
-      "-M0.012",
-      "-s-90",
+      "-M0.032",
+      "-s-90.0",
       "-i",
       "{analysisWav}"
     ]
@@ -300,7 +300,6 @@
     170.639496,
     171.099045,
     171.533463,
-    171.556396,
     172.317276,
     172.472244,
     172.620438,
@@ -361,7 +360,6 @@
     203.44606,
     204.347366,
     204.814651,
-    204.838226,
     205.279709,
     205.452362,
     206.105911,
@@ -473,7 +471,6 @@
     262.149536,
     262.504578,
     263.969971,
-    263.990021,
     264.951263,
     265.658539,
     265.943298,
@@ -579,7 +576,6 @@
     316.136444,
     316.289276,
     318.529114,
-    318.554504,
     318.65506,
     318.824615,
     320.817383,
@@ -711,18 +707,19 @@
   "projection": {
     "profile_sha256": "a1571310427f6ff595a75847429d36aff3e179d4834ab3ce89bd9bdaefe96da0",
     "song": {
+      "algorithm": "hfc",
       "difficulties": {
         "easy": {
-          "minimum_delta": 90,
-          "stride": 2
+          "minimum_delta": 180,
+          "stride": 1
         },
         "hard": {
           "minimum_delta": 90,
           "stride": 1
         },
         "normal": {
-          "minimum_delta": 64,
-          "stride": 2
+          "minimum_delta": 128,
+          "stride": 1
         }
       },
       "duration": 100,
@@ -735,9 +732,12 @@
         ],
         "type": "pattern"
       },
+      "minioi": 0.032,
+      "silence": -90.0,
       "source": "data/music/The Return of Light.mp3",
       "start_time": 0,
-      "twilight_time": 50
+      "threshold": 0.3,
+      "twilight_time": 40
     }
   },
   "schemaVersion": 1,

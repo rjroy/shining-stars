@@ -23,8 +23,8 @@
       "-O",
       "hfc",
       "-t0.3",
-      "-M0.012",
-      "-s-90",
+      "-M0.032",
+      "-s-90.0",
       "-i",
       "{analysisWav}"
     ]
@@ -114,7 +114,6 @@
     69.339119,
     69.748253,
     70.956329,
-    70.979431,
     72.128456,
     72.932991,
     73.446053,
@@ -274,9 +273,7 @@
     163.761093,
     164.194946,
     164.972626,
-    164.999542,
     167.434052,
-    167.464035,
     167.668396,
     167.895309,
     168.260529,
@@ -386,7 +383,6 @@
     238.387161,
     239.413651,
     239.640045,
-    239.663742,
     240.073441,
     240.560699,
     241.717194
@@ -395,18 +391,19 @@
   "projection": {
     "profile_sha256": "a1571310427f6ff595a75847429d36aff3e179d4834ab3ce89bd9bdaefe96da0",
     "song": {
+      "algorithm": "hfc",
       "difficulties": {
         "easy": {
-          "minimum_delta": 90,
-          "stride": 2
+          "minimum_delta": 180,
+          "stride": 1
         },
         "hard": {
           "minimum_delta": 90,
           "stride": 1
         },
         "normal": {
-          "minimum_delta": 64,
-          "stride": 2
+          "minimum_delta": 128,
+          "stride": 1
         }
       },
       "duration": 100,
@@ -419,9 +416,12 @@
         ],
         "type": "pattern"
       },
+      "minioi": 0.032,
+      "silence": -90.0,
       "source": "data/music/The Midnight Bells.mp3",
       "start_time": 0,
-      "twilight_time": 50
+      "threshold": 0.3,
+      "twilight_time": 40
     }
   },
   "schemaVersion": 1,
