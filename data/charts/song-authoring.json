@@ -6,31 +6,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "threshold": 0.35,
-      "minioi": 0.32,
-      "silence": -80,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "complex",
+      "threshold": 0.5,
+      "silence": -60,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 260,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 196,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 128,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "coal-makers-mistake": {
@@ -38,28 +21,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.4,
+      "silence": -90,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "december-light": {
@@ -67,28 +36,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.4,
+      "silence": -30,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "everythings-different-this-year": {
@@ -96,28 +51,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "first-light-of-december": {
@@ -125,28 +63,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "glitch-in-the-bell": {
@@ -154,28 +75,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.8,
+      "silence": -20,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "grylas-lullaby": {
@@ -183,28 +90,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 240,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 160,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 120,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "hope-came-down": {
@@ -214,28 +104,11 @@
       "twilight_time": 40,
       "threshold": 0.15,
       "silence": -100,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 96,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 64,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "hymn-of-the-breathing-rebellion": {
@@ -243,28 +116,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "specflux",
+      "threshold": 0.90,
+      "silence": -40,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 352, "stride": 1 },
+        "normal": { "minimum_delta": 224, "stride": 1 },
+        "hard": { "minimum_delta": 96, "stride": 1 }
       }
     },
     "the-eternal-march": {
@@ -272,28 +131,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-ferrymans-coin": {
@@ -301,28 +143,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-first-shining-star": {
@@ -330,28 +155,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-game": {
@@ -359,28 +167,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-gravediggers-warning": {
@@ -388,28 +179,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-midnight-bells": {
@@ -417,57 +191,29 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.3,
+      "silence": -90,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-necromancers-duet": {
       "source": "data/music/The Necromancer’s Duet.mp3",
       "start_time": 0,
       "duration": 100,
+      "silence": -40,
+      "threshold": 0.4,
+      "algorithm": "hfc",
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-prophets-transmission": {
@@ -475,28 +221,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-return-of-light": {
@@ -504,28 +233,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.3,
+      "silence": -90,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-smallest-light": {
@@ -533,28 +248,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-star-that-followed-us": {
@@ -562,28 +260,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.50,
+      "silence": -30,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-year-we-knew": {
@@ -591,28 +275,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "twenty-seven-times": {
@@ -620,28 +287,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.60,
+      "silence": -30,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "where-candles-meet-the-dark": {
@@ -649,28 +302,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.3,
+      "silence": -90,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "workshop-warriors": {
@@ -678,28 +317,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.4,
+      "silence": -30,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "never-again": {
@@ -707,28 +332,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-abandoned-child": {
@@ -736,28 +344,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.3,
+      "silence": -90,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 140,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-commodity": {
@@ -765,28 +359,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.75,
+      "silence": -30,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 160, "stride": 1 }
       }
     },
     "the-last-true-performer": {
@@ -794,28 +374,14 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "algorithm": "hfc",
+      "threshold": 0.3,
+      "silence": -90,
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-rising-star": {
@@ -823,28 +389,11 @@
       "start_time": 0,
       "duration": 100,
       "twilight_time": 40,
-      "lane_rules": {
-        "type": "pattern",
-        "data": [
-          0,
-          2,
-          1,
-          3
-        ]
-      },
+      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
-        "easy": {
-          "minimum_delta": 180,
-          "stride": 1
-        },
-        "normal": {
-          "minimum_delta": 128,
-          "stride": 1
-        },
-        "hard": {
-          "minimum_delta": 90,
-          "stride": 1
-        }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     }
   }

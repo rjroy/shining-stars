@@ -406,15 +406,15 @@
       "algorithm": "hfc",
       "difficulties": {
         "easy": {
-          "minimum_delta": 128,
+          "minimum_delta": 384,
           "stride": 1
         },
         "hard": {
-          "minimum_delta": 64,
+          "minimum_delta": 128,
           "stride": 1
         },
         "normal": {
-          "minimum_delta": 96,
+          "minimum_delta": 256,
           "stride": 1
         }
       },

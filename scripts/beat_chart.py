@@ -39,7 +39,7 @@ DEFAULT_BOUNDARY = 39.2
 DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
-ONSET_DEFAULTS = {"algorithm": "hfc", "minioi": 0.032, "threshold": 0.3, "silence": -90.0}
+ONSET_DEFAULTS = {"algorithm": "hfc", "minioi": 0.032, "threshold": 0.50, "silence": -20.0}
 ONSET_ALGORITHMS = {
     "default", "energy", "hfc", "complex", "phase", "specdiff", "kl", "mkl", "specflux"
 }

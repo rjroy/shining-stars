@@ -702,15 +702,15 @@
       "algorithm": "hfc",
       "difficulties": {
         "easy": {
-          "minimum_delta": 180,
+          "minimum_delta": 384,
           "stride": 1
         },
         "hard": {
-          "minimum_delta": 90,
+          "minimum_delta": 128,
           "stride": 1
         },
         "normal": {
-          "minimum_delta": 140,
+          "minimum_delta": 256,
           "stride": 1
         }
       },

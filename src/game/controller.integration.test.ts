@@ -11,7 +11,10 @@ import { createGame } from './game';
 import { getDifficultyProfile } from './game-balance';
 
 class TestBuffer implements AudioBufferPort {
-  constructor(readonly duration: number) {}
+  constructor(
+    readonly duration: number,
+    readonly sampleRate = 48_000,
+  ) {}
 }
 
 class TestSource extends EventTarget implements AudioSourcePort<TestBuffer> {
