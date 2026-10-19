@@ -291,6 +291,57 @@ a:focus-visible {
   min-height: 0;
 }
 
+/* A screen-edge overlay, deliberately outside the measured HUD/camera fit. */
+.song-progress {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 10px;
+  background: #17132c;
+  box-shadow: 0 2px 7px rgb(4 5 18 / 65%);
+  pointer-events: none;
+}
+.song-progress-meter {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 10px;
+  opacity: 0;
+}
+.song-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--accent, var(--gold));
+  /* Match the transport immediately, including the global reduced-motion rule. */
+  transition: none !important;
+}
+.song-progress-twilight-marker {
+  position: absolute;
+  top: 0;
+  left: var(--twilight-position);
+  width: 3px;
+  height: 15px;
+  transform: translateX(-50%);
+  background: #f3e7ff;
+  box-shadow: 0 0 0 2px #48335f;
+}
+.song-progress-twilight-label {
+  position: absolute;
+  top: 10px;
+  left: clamp(32px, var(--twilight-position), calc(100% - 32px));
+  padding: 0 5px;
+  transform: translateX(-50%);
+  background: #21152f;
+  color: #f3e7ff;
+  font:
+    500 8px/8px 'DM Mono',
+    monospace;
+}
+
 .play-heading {
   position: relative;
   z-index: 1;

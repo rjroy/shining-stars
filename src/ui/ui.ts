@@ -25,6 +25,7 @@ import {
 } from '../rendering/brightvale/viewport';
 import { ensureExperienceShell } from './experience-shell';
 import type { SongCatalogEntry } from '../catalog/catalog';
+import { createSongProgress } from './song-progress';
 
 export interface UIActions {
   readonly start: () => void;
@@ -350,6 +351,12 @@ export function createGameUI(
   const shell = ensureExperienceShell(applicationRoot);
   const root = shell.createScreen('gameplay', 'Rhythm performance');
   root.innerHTML = `
+      <div class="song-progress" data-song-progress-rail>
+        <progress class="song-progress-meter" data-song-progress aria-label="Song progress" max="1" value="0"></progress>
+        <span class="song-progress-fill" data-song-progress-fill aria-hidden="true"></span>
+        <span class="song-progress-twilight-marker" aria-hidden="true"></span>
+        <span class="song-progress-twilight-label" aria-hidden="true">Twilight</span>
+      </div>
       <div class="gameplay-screen-content" aria-describedby="lane-instructions">
         <div class="play-heading">
           <div class="score-readout" aria-live="off">
@@ -470,6 +477,7 @@ export function createGameUI(
       </div>`;
 
   shell.activate('gameplay');
+  const songProgress = createSongProgress(root, chart);
   setText(
     root,
     '[data-song-label]',
@@ -829,6 +837,7 @@ export function createGameUI(
 
   function render(snapshot: ControllerSnapshot, audioNow: number): void {
     const { audio, game } = snapshot;
+    songProgress.render(game.transportTime);
     updateScore(game);
     pendingPlaybackRequests = snapshot.pendingPlaybackRequests;
     const isError = audio.status === 'error' || fatalMessage !== null;
@@ -1088,6 +1097,7 @@ export function createGameUI(
       if (message !== null) showPanel('error');
     },
     destroy() {
+      songProgress.destroy();
       if (!touchDisposed) resetTouch();
       touchDisposed = true;
       root.removeEventListener('pointerdown', onTouchDown);
