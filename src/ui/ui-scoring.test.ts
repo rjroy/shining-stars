@@ -24,9 +24,10 @@ interface ScorePresentation {
 // actual DOM wiring and canvas safety require the later real-game browser pass.
 function present(fields: ScoreFields): ScorePresentation {
   const helper = Reflect.get(ui, 'getScorePresentation');
-  expect(helper, 'ui.ts exports the shared HUD/results score presenter').toBeTypeOf(
-    'function',
-  );
+  expect(
+    helper,
+    'ui.ts exports the shared HUD/results score presenter',
+  ).toBeTypeOf('function');
   return (helper as (input: ScoreFields) => ScorePresentation)(fields);
 }
 
@@ -86,9 +87,12 @@ describe('shared score presentation contract', () => {
     [30, [1, 1, 1, 0, 0]],
     [44, [1, 1, 1, 1, 0]],
     [60, [1, 1, 1, 1, 1]],
-  ] as const)('progressively fills normal silhouettes at %s%%', (percent, normal) => {
-    expectFills(atPercent(percent), normal, [0, 0, 0, 0, 0]);
-  });
+  ] as const)(
+    'progressively fills normal silhouettes at %s%%',
+    (percent, normal) => {
+      expectFills(atPercent(percent), normal, [0, 0, 0, 0, 0]);
+    },
+  );
 
   it.each([
     [65, [0.5, 0, 0, 0, 0]],
@@ -102,9 +106,12 @@ describe('shared score presentation contract', () => {
     [87.5, [1, 1, 1, 1, 0.5]],
     [90, [1, 1, 1, 1, 1]],
     [125, [1, 1, 1, 1, 1]],
-  ] as const)('overlays progressive gold in the SAME five silhouettes at %s%%', (percent, gold) => {
-    expectFills(atPercent(percent), [1, 1, 1, 1, 1], gold);
-  });
+  ] as const)(
+    'overlays progressive gold in the SAME five silhouettes at %s%%',
+    (percent, gold) => {
+      expectFills(atPercent(percent), [1, 1, 1, 1, 1], gold);
+    },
+  );
 
   it('continues normal filling at its 60% endpoint before gold begins', () => {
     expectFills(atPercent(65), [1, 1, 1, 1, 1], [0.5, 0, 0, 0, 0]);
@@ -119,7 +126,12 @@ describe('shared score presentation contract', () => {
   });
 
   it('keeps a zero-maximum chart finite and empty', () => {
-    const value = present({ score: 0, normalMaximum: 0, combo: 0, multiplier: 1 });
+    const value = present({
+      score: 0,
+      normalMaximum: 0,
+      combo: 0,
+      multiplier: 1,
+    });
     expectFills(value, [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]);
     expect(value.starSummary).not.toMatch(/NaN|Infinity/);
   });
@@ -146,6 +158,8 @@ describe('shared score presentation contract', () => {
     const stats = { perfect: 24, good: 0, miss: 0, accuracy: 100 };
     const result: GameResult = {
       ...scoring,
+      bestCombo: 24,
+      bestComboMultiplier: 3,
       audience: stats,
       twilight: stats,
       overall: stats,
@@ -159,6 +173,8 @@ describe('shared score presentation contract', () => {
       for (const victory of [false, true]) {
         const snapshot: GameSnapshot = {
           ...scoring,
+          bestCombo: 24,
+          bestComboMultiplier: 3,
           phase,
           victory,
           status: 'playing',

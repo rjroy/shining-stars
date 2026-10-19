@@ -1,7 +1,11 @@
 import type { ChartConfig } from '../game/chart';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
-import { defaultDifficulty, getDifficultyProfile, type Difficulty } from '../game/game-balance';
+import {
+  defaultDifficulty,
+  getDifficultyProfile,
+  type Difficulty,
+} from '../game/game-balance';
 import { getInitialTwilightStrength } from '../game/chart';
 import {
   GOLD_STAR_THRESHOLDS,
@@ -434,7 +438,7 @@ export function createGameUI(
             <span class="score-label">Score</span>
             <strong class="score-value" data-result-score>0</strong>
             ${scoreStarsMarkup('result-score')}
-            <p class="result-combo">Final combo <strong data-result-score-combo>0</strong> <span data-result-score-multiplier>×1</span></p>
+            <p class="result-combo">Best combo <strong data-result-score-combo>0</strong> <span data-result-score-multiplier>×1</span></p>
           </div>
           <div class="result-grid" data-result-grid></div>
           <button class="primary-button" type="button" data-action="restart" disabled>Sing again <span aria-hidden="true">↗</span></button>
@@ -476,7 +480,7 @@ export function createGameUI(
     '[data-song-description]',
     song.segmentKind === 'excerpt'
       ? 'This is a short demo excerpt. Follow the notes to the line; the song carries you through Audience and Twilight.'
-       : `Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${getInitialTwilightStrength(chart, defaultDifficulty(chart.allowedDifficulties))} Twilight Strength. A missed note is not surrender.`,
+      : `Follow the notes to the line. At Twilight, your Renown becomes Personal Strength; the enemy begins with ${getInitialTwilightStrength(chart, defaultDifficulty(chart.allowedDifficulties))} Twilight Strength. A missed note is not surrender.`,
   );
   setText(
     root,
@@ -500,7 +504,9 @@ export function createGameUI(
   const countdownNumber = root.querySelector<HTMLElement>(
     '[data-countdown-number]',
   );
-  const countdownUnit = root.querySelector<HTMLElement>('[data-countdown-unit]');
+  const countdownUnit = root.querySelector<HTMLElement>(
+    '[data-countdown-unit]',
+  );
   const panels = [...root.querySelectorAll<HTMLElement>('[data-panel]')];
   const actionButtons = [
     ...root.querySelectorAll<HTMLButtonElement>('[data-action]'),
@@ -793,7 +799,11 @@ export function createGameUI(
     const result = game.result;
     const grid = root.querySelector<HTMLElement>('[data-result-grid]');
     if (result === null || grid === null) return;
-    updateResultScore(result);
+    updateResultScore({
+      ...result,
+      combo: result.bestCombo,
+      multiplier: result.bestComboMultiplier,
+    });
     const outcomeLabels = {
       victory: 'Victory',
       defeat: 'Defeat',
@@ -1011,7 +1021,10 @@ export function createGameUI(
     if (countdown !== null && countdown.hidden === showCountdown)
       countdown.hidden = !showCountdown;
     if (countdownNumber !== null)
-      setElementText(countdownNumber, showCountdown ? String(startCountdown) : '');
+      setElementText(
+        countdownNumber,
+        showCountdown ? String(startCountdown) : '',
+      );
     if (countdownUnit !== null)
       setElementText(
         countdownUnit,

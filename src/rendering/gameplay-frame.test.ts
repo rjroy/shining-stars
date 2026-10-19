@@ -46,9 +46,18 @@ function snapshot(
     difficulty: 'hard' as const,
     score: 0,
     combo: 0,
+    bestCombo: 0,
     multiplier: 1,
+    bestComboMultiplier: 1,
     normalMaximum: getTheoreticalMaximumScore(chart.notes.length),
-    notes: [{ id: 'n-1', lane: 2 as const, phase: 'audience' as const, outcome: null }],
+    notes: [
+      {
+        id: 'n-1',
+        lane: 2 as const,
+        phase: 'audience' as const,
+        outcome: null,
+      },
+    ],
     result: null,
   };
   return {
@@ -66,15 +75,17 @@ function snapshot(
     inputOffset: 0,
     visualOffset: 0,
     selectedDifficulty: 'normal',
-    feedback: [{
-      noteId: 'n-1',
-      lane: 2,
-      quality: 'perfect',
-      timingErrorSeconds: 0.01,
-      eventId: 4,
-      runId: 3,
-      onsetTransportTime: 12,
-    }],
+    feedback: [
+      {
+        noteId: 'n-1',
+        lane: 2,
+        quality: 'perfect',
+        timingErrorSeconds: 0.01,
+        eventId: 4,
+        runId: 3,
+        onsetTransportTime: 12,
+      },
+    ],
     pendingPlaybackRequests: false,
     ...overrides,
   };
@@ -141,8 +152,7 @@ describe('shared gameplay timing geometry', () => {
     const projected = projectGameplayFrame(snapshot(), chart, layout, false);
     const profile = getDifficultyProfile('hard');
     expect(projected.timingWindows).toEqual({
-      goodHalfProgress:
-        profile.timing.goodWindowSeconds / VISIBLE_NOTE_SECONDS,
+      goodHalfProgress: profile.timing.goodWindowSeconds / VISIBLE_NOTE_SECONDS,
       perfectHalfProgress:
         profile.timing.perfectWindowSeconds / VISIBLE_NOTE_SECONDS,
     });
@@ -220,10 +230,12 @@ describe('shared gameplay timing geometry', () => {
     expect(atTransportTime(13.099).feedback).toMatchObject([{ runId: 3 }]);
     expect(
       atTransportTime(FEEDBACK_VISIBLE_SECONDS, {
-        feedback: [{
-          ...snapshot().feedback[0]!,
-          onsetTransportTime: 0,
-        }],
+        feedback: [
+          {
+            ...snapshot().feedback[0]!,
+            onsetTransportTime: 0,
+          },
+        ],
         game: { ...snapshot().game, transportTime: FEEDBACK_VISIBLE_SECONDS },
       }).feedback,
     ).toEqual([]);
@@ -251,7 +263,7 @@ describe('shared gameplay timing geometry', () => {
             ...base.feedback[0]!,
             lane: 1,
             eventId: 12,
-        onsetTransportTime: 10.8,
+            onsetTransportTime: 10.8,
           },
           {
             ...base.feedback[0]!,

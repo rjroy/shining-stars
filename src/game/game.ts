@@ -43,7 +43,9 @@ export interface GameResult {
   readonly outcome: GameOutcome;
   readonly score: number;
   readonly combo: number;
+  readonly bestCombo: number;
   readonly multiplier: number;
+  readonly bestComboMultiplier: number;
   readonly normalMaximum: number;
 }
 
@@ -59,8 +61,11 @@ export interface GameSnapshot {
   readonly difficulty: Difficulty;
   readonly score: number;
   readonly combo: number;
+  readonly bestCombo: number;
   /** Multiplier that applies to the next successful hit. */
   readonly multiplier: number;
+  /** Multiplier reached at the run's best combo. */
+  readonly bestComboMultiplier: number;
   readonly normalMaximum: number;
   readonly notes: readonly GameNoteState[];
   readonly result: GameResult | null;
@@ -206,10 +211,7 @@ export function getTheoreticalMaximumScore(noteCount: number): number {
 }
 
 function multiplierForNextHit(combo: number): number {
-  return Math.min(
-    MAX_SCORE_MULTIPLIER,
-    Math.floor(combo / 10) + 1,
-  );
+  return Math.min(MAX_SCORE_MULTIPLIER, Math.floor(combo / 10) + 1);
 }
 
 function copyResult(result: GameResult | null): GameResult | null {
@@ -228,7 +230,9 @@ function copyResult(result: GameResult | null): GameResult | null {
     outcome: result.outcome,
     score: result.score,
     combo: result.combo,
+    bestCombo: result.bestCombo,
     multiplier: result.multiplier,
+    bestComboMultiplier: result.bestComboMultiplier,
     normalMaximum: result.normalMaximum,
   };
 }
@@ -262,7 +266,9 @@ export function createGame(
   const normalMaximum =
     requestedNormalMaximum ?? getTheoreticalMaximumScore(chart.notes.length);
   if (!Number.isInteger(normalMaximum) || normalMaximum < 0) {
-    throw new RangeError('Normal maximum score must be a non-negative integer.');
+    throw new RangeError(
+      'Normal maximum score must be a non-negative integer.',
+    );
   }
 
   const allowedDifficulties = parseAllowedDifficulties(
@@ -300,6 +306,8 @@ export function createGame(
   let twilightStrength = initialTwilightStrength;
   let score = 0;
   let combo = 0;
+  let bestCombo = 0;
+  let bestComboMultiplier = multiplierForNextHit(0);
   let boundaryProcessed = false;
   let result: GameResult | null = null;
 
@@ -321,7 +329,9 @@ export function createGame(
       outcome,
       score,
       combo,
+      bestCombo,
       multiplier: multiplierForNextHit(combo),
+      bestComboMultiplier,
       normalMaximum,
     };
   }
@@ -459,7 +469,9 @@ export function createGame(
       difficulty,
       score,
       combo,
+      bestCombo,
       multiplier: multiplierForNextHit(combo),
+      bestComboMultiplier,
       normalMaximum,
       notes: notes.map((note) => ({
         id: note.id,
@@ -575,8 +587,7 @@ export function createGame(
       // Account only for input-time floating-point cancellation at exact
       // half-point boundaries; the scoring result remains an integer.
       const goodWindowWidth =
-        profile.timing.goodWindowSeconds -
-        profile.timing.perfectWindowSeconds;
+        profile.timing.goodWindowSeconds - profile.timing.perfectWindowSeconds;
       const roundingTolerance =
         quality === 'good' && goodWindowWidth > 0
           ? (Number.EPSILON *
@@ -588,6 +599,10 @@ export function createGame(
           : 0;
       score += Math.round(basePoints * hitMultiplier + roundingTolerance);
       combo += 1;
+      if (combo > bestCombo) {
+        bestCombo = combo;
+        bestComboMultiplier = multiplierForNextHit(bestCombo);
+      }
       if (phase === 'audience') {
         renown += profile.audience[quality];
       } else {
