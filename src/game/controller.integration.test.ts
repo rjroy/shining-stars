@@ -104,6 +104,42 @@ function cancelWithoutPublishing(
 }
 
 describe('audio and controller timing integration', () => {
+  it('holds the Radiant projection through pause/resume and resets it on restart', async () => {
+    const context = new TestContext();
+    const { controller } = createIntegrationController(context, [
+      { id: 'audience', time: 1, lane: 0 },
+      { id: 'twilight-one', time: 3, lane: 0 },
+      { id: 'twilight-two', time: 4, lane: 1 },
+      { id: 'twilight-three', time: 5, lane: 2 },
+      { id: 'twilight-four', time: 6, lane: 3 },
+      { id: 'twilight-five', time: 7, lane: 0 },
+      { id: 'twilight-six', time: 8, lane: 1 },
+    ]);
+    await beginPlayback(context, controller);
+
+    context.currentTime = 6;
+    controller.keyDown('KeyD');
+    controller.keyUp('KeyD');
+    context.currentTime = 7;
+    controller.update();
+    const targetBeforePause = controller.snapshot().game.radiantTarget;
+    expect(targetBeforePause).toBe(7);
+
+    context.currentTime = 7.25;
+    controller.pause();
+    expect(controller.snapshot().game.radiantTarget).toBe(targetBeforePause);
+    context.currentTime = 50;
+    controller.update();
+    expect(controller.snapshot().game.radiantTarget).toBe(targetBeforePause);
+
+    await controller.resume();
+    expect(controller.snapshot().game.radiantTarget).toBe(targetBeforePause);
+    await controller.restart();
+    expect(controller.snapshot().game.radiantTarget).toBe(targetBeforePause);
+
+    await controller.dispose();
+  });
+
   it('judges from fresh audio time on keydown without waiting for an update frame', async () => {
     const context = new TestContext();
     const audio = createAudioTransport(

@@ -1,10 +1,25 @@
 """Disposable neutral geometry views of a saved source; never saves that source."""
 import argparse
 import hashlib
+import subprocess
 import sys
 from pathlib import Path
 import bpy
 from mathutils import Vector
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 
 def aim(obj,target):obj.rotation_euler=(Vector(target)-obj.location).to_track_quat('-Z','Y').to_euler()
@@ -12,8 +27,9 @@ def aim(obj,target):obj.rotation_euler=(Vector(target)-obj.location).to_track_qu
 
 def render(out,views):
     source=Path(bpy.data.filepath);before=hashlib.sha256(source.read_bytes()).hexdigest()
-    expected=[out/(v+'.png') for v in views]
-    if any(p.exists() for p in expected):raise FileExistsError('Refusing existing preview output')
+    expected=[out/(v+'.webp') for v in views]
+    renders=[p.with_suffix('.png') for p in expected]
+    if any(p.exists() for p in expected+renders):raise FileExistsError('Refusing existing preview output or render path')
     scene=bpy.context.scene
     coll=bpy.data.collections.new('REVIEW_ONLY');scene.collection.children.link(coll)
     scene.render.engine='CYCLES';scene.cycles.samples=32;scene.cycles.use_denoising=True
@@ -50,9 +66,11 @@ def render(out,views):
                 duplicate.data.materials.clear();duplicate.data.materials.append(mat)
                 mod=duplicate.modifiers.new('Review only edge overlay','WIREFRAME');mod.thickness=.00065;mod.offset=1
                 wires.append(duplicate)
-        scene.render.image_settings.file_format='PNG';scene.render.filepath=str(out/(view+'.png'))
+        png=out/(view+'.png')
+        scene.render.image_settings.file_format='PNG';scene.render.filepath=str(png)
         print('NEUTRAL RENDER BEGIN',view,flush=True);bpy.ops.render.render(write_still=True)
-        assert (out/(view+'.png')).stat().st_size>0
+        assert png.stat().st_size>0
+        encode_preview(png)
         for obj in wires:bpy.data.objects.remove(obj,do_unlink=True)
         print('NEUTRAL RENDER COMPLETE',view,flush=True)
     assert hashlib.sha256(source.read_bytes()).hexdigest()==before,'SOURCE MUTATED'

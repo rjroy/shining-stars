@@ -1,16 +1,32 @@
 """Read-only review cameras; never saves or modifies the .blend on disk.
 Run on an explicitly loaded .blend, -- --output-dir /absolute/existing/dir
 --views neutral detail distance audience twilight reverse
-Outputs PNG intermediates; convert selected evidence to WebP outside Blender.
+Outputs retained WebP evidence; PNGs are temporary render intermediates.
 """
 import argparse
 import hashlib
 import importlib.util
 import json
 import sys
+import subprocess
 from pathlib import Path
 import bpy
 from mathutils import Vector
+
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 # Import the adjacent build module without littering a read-only source package.
 sys.dont_write_bytecode=True
@@ -30,6 +46,9 @@ def geometry_signature():
 
 
 def render(out,views):
+    existing=[out/(view+suffix) for view in views for suffix in ('.png','.webp')
+              if (out/(view+suffix)).exists()]
+    if existing: raise FileExistsError('Refusing existing preview output(s): '+', '.join(map(str,existing)))
     source=Path(bpy.data.filepath)
     before=hashlib.sha256(source.read_bytes()).hexdigest()
     geometry_before=geometry_signature()
@@ -84,10 +103,12 @@ def render(out,views):
         loc,target,kind,value=cameras[view];cam.location=loc;aim(cam,target);camdata.type=kind
         if kind=='ORTHO':camdata.ortho_scale=value
         else:camdata.lens=value
-        scene.render.filepath=str(out/(view+'.png'))
+        png=out/(view+'.png')
+        scene.render.filepath=str(png)
         print('CITY RENDER BEGIN',view,scene.render.filepath,flush=True)
         bpy.ops.render.render(write_still=True)
-        assert Path(scene.render.filepath).stat().st_size>0
+        assert png.stat().st_size>0
+        encode_preview(png)
         assert geometry_signature()==geometry_before,'Preview mutated asset geometry/transforms'
         print('CITY RENDER COMPLETE',view,flush=True)
     assert hashlib.sha256(source.read_bytes()).hexdigest()==before,'Source changed during preview'

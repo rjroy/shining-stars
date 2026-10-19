@@ -12,10 +12,10 @@ Approval authorizes production copies and the runtime scale/integration check
 for these surfaces only. Actual-app runtime acceptance remains pending.
 
 - Full brief: [brief.md](brief.md)
-- **Combined 3×3 repeat review:** [ground-textures-repeat-review.png](ground-textures-repeat-review.png)
+- **Combined 3×3 repeat review:** [WebP presentation](ground-textures-repeat-review.webp). The duplicate PNG review sheet is not retained.
   Left is green City Ground; right is blue-violet Audience Plaza.
-- City Ground: [candidate](city-ground-candidate.png) · [2×2 repeat](city-ground-2x2.png)
-- Audience Plaza: [candidate](audience-plaza-candidate.png) · [2×2 repeat](audience-plaza-2x2.png)
+- City Ground: [candidate](city-ground-candidate.png) · [2×2 WebP](city-ground-2x2.webp)
+- Audience Plaza: [candidate](audience-plaza-candidate.png) · [2×2 WebP](audience-plaza-2x2.webp)
 - Reproducible correction: [seamless-tile.py](seamless-tile.py)
 
 The generated originals are preserved as `city-ground-source.png` and
@@ -49,16 +49,40 @@ correction; City Ground uses no blur. This preserves the generated source and
 makes the correction reproducible. A repeat preview is built directly from the
 candidate without added image changes.
 
-From this directory:
+From this directory (repeat PNG intermediates stay in a new temporary
+directory; WebPs go to a new output directory, never over existing evidence):
 
 ```sh
-python seamless-tile.py city-ground-source.png city-ground-candidate.png --band 64
-python seamless-tile.py audience-plaza-source.png audience-plaza-candidate.png --band 64 --blur-sigma 42
-magick city-ground-candidate.png city-ground-candidate.png +append /tmp/city-row.png
-magick /tmp/city-row.png /tmp/city-row.png -append city-ground-2x2.png
-magick audience-plaza-candidate.png audience-plaza-candidate.png +append /tmp/plaza-row.png
-magick /tmp/plaza-row.png /tmp/plaza-row.png -append audience-plaza-2x2.png
+set -euo pipefail
+scratch=$(mktemp -d "${TMPDIR:-/tmp/opencode}/ground-review.XXXXXX")
+trap 'rm -rf -- "$scratch"' EXIT
+destination="${1:-$PWD/ground-review-webp}"
+if [[ -e "$destination" ]]; then
+  printf 'Refusing to overwrite existing output directory: %s\n' "$destination" >&2
+  exit 1
+fi
+mkdir -p -- "$destination"
+python seamless-tile.py city-ground-source.png "$scratch/city-ground-candidate.png" --band 64
+python seamless-tile.py audience-plaza-source.png "$scratch/audience-plaza-candidate.png" --band 64 --blur-sigma 42
+magick "$scratch/city-ground-candidate.png" "$scratch/city-ground-candidate.png" +append "$scratch/city-row.png"
+magick "$scratch/city-row.png" "$scratch/city-row.png" -append "$scratch/city-ground-2x2.png"
+magick "$scratch/audience-plaza-candidate.png" "$scratch/audience-plaza-candidate.png" +append "$scratch/plaza-row.png"
+magick "$scratch/plaza-row.png" "$scratch/plaza-row.png" -append "$scratch/audience-plaza-2x2.png"
+cwebp -quiet -q 80 -m 6 -alpha_q 100 "$scratch/city-ground-2x2.png" -o "$scratch/city-ground-2x2.webp"
+mv -f -- "$scratch/city-ground-2x2.webp" "$destination/city-ground-2x2.webp"
+cwebp -quiet -q 80 -m 6 -alpha_q 100 "$scratch/audience-plaza-2x2.png" -o "$scratch/audience-plaza-2x2.webp"
+mv -f -- "$scratch/audience-plaza-2x2.webp" "$destination/audience-plaza-2x2.webp"
+magick "$scratch/city-ground-candidate.png" "$scratch/city-ground-candidate.png" "$scratch/city-ground-candidate.png" +append "$scratch/city-3x1.png"
+magick "$scratch/audience-plaza-candidate.png" "$scratch/audience-plaza-candidate.png" "$scratch/audience-plaza-candidate.png" +append "$scratch/plaza-3x1.png"
+magick "$scratch/city-3x1.png" "$scratch/city-3x1.png" "$scratch/city-3x1.png" -append "$scratch/city-3x3.png"
+magick "$scratch/plaza-3x1.png" "$scratch/plaza-3x1.png" "$scratch/plaza-3x1.png" -append "$scratch/plaza-3x3.png"
+magick "$scratch/city-3x3.png" "$scratch/plaza-3x3.png" +append "$scratch/ground-textures-repeat-review.png"
+cwebp -quiet -q 80 -m 6 -alpha_q 100 "$scratch/ground-textures-repeat-review.png" -o "$scratch/ground-textures-repeat-review.webp"
+mv -f -- "$scratch/ground-textures-repeat-review.webp" "$destination/ground-textures-repeat-review.webp"
+printf 'Generated WebP reviews in %s (PNG scratch is removed on exit)\n' "$destination"
 ```
+
+The 2×2 PNGs and combined review-sheet PNG are temporary intermediates. The command accepts an optional new output directory; preserve approved candidate/source textures and existing WebPs.
 
 The script was rerun from each preserved source; ImageMagick pixel comparison
 reported RMSE **0** against each candidate. Both 2×2 and 3×3 repeats were

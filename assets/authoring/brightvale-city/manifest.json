@@ -101,6 +101,78 @@
       "origin": "assets/authoring/brightvale-city/evidence/authoring-verification.json",
       "origin_sha256": "fcfc63c2b01e6fc50f611ed827599687a85e4aa709cf5daf90a8e9e64ff1335f",
       "role": "independent read-only verification report; discloses non-loading experiment checkpoint weak-reference metadata"
+    },
+    {
+      "path": "references/citadel-approved-large-left.webp",
+      "bytes": 293822,
+      "sha256": "5da6abc3178edef41103015d44da9f16a590ae3e54734bbd4222cd1c467bd75f",
+      "origin": "references/citadel-approved-large-left.png",
+      "derived_from_sha256": "6ae901d060f05fdf895f9de43ec9c42d858bf632a6fe7b81ea9855ef0a251118",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "references/lighting-direction-comparison.webp",
+      "bytes": 204548,
+      "sha256": "9811386cfd4f6594f31750c0e7be4512a258de53d0d4dd2c742452e394691a4d",
+      "origin": "references/lighting-direction-comparison.png",
+      "derived_from_sha256": "2ce860b4830cdfb3d75ef7ce1df7e8b1ef85f09a0987d677f7fc9ac0c3eb4dca",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "references/paired-districts-approved.webp",
+      "bytes": 422858,
+      "sha256": "78ef62051c75c91e56f8aabd562529bace8faf5f6aa2d0c462bdb7b57303163d",
+      "origin": "references/paired-districts-approved.png",
+      "derived_from_sha256": "fe8720d327a6ed1613726c6a6426b6b282e284c01ab91770d1081922573b637d",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "references/ravine-crossing-approved-upper.webp",
+      "bytes": 409762,
+      "sha256": "a19431c9a2511dc4a28ed7c3ba9a8dedae0360c8ff747d838e4d86316017928b",
+      "origin": "references/ravine-crossing-approved-upper.png",
+      "derived_from_sha256": "2a1fdcd50153bd2098f8cb70b50529539d5c89ccf73a2e85a002ed710ea97661",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "references/skyline-corrected-approved.webp",
+      "bytes": 45914,
+      "sha256": "15296f0f01f86c72db651ad09c709c747342e291e0f18b922ad8421c62db2930",
+      "origin": "references/skyline-corrected-approved.png",
+      "derived_from_sha256": "5b0818efe4f3fb70c6a14ea7a88776705e537e4e4470369952b98e38a9b7ba03",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "references/water-vegetation-approved.webp",
+      "bytes": 395938,
+      "sha256": "fdd0896dd1fc8ae5585b0b21e36ffe4e52d69c4595517601654f475f6ead82ee",
+      "origin": "references/water-vegetation-approved.png",
+      "derived_from_sha256": "799f6a23dd19663b68f5039b613a0cfd0e2a6fb70f61e0f97398bc2161250d5b",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "evidence/city-audience.webp",
+      "bytes": 89744,
+      "sha256": "f465048c0795df95444570cac197ee4364eccad5300f03aa1879ce1c18a8ebb9",
+      "origin": "evidence/city-audience.png",
+      "derived_from_sha256": "a229aef9a5e3874be48613c5bbf6e77e47dfb8abf212f6122946ec9005834559",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "evidence/city-twilight.webp",
+      "bytes": 74432,
+      "sha256": "c844bfe5df3b42a2543408e54d619ed1138bfc981a93319d04f5b002ce625d23",
+      "origin": "evidence/city-twilight.png",
+      "derived_from_sha256": "3aee752ab813ba6af1eb74a05ec05729ad04df077466239ac18da48cf1f112b4",
+      "role": "presentation derivative; source PNG retained unchanged"
+    },
+    {
+      "path": "evidence/water-before-after.webp",
+      "bytes": 125254,
+      "sha256": "50ffaecd33927b2c48d4942e15c0347e79993d65c267ff076bd241db597e01be",
+      "origin": "evidence/water-before-after.png",
+      "derived_from_sha256": "ceb56d93d53f2c061573b11e998cd32d6714b353e73125fbb22d330021e95b35",
+      "role": "presentation derivative; source PNG retained unchanged"
     }
   ]
 }

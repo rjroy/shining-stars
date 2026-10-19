@@ -1,12 +1,27 @@
 """Disposable neutral-light geometry evidence; never saves the opened source."""
 import argparse
 import sys
+import subprocess
 sys.dont_write_bytecode=True
 from pathlib import Path
 import bpy
 from mathutils import Vector
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 import build as B
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 VIEWS=['group-front','group-threequarter','A-front','B-front','C-front',
        'B-threequarter','C-threequarter','B-head','C-head','B-shoulder','C-shoulder',
@@ -19,8 +34,9 @@ def aim(o,target):
 
 def render(out,views,samples=32):
     source=Path(bpy.data.filepath);before=B.sha(source);B.sources()
-    paths=[out/(v+'.png') for v in views]
-    if any(p.exists() for p in paths):raise FileExistsError('Refusing existing preview output')
+    paths=[out/(v+'.webp') for v in views]
+    render_paths=[p.with_suffix('.png') for p in paths]
+    if any(p.exists() for p in paths+render_paths):raise FileExistsError('Refusing existing preview output or render path')
     scene=bpy.context.scene;coll=bpy.data.collections.new('REVIEW_ONLY');scene.collection.children.link(coll)
     scene.render.engine='CYCLES';scene.cycles.samples=samples;scene.cycles.use_denoising=True
     scene.world=bpy.data.worlds.new('ReviewWorld');scene.world.use_nodes=True
@@ -33,6 +49,7 @@ def render(out,views,samples=32):
     data=bpy.data.cameras.new('ReviewCamera');camera=bpy.data.objects.new('ReviewCamera',data);coll.objects.link(camera)
     scene.camera=camera;data.type='ORTHO'
     for view,path in zip(views,paths):
+        render_path=path.with_suffix('.png')
         B.assigned_poses()
         cid,kind=view.split('-',1)
         group=cid=='group'
@@ -56,10 +73,11 @@ def render(out,views,samples=32):
             elif kind!='front':raise ValueError(kind)
         camera.location=target+Vector(offset);aim(camera,target);data.ortho_scale=scale
         scene.render.resolution_x=width;scene.render.resolution_y=height;scene.render.resolution_percentage=100
-        scene.render.image_settings.file_format='PNG';scene.render.filepath=str(path)
-        print('TRIO RENDER BEGIN',view,path,flush=True)
+        scene.render.image_settings.file_format='PNG';scene.render.filepath=str(render_path)
+        print('TRIO RENDER BEGIN',view,render_path,flush=True)
         bpy.ops.render.render(write_still=True)
-        assert path.stat().st_size>0
+        assert render_path.stat().st_size>0
+        encode_preview(render_path)
         print('TRIO RENDER COMPLETE',view,flush=True)
     assert B.sha(source)==before,'CANDIDATE MUTATED';B.sources()
     print('READ-ONLY RENDERS COMPLETE',before,flush=True)

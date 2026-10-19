@@ -7,7 +7,7 @@ No study placements, authoring files, runtime code, shaders, or animation change
 
 - [crowd.glb](crowd.glb): reusable mesh-PBR pose bank, **449,668 bytes**.
 - [crowd.blend](crowd.blend): editable reduced mesh derivative, not the rig authority.
-- [comparison.webp](comparison.webp): lossless actual source/reduced renders, opened and inspected.
+- [comparison.webp](comparison.webp): existing lossless actual source/reduced renders, opened and inspected; it is retained unchanged.
 - [validation.json](validation.json): measured bounds, fingerprints, export checks,
   source comparisons, negative checks and independent reproduction result.
 - [build.py](build.py), [validate.py](validate.py), [compare.py](compare.py): deterministic
@@ -64,9 +64,10 @@ plus larger three-quarter diagnostics. Every pair shows **source left / reduced
 right**, identical lights/camera/settings. Cycles 24 samples, denoising, AgX
 Medium High Contrast, neutral gray world and three broad area lights; no blend
 is saved during rendering. ImageMagick only labels/assembles the actual renders;
-`cwebp -lossless -exact` preserves the assembled 8-bit image in the maintained
-WebP. PNG intermediates stay in
-scratch; no duplicate capture is retained in this package.
+The maintained comparison is an existing lossless WebP and is retained unchanged.
+The comparison generator now uses the shared `cwebp -q 80 -m 6 -alpha_q 100`
+preview settings for newly generated sheets. PNG intermediates stay in scratch;
+no duplicate capture is retained in this package.
 
 Inspected result: arm gestures, finger separation, head/neck proportions, bob
 outline, swept fringe, rear knot, garment cuts and color blocks remain readable.

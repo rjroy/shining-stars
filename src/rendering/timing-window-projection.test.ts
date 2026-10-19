@@ -49,6 +49,7 @@ function makeSnapshot(
       phase: 'audience',
       status: 'playing',
       victory: false,
+      radiantTarget: null,
       renown: 0,
       personalStrength: 100,
       twilightStrength: 100,

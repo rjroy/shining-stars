@@ -1,12 +1,27 @@
 """Read-only neutral-light pose diagnostics. Does not save the source."""
 import argparse
 import sys
+import subprocess
 sys.dont_write_bytecode = True
 from pathlib import Path
 import bpy
 from mathutils import Vector
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build import apply_pose, POSES, sha
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 
 def aim(obj, target):
@@ -16,8 +31,9 @@ def aim(obj, target):
 def render(out, poses, views):
     source = Path(bpy.data.filepath)
     before = sha(source)
-    paths = [out/(pose.lower()+'-'+view+'.png') for pose in poses for view in views]
-    if any(p.exists() for p in paths):
+    paths = [out/(pose.lower()+'-'+view+'.webp') for pose in poses for view in views]
+    render_paths = [p.with_suffix('.png') for p in paths]
+    if any(p.exists() for p in paths + render_paths):
         raise FileExistsError('Refusing existing preview output')
     scene = bpy.context.scene
     coll = bpy.data.collections.new('REVIEW_ONLY')
@@ -69,6 +85,7 @@ def render(out, poses, views):
             print('POSE RENDER BEGIN',pose,view,flush=True)
             bpy.ops.render.render(write_still=True)
             assert path.stat().st_size > 0
+            encode_preview(path)
             print('POSE RENDER COMPLETE',path,flush=True)
     assert sha(source) == before, 'SOURCE MUTATED'
     print('SOURCE UNCHANGED',before,flush=True)

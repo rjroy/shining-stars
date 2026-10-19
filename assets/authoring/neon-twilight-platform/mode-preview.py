@@ -9,8 +9,23 @@ import bpy
 import hashlib
 import json
 import sys
+import subprocess
 from pathlib import Path
 from mathutils import Vector
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "platform.blend"
@@ -126,14 +141,14 @@ for mode, config in settings.items():
     for name, (energy, color) in config["lights"].items():
         lights[name].data.energy = energy
         lights[name].data.color = color
-    destination = OUTPUT / f"platform-{mode.lower()}.png"
-    scene.render.filepath = str(destination)
+    png = OUTPUT / f"platform-{mode.lower()}.png"
+    destination = png.with_suffix('.webp')
+    scene.render.filepath = str(png)
     print("MODE_SETUP", json.dumps({"mode": mode, "world": config["world"],
           "ground": config["ground"], "lights": config["lights"],
           "output": str(destination)}), flush=True)
     bpy.ops.render.render(write_still=True)
-    if not destination.is_file() or destination.stat().st_size == 0:
-        raise RuntimeError(f"Missing or empty render: {destination}")
+    destination = encode_preview(png)
 
 source_hash_after = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
 if source_hash_before != source_hash_after:
@@ -164,6 +179,6 @@ manifest = {
 }
 (OUTPUT / "mode-preview-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 print("MODE_PREVIEW_PASS", json.dumps({"source_sha256": source_hash_after,
-      "outputs": [str(OUTPUT / "platform-audience.png"), str(OUTPUT / "platform-twilight.png")],
+      "outputs": [str(OUTPUT / "platform-audience.webp"), str(OUTPUT / "platform-twilight.webp")],
       "camera": render_setup, "geometry": manifest["geometry"],
       "material_slots": original_material_names}, sort_keys=True), flush=True)

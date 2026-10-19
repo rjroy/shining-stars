@@ -1,7 +1,21 @@
 """Disposable read-only geometry evidence; no source save and no presentation tuning."""
-import bpy, json, hashlib, argparse, sys
+import bpy, json, hashlib, argparse, sys, subprocess
 from pathlib import Path
 from mathutils import Vector
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 ROOT=Path(__file__).resolve().parent
 GENERATED=ROOT/"generated"
 parser=argparse.ArgumentParser(description="Read-only disposable geometry evidence")
@@ -24,13 +38,15 @@ scene.render.resolution_x,scene.render.resolution_y=1000,700
 scene.render.image_settings.color_mode="RGBA"
 views=[]
 def render(name):
-    scene.render.filepath=OUT+"/"+name+".png"
-    views.append({"image":scene.render.filepath,"camera":scene.camera.name,
+    png=Path(OUT)/(name+".png")
+    scene.render.filepath=str(png)
+    views.append({"image":name+".webp","camera":scene.camera.name,
                   "position":list(scene.camera.location),"projection":scene.camera.data.type,
                   "lens":scene.camera.data.lens,"ortho_scale":scene.camera.data.ortho_scale,
                   "material_override":bool(bpy.context.view_layer.material_override)})
     bpy.ops.render.render(write_still=True)
     print("RENDERED",scene.render.filepath)
+    encode_preview(png)
 
 def camera(name,loc,target,scale):
     data=bpy.data.cameras.new(name); data.type="ORTHO"; data.ortho_scale=scale

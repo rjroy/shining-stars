@@ -842,4 +842,191 @@ describe('game model', () => {
       ]);
     });
   });
+
+  describe('Radiant projection', () => {
+    const audienceNotes = [
+      note('audience-one', 0.8, 0),
+      note('audience-two', 1.4, 1),
+      note('audience-three', 2.1, 2),
+      note('audience-four', 2.8, 3),
+    ];
+    const twilightNotes = [
+      note('twilight-one', 5.1, 0),
+      note('twilight-chord', 5.14, 1),
+      note('twilight-three', 5.9, 2),
+      note('twilight-four', 6.8, 3),
+      note('twilight-five', 7.6, 0),
+      note('twilight-six', 8.7, 1),
+    ];
+
+    function radiantGame(difficulty: TestDifficulty = 'normal') {
+      return makeDifficultyGame(
+        [...audienceNotes, ...twilightNotes],
+        difficulty,
+        { duration: 10, twilightAt: 4 },
+      );
+    }
+
+    it('projects unresolved notes as Perfect at nominal chart timestamps', () => {
+      const normal = radiantGame('normal');
+      const hard = radiantGame('hard');
+
+      // Normal starts at 14 and needs five Perfect hits; the fifth is at 7.6.
+      // Hard starts at 23 and also needs five; the fifth is at 7.6.
+      expect(normal.snapshot()).toMatchObject({
+        personalStrength: 0,
+        phase: 'audience',
+        radiantTarget: 7.6,
+      });
+      expect(hard.snapshot()).toMatchObject({
+        personalStrength: 0,
+        phase: 'audience',
+        radiantTarget: 7.6,
+      });
+    });
+
+    it('does not retarget when pending notes cross timing windows, but retargets on Good outcomes', () => {
+      const game = radiantGame();
+      for (const audience of audienceNotes)
+        game.press(audience.lane, audience.time);
+      game.advanceTo(4);
+      expect(game.snapshot().radiantTarget).toBe(7.6);
+
+      game.advanceTo(5.2); // Crosses Perfect, but no actual note outcome changed.
+      expect(
+        game.snapshot().notes.find(({ id }) => id === 'twilight-one'),
+      )?.toMatchObject({ outcome: null });
+      expect(game.snapshot().radiantTarget).toBe(7.6);
+
+      expect(game.press(0, 5.2)?.quality).toBe('good');
+      expect(game.snapshot().radiantTarget).toBe(7.6);
+
+      expect(game.press(1, 5.24)?.quality).toBe('good');
+      expect(game.snapshot().radiantTarget).toBe(8.7);
+      expect(game.press(2, 6)?.quality).toBe('good');
+      expect(game.snapshot().radiantTarget).toBe(8.7);
+    });
+
+    it('retargets on actual misses and returns null when remaining Perfect damage cannot win', () => {
+      const game = radiantGame();
+      for (const audience of audienceNotes)
+        game.press(audience.lane, audience.time);
+      game.advanceTo(4);
+      expect(game.snapshot().radiantTarget).toBe(7.6);
+
+      game.advanceTo(5.231); // Strictly past the first note's 5.225 miss deadline.
+      expect(
+        game.snapshot().notes.find(({ id }) => id === 'twilight-one'),
+      )?.toMatchObject({
+        outcome: 'miss',
+      });
+      expect(game.snapshot().radiantTarget).toBe(8.7);
+
+      // Subsequent actual misses eventually leave insufficient Perfect damage.
+      game.advanceTo(8.826);
+      expect(game.snapshot().radiantTarget).toBeNull();
+    });
+
+    it('retains the nominal forecast across timing windows and freezes actual early victory', () => {
+      const game = makeGame(
+        [
+          note('audience', 1, 3),
+          note('setup-one', 5, 0),
+          note('setup-two', 6, 1),
+          note('older-good', 7, 2),
+          note('newer-perfect', 7.18, 2),
+        ],
+        0,
+        { duration: 10, twilightAt: 2 },
+      );
+
+      game.press(3, 1);
+      game.advanceTo(2);
+      game.press(0, 5);
+      game.press(1, 6);
+      const forecast = game.snapshot().radiantTarget;
+      expect(forecast).toBe(7);
+      game.advanceTo(7.1);
+      expect(game.snapshot().radiantTarget).toBe(forecast);
+
+      expect(game.press(2, 7.115)).toMatchObject({
+        noteId: 'newer-perfect',
+        quality: 'perfect',
+      });
+      expect(game.snapshot()).toMatchObject({
+        victory: true,
+        radiantTarget: 7.115,
+      });
+    });
+
+    it('projects pending notes as Perfect despite same-lane selection, then changes on actual Good and Miss', () => {
+      const game = makeGame(
+        [
+          note('audience-one', 1, 0),
+          note('audience-two', 2, 1),
+          note('older', 7, 2),
+          note('newer', 7.22, 2),
+        ],
+        0,
+        { duration: 10, twilightAt: 4 },
+      );
+      game.press(0, 1);
+      game.press(1, 2);
+      expect(game.snapshot()).toMatchObject({
+        renown: 6,
+        personalStrength: 0,
+        twilightStrength: 5,
+        radiantTarget: 7.22,
+      });
+
+      game.advanceTo(7.12);
+      expect(game.snapshot().radiantTarget).toBe(7.22);
+      expect(game.press(2, 7.12)).toMatchObject({
+        noteId: 'newer',
+        quality: 'good',
+      });
+      expect(game.snapshot().radiantTarget).toBe(7);
+
+      game.advanceTo(7.126);
+      const afterMiss = game.snapshot();
+      expect(afterMiss.radiantTarget).toBeNull();
+      expect(afterMiss.notes.find(({ id }) => id === 'older')?.outcome).toBe(
+        'miss',
+      );
+      expect(afterMiss.notes.find(({ id }) => id === 'newer')?.outcome).toBe(
+        'good',
+      );
+    });
+
+    it('recalculates after a Good and a fresh run starts from its own state', () => {
+      const chart = makeChart(
+        [
+          note('audience-one', 0.5, 0),
+          note('audience-two', 1, 1),
+          note('twilight-one', 5, 0),
+          note('twilight-two', 6, 1),
+          note('twilight-three', 7, 2),
+          note('twilight-four', 8, 3),
+        ],
+        { duration: 10, twilightAt: 4 },
+      );
+      const firstRun = createGame(chart);
+      expect(firstRun.snapshot().radiantTarget).toBe(7);
+
+      firstRun.press(0, 0.5);
+      firstRun.press(1, 1);
+      firstRun.advanceTo(4);
+      firstRun.press(0, 5.1);
+      expect(firstRun.snapshot().radiantTarget).toBe(8);
+
+      const restartedRun = createGame(chart);
+      expect(restartedRun.snapshot()).toMatchObject({
+        transportTime: 0,
+        radiantTarget: 7,
+        renown: 0,
+        personalStrength: 0,
+        twilightStrength: 9,
+      });
+    });
+  });
 });

@@ -4,8 +4,23 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import subprocess
 
 import bpy
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 ROOT = Path(__file__).resolve().parent
 GENERATED = ROOT / "generated"
@@ -22,10 +37,12 @@ scene = bpy.context.scene
 # Only sampling/output path change in memory; no source save, reframing, material,
 # lighting, exposure or compositor edits. Same deterministic settings for both.
 scene.cycles.samples = 16
-scene.render.filepath = str(out / "comparison.png")
+png = out / "comparison.png"
+scene.render.filepath = str(png)
 print("COMPARISON RENDER ATTEMPT", source, scene.render.filepath, flush=True)
 bpy.ops.render.render(write_still=True)
-assert (out / "comparison.png").stat().st_size > 0
+assert png.stat().st_size > 0
+preview = encode_preview(png)
 assert hashlib.sha256(source.read_bytes()).hexdigest() == before
 with (out / "render.json").open("x") as f:
     json.dump({"source": str(source.relative_to(ROOT)), "sha256_unchanged": before,
@@ -34,5 +51,6 @@ with (out / "render.json").open("x") as f:
                "camera": scene.camera.name, "location": list(scene.camera.location),
                "lens": scene.camera.data.lens, "view_transform": scene.view_settings.view_transform,
                "lighting_materials_compositor_unchanged": True, "source_saved": False,
+               "preview": preview.name,
                "purpose": "Geometry/material comparison only; not runtime evidence"}, f, indent=2)
 print("COMPARISON RENDER SUCCESS; SOURCE UNCHANGED", before, flush=True)

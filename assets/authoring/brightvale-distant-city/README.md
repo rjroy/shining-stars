@@ -53,7 +53,7 @@ The first neutral inspection exposed separated tile-like quarters and partly bur
 
 ### Reproduce into a new scratch output, never over the baseline
 
-Requires the existing **Blender 5.2.1 LTS**; preview conversion used installed `cwebp`. No software was installed. Set `PACKAGE` to this directory and `WORK` to a new, existing scratch directory. Use absolute paths. Each Blender process is bounded externally; this task used 120 seconds for builds/checks and 240 seconds for six-view rendering, with `--python-exit-code` before `--python`.
+Requires the existing **Blender 5.2.1 LTS** and installed `cwebp`; no software was installed. Set `PACKAGE` to this directory and `WORK` to a new, existing scratch directory. Use absolute paths. Each Blender process is bounded externally; this task used 120 seconds for builds/checks and 240 seconds for six-view rendering, with `--python-exit-code` before `--python`.
 
 ```bash
 blender --background --threads 8 --python-exit-code 1 \
@@ -63,9 +63,6 @@ blender --background "$WORK/city-rebuild.blend" --threads 8 \
   --negative-test --report "$WORK/validation.json"
 blender --background "$WORK/city-rebuild.blend" --threads 8 \
   --python-exit-code 1 --python "$PACKAGE/preview.py" -- --output-dir "$WORK"
-for view in neutral detail distance audience twilight reverse; do
-  cwebp -quiet -q 90 "$WORK/$view.png" -o "$WORK/preview-$view.webp"
-done
 ```
 
 Add `--sources-root /absolute/repository` to validation to check the four separately approved `.blend` files and the approved city WebP against pinned hashes. A standalone relocated package needs none of them to build or validate its own model. Compare the reported `fingerprint` from separate builds; it covers mesh coordinates, topology/material indices, object ownership/world transforms, and authored material values, not nondeterministic `.blend` container bytes.

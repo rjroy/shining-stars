@@ -132,7 +132,17 @@ def comparison_sheet(out,destination):
                 '-pointsize','20','-annotate','+0+16',label,str(out/(row+'-'+kind+'.png')))
         run('magick',str(out/(row+'-source.png')),str(out/(row+'-derived.png')),'+append',str(out/(row+'.png')))
     run('magick',str(out/'top.png'),str(out/'bottom.png'),'-append',str(out/'comparison.png'))
-    run('cwebp','-quiet','-q','92',str(out/'comparison.png'),'-o',str(destination))
+    partial=destination.with_name(destination.stem+'.partial.webp')
+    if destination.exists(): raise FileExistsError('Refusing existing comparison output: '+str(destination))
+    if partial.exists(): raise FileExistsError('Refusing existing staged comparison output: '+str(partial))
+    try:
+        run('cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(out/'comparison.png'),'-o',str(partial))
+        if not partial.is_file() or partial.stat().st_size==0:
+            raise RuntimeError('WebP comparison missing or empty: '+str(partial))
+        partial.replace(destination)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
     print('CITY COMPARISON ASSEMBLY SUCCESS',destination,flush=True)
 
 
