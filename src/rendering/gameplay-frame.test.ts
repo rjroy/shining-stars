@@ -39,6 +39,7 @@ function snapshot(
     phase: 'audience' as const,
     status: 'playing' as const,
     victory: false,
+    radiantTarget: null,
     renown: 0,
     personalStrength: 100,
     twilightStrength: 100,

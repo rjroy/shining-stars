@@ -54,6 +54,12 @@ export interface GameSnapshot {
   readonly phase: GamePhase;
   readonly status: GameStatus;
   readonly victory: boolean;
+  /**
+   * Projected Radiant time assuming unresolved notes are Perfect at chart times.
+   * Updates on resolved outcomes, not timing-window expiry; null means this
+   * projection cannot win. Freezes at the actual victory timestamp.
+   */
+  readonly radiantTarget: number | null;
   readonly renown: number;
   readonly personalStrength: number;
   readonly twilightStrength: number;
@@ -295,11 +301,15 @@ export function createGame(
     phase: chartNote.time < chart.twilightAt ? 'audience' : 'twilight',
     outcome: null,
   }));
+  const chronologicalNotes = [...notes].sort(
+    (left, right) => left.time - right.time,
+  );
 
   let currentTransportTime = 0;
   let phase: GamePhase = 'audience';
   let status: GameStatus = 'playing';
   let victory = false;
+  let radiantAt: number | null = null;
   let renown = 0;
   let personalStrength = 0;
   const initialTwilightStrength = getInitialTwilightStrength(chart, difficulty);
@@ -310,6 +320,51 @@ export function createGame(
   let bestComboMultiplier = multiplierForNextHit(0);
   let boundaryProcessed = false;
   let result: GameResult | null = null;
+  let outcomeRevision = 0;
+  let predictedRadiantTime: number | null = null;
+
+  function refreshRadiantPrediction(): void {
+    predictedRadiantTime = null;
+
+    if (radiantAt !== null || status === 'results') return;
+
+    let projectedPersonalStrength = personalStrength;
+    if (phase === 'audience') {
+      let projectedRenown = renown;
+      for (const note of chronologicalNotes) {
+        if (note.phase === 'audience' && note.outcome === null) {
+          projectedRenown += profile.audience.perfect;
+        }
+      }
+      projectedPersonalStrength = projectedRenown;
+      if (projectedPersonalStrength === 0) return;
+    }
+
+    let projectedTwilightStrength = twilightStrength;
+    for (const note of chronologicalNotes) {
+      if (note.phase !== 'twilight' || note.outcome !== null) continue;
+      const balance = profile.twilight.perfect;
+      projectedPersonalStrength = Math.max(
+        0,
+        projectedPersonalStrength - balance.personalCost,
+      );
+      projectedTwilightStrength = Math.max(
+        0,
+        projectedTwilightStrength - balance.damage,
+      );
+
+      if (projectedTwilightStrength === 0) {
+        predictedRadiantTime = note.time;
+        return;
+      }
+      if (projectedPersonalStrength === 0) return;
+    }
+  }
+
+  function radiantTarget(): number | null {
+    if (radiantAt !== null) return radiantAt;
+    return predictedRadiantTime;
+  }
 
   function buildResult(outcome: GameOutcome): GameResult {
     const audienceNotes = notes.filter((note) => note.phase === 'audience');
@@ -346,20 +401,23 @@ export function createGame(
     return status === 'results';
   }
 
-  function applyTwilightOutcome(outcome: NoteOutcome): void {
+  function applyTwilightOutcome(outcome: NoteOutcome, atTime: number): void {
     if (outcome === null || victory) return;
     const balance = profile.twilight[outcome];
     personalStrength = Math.max(0, personalStrength - balance.personalCost);
     twilightStrength = Math.max(0, twilightStrength - balance.damage);
 
     // When one hit exhausts both strengths, victory takes precedence.
-    if (twilightStrength === 0) victory = true;
-    else if (personalStrength === 0) finish('defeat');
+    if (twilightStrength === 0) {
+      victory = true;
+      radiantAt = atTime;
+    } else if (personalStrength === 0) finish('defeat');
   }
 
   function resolveMiss(note: MutableGameNote): void {
     if (note.outcome === null) {
       note.outcome = 'miss';
+      outcomeRevision += 1;
       combo = 0;
       if (note.phase === 'audience') {
         renown = Math.max(0, renown + profile.audience.miss);
@@ -426,7 +484,7 @@ export function createGame(
           if (event.note.outcome === null) {
             resolveMiss(event.note);
             if (event.note.phase === 'twilight') {
-              applyTwilightOutcome('miss');
+              applyTwilightOutcome('miss', event.time);
               if (isFinished()) currentTransportTime = event.time;
             }
           }
@@ -462,6 +520,7 @@ export function createGame(
       phase,
       status,
       victory,
+      radiantTarget: radiantTarget(),
       renown,
       personalStrength,
       twilightStrength,
@@ -487,15 +546,26 @@ export function createGame(
     validateTransportTime(transportTime);
 
     if (status === 'playing') {
+      const previousPhase = phase;
+      const previousStatus = status;
+      const previousOutcomeRevision = outcomeRevision;
       processEventsThrough(transportTime);
       if (status === 'playing') {
         currentTransportTime = transportTime;
+      }
+      if (
+        phase !== previousPhase ||
+        status !== previousStatus ||
+        outcomeRevision !== previousOutcomeRevision
+      ) {
+        refreshRadiantPrediction();
       }
     }
 
     return snapshot();
   }
 
+  refreshRadiantPrediction();
   return {
     snapshot,
     advanceTo,
@@ -572,6 +642,7 @@ export function createGame(
         : 'good';
 
       selected.outcome = quality;
+      outcomeRevision += 1;
       const absoluteError = Math.abs(selectedError);
       const basePoints =
         quality === 'perfect'
@@ -606,8 +677,9 @@ export function createGame(
       if (phase === 'audience') {
         renown += profile.audience[quality];
       } else {
-        applyTwilightOutcome(quality);
+        applyTwilightOutcome(quality, transportTime);
       }
+      refreshRadiantPrediction();
 
       return {
         noteId: selected.id,

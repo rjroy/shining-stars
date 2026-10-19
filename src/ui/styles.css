@@ -332,7 +332,11 @@ a:focus-visible {
 .song-progress-twilight-label {
   position: absolute;
   top: 10px;
-  left: clamp(32px, var(--twilight-position), calc(100% - 32px));
+  left: clamp(
+    32px,
+    var(--twilight-label-position, var(--twilight-position)),
+    calc(100% - 32px)
+  );
   padding: 0 5px;
   transform: translateX(-50%);
   background: #21152f;
@@ -340,6 +344,24 @@ a:focus-visible {
   font:
     500 8px/8px 'DM Mono',
     monospace;
+}
+.song-progress-radiant {
+  position: absolute;
+  z-index: 1;
+  top: 11px;
+  width: 12px;
+  height: 7px;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: var(--mint);
+  filter: drop-shadow(0 0 1px var(--night));
+  transition: none !important;
+}
+.song-progress-radiant.is-attained {
+  background: #fff0b9;
+}
+.song-progress-radiant[hidden] {
+  display: none;
 }
 
 .play-heading {

@@ -18,6 +18,8 @@ for (const [name, width, height] of [
   ['song-progress-desktop', 1280, 757],
   ['song-progress-narrow', 900, 700],
   ['song-progress-portrait', 390, 844],
+  ['song-progress-radiant-desktop', 1280, 757],
+  ['song-progress-radiant-portrait', 390, 844],
 ])
   test(
     'real song playback begins when the single five-second countdown completes: ' +
@@ -25,7 +27,25 @@ for (const [name, width, height] of [
     { timeout: 90_000 },
     async () => {
       const progressCase = name.startsWith('song-progress-');
+      const radiantCase = name.includes('radiant-');
       const phaseFixture = name === 'timing-legend-phases' || progressCase;
+      const automaticNotes = radiantCase
+        ? [
+            { at: 0.8, lane: 0 },
+            { at: 1.4, lane: 1 },
+            { at: 2.1, lane: 2 },
+            { at: 2.8, lane: 3 },
+            { at: 5.2, lane: 0 },
+            { at: 5.24, lane: 1 },
+            { at: 5.9, lane: 2 },
+            { at: 6.8, lane: 3 },
+            { at: 7.6, lane: 0 },
+            { at: 8.7, lane: 1 },
+          ]
+        : [
+            { at: 1, lane: 0 },
+            { at: 7, lane: 0 },
+          ];
       const profile = await mkdtemp(
         path.join(tmpdir(), 'shining-stars-countdown-'),
       );
@@ -67,10 +87,23 @@ for (const [name, width, height] of [
                         duration: 10,
                         twilightAt: progressCase ? 4 : 5,
                         allowedDifficulties: ['normal'],
-                        notes: [
-                          { id: 'audience-test', lane: 0, time: 1 },
-                          { id: 'twilight-test', lane: 0, time: 7 },
-                        ],
+                        notes: radiantCase
+                          ? [
+                              { id: 'audience-1', lane: 0, time: 0.8 },
+                              { id: 'audience-2', lane: 1, time: 1.4 },
+                              { id: 'audience-3', lane: 2, time: 2.1 },
+                              { id: 'audience-4', lane: 3, time: 2.8 },
+                              { id: 'twilight-1', lane: 0, time: 5.1 },
+                              { id: 'twilight-2', lane: 1, time: 5.14 },
+                              { id: 'twilight-3', lane: 2, time: 5.9 },
+                              { id: 'twilight-4', lane: 3, time: 6.8 },
+                              { id: 'twilight-5', lane: 0, time: 7.6 },
+                              { id: 'twilight-6', lane: 1, time: 8.7 },
+                            ]
+                          : [
+                              { id: 'audience-test', lane: 0, time: 1 },
+                              { id: 'twilight-test', lane: 0, time: 7 },
+                            ],
                       },
                     };
                     return { code: JSON.stringify(metadata), map: null };
@@ -214,12 +247,17 @@ for (const [name, width, height] of [
             maxTouchPoints: 2,
           });
           await command('Emulation.setEmulatedMedia', {
-            features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+            features: [
+              {
+                name: 'prefers-reduced-motion',
+                value: radiantCase ? 'no-preference' : 'reduce',
+              },
+            ],
           });
         }
         await command('Page.addScriptToEvaluateOnNewDocument', {
           source: `
-      window.__countdownEvidence = { contexts: [], starts: [], samples: [], phases: [], timingDraws: [], hits: [], laneLabels: {}, progressSamples: [], phasePresentations: {} };
+      window.__countdownEvidence = { contexts: [], starts: [], samples: [], phases: [], timingDraws: [], hits: [], laneLabels: {}, progressSamples: [], phasePresentations: {}, radiantSamples: [] };
       const evidence = window.__countdownEvidence;
       const fillText = CanvasRenderingContext2D.prototype.fillText;
       CanvasRenderingContext2D.prototype.fillText = function(text, ...args) {
@@ -256,6 +294,20 @@ for (const [name, width, height] of [
           if (${JSON.stringify(progressCase)} && meter && evidence.progressSamples.length < 2000) {
             const fill = document.querySelector('[data-song-progress-fill]');
             const rail = document.querySelector('[data-song-progress-rail]');
+            const radiant = document.querySelector('[data-radiant-marker]');
+            if (${JSON.stringify(radiantCase)} && radiant && evidence.radiantSamples.length < 2000) {
+              const box = radiant.getBoundingClientRect();
+              const track = rail.getBoundingClientRect();
+              const label = rail.querySelector('.song-progress-twilight-label').getBoundingClientRect();
+              const pointerHud = [...document.querySelectorAll('.play-heading > *, [data-touch-controls] button')].map(element => element.getBoundingClientRect());
+              evidence.radiantSamples.push({ now: context.currentTime, hidden: radiant.hidden,
+                target: Number(radiant.getAttribute('data-target-time')),
+                displayed: (box.x + box.width / 2 - track.x) / track.width,
+                attained: radiant.classList.contains('is-attained'),
+                belowFill: radiant.hidden || box.y >= track.bottom,
+                clearOfHud: radiant.hidden || !pointerHud.some(hud => hud.width && hud.height && box.x < hud.right && box.right > hud.x && box.y < hud.bottom && box.bottom > hud.y),
+                clearOfLabel: radiant.hidden || box.right <= label.x || box.x >= label.right });
+            }
             if (mode && !evidence.phasePresentations[mode]) {
               const label = rail.querySelector('.song-progress-twilight-label').getBoundingClientRect();
               const track = rail.getBoundingClientRect();
@@ -272,11 +324,13 @@ for (const [name, width, height] of [
           }
           if (${JSON.stringify(phaseFixture)} && evidence.starts.length) {
             const position = context.currentTime - evidence.starts.at(-1).when;
-            for (const onset of [1, 7]) {
-              if (position >= onset - 0.02 && !evidence.hits.includes(onset)) {
-                evidence.hits.push(onset);
-                window.dispatchEvent(new KeyboardEvent('keydown', {code: 'KeyD', key: 'd', bubbles: true}));
-                window.dispatchEvent(new KeyboardEvent('keyup', {code: 'KeyD', key: 'd', bubbles: true}));
+            for (const {at, lane} of ${JSON.stringify(automaticNotes)}) {
+              if (position >= at - 0.02 && !evidence.hits.includes(at)) {
+                evidence.hits.push(at);
+                const code = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'][lane];
+                const key = ['d', 'f', 'j', 'k'][lane];
+                window.dispatchEvent(new KeyboardEvent('keydown', {code, key, bubbles: true}));
+                window.dispatchEvent(new KeyboardEvent('keyup', {code, key, bubbles: true}));
               }
             }
           }
@@ -392,7 +446,10 @@ for (const [name, width, height] of [
             results.text.includes('Perfect ±' + results.perfect + ' ms'),
           );
           assert.ok(results.text.includes('Good ±' + results.good + ' ms'));
-          assert.deepEqual(results.hits, [1, 7]);
+          assert.deepEqual(
+            results.hits,
+            automaticNotes.map(({ at }) => at),
+          );
           console.log('Real app phase coverage:', results.phases);
         }
         const evidence = await evaluate(`(() => {
@@ -400,7 +457,7 @@ for (const [name, width, height] of [
       const canvas = document.querySelector('canvas');
       const context = evidence.contexts.at(-1);
       return { starts: evidence.starts, samples: evidence.samples, audioState: context.state,
-        now: context.currentTime, canvas: !!canvas, timingDraws: evidence.timingDraws, laneLabels: evidence.laneLabels, progressSamples: evidence.progressSamples, phasePresentations: evidence.phasePresentations,
+        now: context.currentTime, canvas: !!canvas, timingDraws: evidence.timingDraws, laneLabels: evidence.laneLabels, progressSamples: evidence.progressSamples, phasePresentations: evidence.phasePresentations, radiantSamples: evidence.radiantSamples,
         rendererError: document.querySelector('[data-panel="error"]')?.hidden === false };
     })()`);
         assert.equal(evidence.rendererError, false);
@@ -487,6 +544,65 @@ for (const [name, width, height] of [
           }),
         );
         if (progressCase) {
+          if (radiantCase) {
+            const visible = evidence.radiantSamples.filter(
+              (sample) => !sample.hidden,
+            );
+            assert.ok(
+              visible
+                .filter((sample) => !sample.attained)
+                .every(
+                  (sample) =>
+                    Math.abs(sample.target - 7.6) < 0.001 ||
+                    Math.abs(sample.target - 8.7) < 0.001,
+                ),
+              'optimistic targets stay at nominal note timestamps until an outcome resolves',
+            );
+            assert.ok(
+              visible.length > 10,
+              'core forecast appears in the actual UI',
+            );
+            assert.ok(
+              visible.every(
+                (sample) =>
+                  sample.belowFill && sample.clearOfLabel && sample.clearOfHud,
+              ),
+              'Radiant pointer never covers the fill, Twilight label or HUD',
+            );
+            const moved = visible.find(
+              (sample) =>
+                !sample.attained && Math.abs(sample.target - 8.7) < 0.001,
+            );
+            assert.ok(
+              moved,
+              'actual Good judgments move the core forecast to the later irregular note',
+            );
+            assert.ok(
+              moved.displayed < moved.target / 10 - 0.05,
+              'changed forecast starts from the displayed pointer, not a jump',
+            );
+            const settled = visible.find(
+              (sample) =>
+                sample.now > moved.now + 0.52 &&
+                Math.abs(sample.target - moved.target) < 0.001,
+            );
+            assert.ok(
+              settled &&
+                Math.abs(settled.displayed - moved.target / 10) < 0.001,
+              'unchanged forecast completes the half-second slide',
+            );
+            const attained = visible.filter((sample) => sample.attained);
+            assert.ok(attained.length > 2, 'actual victory is rendered');
+            assert.ok(
+              attained.every((sample) => sample.target === attained[0].target),
+              'actual victory timestamp stays frozen',
+            );
+            assert.ok(
+              Math.abs(attained.at(-1).displayed - attained[0].target / 10) <
+                0.001,
+              'attained pointer settles at the normalized actual timestamp',
+            );
+          }
           const actualColors = [];
           for (const [phase, color] of [
             ['Audience', 'rgb(255, 212, 117)'],
@@ -602,6 +718,16 @@ for (const [name, width, height] of [
             `document.querySelector('[data-countdown]:not([hidden])') && document.querySelector('[data-song-progress]')?.value === 0`,
             'restart resets progress during count-in',
           );
+          if (radiantCase) {
+            const marker = await evaluate(
+              `(() => { const marker = document.querySelector('[data-radiant-marker]'); return { left: parseFloat(marker.style.left), target: Number(marker.getAttribute('data-target-time')), attained: marker.classList.contains('is-attained') }; })()`,
+            );
+            assert.ok(
+              Math.abs(marker.left - marker.target * 10) < 0.001,
+              'restart forecast appears immediately at its normalized timestamp',
+            );
+            assert.equal(marker.attained, false);
+          }
           await waitFor(
             `document.querySelector('[data-song-progress]')?.value > 1`,
             'restarted playable progress',
@@ -656,12 +782,25 @@ for (const [name, width, height] of [
             await evaluate(`(async () => {
             const { createSongProgress } = await import('/src/ui/song-progress.ts');
             const root = document.createElement('div');
-            root.innerHTML = '<div data-song-progress-rail><progress data-song-progress></progress><span data-song-progress-fill></span></div>';
+            root.style.cssText = 'position:fixed;left:-2000px;top:0;width:390px;height:30px';
+            root.innerHTML = '<div class="song-progress" data-song-progress-rail><progress data-song-progress></progress><span data-song-progress-fill></span><span class="song-progress-twilight-label">Twilight</span><span class="song-progress-radiant" data-radiant-marker hidden></span></div>';
+            document.body.append(root);
             const binding = createSongProgress(root, { duration: 10, twilightAt: 4 });
-            binding.render(3);
-            binding.destroy();
-            binding.render(7);
-            return root.querySelector('progress').value;
+            try {
+              const frame = { target: 4.1, achieved: false, clockTime: 0, paused: false, reducedMotion: false, runId: 1 };
+              binding.render(3, frame);
+              const label = root.querySelector('.song-progress-twilight-label').getBoundingClientRect();
+              const pointer = root.querySelector('[data-radiant-marker]').getBoundingClientRect();
+              if (!(label.right <= pointer.x || pointer.right <= label.x)) throw new Error('Close Radiant target collides with Twilight word');
+              binding.render(3, { ...frame, target: 8.7, reducedMotion: true });
+              if (root.querySelector('[data-radiant-marker]').style.left !== '87%') throw new Error('Reduced motion must be immediate');
+              binding.render(3, { ...frame, target: null });
+              if (!root.querySelector('[data-radiant-marker]').hidden) throw new Error('Impossible target must hide');
+              binding.render(3, frame);
+              binding.destroy();
+              binding.render(7, { ...frame, target: 9 });
+              return root.querySelector('progress').value;
+            } finally { binding.destroy(); root.remove(); }
           })()`),
             3,
             'disposed binding ignores later renders',

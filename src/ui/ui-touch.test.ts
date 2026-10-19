@@ -295,6 +295,80 @@ afterEach(() => {
 });
 
 describe('real gameplay UI thumb controls', () => {
+  it('binds the core Radiant timestamp, attained state, null and run reset to the marker', () => {
+    const initial = createGame(chart, 0, 'normal').snapshot();
+    const renderTarget = (
+      target: number | null,
+      now: number,
+      victory = false,
+      runId = 1,
+      transportTime = 40,
+    ) => {
+      ui.render(
+        {
+          runId,
+          audio: {
+            status: 'playing',
+            position: transportTime,
+            duration: 60,
+            scheduledWhen: null,
+            hasActiveSource: true,
+            loaded: true,
+            disposed: false,
+            error: null,
+          },
+          game: {
+            ...initial,
+            phase: 'twilight',
+            transportTime,
+            radiantTarget: target,
+            victory,
+          },
+          inputOffset: 0,
+          visualOffset: 0,
+          selectedDifficulty: 'normal',
+          feedback: [],
+          pendingPlaybackRequests: false,
+        },
+        now,
+      );
+    };
+    const marker = shellMock.root.querySelector('[data-radiant-marker]');
+    expect(marker).not.toBeNull();
+    renderTarget(45, 0);
+    expect(marker?.hidden).toBe(false);
+    expect(marker?.style.left).toBe('75%');
+    expect(marker?.getAttribute('aria-label')).toContain(
+      'Radiant target with Perfect remaining notes',
+    );
+    renderTarget(54, 1);
+    expect(marker?.style.left).toBe('75%');
+    renderTarget(54, 1.25);
+    expect(marker?.style.left).toBe('82.5%');
+    renderTarget(42, 1.5, true);
+    renderTarget(42, 2, true);
+    expect(marker?.style.left).toBe('70%');
+    expect(marker?.className).toContain('is-attained');
+    expect(marker?.getAttribute('aria-label')).toContain(
+      'Radiant reached: 42.00',
+    );
+    renderTarget(null, 3);
+    expect(marker?.hidden).toBe(true);
+    renderTarget(45, 4);
+    expect(marker?.style.left).toBe('75%');
+    renderTarget(30, 4.1, false, 2);
+    expect(marker?.style.left).toBe('50%');
+    // An unresolved nominal target can be behind progress. Only a changed
+    // authoritative target or actual victory may change this presentation.
+    renderTarget(30, 5, false, 2, 50);
+    expect(marker?.style.left).toBe('50%');
+    expect(marker?.className).not.toContain('is-attained');
+    expect(shellMock.root.querySelector('[data-song-progress]')).toHaveProperty(
+      'value',
+      50,
+    );
+  });
+
   it('binds the progress palette to actual phase and victory, not elapsed time', () => {
     const initial = createGame(chart, 0, 'normal').snapshot();
     const renderPhase = (phase: typeof initial.phase, victory: boolean) => {

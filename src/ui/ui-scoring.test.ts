@@ -177,6 +177,7 @@ describe('shared score presentation contract', () => {
           bestComboMultiplier: 3,
           phase,
           victory,
+          radiantTarget: null,
           status: 'playing',
           transportTime: 42,
           renown: 80,

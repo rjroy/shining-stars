@@ -356,6 +356,7 @@ export function createGameUI(
         <span class="song-progress-fill" data-song-progress-fill aria-hidden="true"></span>
         <span class="song-progress-twilight-marker" aria-hidden="true"></span>
         <span class="song-progress-twilight-label" aria-hidden="true">Twilight</span>
+        <span class="song-progress-radiant" data-radiant-marker role="img" aria-label="Radiant target with Perfect remaining notes" hidden></span>
       </div>
       <div class="gameplay-screen-content" aria-describedby="lane-instructions">
         <div class="play-heading">
@@ -837,7 +838,17 @@ export function createGameUI(
 
   function render(snapshot: ControllerSnapshot, audioNow: number): void {
     const { audio, game } = snapshot;
-    songProgress.render(game.transportTime);
+    songProgress.render(game.transportTime, {
+      target: game.radiantTarget,
+      achieved: game.victory,
+      clockTime: audioNow,
+      paused:
+        audio.status === 'starting' ||
+        (audio.status === 'paused' && game.status !== 'results') ||
+        snapshot.pendingPlaybackRequests,
+      reducedMotion: motionPreference?.matches ?? false,
+      runId: snapshot.runId,
+    });
     updateScore(game);
     pendingPlaybackRequests = snapshot.pendingPlaybackRequests;
     const isError = audio.status === 'error' || fatalMessage !== null;
