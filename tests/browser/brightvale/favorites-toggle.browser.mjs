@@ -117,7 +117,6 @@ test(
       };
       const snapshot = () => ({
         query: find('[data-search]').value,
-        availability: find('[data-filter-availability]').value,
         difficulty: find('[data-filter-difficulty]').value,
         collection: find('[data-browser-title]').textContent,
         pressed: find('[data-action="favorites"]').getAttribute('aria-pressed'),
@@ -126,7 +125,6 @@ test(
       });
       click('browse-collection');
       click('toggle-favorite');
-      change('[data-filter-availability]', 'available');
       change('[data-filter-difficulty]', 'normal');
       change('[data-search]', 'a', 'input');
       const before = snapshot();
@@ -142,9 +140,8 @@ test(
       const emptyOff = snapshot();
       return { before, on, off, emptyBefore, emptyOn, emptyOff };
     })()`);
-      const filters = ({ query, availability, difficulty, collection }) => ({
+      const filters = ({ query, difficulty, collection }) => ({
         query,
-        availability,
         difficulty,
         collection,
       });
@@ -171,6 +168,45 @@ test(
       }
       assert.equal(evidence.emptyOn.pressed, 'true');
       assert.equal(evidence.emptyOff.pressed, 'false');
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+      ]) {
+        await command('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: width < 600,
+        });
+        await evaluate(
+          `document.querySelector('[data-action="clear-filters"]').click()`,
+        );
+        await evaluate(
+          `if (document.querySelector('[data-filter-panel]').hidden) document.querySelector('[data-action="toggle-filters"]').click()`,
+        );
+        await delay(250);
+        const layout = await evaluate(`(() => {
+          const panel = document.querySelector('[data-filter-panel]');
+          const select = document.querySelector('[data-filter-difficulty]');
+          const rect = select.getBoundingClientRect();
+          return {
+            noAvailability: !document.querySelector('[data-filter-availability]'),
+            open: !panel.hidden,
+            fits: rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight,
+            usable: rect.height >= 40 && !select.disabled,
+            rows: document.querySelectorAll('.song-row').length,
+          };
+        })()`);
+        assert.equal(layout.noAvailability, true);
+        assert.equal(layout.open, true);
+        assert.equal(
+          layout.fits,
+          true,
+          `${width}px difficulty filter stays in view`,
+        );
+        assert.equal(layout.usable, true);
+        assert.ok(layout.rows > 0);
+      }
     } finally {
       try {
         socket?.close();

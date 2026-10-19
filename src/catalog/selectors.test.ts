@@ -6,6 +6,7 @@ import {
   type SongCollection,
 } from './catalog';
 import {
+  canStartSong,
   normalizeSongSearch,
   reconcileSongSelection,
   selectSongs,
@@ -110,23 +111,22 @@ describe('catalog browsing selectors', () => {
     expect(selectSongs(catalog, { query: 'audio' })).toEqual([]);
   });
 
-  it('intersects favorites, availability and supports-difficulty filters independently', () => {
+  it('intersects search, collection, favorites and supports-difficulty filters', () => {
     expect(
       selectSongs(
         catalog,
         {
           favoritesOnly: true,
-          availability: 'available',
+          query: 'CAFÉ',
+          collectionId: 'all-songs',
           supportsDifficulty: 'hard',
         },
         new Set(['mixed', 'easy-only']),
       ).map((song) => song.id),
     ).toEqual(['mixed']);
     expect(
-      selectSongs(catalog, { availability: 'unavailable' }).map(
-        (song) => song.id,
-      ),
-    ).toEqual(['unavailable']);
+      selectSongs(catalog, { favoritesOnly: true }, new Set(['unavailable'])),
+    ).toEqual([]);
     expect(
       selectSongs(catalog, { supportsDifficulty: 'easy' }).map(
         (song) => song.id,
@@ -159,13 +159,48 @@ describe('catalog browsing selectors', () => {
     expect(
       reconcileSongSelection(
         catalog,
-        { availability: 'unavailable' },
+        { query: 'Unavailable Song' },
         initiallySelected,
       ),
     ).toEqual({
       selectedSongId: null,
       runDifficulty: null,
     });
+  });
+
+  it('hides editorially unavailable entries in every browse scope and rejects stale starts', () => {
+    expect(selectSongs(catalog).map((song) => song.id)).toEqual([
+      'mixed',
+      'easy-only',
+    ]);
+    expect(
+      selectSongs(catalog, { collectionId: 'all-songs' }).map(
+        (song) => song.id,
+      ),
+    ).toEqual(['mixed', 'easy-only']);
+    const unavailable = catalog.songs.find(
+      (song) => song.id === 'unavailable',
+    )!;
+    expect(unavailable.availability).toBe('unavailable');
+    expect(canStartSong(catalog, unavailable, 'normal')).toBe(false);
+    expect(canStartSong(catalog, catalog.songs[0]!, 'normal')).toBe(true);
+    expect(canStartSong(catalog, catalog.songs[0]!, 'easy')).toBe(false);
+    expect(
+      reconcileSongSelection(
+        catalog,
+        {},
+        { selectedSongId: unavailable.id, runDifficulty: 'normal' },
+      ),
+    ).toEqual({ selectedSongId: 'mixed', runDifficulty: 'normal' });
+    const hiddenCatalog = { ...catalog, songs: [unavailable] };
+    expect(selectSongs(hiddenCatalog)).toEqual([]);
+    expect(
+      reconcileSongSelection(
+        hiddenCatalog,
+        {},
+        { selectedSongId: unavailable.id, runDifficulty: 'normal' },
+      ),
+    ).toEqual({ selectedSongId: null, runDifficulty: null });
   });
 
   it('retains a supported run difficulty, otherwise uses default, then clears when there are no results', () => {

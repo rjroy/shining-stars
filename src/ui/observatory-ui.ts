@@ -88,7 +88,7 @@ export function chooseObservatorySong(
   songId: string,
 ): SongSelection | null {
   const song = catalog.songs.find((entry) => entry.id === songId);
-  if (song === undefined) return null;
+  if (song === undefined || song.availability !== 'available') return null;
   return {
     selectedSongId: song.id,
     runDifficulty:
@@ -319,7 +319,6 @@ export function createObservatoryUI(
 
       <section class="observatory-filter-panel" id="observatory-filters" data-filter-panel aria-label="Filter songs" hidden>
         <div class="filter-heading"><h2>Refine your search</h2><button type="button" data-action="clear-filters">Clear filters</button></div>
-        <label>Availability<select data-filter-availability><option value="">All songs</option><option value="available">Available to play</option><option value="unavailable">Unavailable</option></select></label>
         <label>Difficulty support<select data-filter-difficulty><option value="">Any difficulty</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
       </section>
 
@@ -445,13 +444,9 @@ export function createObservatoryUI(
   }
 
   function syncFilterControls(): void {
-    const availability = root.querySelector<HTMLSelectElement>(
-      '[data-filter-availability]',
-    );
     const supports = root.querySelector<HTMLSelectElement>(
       '[data-filter-difficulty]',
     );
-    if (availability !== null) availability.value = filters.availability ?? '';
     if (supports !== null) supports.value = filters.supportsDifficulty ?? '';
     const favoritesButton = root.querySelector<HTMLButtonElement>(
       '[data-action="favorites"]',
@@ -562,12 +557,9 @@ export function createObservatoryUI(
         options.getSongRating?.(song.id) ?? null,
       );
       const row = document.createElement('div');
-      row.className = `song-row${song.id === currentSelection.selectedSongId ? ' is-selected' : ''}${song.availability === 'unavailable' ? ' is-unavailable' : ''}`;
+      row.className = `song-row${song.id === currentSelection.selectedSongId ? ' is-selected' : ''}`;
       row.setAttribute('role', 'listitem');
-      row.setAttribute(
-        'aria-label',
-        `${song.title}${song.availability === 'unavailable' ? ', unavailable' : ''}`,
-      );
+      row.setAttribute('aria-label', song.title);
       row.dataset.songId = song.id;
       const select = createButton(
         '',
@@ -588,9 +580,7 @@ export function createObservatoryUI(
       status.textContent =
         song.segmentKind === 'excerpt'
           ? `Demo excerpt · play-test chart · ${presentation.durationText}`
-          : song.availability === 'unavailable'
-            ? `Unavailable · ${presentation.durationText}`
-            : `Play-test chart · ${presentation.durationText}`;
+          : `Play-test chart · ${presentation.durationText}`;
       const locked = unlockRequest(song.id);
       if (locked !== null)
         status.textContent = `Locked · ${locked.kind === 'collection' ? 'Unlock collection first' : 'Unlock song · 1 credit'} · ${presentation.durationText}`;
@@ -634,7 +624,12 @@ export function createObservatoryUI(
       const empty = document.createElement('p');
       empty.className = 'song-list-empty';
       empty.textContent =
-        'No songs match these filters. Clear a filter or try another search.';
+        selectSongs(catalog, { collectionId: filters.collectionId }).length ===
+        0
+          ? filters.collectionId === undefined
+            ? 'No songs are available yet. Check back later.'
+            : 'No songs are available in this collection yet. Try All Songs or another collection.'
+          : 'No songs match these filters. Clear a filter or try another search.';
       list.append(empty);
     }
   }
@@ -828,10 +823,14 @@ export function createObservatoryUI(
       collectionEmblem.classList.remove('has-artwork');
       detailArtwork?.remove();
     }
+    const collectionSongCount = selectSongs(catalog, {
+      collectionId: collection?.id,
+    }).length;
+    const collectionCountText = `${collectionSongCount} ${collectionSongCount === 1 ? 'song' : 'songs'}`;
     root.querySelector<HTMLElement>('[data-collection-count]')!.textContent =
-      `${currentCollection()?.songIds.length ?? 0} songs`;
+      collectionCountText;
     root.querySelector<HTMLElement>('.collection-story')!.textContent =
-      `${currentCollection()?.songIds.length ?? 0} songs in the current collection.`;
+      `${collectionCountText} in the current collection.`;
     if (collection !== null && membership !== null && progress !== undefined) {
       const price = membership.collections.get(collection.id);
       if (
@@ -1000,12 +999,7 @@ export function createObservatoryUI(
   function onChange(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLSelectElement)) return;
-    if (target.dataset.filterAvailability !== undefined) {
-      const value = target.value;
-      const availability =
-        value === 'available' || value === 'unavailable' ? value : undefined;
-      filters = { ...filters, availability };
-    } else if (target.dataset.filterDifficulty !== undefined) {
+    if (target.dataset.filterDifficulty !== undefined) {
       filters = {
         ...filters,
         supportsDifficulty: normalizeDifficulty(target.value) ?? undefined,

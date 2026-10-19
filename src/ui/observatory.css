@@ -961,10 +961,6 @@
     0 0 15px rgb(255 207 112 / 21%),
     0 5px 18px rgb(3 4 20 / 35%);
 }
-.song-row.is-unavailable {
-  border-style: dashed;
-  opacity: 0.72;
-}
 .song-row-main {
   display: flex;
   flex: 1 1 auto;

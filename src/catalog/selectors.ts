@@ -4,17 +4,12 @@ import {
   type Difficulty,
 } from '../game/game-balance';
 import { getSongDifficulties } from './catalog';
-import type {
-  SongAvailability,
-  SongCatalog,
-  SongCatalogEntry,
-} from './catalog';
+import type { SongCatalog, SongCatalogEntry } from './catalog';
 
 export interface SongBrowseFilters {
   readonly query?: string;
   readonly collectionId?: string;
   readonly favoritesOnly?: boolean;
-  readonly availability?: SongAvailability;
   /** Filters songs that support this difficulty; does not configure a run. */
   readonly supportsDifficulty?: Difficulty;
 }
@@ -69,12 +64,11 @@ export function selectSongs(
         });
   return ordered.filter(
     (song) =>
+      song.availability === 'available' &&
       (query === '' || normalizeSongSearch(song.title).includes(query)) &&
       (filters.collectionId === undefined ||
         song.collections.includes(filters.collectionId)) &&
       (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
-      (filters.availability === undefined ||
-        song.availability === filters.availability) &&
       (filters.supportsDifficulty === undefined ||
         getSongDifficulties(song).includes(filters.supportsDifficulty)),
   );
@@ -88,10 +82,7 @@ export function reconcileSongSelection(
 ): SongSelection {
   const results = selectSongs(catalog, filters, favoriteIds);
   const retained = results.find((song) => song.id === current.selectedSongId);
-  const selected =
-    retained ??
-    results.find((song) => song.availability === 'available') ??
-    null;
+  const selected = retained ?? results[0] ?? null;
   if (selected === null) return { selectedSongId: null, runDifficulty: null };
   const allowed = getSongDifficulties(selected);
   return {

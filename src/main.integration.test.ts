@@ -371,14 +371,11 @@ describe('real app Observatory-to-gameplay integration', () => {
     expect(
       await evaluate("document.querySelector('[data-filter-panel]')?.hidden"),
     ).toBe(false);
-    await evaluate(
-      "(()=>{const input=document.querySelector('[data-filter-availability]');input.value='unavailable';input.dispatchEvent(new Event('change',{bubbles:true}))})()",
-    );
     expect(
       await evaluate(
-        "document.querySelector('[data-result-count]')?.textContent",
+        "document.querySelector('[data-filter-availability]') === null",
       ),
-    ).toBe('0 songs');
+    ).toBe(true);
     await click('[data-action="clear-filters"]');
     expect(
       await evaluate(
