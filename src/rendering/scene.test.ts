@@ -21,6 +21,7 @@ import { createBrightvaleScene, type SceneRenderer } from './scene';
 import { FEEDBACK_VISIBLE_SECONDS, type GameplayFrame } from './gameplay-frame';
 import type { SceneStateProjection } from './scene-state';
 import { projectTimingWindowHalfProgress } from './note-projection';
+import { createBrightvalePlayfieldContract } from './brightvale/playfield';
 
 const productionFiles: Record<BrightvaleAssetName, string> = {
   city: '../../assets/production/brightvale-city/city-meshopt.glb',
@@ -962,7 +963,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       }
       // makeFrame deliberately includes timing text and a nonzero legend slot.
       // The GPU overlay must not draw it even if a caller supplies legacy copy.
-      const legend = rendered.overlay.getObjectByName('Brightvale.Label.legend');
+      const legend = rendered.overlay.getObjectByName(
+        'Brightvale.Label.legend',
+      );
       expect(legend).toBeDefined();
       expect(legend?.visible).toBe(false);
       expect(fillText).toHaveBeenCalled();
@@ -974,6 +977,86 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       rendered.assets.dispose();
     }
   });
+
+  it.each([
+    ['desktop', 1280, 757],
+    ['narrow', 900, 700],
+    ['portrait', 390, 844],
+  ] as const)(
+    'centers lane lettering on the front face without changing its styling or projection at %s',
+    async (_name, width, height) => {
+      const fillText = vi.fn();
+      const context = {
+        clearRect: vi.fn(),
+        fillRect: vi.fn(),
+        fillText,
+        strokeText: vi.fn(),
+      };
+      vi.stubGlobal('document', {
+        createElement: () => ({
+          width: 1,
+          height: 1,
+          getContext: () => context,
+        }),
+      });
+      const rendered = await renderWithProductionAssets(
+        makeLayout(width, height),
+      );
+      try {
+        if (rendered.camera === undefined)
+          throw new Error('missing gameplay camera');
+        const camera = rendered.camera;
+        const surface = brightvaleProjection.createBrightvaleSurfaceProfile(
+          rendered.assets.roots,
+        );
+        const playfield = createBrightvalePlayfieldContract(surface);
+        const frontProgress = brightvaleProjection.getFrontPlatformProgress(
+          playfield,
+          surface,
+        );
+        const projectedAnchors = [0, 1, 2, 3].map((lane) =>
+          playfield.point(lane, frontProgress).project(camera),
+        );
+        const lanePitch =
+          ((Math.max(...projectedAnchors.map(({ x }) => x)) -
+            Math.min(...projectedAnchors.map(({ x }) => x))) *
+            width) /
+          6;
+        const centerOffset = Math.min(9, lanePitch / 16);
+        if (width === 390) {
+          expect(centerOffset).toBeGreaterThan(0);
+          expect(centerOffset).toBeLessThan(6);
+        } else {
+          expect(centerOffset).toBeGreaterThan(7);
+          expect(centerOffset).toBeLessThanOrEqual(9);
+        }
+        for (const [lane, key] of ['D', 'F', 'J', 'K'].entries()) {
+          const calls = fillText.mock.calls.filter(([text]) => text === key);
+          expect(calls).toHaveLength(1);
+          // DPR 2 is capped at 1.5: the unchanged 36×24 slot is 54×36 pixels.
+          // Text remains centered in its texture, with no clipping or font change.
+          expect(calls[0]).toEqual([key, 27, 18, 54]);
+          const label = rendered.overlay?.getObjectByName(
+            `Brightvale.Label.lane-${lane}`,
+          );
+          expect(label?.visible).toBe(true);
+          expect(label?.scale.x).toBe(36);
+          expect(label?.scale.y).toBe(24);
+          const anchor = playfield
+            .point(lane, frontProgress)
+            .project(rendered.camera);
+          const x = ((anchor.x + 1) * width) / 2;
+          const y = ((1 - anchor.y) * height) / 2;
+          expect(label?.position.x).toBeCloseTo(x, 5);
+          // Perspective changes the face depth, never the label's font/size.
+          expect(label?.position.y).toBeCloseTo(y + centerOffset, 5);
+        }
+      } finally {
+        rendered.scene.destroy();
+        rendered.assets.dispose();
+      }
+    },
+  );
 
   it('renders lane-local impact rings and readable judgments, reusing the bounded pool through expiry and reduced motion', async () => {
     const context = {

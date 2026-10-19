@@ -12,6 +12,7 @@ import { createServer } from 'vite';
 // Native audio timing is observed, not replaced or accelerated.
 for (const [name, width, height] of [
   ['desktop', 1280, 757],
+  ['narrow', 900, 700],
   ['portrait', 390, 844],
   ['timing-legend-phases', 1280, 757],
 ])
@@ -193,16 +194,20 @@ for (const [name, width, height] of [
         await command('Emulation.setDeviceMetricsOverride', {
           width,
           height,
-          deviceScaleFactor: 0.5,
+          deviceScaleFactor: 1,
           mobile: false,
         });
         await command('Page.addScriptToEvaluateOnNewDocument', {
           source: `
-      window.__countdownEvidence = { contexts: [], starts: [], samples: [], phases: [], timingDraws: [], hits: [] };
+      window.__countdownEvidence = { contexts: [], starts: [], samples: [], phases: [], timingDraws: [], hits: [], laneLabels: {} };
       const evidence = window.__countdownEvidence;
       const fillText = CanvasRenderingContext2D.prototype.fillText;
       CanvasRenderingContext2D.prototype.fillText = function(text, ...args) {
         if (/(?:Good|Perfect)\\s*±/.test(String(text))) evidence.timingDraws.push(String(text));
+        if (/^[DFJK]$/.test(String(text))) evidence.laneLabels[text] = {
+          x: args[0], y: args[1], width: this.canvas.width, height: this.canvas.height,
+          align: this.textAlign, baseline: this.textBaseline, font: this.font, color: this.fillStyle,
+        };
         return fillText.call(this, text, ...args);
       };
       const NativeContext = window.AudioContext;
@@ -295,6 +300,16 @@ for (const [name, width, height] of [
           `document.querySelector('[data-time]')?.textContent && document.querySelector('[data-time]').textContent !== '00:00'`,
           'advancing gameplay time',
         );
+        if (process.env.IF3_SCREENSHOT_PATH) {
+          const capture = await command('Page.captureScreenshot', {
+            format: 'png',
+          });
+          await writeFile(
+            process.env.IF3_SCREENSHOT_PATH + '-' + name + '-playing.png',
+            Buffer.from(capture.data, 'base64'),
+            { flag: 'wx' },
+          );
+        }
         if (name === 'timing-legend-phases') {
           await waitFor(
             `window.__countdownEvidence.phases.some(phase => phase.startsWith('Twilight'))`,
@@ -337,7 +352,7 @@ for (const [name, width, height] of [
       const canvas = document.querySelector('canvas');
       const context = evidence.contexts.at(-1);
       return { starts: evidence.starts, samples: evidence.samples, audioState: context.state,
-        now: context.currentTime, canvas: !!canvas, timingDraws: evidence.timingDraws,
+        now: context.currentTime, canvas: !!canvas, timingDraws: evidence.timingDraws, laneLabels: evidence.laneLabels,
         rendererError: document.querySelector('[data-panel="error"]')?.hidden === false };
     })()`);
         assert.equal(evidence.rendererError, false);
@@ -352,6 +367,28 @@ for (const [name, width, height] of [
           [],
           'no timing-window text reaches real canvas texture drawing',
         );
+        assert.deepEqual(Object.keys(evidence.laneLabels).sort(), [
+          'D',
+          'F',
+          'J',
+          'K',
+        ]);
+        for (const label of Object.values(evidence.laneLabels)) {
+          assert.equal(
+            label.x,
+            label.width / 2,
+            'preserved horizontal centering',
+          );
+          assert.equal(
+            label.y,
+            label.height / 2,
+            'text remains centered and unclipped inside its texture',
+          );
+          assert.equal(label.align, 'center');
+          assert.equal(label.baseline, 'middle');
+          assert.equal(label.color, '#f4f0df');
+          assert.match(label.font, /Manrope/);
+        }
         assert.equal(
           evidence.starts.length,
           1,

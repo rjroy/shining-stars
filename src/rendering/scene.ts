@@ -979,10 +979,17 @@ export function createBrightvaleScene(
         playfield.point(lane, composition.frontProgress),
       ),
     );
+    const projectedLanePitch =
+      (Math.max(...anchors.map(({ x }) => x)) -
+        Math.min(...anchors.map(({ x }) => x))) /
+      3;
+    // The front face thins with perspective; keep the established desktop gap
+    // but scale it down for the smaller portrait platform, not the lettering.
+    const labelCenterOffset = Math.min(9, projectedLanePitch / 16);
     anchors.forEach((anchor, lane) => {
       const slot = {
         x: anchor.x - 18,
-        y: anchor.y + 4,
+        y: anchor.y + labelCenterOffset - 12,
         width: 36,
         height: 24,
       };
