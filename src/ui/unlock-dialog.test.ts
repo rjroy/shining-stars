@@ -15,6 +15,14 @@ function setup(persistence: 'local' | 'session' = 'local') {
   return { flow, purchase };
 }
 describe('Unlock confirmation policy', () => {
+  it('keeps completed purchases terminal so a duplicate activation cannot spend twice', () => {
+    const { flow, purchase } = setup();
+    flow.confirm();
+    flow.confirm();
+    expect(flow.snapshot().phase).toBe('result');
+    expect(purchase).toHaveBeenCalledTimes(1);
+  });
+
   it('ordinary confirmation offers no destination picker and automatically saves locally', () => {
     const { flow, purchase } = setup();
     expect(flow.snapshot()).toMatchObject({

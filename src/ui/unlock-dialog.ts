@@ -157,6 +157,15 @@ export function createUnlockDialog(
     if (flow === null) return;
     flow.confirm();
     onChanged();
+    // Saved unlocks are already visible in the browser. Temporary purchases
+    // still show their storage warning instead of silently dismissing it.
+    if (
+      flow.snapshot().phase === 'result' &&
+      store.progression.snapshot().persistence === 'local'
+    ) {
+      close();
+      return;
+    }
     render();
   }
   const cancel = (event: Event) => {
