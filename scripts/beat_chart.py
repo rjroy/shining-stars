@@ -39,6 +39,10 @@ DEFAULT_BOUNDARY = 39.2
 DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
+ONSET_DEFAULTS = {"algorithm": "specflux", "minioi": 0.032, "threshold": 0.40, "silence": -20.0}
+ONSET_ALGORITHMS = {
+    "default", "energy", "hfc", "complex", "phase", "specdiff", "kl", "mkl", "specflux"
+}
 DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
 DEFAULT_GENERATED_DIR = PROJECT_ROOT / "data/charts/generated"
 DEFAULT_ONSETS_DIR = PROJECT_ROOT / "data/charts/onsets"
@@ -393,6 +397,7 @@ def _validate_song_settings(song_id, settings):
     if not isinstance(settings, dict):
         raise ValueError(f"song settings for {song_id!r} must be an object")
     _reject_song_level_lane_mapping(song_id, settings)
+    onset_recipe = _resolve_onset_recipe(song_id, settings)
     source = settings.get("source")
     if not isinstance(source, str) or not source.strip():
         raise ValueError(f"song {song_id!r} source must be a non-empty path")
@@ -443,6 +448,7 @@ def _validate_song_settings(song_id, settings):
         "minimum_delta": minimum_delta,
         "stride": stride,
         "lane_rules": {"type": "pattern", "data": list(lane_rules["data"])},
+        **onset_recipe,
     }
     if "lane_mapping" in settings:
         validated["lane_mapping"] = settings["lane_mapping"]
@@ -521,6 +527,7 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
         if not isinstance(settings, dict) or not isinstance(settings.get("source"), str):
             raise ValueError(f"song {song_id!r} must specify a source path")
         _reject_song_level_lane_mapping(song_id, settings)
+        _resolve_onset_recipe(song_id, settings)
         for name in ("start_time", "duration", "twilight_time"):
             value = _finite_number(settings.get(name), name)
             if value < 0 or (name != "start_time" and value <= 0) or value > 100:
@@ -553,6 +560,25 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             if delta < 0 or isinstance(stride, bool) or not isinstance(stride, int) or stride <= 0:
                 raise ValueError(f"song {song_id!r} has invalid {difficulty} difficulty values")
     return songs
+
+
+def _resolve_onset_recipe(song_id, settings):
+    """Validate and resolve song-wide aubioonset controls."""
+    allowed = {"algorithm", "minioi", "threshold", "silence"}
+    override_keys = set(settings) & allowed
+    recipe = {**ONSET_DEFAULTS, **{key: settings[key] for key in override_keys}}
+    algorithm = recipe["algorithm"]
+    if not isinstance(algorithm, str) or algorithm not in ONSET_ALGORITHMS:
+        raise ValueError(f"song {song_id!r} has unsupported onset algorithm: {algorithm!r}")
+    for name in ("minioi", "threshold", "silence"):
+        recipe[name] = _finite_number(recipe[name], f"onset {name}")
+    if recipe["minioi"] <= 0:
+        raise ValueError(f"song {song_id!r} onset minioi must be positive seconds")
+    if not 0.1 <= recipe["threshold"] <= 1:
+        raise ValueError(f"song {song_id!r} onset threshold must be in [0.1, 1]")
+    if recipe["silence"] > 0:
+        raise ValueError(f"song {song_id!r} onset silence must be non-positive dB")
+    return recipe
 
 
 def _source_path(settings):
@@ -656,12 +682,12 @@ def _validate_onset_values(onsets, song_id):
     return validated
 
 
-def _validate_analysis_commands(commands, song_id, field_name):
-    if commands != _recorded_commands():
+def _validate_analysis_commands(commands, song_id, field_name, recipe):
+    if commands != _recorded_commands(recipe):
         raise ValueError(f"{field_name} for {song_id} is not the supported full-source analysis")
 
 
-def _validate_cache_provenance(cache, song_id, source, digest, *, legacy=False):
+def _validate_cache_provenance(cache, song_id, source, digest, recipe, *, legacy=False):
     if not isinstance(cache, dict):
         raise ValueError(f"onset cache for {song_id} must be a JSON object")
     if legacy:
@@ -690,7 +716,7 @@ def _validate_cache_provenance(cache, song_id, source, digest, *, legacy=False):
         or cached_hash != source_hash
     ):
         raise ValueError(f"cached onset source mismatch for {song_id}")
-    _validate_analysis_commands(commands, song_id, "analysis commands" if not legacy else "legacy commands")
+    _validate_analysis_commands(commands, song_id, "analysis commands" if not legacy else "legacy commands", recipe)
     if tools != {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"}:
         raise ValueError(f"onset cache for {song_id} has unsupported analysis tools")
     _validate_onset_values(cache.get("onsets"), song_id)
@@ -797,10 +823,16 @@ def _scoring_metadata(charts):
 
 
 def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_path):
+    recipe = _resolve_onset_recipe(song_id, settings)
     if onset_path.exists():
         cached = json.loads(onset_path.read_text(encoding="utf-8"))
-        _validate_cache_provenance(cached, song_id, source, digest)
-        return cached
+        try:
+            _validate_cache_provenance(cached, song_id, source, digest, recipe)
+        except ValueError:
+            if check:
+                raise
+        else:
+            return cached
     if check:
         raise ValueError(f"missing cached onset artifact for {song_id}")
     legacy_candidates = [PROJECT_ROOT / "data/charts" / f"{song_id}.beats.json",
@@ -808,18 +840,37 @@ def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_p
     for legacy in legacy_candidates:
         if legacy.exists():
             old = json.loads(legacy.read_text(encoding="utf-8"))
-            _validate_cache_provenance(old, song_id, source, digest, legacy=True)
+            try:
+                _validate_cache_provenance(old, song_id, source, digest, recipe, legacy=True)
+            except ValueError as error:
+                if check or "legacy commands" not in str(error):
+                    raise
+                # Treat only a structurally valid legacy cache with a different
+                # onset recipe as stale; malformed provenance must remain fatal.
+                legacy_hfc_recipe = {**recipe, "algorithm": "hfc"}
+                legacy_hfc_commands = _recorded_commands(legacy_hfc_recipe)
+                previous_format_commands = [list(command) for command in legacy_hfc_commands]
+                previous_format_commands[1] = [
+                    "-s-90" if argument == "-s-90.0" else argument
+                    for argument in previous_format_commands[1]
+                ]
+                if old.get("commands") not in (legacy_hfc_commands, previous_format_commands):
+                    raise
+                candidate = dict(old)
+                candidate["commands"] = _recorded_commands(recipe)
+                _validate_cache_provenance(candidate, song_id, source, digest, recipe, legacy=True)
+                continue
             return {"schemaVersion": 1, "source": {"path": _project_relative_source(source), "sha256": digest},
                     "source_sha256": digest, "onsets": _validate_onset_values(old["onsets"], song_id),
                     "analysis": old["commands"], "tools": old["tools"]}
     with tempfile.TemporaryDirectory(prefix="beat-chart-") as temp_dir:
         wav = Path(temp_dir) / "analysis.wav"
-        ffmpeg, aubio = _build_commands(source, wav)
+        ffmpeg, aubio = _build_commands(source, wav, recipe)
         _run_process(runner, ffmpeg, "FFmpeg audio conversion")
         result = _run_process(runner, aubio, "aubio onset detection")
     return {"schemaVersion": 1, "source": {"path": _project_relative_source(source), "sha256": digest},
             "source_sha256": digest, "onsets": parse_onsets(result.stdout or ""),
-            "analysis": _recorded_commands(), "tools": {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"}}
+            "analysis": _recorded_commands(recipe), "tools": {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"}}
 
 
 def _bulk_run(args, runner):
@@ -855,7 +906,10 @@ def _bulk_run(args, runner):
             charts[difficulty] = chart
             report_controls[difficulty] = analysis["controls"]
             report_metrics[difficulty] = analysis["metrics"]
-        projection = {"song": settings, "profile_sha256": profile_hash}
+        projection = {
+            "song": {**settings, **_resolve_onset_recipe(song_id, settings)},
+            "profile_sha256": profile_hash,
+        }
         cache.update({
             "source_duration_seconds": audio_duration,
             "projection": projection,
@@ -1015,25 +1069,33 @@ def _run_process(runner, command, label, timeout=1800):
     return result
 
 
-def _build_commands(source, wav_path):
+def _build_commands(source, wav_path, recipe=None):
+    recipe = {**ONSET_DEFAULTS, **(recipe or {})}
+    format_number = lambda value: repr(float(value))
     ffmpeg = [
         "ffmpeg", "-nostdin", "-y", "-i", str(source), "-ac", "1", "-ar", "44100",
         "-sample_fmt", "s16", "-c:a", "pcm_s16le", str(wav_path),
     ]
     aubio = [
-        "aubioonset", "-T", "seconds", "-O", "hfc", "-t0.3", "-M0.012", "-s-90",
+        "aubioonset", "-T", "seconds", "-O", recipe["algorithm"],
+        f"-t{format_number(recipe['threshold'])}", f"-M{format_number(recipe['minioi'])}",
+        f"-s{format_number(recipe['silence'])}",
         "-i", str(wav_path),
     ]
     return ffmpeg, aubio
 
 
-def _recorded_commands():
+def _recorded_commands(recipe=None):
+    recipe = {**ONSET_DEFAULTS, **(recipe or {})}
+    format_number = lambda value: repr(float(value))
     return [
         [
             "ffmpeg", "-nostdin", "-y", "-i", "{sourceAudio}", "-ac", "1", "-ar",
             "44100", "-sample_fmt", "s16", "-c:a", "pcm_s16le", "{analysisWav}",
         ],
-        ["aubioonset", "-T", "seconds", "-O", "hfc", "-t0.3", "-M0.012", "-s-90", "-i", "{analysisWav}"],
+        ["aubioonset", "-T", "seconds", "-O", recipe["algorithm"],
+         f"-t{format_number(recipe['threshold'])}", f"-M{format_number(recipe['minioi'])}",
+         f"-s{format_number(recipe['silence'])}", "-i", "{analysisWav}"],
     ]
 
 

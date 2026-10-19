@@ -23,9 +23,37 @@ Every song entry contains:
   source duration, each in `[0, 100]`; start plus duration cannot exceed 100,
   and Twilight must be below 100. The generator converts these to seconds.
 - `lane_rules`: a non-empty lane pattern containing only `0`, `1`, `2`, `3`.
-- `difficulties`: exactly `easy`, `normal`, and `hard`. Each specifies a
-  minimum onset delta in milliseconds and a positive integer stride. Twilight
+- Optional song-wide `algorithm`, `minioi`, `threshold`, and `silence` onset
+  controls. These affect the single full-song onset analysis shared by every
+  difficulty; defaults and units are documented below.
+- `difficulties`: exactly `easy`, `normal`, and `hard`. Each specifies
+  `minimum_delta` in milliseconds and a positive integer `stride`. Twilight
   Strength percentages are global difficulty-profile values, not per-song data.
+
+### Song-level onset recipe
+
+The optional song-level onset controls independently default to `algorithm:
+"complex"`, `minioi: 0.012` seconds, `threshold: 0.3`, and `silence: -90` dB.
+Supported algorithms are `default`, `energy`, `hfc`, `complex`, `phase`,
+`specdiff`, `kl`, `mkl`, and `specflux` (as listed by `aubioonset -h`).
+`minioi` must be positive, `threshold` is in `[0.1, 1]`, and `silence` must be
+non-positive. Example of partial overrides:
+
+```json
+"the-rising-star": {
+  "algorithm": "complex",
+  "minioi": 0.018,
+  "source": "data/music/The Rising Star (Remastered).mp3"
+}
+```
+
+The omitted threshold and silence independently retain their defaults. These
+fields are song-level only: placing them under a difficulty is rejected. Do not
+confuse `minioi` (aubio's seconds-based onset-detector spacing) with
+`difficulties.<name>.minimum_delta` (milliseconds-based post-processing), or
+with `stride` (post-processing thinning). `lane_rules` provides the cyclic
+baseline/fallback lane pattern; optional `lane_mapping` controls the
+pitch-informed mapper's per-difficulty preferences, not the onset detector.
 
 For each difficulty, the generator filters detections using that difficulty's
 delta and stride and emits its own singleton-difficulty chart. Runtime computes
@@ -38,6 +66,51 @@ The shared gameplay profiles are in
 side effect of chart work. Both authoring and runtime validate its Easy,
 Normal, and Hard profile values. The widest selected Good timing window plus
 the existing 200 ms input-offset limit determines chart edge/handoff safety.
+
+### Choosing an onset algorithm
+
+Think of these algorithms as different ways of listening for “something just
+happened” in the music. An onset is a sound change, often a note or drum attack,
+not necessarily a beat. None of these methods understands the song or decides
+which moments would make satisfying game notes. Pitch-based lane assignment is
+a separate step.
+
+| Algorithm | What it listens for | Practical implication |
+| --- | --- | --- |
+| `energy` | “The sound just got louder.” | Simple attacks can stand out, but a new note buried under an already-loud backing track might not. |
+| `hfc` | “There is a burst of bright, sharp sound.” Higher frequencies get more weight. | Suited to percussive attacks such as clicks, crisp drum hits, and the initial strike of an instrument. It is not specifically following the melody. |
+| `specflux` | “Which parts of the sound just became stronger?” It adds up increases in separate frequency regions. | A new sound can register even when overall loudness barely changes. Fading sounds do not directly contribute to its change measurement. |
+| `specdiff` | “How much did the sound's makeup change?” Its calculation responds to both increases and decreases, with additional filtering. | Notices broader changes, not just new energy arriving. Not every change represents a note worth playing. |
+| `phase` | “The sound stopped continuing smoothly.” It detects disruptions in the progression of repeating vibrations. | Can notice an attack without a large volume increase, but does not identify instruments or understand phrases. |
+| `complex` | “The sound differs from what I expected, in both strength and vibration.” | Combines changes in component strength and predicted phase. Worth trying on layered recordings, but not automatically better than HFC. |
+| `kl` | “How surprising is this sound compared with a moment ago?” It compares current and previous strength in each frequency region, with extra weight for stronger current components. | Relative changes in prominent sounds have more influence. |
+| `mkl` | “Look at relative changes without giving loud components the same extra advantage.” | Removes KL's extra weighting by current strength. Less-prominent components have more relative influence than in KL; this does not guarantee better quiet-note detection. |
+| `default` | Aubio's built-in choice, which is `hfc` in version 0.4.9. | Does not inspect the song and choose a method. Explicitly setting `"algorithm": "default"` selects HFC, whereas omitting `algorithm` uses this project's `complex` default. |
+
+For example, a piano note over a continuing bass might barely change the total
+loudness but change which frequencies are present. That is why `energy` and the
+spectral methods can disagree. In `complex`, the name refers to the mathematical
+method, not a promise to handle complicated songs better or produce harder charts.
+
+For this game, start by comparing `hfc`, `specflux`, and `complex`:
+
+- **HFC:** Does following the sharp attacks feel right?
+- **Spectral flux:** Do newly appearing sounds provide better playable moments?
+- **Complex:** Does considering both strength and phase changes better match the
+  musical action?
+
+Judge actual gameplay, not just density numbers. Two charts with the same average
+density can feel different because they select different moments. The same
+threshold does not guarantee equivalent sensitivity across algorithms. If a
+method feels promising but produces too many or too few notes, tune its threshold
+before rejecting it. Minimum onset spacing and silence settings also affect which
+candidates survive.
+
+These explanations are based on the
+[aubio 0.4.9 manual](https://github.com/aubio/aubio/blob/0.4.9/doc/aubioonset.txt)
+and [algorithm implementations](https://github.com/aubio/aubio/blob/0.4.9/src/spectral/specdesc.c).
+The listening descriptions are practical interpretations, not guarantees for a
+particular instrument or genre.
 
 ### Profile outcome signs
 
@@ -81,7 +154,12 @@ song instead:
 ```sh
 python3 -m scripts.beat_chart --song never-again
 python3 -m scripts.beat_chart --check --song never-again
+python3 scripts/tune_song.py never-again
 ```
+
+`tune_song.py` generates that song's chart, then prints its density report. It
+stops and returns the failing command's exit code if generation or reporting
+fails.
 
 The `--all` generation/check reads the full recording's cached or newly
 detected onsets and full-source pitch frames, then creates three independent
@@ -113,14 +191,36 @@ The generated outputs are:
   rolling-32 concentration, stable/unknown pitch counts, and baseline/candidate
   extracted-F0 direction agreement.
 
+### Inspect chart note density
+
+`scripts/chart_density.py` reports each generated song/difficulty's mean notes
+per 10 seconds, duration-weighted population standard deviation, and maximum
+notes per 10 seconds across fixed blocks. The maximum uses normalized block
+rates (including the final partial block), not a sliding window. It reads only
+`data/charts/generated/`; it does not regenerate charts, read audio, or write
+artifacts. Empty 10-second blocks count as zero density, and a final partial
+block is normalized to a 10-second rate and weighted by its actual duration.
+
+```sh
+python3 scripts/chart_density.py --all
+python3 scripts/chart_density.py --song the-rising-star
+```
+
+Use `npm run test:chart` to run the isolated density tests with the chart
+pipeline suite.
+
 Vite eagerly imports these JSON bundles and audio URLs. Browsing creates no
 audio context and performs no audio fetch/decode. Exact source spelling in the
 chart bundle must match an imported MP3 asset. Do not introduce a fallback
 chart, Normal alias, or runtime-generated default when a bundle is missing or
 malformed.
 
-Generation caches onset detections in `data/charts/onsets/`. Changing source
-audio requires source-hash-matching onset and pitch analysis; old
+Generation caches onset detections in `data/charts/onsets/`. The resolved
+onset recipe is recorded in analysis-command provenance and the song projection.
+Changing an onset override invalidates that cache; an old HFC cache cannot
+satisfy the default `complex` recipe. Generation skips mismatched legacy onset
+caches and regenerates; `chart:check` remains read-only and fails on a mismatch.
+Changing source audio requires source-hash-matching onset and pitch analysis; old
 content-addressed pitch caches may remain. The pitch-cache key includes the
 full-source audio SHA-256, normalized extraction recipe/version, and tool
 identity. Changes to lane controls, difficulty stride/minimum delta, excerpt
@@ -158,7 +258,6 @@ controls retain their defaults:
 
 ```json
 "normal": {
-  "twilight_strength": 80,
   "minimum_delta": 64,
   "stride": 2,
   "lane_mapping": {
@@ -211,8 +310,8 @@ rolling-32 concentration, longest run, unknown-pitch count, and F0 direction
 agreement. `chart:check` is read-only: it validates the recorded provenance
 and recomputes expected outputs without requiring installed analysis tools. It
 does not check the currently installed tool version. Production integration
-is implemented; the full 29-song regeneration and check are being handled
-separately and are not claimed as complete here.
+and the full 29-song regeneration/check are complete for the current authoring
+collection.
 
 ## Browser validation
 

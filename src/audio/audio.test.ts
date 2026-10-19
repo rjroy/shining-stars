@@ -16,7 +16,10 @@ interface StartCall {
 }
 
 class FakeBuffer implements AudioBufferPort {
-  constructor(readonly duration: number) {}
+  constructor(
+    readonly duration: number,
+    readonly sampleRate = 48_000,
+  ) {}
 }
 
 class FakeSource extends EventTarget implements AudioSourcePort<FakeBuffer> {
@@ -49,6 +52,7 @@ class FakeContext
   currentTime = 0;
   state = 'suspended';
   bufferDuration = 180;
+  bufferSampleRate = 48_000;
   resumeCalls = 0;
   closeCalls = 0;
   decodeCalls = 0;
@@ -60,7 +64,7 @@ class FakeContext
     audioData,
   ) => {
     void audioData;
-    return new FakeBuffer(this.bufferDuration);
+    return new FakeBuffer(this.bufferDuration, this.bufferSampleRate);
   };
   createSourceBehavior: () => FakeSource = () => {
     const source = new FakeSource();
@@ -221,51 +225,71 @@ describe('audio transport', () => {
     expect(harness.context.decodeCalls).toBe(2);
   });
 
-  it('accepts the half-microsecond metadata rounding gap for nonzero source offsets', async () => {
-    const audioConfig: AudioTransportConfig = {
-      sourceUrl: 'synthetic://rounded-duration',
-      sourceStart: 100,
-      duration: 174.567188,
-    };
-    const harness = createHarness(undefined, audioConfig);
-    harness.context.bufferDuration = 274.5671875;
+  it.each([44_100, 48_000, 96_000])(
+    'accepts a source end within one decoded sample plus metadata rounding at %s Hz',
+    async (sampleRate) => {
+      const audioConfig: AudioTransportConfig = {
+        sourceUrl: 'synthetic://rounded-duration',
+        sourceStart: 50.25,
+        duration: 189.629979,
+      };
+      const harness = createHarness(undefined, audioConfig);
+      harness.context.bufferSampleRate = sampleRate;
+      const requiredSourceEnd = audioConfig.sourceStart + audioConfig.duration;
+      const tolerance = 1 / sampleRate + 0.5e-6;
+      harness.context.bufferDuration = requiredSourceEnd - tolerance;
 
-    await expect(harness.transport.load()).resolves.toMatchObject({
-      status: 'ready',
-      loaded: true,
-    });
-  });
+      await expect(harness.transport.load()).resolves.toMatchObject({
+        status: 'ready',
+        loaded: true,
+      });
+    },
+  );
 
-  it('accepts the reported rounded duration at a zero source offset', async () => {
+  it('accepts the reported sub-sample shortfall and rejects a shortfall beyond the sample bound', async () => {
     const audioConfig: AudioTransportConfig = {
-      sourceUrl: 'synthetic://rounded-duration',
+      sourceUrl: 'synthetic://phone-decoded-duration',
       sourceStart: 0,
-      duration: 274.567188,
+      duration: 239.879979,
     };
     const harness = createHarness(undefined, audioConfig);
-    harness.context.bufferDuration = 274.5671875;
+    harness.context.bufferDuration = 239.87997732426305;
 
     await expect(harness.transport.load()).resolves.toMatchObject({
       status: 'ready',
       loaded: true,
     });
+
+    const shortConfig: AudioTransportConfig = {
+      ...audioConfig,
+      sourceUrl: 'synthetic://materially-short-duration',
+    };
+    const shortHarness = createHarness(undefined, shortConfig);
+    shortHarness.context.bufferDuration =
+      shortConfig.duration - 1 / shortHarness.context.bufferSampleRate - 1e-6;
+    await expect(shortHarness.transport.load()).rejects.toThrow(/duration/i);
+
+    const invalidHarness = createHarness(undefined, audioConfig);
+    for (const invalidDuration of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      invalidHarness.context.bufferDuration = invalidDuration;
+      await expect(invalidHarness.transport.load()).rejects.toThrow(
+        /duration/i,
+      );
+    }
+
+    invalidHarness.context.bufferDuration = audioConfig.duration;
+    invalidHarness.context.bufferSampleRate = Number.NaN;
+    await expect(invalidHarness.transport.load()).rejects.toThrow(/duration/i);
   });
 
-  it('rejects coverage below the metadata rounding bound and non-finite durations', async () => {
-    const audioConfig: AudioTransportConfig = {
-      sourceUrl: 'synthetic://rounded-duration',
-      sourceStart: 100,
-      duration: 174.567188,
-    };
-    const harness = createHarness(undefined, audioConfig);
-
-    harness.context.bufferDuration = 274.567187499;
+  it('rejects a materially truncated buffer and permits retry with complete audio', async () => {
+    const harness = createHarness();
+    harness.context.bufferDuration =
+      config.sourceStart + config.duration - 0.01;
     await expect(harness.transport.load()).rejects.toThrow(/duration/i);
-
-    for (const invalidDuration of [Number.NaN, Number.POSITIVE_INFINITY]) {
-      harness.context.bufferDuration = invalidDuration;
-      await expect(harness.transport.load()).rejects.toThrow(/duration/i);
-    }
+    harness.context.bufferDuration = config.sourceStart + config.duration;
+    await harness.transport.load();
+    expect(harness.transport.snapshot().status).toBe('ready');
   });
 
   it('can retry after a fetch error without decoding the failed response', async () => {
@@ -608,6 +632,35 @@ describe('audio transport', () => {
       position: config.duration,
       hasActiveSource: false,
     });
+  });
+
+  it('treats a source ending within its decoded-sample tolerance as natural completion', async () => {
+    const audioConfig: AudioTransportConfig = {
+      sourceUrl: 'synthetic://sample-quantized-end',
+      sourceStart: 0,
+      duration: 239.879979,
+    };
+    const harness = createHarness(undefined, audioConfig);
+    harness.context.bufferDuration = 239.87997732426305;
+    await harness.transport.load();
+    await harness.transport.start();
+
+    const source = sourceAt(harness.context);
+    const scheduledEnd = 5 + audioConfig.duration;
+    harness.context.currentTime = 5 + harness.context.bufferDuration;
+    source.finish();
+
+    expect(source.startCalls[0]).toMatchObject({
+      offset: 0,
+      duration: audioConfig.duration,
+    });
+    expect(harness.transport.snapshot()).toMatchObject({
+      status: 'results',
+      position: audioConfig.duration,
+      hasActiveSource: false,
+      error: null,
+    });
+    expect(harness.context.currentTime).toBeLessThan(scheduledEnd);
   });
 
   it('pauses and preserves position after an unexpected context suspension without auto-resume', async () => {

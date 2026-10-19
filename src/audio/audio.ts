@@ -1,5 +1,6 @@
 export interface AudioBufferPort {
   readonly duration: number;
+  readonly sampleRate: number;
 }
 
 export interface AudioSourcePort<
@@ -92,16 +93,31 @@ interface ActiveSource<TSource> {
   readonly source: TSource;
   readonly epoch: number;
   readonly scheduledEnd: number;
+  readonly endToleranceSeconds: number;
   intentional: boolean;
   endedListener: EventListener;
 }
 
 const COUNTDOWN_SECONDS = 5;
 const MAX_INPUT_TIME_ULPS = 8;
-// FFprobe reports this song's source duration to six decimal places; its 100%
-// authoring interval inherits that rounding. Allow half of the reported 1 µs
-// unit when comparing chart metadata with the decoded buffer duration.
-const SOURCE_DURATION_ROUNDING_TOLERANCE_SECONDS = 0.5e-6;
+// Source metadata is rounded to microseconds, while decoded audio can only end
+// on a sample boundary. Accept at most one decoded sample plus half a metadata
+// unit; this is the maximum precision loss, not a general short-audio allowance.
+const SOURCE_METADATA_ROUNDING_TOLERANCE_SECONDS = 0.5e-6;
+
+function sourceEndTolerance(sampleRate: number): number {
+  return 1 / sampleRate + SOURCE_METADATA_ROUNDING_TOLERANCE_SECONDS;
+}
+
+function reachedScheduledEnd<TSource>(
+  currentTime: number,
+  record: ActiveSource<TSource>,
+): boolean {
+  return (
+    compareClockValues(currentTime, record.scheduledEnd) >= 0 ||
+    record.scheduledEnd - currentTime <= record.endToleranceSeconds
+  );
+}
 
 function compareClockValues(left: number, right: number): -1 | 0 | 1 {
   const difference = left - right;
@@ -277,7 +293,7 @@ export function createAudioTransport<
       return;
     }
 
-    if (compareClockValues(context.currentTime, record.scheduledEnd) >= 0) {
+    if (reachedScheduledEnd(context.currentTime, record)) {
       completeAtEnd(record);
       return;
     }
@@ -363,8 +379,10 @@ export function createAudioTransport<
       const requiredSourceEnd = config.sourceStart + config.duration;
       if (
         !Number.isFinite(buffer.duration) ||
+        !Number.isFinite(buffer.sampleRate) ||
+        buffer.sampleRate <= 0 ||
         buffer.duration <
-          requiredSourceEnd - SOURCE_DURATION_ROUNDING_TOLERANCE_SECONDS
+          requiredSourceEnd - sourceEndTolerance(buffer.sampleRate)
       ) {
         throw new Error(
           `Decoded audio duration ${buffer.duration}s is shorter than the requested source interval ending at ${requiredSourceEnd}s.`,
@@ -463,10 +481,7 @@ export function createAudioTransport<
     }
 
     const record = activeSource;
-    if (
-      record !== null &&
-      compareClockValues(context.currentTime, record.scheduledEnd) >= 0
-    ) {
+    if (record !== null && reachedScheduledEnd(context.currentTime, record)) {
       finishExpectedSource(record);
       return snapshot();
     }
@@ -566,6 +581,7 @@ export function createAudioTransport<
         source,
         epoch: requestEpoch,
         scheduledEnd: when + remainingDuration,
+        endToleranceSeconds: sourceEndTolerance(decodedBuffer.sampleRate),
         intentional: false,
         endedListener: () => undefined,
       };

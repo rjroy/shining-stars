@@ -7,7 +7,10 @@ import type {
 import { createBrowserAudioContextAdapter } from './browser-audio';
 
 class FakeBuffer implements AudioBufferPort {
-  constructor(readonly duration: number) {}
+  constructor(
+    readonly duration: number,
+    readonly sampleRate = 48_000,
+  ) {}
 }
 
 class FakeDestination {}
