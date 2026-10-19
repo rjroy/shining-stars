@@ -2,10 +2,17 @@
 set -euo pipefail
 
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+output="${1:-$root/sky-art-review.webp}"
+if [[ -e "$output" ]]; then
+  printf 'Refusing to overwrite existing review output: %s\n' "$output" >&2
+  exit 1
+fi
 scratch_root="${TMPDIR:-/tmp/opencode}"
 mkdir -p "$scratch_root"
 scratch="$(mktemp -d "$scratch_root/brightvale-sky-review.XXXXXX")"
-trap 'rm -rf -- "$scratch"' EXIT
+staged_output=''
+trap 'rm -f -- "$staged_output"; rm -rf -- "$scratch"' EXIT
+staged_output="$(mktemp "${output}.partial.XXXXXX")"
 
 magick -size 960x540 gradient:'#142342-#e7a66f' "$scratch/warm-gradient.png"
 magick -size 960x540 gradient:'#080d25-#49346e' "$scratch/twilight-gradient.png"
@@ -50,6 +57,9 @@ magick -size 1920x1746 xc:'#0d1020' \
   "$scratch/panel-4.png" -gravity northwest -geometry +960+582 -composite \
   "$scratch/panel-5.png" -gravity northwest -geometry +0+1164 -composite \
   "$scratch/panel-6.png" -gravity northwest -geometry +960+1164 -composite \
-  "$root/sky-art-review.png"
+  "$scratch/sky-art-review.png"
 
-printf 'Wrote %s\n' "$root/sky-art-review.png"
+cwebp -quiet -q 80 -m 6 -alpha_q 100 \
+  "$scratch/sky-art-review.png" -o "$staged_output"
+mv -f -- "$staged_output" "$output"
+printf 'Wrote %s\n' "$output"

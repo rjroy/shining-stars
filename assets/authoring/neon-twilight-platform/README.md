@@ -97,8 +97,9 @@ intact. The four real inset targets and bezels at Y=1.45 remain untouched.
   are unchanged.
 - Current saved source: `platform-slot-cues.blend`, SHA-256
   `72ba506b25c7ddfc61541dc9cc54bd65880fa112ad1e51dd839a0fa794befe26`.
-- Durable actual-model previews: `slot-cues-before.png` and
-  `slot-cues-approved.png` (exact approved image bytes). Both 1200×800,
+- Durable actual-model preview source PNGs: `slot-cues-before.png` and
+  `slot-cues-approved.png` (exact approved image bytes). Presentation derivatives:
+  [before](slot-cues-before.webp) and [approved](slot-cues-approved.webp). PNGs remain unchanged originals. Both are 1200×800,
   Cycles 16 samples, saved
   concept-comparison camera at `(0,-16,12.5)`, 50mm. Original lighting, AgX,
   materials (apart from authorized tints) and compositor retained; source hashes

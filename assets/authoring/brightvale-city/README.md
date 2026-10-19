@@ -71,7 +71,9 @@ performance claim is made.
 | `production.blend` | 81,812,470 | `a5caa2d3ec237971e401e11deb226f091e6dd9ab9e980c796b5ccbda836a9ca5` |
 | `city-meshopt.glb` | 59,559,056 | `db79454415423002bf87eb36d845a427f2c6c3e2dc4a3e63a05e4b2ded1be878` |
 
-Approved concept references and selected original-scene evidence remain under
-[`references/`](references/) and [`evidence/`](evidence/). The original's known
+Approved concept-reference PNGs and selected original-scene evidence remain under
+[`references/`](references/) and [`evidence/`) unchanged for provenance; adjacent
+WebP files are presentation derivatives registered in `manifest.json`, not
+byte-identical originals. The original's known
 limits remain: stylized static water, a locally raised/narrow far-right approach,
 and no claim of watertightness, navigability, physical scale or solved hydrology.

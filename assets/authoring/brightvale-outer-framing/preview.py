@@ -2,6 +2,7 @@
 import argparse
 import json
 import sys
+import subprocess
 from pathlib import Path
 sys.dont_write_bytecode=True
 sys.path.insert(0,str(Path(__file__).resolve().parent))
@@ -10,6 +11,20 @@ import validate
 import bpy
 from mathutils import Vector
 from bpy_extras.object_utils import world_to_camera_view
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 VIEWS=['neutral-modules','neutral-section','neutral-post','neutral-placement',
        'assembly-audience','assembly-twilight']
@@ -116,6 +131,8 @@ def main():
         print('RENDER_ATTEMPT',view,str(path),flush=True)
         bpy.ops.render.render(write_still=True)
         assert path.is_file() and path.stat().st_size>1000,'Render missing/empty'
+        encode_preview(path)
+        path=path.with_suffix('.webp')
         assert validate.camera_state()==original_camera,'Preserved reference camera changed'
         evidence[view]={'file':path.name,'camera_location':list(cam.location),
                         'camera_rotation':list(cam.rotation_euler),'orthographic_scale':cam.data.ortho_scale,

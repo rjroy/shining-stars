@@ -13,7 +13,7 @@ The artwork is informed by `.lore/work/mockups/Golden City Rhythm Concert.webp`,
 - `audience-radiant-clouds.png` — framed warm illuminated cloud banks for Audience and Radiant.
 - `twilight-cosmic-clouds.png` — framed indigo/violet cloud and restrained cosmic-depth overlay for Twilight.
 - `audience-radiant-clouds-source.png` and `twilight-cosmic-clouds-source.png` — exact native generated sources, retained unchanged for provenance.
-- `sky-art-review.png` — palette composites on twilight gradients plus light/dark edge checks. This is an art review sheet, not an in-game capture.
+- [sky-art-review.webp](sky-art-review.webp) — palette composites on twilight gradients plus light/dark edge checks. This is an art review sheet, not an in-game capture. The generated PNG intermediate is temporary and is not retained.
 
 Intended placement: broad, asymmetric clouds in the upper sky and selected skyline gaps, behind the unchanged 3D city. Keep the central upper gameplay field and UI reading zones quieter; preserve a clean low horizon for the city silhouette. No skyline, ground, text, controls, highway, HUD, baked stars, or baked glow is intended.
 
@@ -42,6 +42,6 @@ Cloud quads keep the approved aspect ratio and cover the sky height; portrait vi
 
 Both framed candidates decode as 1672×941 sRGBA with zero-alpha corners and feathered, non-opaque edges. Their nonzero-alpha bounds after the 80% transparent-canvas framing are 1262×661 at +208+137 (warm) and 1305×730 at +189+117 (violet). Candidate file sizes are about 453 KB and 780 KB. The original sources are about 675 KB and 1.18 MB. These are observed sizes, not an approved budget.
 
-Rebuild the framed review candidates from their exact sources with `magick source.png -resize 80% -background none -gravity center -extent 1672x941 candidate.png` (ImageMagick; no package installation performed). Rebuild the contact sheet with `bash assets/authoring/brightvale-sky/build-review.sh`. The sheet composites both candidate PNGs over representative mode gradients and over light and dark solids; these are illustrative, not runtime evidence. No alpha was removed or color-keyed. The violet artwork's painterly nebular texture is part of the approved candidate.
+Rebuild the framed review candidates from their exact sources with `magick source.png -resize 80% -background none -gravity center -extent 1672x941 candidate.png` (ImageMagick; no package installation performed). Rebuild the WebP contact sheet with `bash assets/authoring/brightvale-sky/build-review.sh [new-output.webp]`; the default output is `sky-art-review.webp`, and an existing destination is refused rather than overwritten. The PNG intermediate is generated under temporary scratch and removed on exit. The sheet composites both candidate PNGs over representative mode gradients and over light and dark solids; these are illustrative, not runtime evidence. No alpha was removed or color-keyed. The violet artwork's painterly nebular texture is part of the approved candidate.
 
 The runtime gate still requires actual-game captures in the three gameplay modes and both Observatory views, plus readable responsive compositions and lifecycle/performance verification. Any composite using gameplay screenshots is illustrative composition evidence only, not runtime evidence.

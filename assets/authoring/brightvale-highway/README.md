@@ -62,7 +62,6 @@ timeout 180s blender --background "$WORK/rebuild/highway-candidate.blend" \
   -- --negative-test --compare "$ASSET/highway.blend" --report "$WORK/validation.json"
 timeout 600s blender --background "$ASSET/highway.blend" \
   --python-exit-code 1 --python "$ASSET/preview.py" -- --output-dir "$WORK/previews"
-cwebp -lossless -z 6 "$WORK/previews/neutral-isolated.png" -o "$WORK/neutral-isolated.webp"
 ```
 
 Verified saved reopening and **independent regeneration from packaged scripts/inputs in a relocated scratch sibling layout**: exact evaluated geometry, transforms and material nodes, and unchanged imported approved references/camera. Successful final build/validation/render processes exited **0**. Missing output, existing output directory and nonfinite length are rejected before writing. Lengths **6, 12, 18 and 60** passed topology and measured junction/lane assertions. An earlier length-12 test caught collapsed bevel faces on seam ramps; the bed angle limit corrected that generator defect without weakening validation. The negative test moved lane 2 **0.125** in memory: the **lane-center mismatch invariant rejected it**, then restored it without any source save. Preview cameras are documented for the selected length 18; materially different lengths may require explicitly reviewed diagnostic framing, and full-view crop assertions refuse misleading evidence.

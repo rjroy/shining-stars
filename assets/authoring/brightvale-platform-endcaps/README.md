@@ -57,8 +57,6 @@ timeout 120s blender --background "$WORK/rebuild/endcaps-candidate.blend" \
   -- --compare "$ASSET/endcaps.blend" --report "$WORK/validation.json"
 timeout 600s blender --background "$ASSET/endcaps.blend" \
   --python-exit-code 1 --python "$ASSET/preview.py" -- --output-dir "$WORK/previews"
-# For a selected PNG only, use the existing local converter:
-cwebp -lossless -z 6 "$WORK/previews/neutral-fit.png" -o "$WORK/neutral-fit.webp"
 ```
 
 Verified: saved candidate reopening; regeneration from packaged scripts in a **relocated scratch sibling layout**; exact evaluated mesh/transforms/material nodes against the selected candidate; exact imported reference geometry/materials and accepted camera against the approved source; source checksums unchanged. All build/validation/render processes exited **0**. A negative test displaced one cap **0.1** in memory: validation rejected it, wrote no report, and did not save the source.

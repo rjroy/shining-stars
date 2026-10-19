@@ -1,15 +1,30 @@
 """Read-only actual-model diagnostics and accepted-camera mode comparisons.
 Load approved endcaps.blend (or an explicitly selected scratch rebuild) in Blender.
 Temporary lighting/camera/visibility changes are never saved to either source.
-PNG intermediates and render manifest go to NEW output directory; convert locally
-with cwebp for maintained evidence. No renderer/dependency installs needed.
+WebP previews and render manifest go to a NEW output directory. PNGs are temporary
+intermediates. No renderer/dependency installs needed.
 """
 import bpy, json, sys, argparse
+import subprocess
 from pathlib import Path
 from mathutils import Vector
 sys.dont_write_bytecode=True
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from build import PLATFORM, APPROVED_SHA, output_path, sha
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 # Exact Audience/Twilight studio values from the platform's accepted mode study.
 MODES={
@@ -58,6 +73,9 @@ def main():
         print('RENDER_ATTEMPT',dest,flush=True)
         bpy.ops.render.render(write_still=True)
         assert dest.is_file() and dest.stat().st_size>0
+        encode_preview(dest)
+        dest=dest.with_suffix('.webp')
+        views[-1]['image']=dest.name
         print('RENDER_PASS',dest,flush=True)
 
     def camera(name,loc,target,scale):

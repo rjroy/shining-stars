@@ -1,9 +1,9 @@
 """Saved-highway geometry evidence, read-only. All diagnostic cameras are TEMP.
 Load approved highway.blend (or an explicitly selected scratch rebuild) in Blender.
 The saved approved platform camera is preserved, not used as an invented game view.
-Writes new PNGs/manifest only; convert selected evidence with local cwebp.
+Writes retained WebP evidence and a render manifest; PNGs are temporary.
 """
-import argparse,json,sys
+import argparse,json,sys,subprocess
 from pathlib import Path
 import bpy
 from mathutils import Vector
@@ -11,6 +11,20 @@ from bpy_extras.object_utils import world_to_camera_view
 sys.dont_write_bytecode=True
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from build import CANDIDATE,PLATFORM_REF,ENDCAP_REF,output_path,sha,source_integrity
+
+def encode_preview(png):
+    webp=png.with_suffix('.webp')
+    partial=png.with_name(png.stem+'.partial.webp')
+    if webp.exists(): raise FileExistsError('Refusing existing preview output: '+str(webp))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(png),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0: raise RuntimeError('WebP preview missing or empty: '+str(partial))
+        partial.replace(webp)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    png.unlink()
+    return webp
 
 LIGHTS=['Studio key | soft warmbox','Studio fill | cool sky','Studio rim | violet','Studio front strip']
 MODES={
@@ -83,6 +97,9 @@ def main():
                       'resolution':[scene.render.resolution_x,scene.render.resolution_y]})
         print('RENDER_ATTEMPT',dest,flush=True); bpy.ops.render.render(write_still=True)
         assert dest.is_file() and dest.stat().st_size>0
+        encode_preview(dest)
+        dest=dest.with_suffix('.webp')
+        views[-1]['image']=dest.name
         print('RENDER_PASS',dest,flush=True)
 
     mode('neutral'); pr.hide_render=True; er.hide_render=True

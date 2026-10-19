@@ -1,7 +1,7 @@
 """Read-only actual-model comparison at study sizes plus 3/4 diagnostics.
 
-Uses ImageMagick for scratch PNG assembly and cwebp for the maintained lossless
-WebP. Intermediate PNGs stay in scratch. Never saves a blend.
+Uses ImageMagick for scratch PNG assembly and cwebp for the maintained WebP.
+Intermediate PNGs stay in scratch. Never saves a blend.
 """
 import argparse
 import importlib.util
@@ -17,8 +17,16 @@ B=importlib.util.module_from_spec(spec);spec.loader.exec_module(B)
 
 def encode_webp(source, dest):
     assert not dest.exists(), 'Refusing existing WebP'
-    subprocess.run(['cwebp','-lossless','-exact',str(source),'-o',str(dest)],check=True)
-    assert dest.stat().st_size > 0
+    partial=dest.with_name(dest.stem+'.partial.webp')
+    if partial.exists(): raise FileExistsError('Refusing stale partial WebP: '+str(partial))
+    try:
+        subprocess.run(['cwebp','-quiet','-q','80','-m','6','-alpha_q','100',str(source),'-o',str(partial)],check=True)
+        if not partial.is_file() or partial.stat().st_size==0:
+            raise RuntimeError('WebP output missing or empty: '+str(partial))
+        partial.replace(dest)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
 
 def run(args):
     B.protected(args.source); derived_hash=B.sha(args.derived)
