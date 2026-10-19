@@ -1390,6 +1390,8 @@
   top: 66px;
   right: 0;
   width: min(360px, 100%);
+  max-height: calc(100% - 110px);
+  overflow-y: auto;
   padding: 18px;
   border: 1px solid rgb(255 218 145 / 76%);
   border-radius: 10px;
@@ -1427,6 +1429,46 @@
 .observatory-filter-panel select {
   min-height: 40px;
   border-radius: 6px;
+}
+.song-progress-filters {
+  margin: 18px 0 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid rgb(255 218 145 / 25%);
+  min-width: 0;
+}
+.song-progress-filters legend {
+  padding: 0 8px 0 0;
+  color: #fff0d1;
+  font-size: 0.85rem;
+}
+.observatory-filter-panel .song-filter-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  margin-top: 0;
+  cursor: pointer;
+}
+.song-filter-check input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #ffda91;
+}
+.song-filter-check input:focus-visible {
+  outline: 2px solid #ffda91;
+  outline-offset: 4px;
+}
+.song-progress-filters select {
+  margin-bottom: 8px;
+}
+.song-filter-help {
+  margin: 10px 0 0;
+  color: #f1dfc0;
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
 
 @media (max-width: 900px) {

@@ -5,6 +5,7 @@ import {
 } from '../game/game-balance';
 import { getSongDifficulties } from './catalog';
 import type { SongCatalog, SongCatalogEntry } from './catalog';
+import type { SongRating } from './song-ratings';
 
 export interface SongBrowseFilters {
   readonly query?: string;
@@ -12,6 +13,48 @@ export interface SongBrowseFilters {
   readonly favoritesOnly?: boolean;
   /** Filters songs that support this difficulty; does not configure a run. */
   readonly supportsDifficulty?: Difficulty;
+  readonly unlockedOnly?: boolean;
+  readonly unplayedOnly?: boolean;
+  /** No tier means no condition; independent from the selected run difficulty. */
+  readonly undefeatedDifficulty?: Difficulty;
+  readonly belowFiveNormalStars?: boolean;
+  readonly belowFiveGoldStars?: boolean;
+}
+
+/** Read the current save, not cached filter results. Missing ratings mean unplayed. */
+export interface SongBrowseProgress {
+  readonly getRating?: (songId: string) => SongRating | null;
+  readonly isUnlocked?: (songId: string) => boolean;
+  readonly getVictoryDifficulty?: (songId: string) => Difficulty | undefined;
+}
+
+function matchesProgress(
+  songId: string,
+  filters: SongBrowseFilters,
+  progress: SongBrowseProgress,
+): boolean {
+  if (filters.unlockedOnly && !(progress.isUnlocked?.(songId) ?? true))
+    return false;
+  const rating = progress.getRating?.(songId) ?? null;
+  if (filters.unplayedOnly && rating !== null) return false;
+  if (
+    filters.belowFiveNormalStars &&
+    rating !== null &&
+    (rating.normalStars >= 5 || rating.goldStars > 0)
+  )
+    return false;
+  if (filters.belowFiveGoldStars && (rating?.goldStars ?? 0) >= 5) return false;
+  const tier = filters.undefeatedDifficulty;
+  if (tier !== undefined) {
+    const tiers: readonly Difficulty[] = ['easy', 'normal', 'hard'];
+    const credited = progress.getVictoryDifficulty?.(songId);
+    if (
+      credited !== undefined &&
+      tiers.indexOf(credited) >= tiers.indexOf(tier)
+    )
+      return false;
+  }
+  return true;
 }
 
 export interface SongSelection {
@@ -49,6 +92,7 @@ export function selectSongs(
   catalog: SongCatalog,
   filters: SongBrowseFilters = {},
   favoriteIds: ReadonlySet<string> = new Set(),
+  progress: SongBrowseProgress = {},
 ): readonly SongCatalogEntry[] {
   const query = normalizeSongSearch(filters.query ?? '');
   const collection =
@@ -69,6 +113,7 @@ export function selectSongs(
       (filters.collectionId === undefined ||
         song.collections.includes(filters.collectionId)) &&
       (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
+      matchesProgress(song.id, filters, progress) &&
       (filters.supportsDifficulty === undefined ||
         getSongDifficulties(song).includes(filters.supportsDifficulty)),
   );
@@ -79,8 +124,9 @@ export function reconcileSongSelection(
   filters: SongBrowseFilters,
   current: SongSelectionInput,
   favoriteIds: ReadonlySet<string> = new Set(),
+  progress: SongBrowseProgress = {},
 ): SongSelection {
-  const results = selectSongs(catalog, filters, favoriteIds);
+  const results = selectSongs(catalog, filters, favoriteIds, progress);
   const retained = results.find((song) => song.id === current.selectedSongId);
   const selected = retained ?? results[0] ?? null;
   if (selected === null) return { selectedSongId: null, runDifficulty: null };

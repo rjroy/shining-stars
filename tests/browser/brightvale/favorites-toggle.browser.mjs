@@ -168,6 +168,82 @@ test(
       }
       assert.equal(evidence.emptyOn.pressed, 'true');
       assert.equal(evidence.emptyOff.pressed, 'false');
+      const progressionEvidence = await evaluate(`(async () => {
+        const { createObservatoryUI, getSongUnlockRequest } = await import('/src/ui/observatory-ui.ts');
+        const { SONG_CATALOG } = await import('/src/catalog/catalog.ts');
+        const { createSaveStore } = await import('/src/app/save-data.ts');
+        const { createProgressionMembership } = await import('/src/catalog/progression-catalog.ts');
+        const host = document.createElement('div');
+        host.style.cssText = 'position:fixed;inset:0;z-index:1000;background:#0e0d28';
+        document.body.append(host);
+        const store = createSaveStore(null);
+        const blank = store.exportJson();
+        const ui = createObservatoryUI(host, SONG_CATALOG, { onPlay: () => {} }, store.favorites, { saveStore: store });
+        window.__progressionFilterFixture = { host, ui };
+        const find = selector => host.querySelector(selector);
+        const ids = () => [...host.querySelectorAll('.song-row')].map(row => row.dataset.songId);
+        const set = (selector, value) => {
+          const input = find(selector);
+          if (input.type === 'checkbox') input.checked = value; else input.value = value;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        find('[data-action="all-songs"]').click();
+        find('[data-action="toggle-filters"]').click();
+        const defaults = ui.getSelectionSnapshot();
+        const all = ids();
+        const songId = all[0];
+        set('[data-filter-unplayed]', true);
+        store.songRatings.recordCompletedResult(songId, { score: 0, normalMaximum: 100, outcome: 'defeat', difficulty: 'normal' });
+        ui.setPlayStatus('idle');
+        const resultRefresh = !ids().includes(songId) && ui.getSelectionSnapshot().selection.selectedSongId !== songId;
+        store.applyImport(store.previewImport(blank, 'replace', 'replace'), 'session');
+        ui.refreshSavedData();
+        const resetRefresh = ids().includes(songId);
+        const imported = createSaveStore(null);
+        imported.songRatings.recordCompletedResult(songId, { score: 100, normalMaximum: 100, outcome: 'victory', difficulty: 'hard' });
+        imported.progression.recordVictory(songId, 'hard');
+        store.applyImport(store.previewImport(imported.exportJson(), 'replace', 'replace'), 'session');
+        ui.refreshSavedData();
+        const importRefresh = !ids().includes(songId);
+        find('[data-action="clear-filters"]').click();
+        set('[data-filter-normal-stars]', true);
+        const normalBest = !ids().includes(songId);
+        set('[data-filter-normal-stars]', false);
+        set('[data-filter-gold-stars]', true);
+        const goldBest = !ids().includes(songId);
+        set('[data-filter-gold-stars]', false);
+        const beforeDifficulty = ui.getSelectionSnapshot().selection.runDifficulty;
+        set('[data-filter-undefeated]', 'easy');
+        const higherCredit = !ids().includes(songId);
+        set('[data-filter-undefeated]', '');
+        const noOpposite = ids().length === all.length;
+        const independent = ui.getSelectionSnapshot().selection.runDifficulty === beforeDifficulty;
+        const membership = createProgressionMembership(SONG_CATALOG);
+        const locked = all.find(id => getSongUnlockRequest(id, store.progression.snapshot(), membership) !== null);
+        set('[data-filter-unlocked]', true);
+        const lockedExcluded = locked !== undefined && !ids().includes(locked);
+        if (locked !== undefined) {
+          const parent = membership.songs.get(locked);
+          const needed = (membership.collections.get(parent) ?? 0) + (membership.songPrice ?? 1);
+          for (let index = 0; index < Math.ceil(needed / 3); index++) store.progression.recordVictory('browser-credit-' + index, 'hard');
+          store.progression.purchase({ kind: 'collection', collectionId: parent }, 'session');
+          ui.refreshSavedData();
+          const afterCollection = ids().includes(locked);
+          store.progression.purchase({ kind: 'song', songId: locked }, 'session');
+          ui.refreshSavedData();
+          const unlockRefresh = !afterCollection && ids().includes(locked);
+          find('[data-action="clear-filters"]').click();
+          return { defaults: defaults.filters, resultRefresh, resetRefresh, importRefresh, normalBest, goldBest, higherCredit, noOpposite, independent, lockedExcluded, unlockRefresh };
+        }
+        throw new Error('The integration catalog needs an unlockable song');
+      })()`);
+      assert.equal(
+        progressionEvidence.defaults.undefeatedDifficulty,
+        undefined,
+      );
+      for (const [check, passed] of Object.entries(progressionEvidence)) {
+        if (check !== 'defaults') assert.equal(passed, true, check);
+      }
       for (const [width, height] of [
         [1440, 900],
         [390, 844],
@@ -206,7 +282,46 @@ test(
         );
         assert.equal(layout.usable, true);
         assert.ok(layout.rows > 0);
+        const progressionLayout = await evaluate(`(() => {
+          const { host } = window.__progressionFilterFixture;
+          const panel = host.querySelector('[data-filter-panel]');
+          const controls = [...panel.querySelectorAll('input, select')];
+          const rect = panel.getBoundingClientRect();
+          const detail = host.querySelector('[data-song-detail]');
+          return {
+            checkboxes: panel.querySelectorAll('input[type="checkbox"]').length,
+            defaults: [...panel.querySelector('[data-filter-undefeated]').options].map(option => option.textContent),
+            fits: rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight,
+            controlsFit: controls.every(input => { const r = input.getBoundingClientRect(); return r.left >= rect.left && r.right <= rect.right && r.top >= rect.top && r.bottom <= rect.bottom; }),
+            detailScroll: detail.scrollHeight > detail.clientHeight + 1,
+          };
+        })()`);
+        assert.equal(progressionLayout.checkboxes, 4);
+        assert.deepEqual(progressionLayout.defaults, [
+          'None',
+          'Easy',
+          'Normal',
+          'Hard',
+        ]);
+        assert.equal(
+          progressionLayout.fits,
+          true,
+          'progression panel fits viewport',
+        );
+        assert.equal(
+          progressionLayout.controlsFit,
+          true,
+          'all separate controls visible',
+        );
+        assert.equal(
+          progressionLayout.detailScroll,
+          false,
+          'details stay compact and non-scrolling',
+        );
       }
+      await evaluate(
+        `window.__progressionFilterFixture.ui.destroy(); window.__progressionFilterFixture.host.remove(); delete window.__progressionFilterFixture;`,
+      );
     } finally {
       try {
         socket?.close();

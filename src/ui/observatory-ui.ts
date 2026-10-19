@@ -10,6 +10,7 @@ import {
   reconcileSongSelection,
   selectSongs,
   type SongBrowseFilters,
+  type SongBrowseProgress,
   type SongSelection,
 } from '../catalog/selectors';
 import type { FavoriteStore } from '../catalog/favorites';
@@ -319,7 +320,16 @@ export function createObservatoryUI(
 
       <section class="observatory-filter-panel" id="observatory-filters" data-filter-panel aria-label="Filter songs" hidden>
         <div class="filter-heading"><h2>Refine your search</h2><button type="button" data-action="clear-filters">Clear filters</button></div>
-        <label>Difficulty support<select data-filter-difficulty><option value="">Any difficulty</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+         <label>Difficulty support<select data-filter-difficulty><option value="">Any difficulty</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+         <fieldset class="song-progress-filters">
+           <legend>Progress</legend>
+           <label class="song-filter-check"><input type="checkbox" data-filter-unlocked>Show Unlocked</label>
+           <label class="song-filter-check"><input type="checkbox" data-filter-unplayed>Show Unplayed</label>
+           <label>Undefeated on difficulty<select data-filter-undefeated><option value="">None</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+           <label class="song-filter-check"><input type="checkbox" data-filter-normal-stars>Less than 5 normal stars</label>
+           <label class="song-filter-check"><input type="checkbox" data-filter-gold-stars>Less than 5 golden stars</label>
+         </fieldset>
+         <p class="song-filter-help">All selected filters apply together. Stars use your best result across difficulties.</p>
       </section>
 
       <div class="observatory-play-status" data-play-status role="status" aria-live="polite" hidden></div>
@@ -448,6 +458,16 @@ export function createObservatoryUI(
       '[data-filter-difficulty]',
     );
     if (supports !== null) supports.value = filters.supportsDifficulty ?? '';
+    root.querySelector<HTMLSelectElement>('[data-filter-undefeated]')!.value =
+      filters.undefeatedDifficulty ?? '';
+    for (const [selector, checked] of [
+      ['[data-filter-unlocked]', filters.unlockedOnly],
+      ['[data-filter-unplayed]', filters.unplayedOnly],
+      ['[data-filter-normal-stars]', filters.belowFiveNormalStars],
+      ['[data-filter-gold-stars]', filters.belowFiveGoldStars],
+    ] as const)
+      root.querySelector<HTMLInputElement>(selector)!.checked =
+        checked ?? false;
     const favoritesButton = root.querySelector<HTMLButtonElement>(
       '[data-action="favorites"]',
     );
@@ -459,12 +479,27 @@ export function createObservatoryUI(
     filterPanel.hidden = !filtersOpen;
   }
 
+  function browseProgress(): SongBrowseProgress {
+    const state = options.saveStore?.progression.snapshot();
+    return {
+      getRating:
+        options.getSongRating ??
+        ((id) => options.saveStore?.songRatings.get(id) ?? null),
+      isUnlocked: (id) =>
+        state === undefined ||
+        membership === null ||
+        getSongUnlockRequest(id, state, membership) === null,
+      getVictoryDifficulty: (id) => state?.victoryMarks[id],
+    };
+  }
+
   function reconcile(): void {
     currentSelection = reconcileSongSelection(
       catalog,
       { ...filters, favoritesOnly },
       currentSelection,
       favoriteStore.snapshot().ids,
+      browseProgress(),
     );
   }
 
@@ -545,6 +580,7 @@ export function createObservatoryUI(
       catalog,
       { ...filters, favoritesOnly },
       favoriteStore.snapshot().ids,
+      browseProgress(),
     );
     root.querySelector<HTMLElement>('[data-result-count]')!.textContent =
       `${results.length} ${results.length === 1 ? 'song' : 'songs'}`;
@@ -998,11 +1034,32 @@ export function createObservatoryUI(
 
   function onChange(event: Event): void {
     const target = event.target;
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      const key = target.hasAttribute('data-filter-unlocked')
+        ? 'unlockedOnly'
+        : target.hasAttribute('data-filter-unplayed')
+          ? 'unplayedOnly'
+          : target.hasAttribute('data-filter-normal-stars')
+            ? 'belowFiveNormalStars'
+            : target.hasAttribute('data-filter-gold-stars')
+              ? 'belowFiveGoldStars'
+              : null;
+      if (key === null) return;
+      filters = { ...filters, [key]: target.checked };
+      reconcile();
+      render();
+      return;
+    }
     if (!(target instanceof HTMLSelectElement)) return;
     if (target.dataset.filterDifficulty !== undefined) {
       filters = {
         ...filters,
         supportsDifficulty: normalizeDifficulty(target.value) ?? undefined,
+      };
+    } else if (target.dataset.filterUndefeated !== undefined) {
+      filters = {
+        ...filters,
+        undefeatedDifficulty: normalizeDifficulty(target.value) ?? undefined,
       };
     } else if (target.dataset.runDifficulty !== undefined) {
       const difficulty = normalizeDifficulty(target.value);
@@ -1080,6 +1137,7 @@ export function createObservatoryUI(
       playStatus = status;
       playMessage = message;
       if (status === 'idle') {
+        reconcile();
         render();
       }
       renderDetail();
