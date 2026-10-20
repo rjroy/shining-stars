@@ -54,6 +54,7 @@ const city: SceneStateProjection = {
   cityIntensity: 0.4,
   cityBrightness: 0.5,
   transitionProgress: 0,
+  radiantProgress: 0,
   motion: {
     powerLinePulse: false,
     buildingPulse: false,

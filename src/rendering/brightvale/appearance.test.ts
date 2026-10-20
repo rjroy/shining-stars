@@ -30,6 +30,7 @@ function projection(
     cityIntensity: 0.5,
     cityBrightness: 0.61,
     transitionProgress: 0,
+    radiantProgress: 0,
     motion: {
       powerLinePulse: true,
       buildingPulse: true,
@@ -230,7 +231,12 @@ describe('Brightvale imported city appearance', () => {
         transitionProgress: 1,
         cityBrightness: 0.61,
       }),
-      projection({ phase: 'twilight', victory: true, cityBrightness: 1 }),
+      projection({
+        phase: 'twilight',
+        victory: true,
+        radiantProgress: 1,
+        cityBrightness: 1,
+      }),
       projection({ cityBrightness: 0 }),
       projection({ cityBrightness: Number.NaN }),
       projection({ cityBrightness: 2 }),
@@ -355,7 +361,20 @@ describe('Brightvale shared appearance', () => {
     appearance.update(projection({ phase: 'twilight', transitionProgress: 1 }));
     expect(material.emissive.getHex()).toBe(0x82c79b);
     expect(material.color.getHex()).toBe(0x77b78a);
-    appearance.update(projection({ phase: 'twilight', victory: true }));
+    appearance.update(
+      projection({
+        phase: 'twilight',
+        victory: true,
+        transitionProgress: 1,
+        radiantProgress: 0.5,
+      }),
+    );
+    expect(material.emissive.toArray()).toEqual(
+      new THREE.Color(0x82c79b).lerp(new THREE.Color(0xa5ca8b), 0.5).toArray(),
+    );
+    appearance.update(
+      projection({ phase: 'twilight', victory: true, radiantProgress: 1 }),
+    );
     expect(material.emissive.getHex()).toBe(0xa5ca8b);
     expect(material.color.getHex()).toBe(0x77b78a);
     const dispose = vi.spyOn(cityMap, 'dispose');
@@ -428,7 +447,7 @@ describe('Brightvale shared appearance', () => {
     appearance.dispose();
   });
 
-  it('switches locked victory from violet Twilight to a brighter gold-white radiance', () => {
+  it('blends locked victory from violet Twilight to gold-white and resets cleanly', () => {
     const { scene, root } = makeSourceScene(sourceMaterial('body'));
     const appearance = createBrightvaleAppearance(scene, [root]);
     const hemisphere = sceneLight(
@@ -438,11 +457,49 @@ describe('Brightvale shared appearance', () => {
     );
     const point = sceneLight(scene, 'Brightvale.Point', THREE.PointLight);
 
+    appearance.update(projection({ transitionProgress: 0.25 }));
+    const earlyColor = point.color.clone();
+    appearance.update(
+      projection({
+        transitionProgress: 0.25,
+        victory: true,
+        radiantProgress: 0,
+      }),
+    );
+    expect(point.color.equals(earlyColor)).toBe(true);
     appearance.update(projection({ phase: 'twilight', transitionProgress: 1 }));
     const twilightPoint = point.intensity;
     expect(point.color.getHex()).toBe(0x966dff);
+    const twilightColor = point.color.clone();
     appearance.update(
-      projection({ phase: 'twilight', victory: true, transitionProgress: 1 }),
+      projection({
+        phase: 'twilight',
+        victory: true,
+        transitionProgress: 1,
+        radiantProgress: 0,
+      }),
+    );
+    expect(point.color.equals(twilightColor)).toBe(true);
+    expect(point.intensity).toBe(twilightPoint);
+    appearance.update(
+      projection({
+        phase: 'twilight',
+        victory: true,
+        transitionProgress: 1,
+        radiantProgress: 0.5,
+      }),
+    );
+    expect(point.color.toArray()).toEqual(
+      twilightColor.clone().lerp(new THREE.Color(0xffe2a0), 0.5).toArray(),
+    );
+    expect(point.intensity).toBeCloseTo((96 + 132) / 2);
+    appearance.update(
+      projection({
+        phase: 'twilight',
+        victory: true,
+        radiantProgress: 1,
+        transitionProgress: 1,
+      }),
     );
 
     expect(point.color.getHex()).toBe(0xffe2a0);

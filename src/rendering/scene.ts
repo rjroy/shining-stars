@@ -330,6 +330,7 @@ export function createBrightvaleScene(
     cityIntensity: 0,
     cityBrightness: 0,
     transitionProgress: 0,
+    radiantProgress: 0,
     motion: {
       powerLinePulse: false,
       buildingPulse: false,

@@ -93,6 +93,7 @@ function makeState(transitionProgress: number): SceneStateProjection {
     cityIntensity: 0.5,
     cityBrightness: 0.61,
     transitionProgress,
+    radiantProgress: 0,
     motion: {
       powerLinePulse: false,
       buildingPulse: false,

@@ -205,16 +205,18 @@ export function createBrightvaleSky(
       const transitionProgress = Number.isFinite(state.transitionProgress)
         ? THREE.MathUtils.clamp(state.transitionProgress, 0, 1)
         : 0;
-      const twilightAmount = state.victory ? 0 : transitionProgress;
-      const radiantAmount = state.victory ? 1 : 0;
+      const twilightAmount = transitionProgress;
+      const radiantAmount = state.victory ? state.radiantProgress : 0;
       const observatoryAmount = options.observatory ? 1 : 0;
       backgroundMaterial.uniforms.twilightAmount.value = twilightAmount;
       backgroundMaterial.uniforms.radiantAmount.value = radiantAmount;
       backgroundMaterial.uniforms.observatoryAmount.value = observatoryAmount;
 
       const observatoryDimming = options.observatory ? 0.34 : 1;
-      const warmOpacity = state.victory ? 0.96 : (1 - twilightAmount) * 0.86;
-      const twilightOpacity = twilightAmount * 0.82;
+      const warmOpacity = state.victory
+        ? THREE.MathUtils.lerp((1 - twilightAmount) * 0.86, 0.96, radiantAmount)
+        : (1 - twilightAmount) * 0.86;
+      const twilightOpacity = twilightAmount * (1 - radiantAmount) * 0.82;
       warmClouds.visible = warmOpacity > 0.01;
       twilightClouds.visible = twilightOpacity > 0.01;
       (warmClouds.material as THREE.MeshBasicMaterial).opacity =

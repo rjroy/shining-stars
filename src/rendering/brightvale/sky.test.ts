@@ -23,6 +23,7 @@ function makeTextures(): BrightvaleSkyTextures {
 function state(
   transitionProgress: number,
   victory = false,
+  radiantProgress = victory ? 1 : 0,
 ): SceneStateProjection {
   return {
     phase: transitionProgress > 0 ? 'twilight' : 'audience',
@@ -30,6 +31,7 @@ function state(
     cityIntensity: 0.5,
     cityBrightness: 0.7,
     transitionProgress,
+    radiantProgress,
     motion: {
       powerLinePulse: false,
       buildingPulse: false,
@@ -76,9 +78,17 @@ describe('Brightvale shared sky composition', () => {
     expect(warm.position.x).toBeCloseTo(-warm.scale.x * 0.22);
     expect(warm.position.y).toBeCloseTo(0.72);
 
-    sky.update(state(0, true), 1.6);
+    sky.update(state(1, true, 0), 1.6);
+    expect(gradient.material.uniforms.radiantAmount.value).toBe(0);
+    expect(warm.material.opacity).toBe(0);
+    expect(twilight.material.opacity).toBeCloseTo(0.82);
+    sky.update(state(1, true, 0.5), 1.6);
+    expect(gradient.material.uniforms.radiantAmount.value).toBe(0.5);
+    expect(warm.material.opacity).toBeCloseTo(0.48);
+    expect(twilight.material.opacity).toBeCloseTo(0.41);
+    sky.update(state(1, true, 1), 1.6);
     expect(gradient.material.uniforms.radiantAmount.value).toBe(1);
-    expect(gradient.material.uniforms.twilightAmount.value).toBe(0);
+    expect(gradient.material.uniforms.twilightAmount.value).toBe(1);
     expect(warm.material.opacity).toBeCloseTo(0.96);
     expect(twilight.visible).toBe(false);
 

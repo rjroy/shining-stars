@@ -166,8 +166,11 @@ export function createBrightvaleAppearance(
       ? THREE.MathUtils.clamp(state.transitionProgress, 0, 1)
       : 0;
     const from = PRESETS.audience;
-    const to = state.victory ? PRESETS.radiant : PRESETS.twilight;
-    const amount = state.victory ? 1 : transitionAmount;
+    const to = PRESETS.twilight;
+    const amount = transitionAmount;
+    const radiantAmount = state.victory
+      ? THREE.MathUtils.clamp(state.radiantProgress, 0, 1)
+      : 0;
     lerpColor(hemisphere.color, from.sky, to.sky, amount);
     lerpColor(hemisphere.groundColor, from.ground, to.ground, amount);
     hemisphere.intensity = THREE.MathUtils.lerp(
@@ -185,6 +188,25 @@ export function createBrightvaleAppearance(
       amount,
     );
     point.position.lerpVectors(from.pointPosition, to.pointPosition, amount);
+    // Layer the victory handoff over the existing blend, including early wins.
+    const radiant = PRESETS.radiant;
+    hemisphere.color.lerp(radiant.sky, radiantAmount);
+    hemisphere.groundColor.lerp(radiant.ground, radiantAmount);
+    hemisphere.intensity = THREE.MathUtils.lerp(
+      hemisphere.intensity,
+      radiant.hemisphereIntensity,
+      radiantAmount,
+    );
+    key.color.lerp(radiant.key, radiantAmount);
+    fill.color.lerp(radiant.fill, radiantAmount);
+    rim.color.lerp(radiant.rim, radiantAmount);
+    point.color.lerp(radiant.point, radiantAmount);
+    point.intensity = THREE.MathUtils.lerp(
+      point.intensity,
+      radiant.pointIntensity,
+      radiantAmount,
+    );
+    point.position.lerp(radiant.pointPosition, radiantAmount);
 
     currentCityBrightness = THREE.MathUtils.clamp(
       Number.isFinite(state.cityBrightness) ? state.cityBrightness : 0,
@@ -194,13 +216,13 @@ export function createBrightvaleAppearance(
     for (const [material, baseline] of cityEmissionBaselines)
       material.emissiveIntensity = baseline * currentCityBrightness;
     const fromGround = GROUND_EMISSIVE.audience;
-    const toGround = state.victory
-      ? GROUND_EMISSIVE.radiant
-      : GROUND_EMISSIVE.twilight;
+    const toGround = GROUND_EMISSIVE.twilight;
     for (const [material, surface] of groundMaterials) {
       material.emissive.set(fromGround[surface]);
       groundTargetColor.set(toGround[surface]);
       material.emissive.lerp(groundTargetColor, amount);
+      groundTargetColor.set(GROUND_EMISSIVE.radiant[surface]);
+      material.emissive.lerp(groundTargetColor, radiantAmount);
     }
   };
 
