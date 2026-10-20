@@ -9,6 +9,8 @@ related:
   - .lore/work/design/brightvale-perspective-highway.md
 ---
 
+**2026-10-19 sorting amendment (shining-stars-3sh):** Sort sits beside Filters with a single dropdown: Unsorted (default catalog/collection order), Alphabetical (A–Z), Length (shortest first), Difficulty (lowest first). Difficulty is generated `song.scoring.fiveGoldTarget` divided by the default browse chart's `duration` in seconds, independent of selected Play difficulty. Missing/invalid metrics sort last; ties retain original scope order. Sorting follows filtering without mutating catalog arrays and preserves the current selected ID whenever it still matches. Sort mode and panel state are session-only; clearing filters does not reset sorting. Sort and Filters are mutually exclusive non-modal sections; outside click/tap dismisses them, inside controls remain usable, and disposal removes the shared document listener. No runtime audio scanning, chart generation, or save changes are introduced.
+
 # Observatory song catalog and selection contract
 
 ## Purpose and authority

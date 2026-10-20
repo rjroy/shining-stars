@@ -388,6 +388,51 @@ test(
           false,
           'details stay compact and non-scrolling',
         );
+        const sorting = await evaluate(`(() => {
+          const { host, ui } = window.__progressionFilterFixture;
+          const toggle = host.querySelector('[data-action="toggle-sort"]');
+          const panel = host.querySelector('[data-sort-panel]');
+          const filter = host.querySelector('[data-filter-panel]');
+          const select = panel.querySelector('select');
+          const ids = () => [...host.querySelectorAll('.song-row')].map(row => row.dataset.songId);
+          const original = ids();
+          const selection = ui.getSelectionSnapshot().selection;
+          toggle.click();
+          const coordinated = filter.hidden && !panel.hidden;
+          const modes = [...select.options].map(option => option.textContent);
+          select.click();
+          let retained = !panel.hidden;
+          for (const value of ['alphabetical', 'length', 'difficulty', 'unsorted']) {
+            select.value = value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            retained &&= !panel.hidden && JSON.stringify(ui.getSelectionSnapshot().selection) === JSON.stringify(selection);
+          }
+          const restored = JSON.stringify(ids()) === JSON.stringify(original);
+          toggle.querySelector('svg').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          const toggleClosed = panel.hidden;
+          toggle.click();
+          document.body.click();
+          const outside = panel.hidden && toggle.getAttribute('aria-expanded') === 'false';
+          toggle.click();
+          host.querySelector('[data-action="toggle-filters"]').click();
+          const coordinatedBack = panel.hidden && !filter.hidden;
+          toggle.click();
+          const r = panel.getBoundingClientRect();
+          const t = toggle.getBoundingClientRect();
+          const filterToggle = host.querySelector('[data-action="toggle-filters"]').getBoundingClientRect();
+          const s = select.getBoundingClientRect();
+          return { coordinated, retained, restored, toggleClosed, outside, coordinatedBack,
+            modes, besideFilters: Math.abs(t.top - filterToggle.top) < 1, fits: r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && t.left >= 0 && t.right <= innerWidth && s.height >= 40 };
+        })()`);
+        assert.deepEqual(sorting.modes, [
+          'Unsorted',
+          'Alphabetical',
+          'Length',
+          'Difficulty',
+        ]);
+        for (const [check, passed] of Object.entries(sorting))
+          if (check !== 'modes')
+            assert.equal(passed, true, `${width}px sort ${check}`);
         if (process.env.BRIGHTVALE_SCREENSHOT_DIR) {
           const { data } = await command('Page.captureScreenshot', {
             format: 'png',
@@ -395,11 +440,38 @@ test(
           await writeFile(
             path.join(
               process.env.BRIGHTVALE_SCREENSHOT_DIR,
-              `58a-${width}.png`,
+              `3sh-${width}.png`,
             ),
             Buffer.from(data, 'base64'),
           );
         }
+        if (width < 600) {
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [{ x: 10, y: height - 5 }],
+          });
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: [],
+          });
+        } else {
+          for (const type of ['mousePressed', 'mouseReleased'])
+            await command('Input.dispatchMouseEvent', {
+              type,
+              x: 10,
+              y: height - 5,
+              button: 'left',
+              clickCount: 1,
+            });
+        }
+        await delay(100);
+        assert.equal(
+          await evaluate(
+            `window.__progressionFilterFixture.host.querySelector('[data-sort-panel]').hidden`,
+          ),
+          true,
+          `${width}px real outside click/tap dismisses sort`,
+        );
       }
       const cleanup = await evaluate(`(() => {
         const { ui, host } = window.__progressionFilterFixture;

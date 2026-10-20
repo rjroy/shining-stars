@@ -12,6 +12,7 @@ import {
   type SongBrowseFilters,
   type SongBrowseProgress,
   type SongSelection,
+  type SongSortMode,
 } from '../catalog/selectors';
 import type { FavoriteStore } from '../catalog/favorites';
 import type { SaveStore } from '../app/save-data';
@@ -177,7 +178,9 @@ export function getCreditedSealsMarkup(mark?: Difficulty): string {
   return `<span class="credited-seals" aria-label="Credited victories">${tiers.map((tier, index) => `<span class="credited-seal${index <= level ? ' is-credited' : ''}" aria-label="${tier[0]!.toUpperCase() + tier.slice(1)}: ${index <= level ? 'credited' : 'not credited'}" title="${tier}: ${index <= level ? 'credited' : 'not credited'}">${tier[0]!.toUpperCase()}</span>`).join('')}</span>`;
 }
 
-function createSvgIcon(name: 'heart' | 'search' | 'filter' | 'back'): string {
+function createSvgIcon(
+  name: 'heart' | 'search' | 'filter' | 'sort' | 'back',
+): string {
   const paths = {
     heart:
       '<path d="M20.8 8.8c0 5.1-8.8 10-8.8 10s-8.8-4.9-8.8-10A4.7 4.7 0 0 1 12 6.1a4.7 4.7 0 0 1 8.8 2.7Z"/>',
@@ -185,6 +188,7 @@ function createSvgIcon(name: 'heart' | 'search' | 'filter' | 'back'): string {
     filter:
       '<path d="M3 6h18M6 12h12m-9 6h6"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/>',
     back: '<path d="m14.5 5-7 7 7 7"/>',
+    sort: '<path d="M4 5v14m-3-3 3 3 3-3M11 6h10M11 12h7M11 18h4"/>',
   } satisfies Record<string, string>;
   return `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
 }
@@ -265,6 +269,7 @@ export function createObservatoryUI(
           </label>
           <button class="observatory-tool-button" type="button" data-action="favorites" aria-pressed="false">${createSvgIcon('heart')}<span>Favorites</span></button>
           <button class="observatory-tool-button" type="button" data-action="toggle-filters" aria-expanded="false" aria-controls="observatory-filters">${createSvgIcon('filter')}<span>Filters</span></button>
+          <button class="observatory-tool-button" type="button" data-action="toggle-sort" aria-label="Sort songs" aria-expanded="false" aria-controls="observatory-sort">${createSvgIcon('sort')}<span>Sort</span></button>
         </nav>
       </header>
 
@@ -331,6 +336,11 @@ export function createObservatoryUI(
          <p class="song-filter-help">All selected filters apply together. Stars use your best result across difficulties.</p>
       </section>
 
+      <section class="observatory-filter-panel" id="observatory-sort" data-sort-panel aria-label="Sort songs" hidden>
+        <div class="filter-heading"><h2>Sort songs</h2></div>
+        <label>Order<select data-song-sort><option value="unsorted">Unsorted</option><option value="alphabetical">Alphabetical</option><option value="length">Length</option><option value="difficulty">Difficulty</option></select></label>
+        <p class="song-filter-help">A–Z, shortest first, or lowest difficulty first. Difficulty is the five-gold target per playable second.</p>
+      </section>
       <div class="observatory-play-status" data-play-status role="status" aria-live="polite" hidden></div>
     </div>`;
 
@@ -366,6 +376,8 @@ export function createObservatoryUI(
   let filters: SongBrowseFilters = {};
   let favoritesOnly = false;
   let filtersOpen = false;
+  let sortOpen = false;
+  let sortMode: SongSortMode = 'unsorted';
   let rendererStatus: BrightvaleRendererStatus = 'loading';
   let rendererMessage = 'The Observatory is lighting its stars…';
   let playStatus: ObservatoryPlayStatus = 'idle';
@@ -453,6 +465,11 @@ export function createObservatoryUI(
   }
 
   function syncFilterControls(): void {
+    root.querySelector<HTMLSelectElement>('[data-song-sort]')!.value = sortMode;
+    root
+      .querySelector('[data-action="toggle-sort"]')!
+      .setAttribute('aria-expanded', String(sortOpen));
+    root.querySelector<HTMLElement>('[data-sort-panel]')!.hidden = !sortOpen;
     root.querySelector<HTMLSelectElement>(
       '[data-filter-unlock-status]',
     )!.value = filters.unlockStatus ?? 'all';
@@ -497,6 +514,7 @@ export function createObservatoryUI(
       currentSelection,
       favoriteStore.snapshot().ids,
       browseProgress(),
+      sortMode,
     );
   }
 
@@ -578,6 +596,7 @@ export function createObservatoryUI(
       { ...filters, favoritesOnly },
       favoriteStore.snapshot().ids,
       browseProgress(),
+      sortMode,
     );
     root.querySelector<HTMLElement>('[data-result-count]')!.textContent =
       `${results.length} ${results.length === 1 ? 'song' : 'songs'}`;
@@ -980,6 +999,11 @@ export function createObservatoryUI(
       if (songId !== undefined) selectSong(songId);
     } else if (action === 'toggle-filters') {
       filtersOpen = !filtersOpen;
+      sortOpen = false;
+      syncFilterControls();
+    } else if (action === 'toggle-sort') {
+      sortOpen = !sortOpen;
+      filtersOpen = false;
       syncFilterControls();
     } else if (action === 'clear-filters') {
       filters = { collectionId: filters.collectionId };
@@ -1046,7 +1070,13 @@ export function createObservatoryUI(
       return;
     }
     if (!(target instanceof HTMLSelectElement)) return;
-    if (target.dataset.filterUnlockStatus !== undefined) {
+    if (target.dataset.songSort !== undefined) {
+      const value = target.value;
+      sortMode =
+        value === 'alphabetical' || value === 'length' || value === 'difficulty'
+          ? value
+          : 'unsorted';
+    } else if (target.dataset.filterUnlockStatus !== undefined) {
       filters = {
         ...filters,
         unlockStatus:
@@ -1091,15 +1121,19 @@ export function createObservatoryUI(
   }
 
   function onDocumentClick(event: MouseEvent): void {
-    if (!filtersOpen) return;
+    if (!filtersOpen && !sortOpen) return;
     const path = event.composedPath();
     const toggle = root.querySelector('[data-action="toggle-filters"]');
+    const sortPanel = root.querySelector('[data-sort-panel]')!;
+    const sortToggle = root.querySelector('[data-action="toggle-sort"]')!;
     if (
-      path.includes(filterPanel) ||
-      (toggle !== null && path.includes(toggle))
+      filtersOpen &&
+      !path.includes(filterPanel) &&
+      (toggle === null || !path.includes(toggle))
     )
-      return;
-    filtersOpen = false;
+      filtersOpen = false;
+    if (sortOpen && !path.includes(sortPanel) && !path.includes(sortToggle))
+      sortOpen = false;
     syncFilterControls();
   }
 

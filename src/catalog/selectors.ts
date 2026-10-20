@@ -3,7 +3,7 @@ import {
   isDifficulty,
   type Difficulty,
 } from '../game/game-balance';
-import { getSongDifficulties } from './catalog';
+import { getSongChart, getSongDifficulties } from './catalog';
 import type { SongCatalog, SongCatalogEntry } from './catalog';
 import type { SongRating } from './song-ratings';
 
@@ -17,6 +17,38 @@ export interface SongBrowseFilters {
   readonly undefeatedDifficulty?: Difficulty;
   readonly belowFiveNormalStars?: boolean;
   readonly belowFiveGoldStars?: boolean;
+}
+
+export type SongSortMode =
+  'unsorted' | 'alphabetical' | 'length' | 'difficulty';
+
+/** Match the catalog's browse duration, never the player's run difficulty. */
+function sortMetric(song: SongCatalogEntry, mode: SongSortMode): number | null {
+  const difficulties = getSongDifficulties(song);
+  if (difficulties.length === 0) return null;
+  const duration = getSongChart(song, defaultDifficulty(difficulties)).duration;
+  if (!Number.isFinite(duration) || duration <= 0) return null;
+  if (mode === 'length') return duration;
+  const target = song.scoring.fiveGoldTarget;
+  if (target === null || !Number.isFinite(target) || target < 0) return null;
+  const metric = target / duration;
+  return Number.isFinite(metric) ? metric : null;
+}
+
+function sortSongs(
+  songs: SongCatalogEntry[],
+  mode: SongSortMode,
+): SongCatalogEntry[] {
+  if (mode === 'unsorted') return songs;
+  return songs.sort((left, right) => {
+    if (mode === 'alphabetical')
+      return normalizeSongSearch(left.title).localeCompare(
+        normalizeSongSearch(right.title),
+      );
+    const a = sortMetric(left, mode);
+    const b = sortMetric(right, mode);
+    return a === null ? (b === null ? 0 : 1) : b === null ? -1 : a - b;
+  });
 }
 
 /** Read the current save, not cached filter results. Missing ratings mean unplayed. */
@@ -92,6 +124,7 @@ export function selectSongs(
   filters: SongBrowseFilters = {},
   favoriteIds: ReadonlySet<string> = new Set(),
   progress: SongBrowseProgress = {},
+  sortMode: SongSortMode = 'unsorted',
 ): readonly SongCatalogEntry[] {
   const query = normalizeSongSearch(filters.query ?? '');
   const collection =
@@ -105,14 +138,17 @@ export function selectSongs(
           const song = catalog.songs.find((entry) => entry.id === id);
           return song === undefined ? [] : [song];
         });
-  return ordered.filter(
-    (song) =>
-      song.availability === 'available' &&
-      (query === '' || normalizeSongSearch(song.title).includes(query)) &&
-      (filters.collectionId === undefined ||
-        song.collections.includes(filters.collectionId)) &&
-      (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
-      matchesProgress(song.id, filters, progress),
+  return sortSongs(
+    ordered.filter(
+      (song) =>
+        song.availability === 'available' &&
+        (query === '' || normalizeSongSearch(song.title).includes(query)) &&
+        (filters.collectionId === undefined ||
+          song.collections.includes(filters.collectionId)) &&
+        (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
+        matchesProgress(song.id, filters, progress),
+    ),
+    sortMode,
   );
 }
 
@@ -122,8 +158,15 @@ export function reconcileSongSelection(
   current: SongSelectionInput,
   favoriteIds: ReadonlySet<string> = new Set(),
   progress: SongBrowseProgress = {},
+  sortMode: SongSortMode = 'unsorted',
 ): SongSelection {
-  const results = selectSongs(catalog, filters, favoriteIds, progress);
+  const results = selectSongs(
+    catalog,
+    filters,
+    favoriteIds,
+    progress,
+    sortMode,
+  );
   const retained = results.find((song) => song.id === current.selectedSongId);
   const selected = retained ?? results[0] ?? null;
   if (selected === null) return { selectedSongId: null, runDifficulty: null };

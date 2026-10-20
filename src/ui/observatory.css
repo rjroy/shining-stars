@@ -1529,7 +1529,7 @@
   }
   .observatory-tools {
     display: grid;
-    grid-template-columns: minmax(82px, auto) minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(82px, auto) minmax(0, 1fr) auto auto auto;
     gap: 5px;
   }
   .observatory-nav-button,
