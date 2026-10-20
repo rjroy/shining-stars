@@ -37,6 +37,7 @@ import {
   type BrightvaleShellComposition,
 } from './brightvale/scene-shell';
 import type { SceneStateProjection } from './scene-state';
+import { projectBrightvaleAmbience } from './brightvale/ambience';
 import type { SongCollection } from '../catalog/catalog';
 import type {
   BrightvaleRendererStatus,
@@ -330,6 +331,7 @@ export function createBrightvaleScene(
     cityIntensity: 0,
     cityBrightness: 0,
     transitionProgress: 0,
+    radiantProgress: 0,
     motion: {
       powerLinePulse: false,
       buildingPulse: false,
@@ -779,7 +781,12 @@ export function createBrightvaleScene(
       resizeOverlay(layout);
     }
     if (!composition.projection.usable) return;
-    composition.current.updateAppearance?.(frame.city);
+    const ambience = projectBrightvaleAmbience(
+      frame.city,
+      frame.gameplay.transportTime,
+      frame.gameplay.reducedMotion,
+    );
+    composition.current.updateAppearance?.(frame.city, ambience);
 
     const playfield = composition.playfield;
     ensureNoteVisuals(frame.gameplay.notes.length);
@@ -1010,7 +1017,7 @@ export function createBrightvaleScene(
       renderer.setViewport(0, 0, width, height);
       renderer.setScissorTest(false);
       renderer.clear(true, true, true);
-      sky.update(frame.city, width / height);
+      sky.update(frame.city, width / height, { ambience });
       renderer.render(sky.scene, sky.camera);
       if (shadowScene !== worldScene) {
         renderer.shadowMap.needsUpdate = true;

@@ -64,6 +64,73 @@ function makeSnapshot(
 }
 
 describe('projectSceneState', () => {
+  it('uses the same two-second transport-driven handoff for both transitions', () => {
+    for (const [elapsed, expected] of [
+      [-1, 0],
+      [0, 0],
+      [0.5, 0.25],
+      [1, 0.5],
+      [2, 1],
+      [4, 1],
+    ]) {
+      const audienceHandoff = projectSceneState(
+        makeSnapshot({
+          phase: 'twilight',
+          transportTime: chart.twilightAt + elapsed,
+        }),
+        chart,
+      );
+      const radiantHandoff = projectSceneState(
+        makeSnapshot({
+          phase: 'twilight',
+          victory: true,
+          radiantTarget: 15,
+          transportTime: 15 + elapsed,
+        }),
+        chart,
+      );
+      expect(audienceHandoff.transitionProgress).toBe(expected);
+      expect(radiantHandoff.radiantProgress).toBe(expected);
+    }
+  });
+
+  it('does not transition toward a projected victory or carry progress into a restart', () => {
+    expect(
+      projectSceneState(
+        makeSnapshot({
+          phase: 'twilight',
+          radiantTarget: 12,
+          transportTime: 16,
+        }),
+        chart,
+      ).radiantProgress,
+    ).toBe(0);
+    expect(projectSceneState(makeSnapshot(), chart).radiantProgress).toBe(0);
+  });
+
+  it('holds at saved transport time while paused and resumes without a new clock', () => {
+    const playing = makeSnapshot({
+      phase: 'twilight',
+      victory: true,
+      radiantTarget: 14,
+      transportTime: 14.5,
+    });
+    const paused = {
+      ...playing,
+      audio: { ...playing.audio, status: 'paused' as const },
+    };
+    expect(projectSceneState(paused, chart)).toEqual(
+      projectSceneState(playing, chart),
+    );
+    expect(
+      projectSceneState(
+        makeSnapshot({ ...playing.game, transportTime: 15 }),
+        chart,
+      ).radiantProgress,
+    ).toBe(0.5);
+    expect(projectSceneState(paused, chart, true).radiantProgress).toBe(1);
+  });
+
   it('normalizes audience Renown against chart potential from shared rewards', () => {
     const audienceNotes = 4;
     const audiencePotential = audienceNotes * GAME_BALANCE.audience.perfect;

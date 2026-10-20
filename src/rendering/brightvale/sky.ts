@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { BrightvaleSkyTextures } from './assets';
 import type { SceneStateProjection } from '../scene-state';
+import { STATIC_AMBIENCE, type BrightvaleAmbience } from './ambience';
 
 const SKY_ASPECT = 1535 / 864;
 const SKY_STARS = 156;
@@ -58,7 +59,10 @@ export interface BrightvaleSky {
   update(
     state: SceneStateProjection,
     aspect: number,
-    options?: { readonly observatory?: boolean },
+    options?: {
+      readonly observatory?: boolean;
+      readonly ambience?: BrightvaleAmbience;
+    },
   ): void;
   dispose(): void;
 }
@@ -133,6 +137,8 @@ export function createBrightvaleSky(
   background.renderOrder = 0;
   scene.add(background);
 
+  const cloudGradeColor = { value: new THREE.Color(1, 1, 1) };
+  const cloudGradeAmount = { value: 0 };
   const makeCloudLayer = (
     texture: THREE.Texture,
     name: string,
@@ -146,6 +152,25 @@ export function createBrightvaleSky(
       depthWrite: false,
       toneMapped: false,
     });
+    material.customProgramCacheKey = () => 'brightvale-cloud-grade-v1';
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.brightvaleCloudGrade = cloudGradeColor;
+      shader.uniforms.brightvaleCloudGradeAmount = cloudGradeAmount;
+      shader.fragmentShader = `
+        uniform vec3 brightvaleCloudGrade;
+        uniform float brightvaleCloudGradeAmount;
+        ${shader.fragmentShader}`.replace(
+        '#include <map_fragment>',
+        `
+          #include <map_fragment>
+          vec3 brightvaleLumaWeights = vec3(0.2126, 0.7152, 0.0722);
+          float brightvaleCloudLight = dot(diffuseColor.rgb, brightvaleLumaWeights);
+          vec3 brightvaleGradedCloud = brightvaleCloudLight * brightvaleCloudGrade
+            / max(dot(brightvaleCloudGrade, brightvaleLumaWeights), 0.001);
+          diffuseColor.rgb = mix(diffuseColor.rgb, brightvaleGradedCloud, brightvaleCloudGradeAmount);
+        `,
+      );
+    };
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
     mesh.name = name;
     mesh.frustumCulled = false;
@@ -205,16 +230,25 @@ export function createBrightvaleSky(
       const transitionProgress = Number.isFinite(state.transitionProgress)
         ? THREE.MathUtils.clamp(state.transitionProgress, 0, 1)
         : 0;
-      const twilightAmount = state.victory ? 0 : transitionProgress;
-      const radiantAmount = state.victory ? 1 : 0;
+      const twilightAmount = transitionProgress;
+      const radiantAmount = state.victory ? state.radiantProgress : 0;
       const observatoryAmount = options.observatory ? 1 : 0;
       backgroundMaterial.uniforms.twilightAmount.value = twilightAmount;
       backgroundMaterial.uniforms.radiantAmount.value = radiantAmount;
       backgroundMaterial.uniforms.observatoryAmount.value = observatoryAmount;
 
       const observatoryDimming = options.observatory ? 0.34 : 1;
-      const warmOpacity = state.victory ? 0.96 : (1 - twilightAmount) * 0.86;
-      const twilightOpacity = twilightAmount * 0.82;
+      const ambience = options.observatory
+        ? STATIC_AMBIENCE
+        : (options.ambience ?? STATIC_AMBIENCE);
+      for (const cloud of [warmClouds, twilightClouds])
+        cloud.material.color.setRGB(...ambience.cloudTint);
+      cloudGradeColor.value.setRGB(...ambience.cloudGradeColor);
+      cloudGradeAmount.value = ambience.cloudGradeAmount;
+      const warmOpacity = state.victory
+        ? THREE.MathUtils.lerp((1 - twilightAmount) * 0.86, 0.96, radiantAmount)
+        : (1 - twilightAmount) * 0.86;
+      const twilightOpacity = twilightAmount * (1 - radiantAmount) * 0.82;
       warmClouds.visible = warmOpacity > 0.01;
       twilightClouds.visible = twilightOpacity > 0.01;
       (warmClouds.material as THREE.MeshBasicMaterial).opacity =

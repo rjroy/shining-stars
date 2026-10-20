@@ -3,6 +3,8 @@ import type { ChartConfig } from '../game/chart';
 import type { GamePhase } from '../game/game';
 import { getDifficultyProfile } from '../game/game-balance';
 
+const PHASE_HANDOFF_SECONDS = 2;
+
 export interface SceneMotionState {
   readonly powerLinePulse: boolean;
   readonly buildingPulse: boolean;
@@ -22,6 +24,8 @@ export interface SceneStateProjection {
   readonly cityBrightness: number;
   /** Progress through a fixed two-second handoff, normalized to [0, 1]. */
   readonly transitionProgress: number;
+  /** Two-second Twilight-to-Radiant blend from the locked victory timestamp. */
+  readonly radiantProgress: number;
   readonly motion: SceneMotionState;
   /** This MVP's visual scene never interprets rhythm misses as surrender. */
   readonly playerDefiant: boolean;
@@ -56,8 +60,16 @@ export function projectSceneState(
     ? phase === 'twilight'
       ? 1
       : 0
-    : clamp01((game.transportTime - chart.twilightAt) / 2);
+    : clamp01((game.transportTime - chart.twilightAt) / PHASE_HANDOFF_SECONDS);
   const motionEnabled = !reducedMotion;
+  const radiantProgress = !victory
+    ? 0
+    : reducedMotion
+      ? 1
+      : clamp01(
+          (game.transportTime - (game.radiantTarget ?? game.transportTime)) /
+            PHASE_HANDOFF_SECONDS,
+        );
 
   return {
     phase,
@@ -65,6 +77,7 @@ export function projectSceneState(
     cityIntensity,
     cityBrightness: 0.22 + cityIntensity * 0.78,
     transitionProgress,
+    radiantProgress,
     motion: {
       powerLinePulse: motionEnabled,
       buildingPulse: motionEnabled,

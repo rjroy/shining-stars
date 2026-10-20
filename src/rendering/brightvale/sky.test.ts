@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BrightvaleSkyTextures } from './assets';
 import { createBrightvaleSky } from './sky';
 import type { SceneStateProjection } from '../scene-state';
+import { projectBrightvaleAmbience } from './ambience';
 
 function makeTextures(): BrightvaleSkyTextures {
   const texture = (): THREE.DataTexture => {
@@ -23,6 +24,7 @@ function makeTextures(): BrightvaleSkyTextures {
 function state(
   transitionProgress: number,
   victory = false,
+  radiantProgress = victory ? 1 : 0,
 ): SceneStateProjection {
   return {
     phase: transitionProgress > 0 ? 'twilight' : 'audience',
@@ -30,6 +32,7 @@ function state(
     cityIntensity: 0.5,
     cityBrightness: 0.7,
     transitionProgress,
+    radiantProgress,
     motion: {
       powerLinePulse: false,
       buildingPulse: false,
@@ -42,6 +45,48 @@ function state(
 }
 
 describe('Brightvale shared sky composition', () => {
+  it('tints existing cloud materials without accumulating tint or changing Observatory', () => {
+    const textures = makeTextures();
+    const sky = createBrightvaleSky(textures);
+    const cloud = sky.scene.getObjectByName(
+      'Brightvale.Sky.Clouds.Warm',
+    ) as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+    const material = cloud.material;
+    // The shader hook only consumes these fields; it does not use the renderer.
+    const shader = {
+      vertexShader: THREE.ShaderLib.basic.vertexShader,
+      fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+      uniforms: {},
+    } as THREE.WebGLProgramParametersWithUniforms;
+    material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+    expect(shader.fragmentShader).toContain(
+      'brightvaleCloudLight * brightvaleCloudGrade',
+    );
+    expect(shader.fragmentShader).toContain(
+      'max(dot(brightvaleCloudGrade, brightvaleLumaWeights)',
+    );
+    const initialChildren = [...sky.scene.children];
+    const ambience = projectBrightvaleAmbience(state(0), 11, false);
+    for (const phase of [state(0), state(1), state(1, true)]) {
+      const ambience = projectBrightvaleAmbience(phase, 11, false);
+      sky.update(phase, 1.6, { ambience });
+      expect(material.color.toArray()).toEqual(ambience.cloudTint);
+      expect(shader.uniforms.brightvaleCloudGrade?.value.toArray()).toEqual(
+        ambience.cloudGradeColor,
+      );
+      expect(shader.uniforms.brightvaleCloudGradeAmount?.value).toBe(
+        ambience.cloudGradeAmount,
+      );
+      expect(cloud.material).toBe(material);
+      expect(sky.scene.children).toEqual(initialChildren);
+    }
+    sky.update(state(0), 1.6, { observatory: true, ambience });
+    expect(material.color.toArray()).toEqual([1, 1, 1]);
+    expect(shader.uniforms.brightvaleCloudGradeAmount?.value).toBe(0);
+    sky.update(state(0), 1.6);
+    expect(material.color.toArray()).toEqual([1, 1, 1]);
+    sky.dispose();
+  });
   it('crossfades the approved clouds and perpetual-twilight palettes across modes', () => {
     const textures = makeTextures();
     const sky = createBrightvaleSky(textures);
@@ -76,9 +121,17 @@ describe('Brightvale shared sky composition', () => {
     expect(warm.position.x).toBeCloseTo(-warm.scale.x * 0.22);
     expect(warm.position.y).toBeCloseTo(0.72);
 
-    sky.update(state(0, true), 1.6);
+    sky.update(state(1, true, 0), 1.6);
+    expect(gradient.material.uniforms.radiantAmount.value).toBe(0);
+    expect(warm.material.opacity).toBe(0);
+    expect(twilight.material.opacity).toBeCloseTo(0.82);
+    sky.update(state(1, true, 0.5), 1.6);
+    expect(gradient.material.uniforms.radiantAmount.value).toBe(0.5);
+    expect(warm.material.opacity).toBeCloseTo(0.48);
+    expect(twilight.material.opacity).toBeCloseTo(0.41);
+    sky.update(state(1, true, 1), 1.6);
     expect(gradient.material.uniforms.radiantAmount.value).toBe(1);
-    expect(gradient.material.uniforms.twilightAmount.value).toBe(0);
+    expect(gradient.material.uniforms.twilightAmount.value).toBe(1);
     expect(warm.material.opacity).toBeCloseTo(0.96);
     expect(twilight.visible).toBe(false);
 
