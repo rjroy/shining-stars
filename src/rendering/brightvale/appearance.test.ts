@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { SceneStateProjection } from '../scene-state';
 import { createBrightvaleAppearance } from './appearance';
+import { windowAmbienceMultiplier, type BrightvaleAmbience } from './ambience';
 
 function sourceMaterial(
   role: string,
@@ -51,6 +52,51 @@ function makeSourceScene(material: THREE.Material) {
   scene.add(root);
   return { scene, root, geometry };
 }
+
+describe('gameplay window ambience', () => {
+  it('multiplies selected emission by participation and a non-compounding variation, leaving source untouched', () => {
+    const source = sourceMaterial('emissive_window', { emissiveIntensity: 2 });
+    source.userData.city_role = 'emissive_window';
+    source.userData.source_material = 'District detail | Left lit glazing';
+    const { scene, root, geometry } = makeSourceScene(source);
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const owned = appearance.materialFor(source);
+    const controlledAmbience = (time: number): BrightvaleAmbience => ({
+      time,
+      cloudTint: [1, 1, 1],
+      cloudGradeColor: [1, 1, 1],
+      cloudGradeAmount: 0,
+      waterStrength: 0,
+      windowsEnabled: true,
+    });
+    for (const time of [0, 8, 8, 32, 0]) {
+      const ambience = controlledAmbience(time);
+      for (const cityBrightness of [0, 0.22, 0.6, 1]) {
+        appearance.update(projection({ cityBrightness }), ambience);
+        expect(owned.emissiveIntensity).toBeCloseTo(
+          2 *
+            cityBrightness *
+            windowAmbienceMultiplier(source.userData.source_material, ambience),
+        );
+      }
+    }
+    const noWindowVariation: BrightvaleAmbience = {
+      time: 0,
+      cloudTint: [1, 1, 1],
+      cloudGradeColor: [1, 1, 1],
+      cloudGradeAmount: 0,
+      waterStrength: 0,
+      windowsEnabled: false,
+    };
+    appearance.update(projection({ cityBrightness: 0.6 }), noWindowVariation);
+    expect(owned.emissiveIntensity).toBeCloseTo(1.2);
+    expect(source.emissiveIntensity).toBe(2);
+    expect(appearance.materialFor(source)).toBe(owned);
+    appearance.dispose();
+    source.dispose();
+    geometry.dispose();
+  });
+});
 
 function sceneLight<T extends THREE.Light>(
   scene: THREE.Scene,

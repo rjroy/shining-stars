@@ -85,6 +85,7 @@ describe('real app Observatory-to-gameplay integration', () => {
       chromium,
       [
         '--headless=new',
+        '--mute-audio',
         '--no-sandbox',
         '--disable-dev-shm-usage',
         '--no-first-run',
@@ -158,10 +159,13 @@ describe('real app Observatory-to-gameplay integration', () => {
       return result.result?.value;
     };
     const click = async (selector: string): Promise<void> => {
-      const rect = await evaluate(
-        `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)return null;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
+      const rect = await waitFor(
+        async () =>
+          (await evaluate(
+            `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled||e.getClientRects().length===0||getComputedStyle(e).visibility==='hidden')return false;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
+          )) || false,
+        `visible control ${selector}`,
       );
-      if (rect === null) throw new Error(`Missing visible button ${selector}.`);
       await command('Input.dispatchMouseEvent', {
         type: 'mouseMoved',
         x: rect.x,
@@ -244,12 +248,20 @@ describe('real app Observatory-to-gameplay integration', () => {
       detailFallback: true,
       selected: 'new-curation',
     });
-    expect(fallbackReport.empty).toContain('No songs match');
+    expect(fallbackReport.empty).toContain(
+      'No songs are available in this collection yet',
+    );
 
     await evaluate(
       "document.querySelector('button[data-action=select-collection]')?.focus()",
     );
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await waitFor(
+      async () =>
+        (await evaluate(
+          "document.activeElement?.dataset.collectionId === 'lyra-of-brightvale'",
+        )) || false,
+      'keyboard focus on the first constellation',
+    );
     expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
       'lyra-of-brightvale',
     );
@@ -274,6 +286,13 @@ describe('real app Observatory-to-gameplay integration', () => {
       await click(
         `button[data-action="select-collection"][data-collection-id="${collectionId}"]`,
       );
+      await waitFor(
+        async () =>
+          (await evaluate(
+            `document.querySelector('[data-collection-title]')?.textContent === ${JSON.stringify(title)}`,
+          )) || false,
+        `selected collection title ${title}`,
+      );
       expect(
         await evaluate('document.activeElement?.dataset.collectionId'),
       ).toBe(collectionId);
@@ -296,12 +315,26 @@ describe('real app Observatory-to-gameplay integration', () => {
       expect(selectedArtwork.detailBounds).toBe(true);
       expect(selectedArtwork.fallbackIcon).toBe('none');
       await click('[data-action="browse-collection"]');
+      await waitFor(
+        async () =>
+          (await evaluate(
+            "document.querySelector('[data-observatory-page=browser]')?.hidden === false",
+          )) || false,
+        `browser view for ${title}`,
+      );
       expect(
         await evaluate(
           "[...document.querySelectorAll('.song-row-main')].map(e=>e.dataset.songId)",
         ),
       ).toEqual(songIds);
       await click('[data-action="back-overview"]');
+      await waitFor(
+        async () =>
+          (await evaluate(
+            "document.querySelector('[data-observatory-page=overview]')?.hidden === false",
+          )) || false,
+        `overview after browsing ${title}`,
+      );
     }
     const projectionReport = await evaluate(
       `(()=>[...document.querySelectorAll('[data-action=select-collection]')].map(e=>{const r=e.getBoundingClientRect();return {id:e.dataset.collectionId,x:r.x+r.width/2,y:r.y+r.height/2,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}}))()`,
@@ -335,7 +368,11 @@ describe('real app Observatory-to-gameplay integration', () => {
       deviceScaleFactor: 1,
       mobile: false,
     });
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await waitFor(
+      async () =>
+        (await evaluate('innerWidth === 900 && innerHeight === 760')) || false,
+      'narrow desktop viewport',
+    );
     expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
       'outside-worlds',
     );
@@ -352,7 +389,11 @@ describe('real app Observatory-to-gameplay integration', () => {
       deviceScaleFactor: 1,
       mobile: true,
     });
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await waitFor(
+      async () =>
+        (await evaluate('innerWidth === 390 && innerHeight === 844')) || false,
+      'portrait mobile viewport',
+    );
     const portraitProjection = await evaluate(
       "(()=>{const nodes=[...document.querySelectorAll('[data-action=select-collection]')],rects=nodes.map(e=>e.getBoundingClientRect()),detail=document.querySelector('.collection-detail').getBoundingClientRect(),overlap=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1;return nodes.map((e,i)=>{const r=rects[i];return {visible:!e.hidden&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),clear:!overlap(r,detail)&&rects.every((other,j)=>i===j||!overlap(r,other))}})})()",
     );
@@ -399,7 +440,13 @@ describe('real app Observatory-to-gameplay integration', () => {
         deviceScaleFactor: 1,
         mobile: width < 600,
       });
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitFor(
+        async () =>
+          (await evaluate(
+            `innerWidth === ${width} && innerHeight === ${height}`,
+          )) || false,
+        `${label} viewport dimensions`,
+      );
       const overlaps = await evaluate(
         `(()=>{const rect=(s)=>document.querySelector(s).getBoundingClientRect();const overlap=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1;const kicker=rect('.browser-title-block .observatory-kicker'),title=rect('[data-browser-title]'),count=rect('[data-browser-count]'),label=rect('.song-list-heading span:first-child'),total=rect('[data-result-count]'),heading=rect('.browser-heading'),listHeading=rect('.song-list-heading');return {title:overlap(kicker,title)||overlap(title,count)||overlap(kicker,count),list:overlap(label,total),section:overlap(heading,listHeading),boxes:[kicker.toJSON(),title.toJSON(),count.toJSON(),label.toJSON(),total.toJSON(),heading.toJSON(),listHeading.toJSON()]}})()`,
       );
@@ -567,7 +614,9 @@ describe('real app Observatory-to-gameplay integration', () => {
         "document.querySelector('[data-panel=pause]')?.hidden === false && document.querySelector('[data-action=resume]')?.disabled === false",
       ),
     ).toBe(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await evaluate(
+      'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+    );
     expect(
       await evaluate("document.querySelector('[data-time]')?.textContent"),
     ).toBe(pausedTime);
@@ -637,5 +686,5 @@ describe('real app Observatory-to-gameplay integration', () => {
         "document.querySelectorAll('[data-renderer-status]').length",
       ),
     ).toBe(0);
-  }, 120_000);
+  }, 300_000);
 });

@@ -7,11 +7,15 @@ import {
 import { fitDirectionalShadowCamera, setShadowParticipation } from './shadows';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
+import type { BrightvaleAmbience } from './ambience';
 import type { BrightvaleRuntimeLayout } from './layout';
 
 export interface BrightvaleComposition extends BrightvaleShellComposition {
   /** Applies visual state without rebuilding the assembled scene. */
-  updateAppearance(state: SceneStateProjection): void;
+  updateAppearance(
+    state: SceneStateProjection,
+    ambience?: BrightvaleAmbience,
+  ): void;
 }
 
 /** Rotated planar mapping keeps grass variation legible at grazing angles. */
@@ -346,11 +350,11 @@ export function createBrightvaleComposition(
     let appearanceState: SceneStateProjection | undefined;
     return {
       root,
-      updateAppearance(state) {
+      updateAppearance(state, ambience) {
         if (disposed)
           throw new Error('Brightvale composition has been disposed');
         appearanceState = state;
-        appearance!.update(appearanceState);
+        appearance!.update(appearanceState, ambience);
       },
       dispose() {
         if (disposed) return;

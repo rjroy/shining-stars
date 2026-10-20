@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import type { SceneStateProjection } from '../scene-state';
+import {
+  STATIC_AMBIENCE,
+  windowAmbienceMultiplier,
+  type BrightvaleAmbience,
+} from './ambience';
+import { attachWaterShimmer } from './water-shimmer';
 
 /** Physical materials inherit MeshStandardMaterial; non-city surfaces remain Toon. */
 export type BrightvaleSurfaceMaterial =
@@ -10,7 +16,7 @@ export interface BrightvaleAppearance {
   /** Return an owned city PBR clone or non-city Toon replacement. */
   materialFor(source: THREE.Material): BrightvaleSurfaceMaterial;
   /** Apply the existing projected mode/brightness state without rebuilding resources. */
-  update(state: SceneStateProjection): void;
+  update(state: SceneStateProjection, ambience?: BrightvaleAmbience): void;
   /** Release only resources created by this appearance; safe to call repeatedly. */
   dispose(): void;
 }
@@ -134,6 +140,8 @@ export function createBrightvaleAppearance(
   const materialBySignature = new Map<string, THREE.MeshToonMaterial>();
   const ownedMaterials = new Set<BrightvaleSurfaceMaterial>();
   const cityEmissionBaselines = new Map<BrightvaleSurfaceMaterial, number>();
+  const windowGroups = new Map<BrightvaleSurfaceMaterial, string>();
+  const waterUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
   const groundMaterials = new Map<THREE.MeshToonMaterial, 'city' | 'plaza'>();
   const hemisphere = new THREE.HemisphereLight(
     PRESETS.audience.sky,
@@ -157,10 +165,14 @@ export function createBrightvaleAppearance(
   scene.add(hemisphere, key, fill, rim, point);
 
   let currentCityBrightness = 1;
+  let currentAmbience = STATIC_AMBIENCE;
   let disposed = false;
   const groundTargetColor = new THREE.Color();
 
-  const update = (state: SceneStateProjection): void => {
+  const update = (
+    state: SceneStateProjection,
+    ambience = STATIC_AMBIENCE,
+  ): void => {
     if (disposed) throw new Error('Brightvale appearance has been disposed');
     const transitionAmount = Number.isFinite(state.transitionProgress)
       ? THREE.MathUtils.clamp(state.transitionProgress, 0, 1)
@@ -213,8 +225,13 @@ export function createBrightvaleAppearance(
       0,
       1,
     );
+    currentAmbience = ambience;
+    for (const updateWater of waterUpdates) updateWater(ambience);
     for (const [material, baseline] of cityEmissionBaselines)
-      material.emissiveIntensity = baseline * currentCityBrightness;
+      material.emissiveIntensity =
+        baseline *
+        currentCityBrightness *
+        windowAmbienceMultiplier(windowGroups.get(material) ?? '', ambience);
     const fromGround = GROUND_EMISSIVE.audience;
     const toGround = GROUND_EMISSIVE.twilight;
     for (const [material, surface] of groundMaterials) {
@@ -250,10 +267,22 @@ export function createBrightvaleAppearance(
         material.userData.brightvaleRole = role;
         materialBySource.set(source, material);
         ownedMaterials.add(material);
+        const updateWater = attachWaterShimmer(material, role);
+        if (updateWater) {
+          waterUpdates.push(updateWater);
+          updateWater(currentAmbience);
+        }
         if (role === 'emissive_window') {
           cityEmissionBaselines.set(material, source.emissiveIntensity);
+          const group =
+            typeof source.userData.source_material === 'string'
+              ? source.userData.source_material
+              : source.name;
+          windowGroups.set(material, group);
           material.emissiveIntensity =
-            source.emissiveIntensity * currentCityBrightness;
+            source.emissiveIntensity *
+            currentCityBrightness *
+            windowAmbienceMultiplier(group, currentAmbience);
         }
         return material;
       }
