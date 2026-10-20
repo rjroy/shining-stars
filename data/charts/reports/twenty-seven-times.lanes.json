@@ -3,23 +3,23 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
@@ -44,24 +44,24 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8017241379310345,
+      "candidateExtractedF0DirectionAgreement": 0.8275862068965517,
       "candidateHandCounts": [
         114,
         111
       ],
       "candidateLaneCounts": [
-        56,
         58,
+        56,
         56,
         55
       ],
       "candidateLaneShares": [
-        0.24888888888888888,
         0.2577777777777778,
+        0.24888888888888888,
         0.24888888888888888,
         0.24444444444444444
       ],
-      "candidateLongestLaneRun": 3,
+      "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.34375,
       "noteCount": 225,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -90,7 +90,7 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7697368421052632,
+      "candidateExtractedF0DirectionAgreement": 0.7763157894736842,
       "candidateHandCounts": [
         173,
         171
@@ -136,21 +136,21 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8031496062992126,
+      "candidateExtractedF0DirectionAgreement": 0.7952755905511811,
       "candidateHandCounts": [
-        125,
-        124
+        126,
+        123
       ],
       "candidateLaneCounts": [
         63,
-        62,
         63,
+        62,
         61
       ],
       "candidateLaneShares": [
         0.25301204819277107,
-        0.24899598393574296,
         0.25301204819277107,
+        0.24899598393574296,
         0.24497991967871485
       ],
       "candidateLongestLaneRun": 3,

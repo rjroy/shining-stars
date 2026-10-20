@@ -31,7 +31,7 @@ const AUDIENCE_CLOUD_COOL = [0.72, 0.44, 1] as const;
 const TWILIGHT_CLOUD_EMBER = [1, 0.025, 0.16] as const;
 const TWILIGHT_CLOUD_ION = [0.025, 0.32, 1] as const;
 const RADIANT_CLOUD_GOLD = [1, 0.48, 0.035] as const;
-const RADIANT_CLOUD_ROSE = [0.6, 0.045, 0.85] as const;
+const RADIANT_CLOUD_ROSE = [0.95, 0.10, 0.35] as const;
 
 export function projectBrightvaleAmbience(
   state: SceneStateProjection,
@@ -105,10 +105,10 @@ export function projectBrightvaleAmbience(
 
 /** Authored material groups, not individual windows or added real light sources. */
 const WINDOW_PHASES: Readonly<Record<string, number>> = {
-  'Citadel detail | amber glazing 0': 0.3,
-  'Ravine detail | amber': 2.1,
-  'District detail | Left lit glazing': 3.8,
-  'District detail | Right lit glazing': 5.4,
+  'Citadel detail | amber glazing 0': 2,
+  'Ravine detail | amber': 3,
+  'District detail | Left lit glazing': 5,
+  'District detail | Right lit glazing': 7,
 };
 
 export function windowAmbienceMultiplier(
@@ -121,7 +121,7 @@ export function windowAmbienceMultiplier(
   }
 
   const wave =
-    0.9 * Math.sin(ambience.time * (Math.PI / 11) + phase) +
-    0.1 * Math.sin(ambience.time * (Math.PI / 3) + phase * 1.7);
-  return 30 * (0.50 + wave * 0.50);
+    0.9 * Math.sin((ambience.time + phase) * (Math.PI / 11)) +
+    0.1 * Math.sin((ambience.time + phase) * (Math.PI / 3));
+  return 20 * (0.50 + wave * 0.50);
 }

@@ -3,23 +3,23 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
@@ -44,25 +44,25 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7466666666666667,
+      "candidateExtractedF0DirectionAgreement": 0.7533333333333333,
       "candidateHandCounts": [
-        170,
-        167
+        169,
+        168
       ],
       "candidateLaneCounts": [
         84,
-        86,
+        85,
         84,
-        83
+        84
       ],
       "candidateLaneShares": [
         0.24925816023738873,
-        0.2551928783382789,
+        0.2522255192878338,
         0.24925816023738873,
-        0.24629080118694363
+        0.24925816023738873
       ],
       "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.34375,
+      "candidateWorstRolling32Concentration": 0.375,
       "noteCount": 337,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 251,
@@ -90,25 +90,25 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7014218009478673,
+      "candidateExtractedF0DirectionAgreement": 0.6872037914691943,
       "candidateHandCounts": [
-        238,
-        236
+        237,
+        237
       ],
       "candidateLaneCounts": [
-        117,
+        116,
         121,
         118,
-        118
+        119
       ],
       "candidateLaneShares": [
-        0.2468354430379747,
+        0.24472573839662448,
         0.2552742616033755,
         0.2489451476793249,
-        0.2489451476793249
+        0.2510548523206751
       ],
       "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.375,
+      "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 474,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 346,
@@ -136,22 +136,22 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7044025157232704,
+      "candidateExtractedF0DirectionAgreement": 0.7169811320754716,
       "candidateHandCounts": [
-        183,
-        180
+        182,
+        181
       ],
       "candidateLaneCounts": [
         91,
+        91,
         92,
-        90,
-        90
+        89
       ],
       "candidateLaneShares": [
         0.25068870523415976,
+        0.25068870523415976,
         0.2534435261707989,
-        0.24793388429752067,
-        0.24793388429752067
+        0.24517906336088155
       ],
       "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.375,
