@@ -1,4 +1,5 @@
 import { defaultDifficulty, type Difficulty } from '../game/game-balance';
+import { formatPersonalBestScore } from './personal-best-copy';
 import {
   getSongChart,
   getSongDifficulties,
@@ -775,6 +776,19 @@ export function createObservatoryUI(
     difficulty.value = currentSelection.runDifficulty ?? '';
     difficulty.disabled = getSongDifficulties(song).length < 2;
     difficultyLabel.append(difficulty);
+    const bestScore = document.createElement('span');
+    bestScore.className = 'song-best-score';
+    bestScore.dataset.personalBestScore = '';
+    if (currentSelection.runDifficulty !== null) {
+      bestScore.textContent = formatPersonalBestScore(
+        currentSelection.runDifficulty,
+        options.saveStore?.personalBestScores.getBest(
+          song.id,
+          currentSelection.runDifficulty,
+        ) ?? null,
+      );
+    }
+    difficultyLabel.append(bestScore);
 
     const play = createButton(
       'Play',

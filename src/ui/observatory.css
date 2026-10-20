@@ -1437,6 +1437,14 @@
   border-top: 1px solid rgb(255 218 145 / 25%);
   min-width: 0;
 }
+
+.song-best-score {
+  color: #f1dfc0;
+  font-size: 0.7rem;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.4;
+}
 .song-progress-filters legend {
   padding: 0 8px 0 0;
   color: #fff0d1;

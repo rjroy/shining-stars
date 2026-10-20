@@ -270,7 +270,9 @@ function isSongUnlocked(songId: string): boolean {
   const parentCollection = progressionMembership.songs.get(songId);
   if (parentCollection === undefined) return false;
   if (parentCollection === 'lyra-of-brightvale') return true;
-  return saveStore.progression.snapshot().songPurchases[songId] === parentCollection;
+  return (
+    saveStore.progression.snapshot().songPurchases[songId] === parentCollection
+  );
 }
 
 function beginSelectedPerformance(): void {
@@ -304,7 +306,36 @@ function beginSelectedPerformance(): void {
         return response.arrayBuffer();
       },
       render: paintGameplay,
-      onRunCompleted: ({ songId, result }) => {
+      onRunCompleted: ({ songId, runId, result }) => {
+        console.info('[Brightvale] personal best score write attempt', {
+          songId,
+          runId,
+          difficulty: result.difficulty,
+          score: result.score,
+        });
+        try {
+          const comparison = saveStore.personalBestScores.recordCompletedScore(
+            songId,
+            result.difficulty,
+            result.score,
+          );
+          gameplay?.setCompletedScore(runId, comparison);
+          console.info('[Brightvale] personal best score write outcome', {
+            songId,
+            runId,
+            difficulty: result.difficulty,
+            ...comparison,
+            persistence: saveStore.snapshot().personalBestScores.persistence,
+            notice: saveStore.snapshot().personalBestScores.notice,
+          });
+        } catch (error) {
+          console.error('[Brightvale] personal best score write failed', {
+            songId,
+            runId,
+            difficulty: result.difficulty,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
         const song = SONG_CATALOG.songs.find((entry) => entry.id === songId);
         if (
           song === undefined ||
@@ -350,7 +381,10 @@ function beginSelectedPerformance(): void {
           difficulty,
         });
         try {
-          const mutation = saveStore.progression.recordVictory(songId, difficulty);
+          const mutation = saveStore.progression.recordVictory(
+            songId,
+            difficulty,
+          );
           console.info('[Brightvale] victory credit write outcome', {
             songId,
             difficulty,

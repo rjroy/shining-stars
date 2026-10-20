@@ -72,6 +72,7 @@ export interface PerformanceDependencies<
   readonly render?: ControllerDependencies['render'];
   readonly onRunCompleted?: (completion: {
     readonly songId: string;
+    readonly runId: number;
     readonly result: GameResult;
   }) => void;
   readonly onTwilightDefeated?: (event: {
@@ -300,18 +301,28 @@ export function createPerformanceCoordinator<
         if (currentRecord !== null && isCurrent(currentRecord)) {
           if (
             controllerSnapshot.game.victory &&
-            !currentRecord.twilightDefeatRunsReported.has(controllerSnapshot.runId ?? 1)
+            !currentRecord.twilightDefeatRunsReported.has(
+              controllerSnapshot.runId ?? 1,
+            )
           ) {
-            currentRecord.twilightDefeatRunsReported.add(controllerSnapshot.runId ?? 1);
+            currentRecord.twilightDefeatRunsReported.add(
+              controllerSnapshot.runId ?? 1,
+            );
             if (dependencies.onTwilightDefeated !== undefined) {
               const event = {
                 songId: currentRecord.song.id,
                 difficulty: controllerSnapshot.game.difficulty,
               };
-              console.info('[Performance] Twilight defeat callback attempt', event);
+              console.info(
+                '[Performance] Twilight defeat callback attempt',
+                event,
+              );
               try {
                 dependencies.onTwilightDefeated(event);
-                console.info('[Performance] Twilight defeat callback succeeded', event);
+                console.info(
+                  '[Performance] Twilight defeat callback succeeded',
+                  event,
+                );
               } catch (error) {
                 console.error('[Performance] Twilight defeat callback failed', {
                   ...event,
@@ -327,6 +338,7 @@ export function createPerformanceCoordinator<
             if (dependencies.onRunCompleted !== undefined) {
               const completion = {
                 songId: currentRecord.song.id,
+                runId: controllerSnapshot.runId ?? 1,
                 result,
               };
               console.info('[Performance] run completion callback attempt', {
