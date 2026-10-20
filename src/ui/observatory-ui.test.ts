@@ -129,6 +129,39 @@ describe('Observatory selection transitions', () => {
     ).toEqual({ selectedSongId: 'easy-only', runDifficulty: 'easy' });
   });
 
+  it.each([
+    ['hard', ['easy', 'hard'], 'hard'],
+    ['normal', ['easy', 'hard'], 'easy'],
+    ['easy', ['normal'], 'normal'],
+    ['hard', [], null],
+  ] as const)(
+    'reconciles %s using supported difficulties %j',
+    (requested, supported, expected) => {
+      const entry = catalog.songs.find((song) => song.id === 'mixed')!;
+      const synthetic = {
+        ...catalog,
+        songs: [
+          {
+            ...entry,
+            charts: Object.fromEntries(
+              supported.map((difficulty) => [
+                difficulty,
+                chart([difficulty]),
+              ]),
+            ),
+          },
+        ],
+      } as typeof catalog;
+      expect(
+        chooseObservatorySong(
+          synthetic,
+          { selectedSongId: null, runDifficulty: requested },
+          'mixed',
+        )?.runDifficulty,
+      ).toBe(expected);
+    },
+  );
+
   it('does not change selection for an unknown song and labels collection, All Songs, and Favorites routes', () => {
     const current = {
       selectedSongId: 'mixed',
