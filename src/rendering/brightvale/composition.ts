@@ -5,6 +5,7 @@ import {
   type BrightvaleSurfaceMaterial,
 } from './appearance';
 import { fitDirectionalShadowCamera, setShadowParticipation } from './shadows';
+import { hideFrontPlatformCaps } from './platform';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleAmbience } from './ambience';
@@ -170,6 +171,7 @@ export function createBrightvaleComposition(
       const source = assets.roots[name];
       const clone = source.clone(true);
       copyAppearanceMaterials(source, clone, appearance!.materialFor);
+      if (name === 'platform') hideFrontPlatformCaps(clone);
       setShadowParticipation(clone, { cast: true, receive: true });
       wrapper.add(clone);
       playfield.add(wrapper);
