@@ -16,12 +16,23 @@ import {
   type SongRatingStore,
   type StoredRating,
 } from '../catalog/song-ratings';
-import { createProgression, purchase as buyProgression, recordVictory as creditVictory, validateProgression, type Difficulty, type ProgressionPurchaseRequest, type ProgressionState } from '../catalog/progression';
+import { createProgression, purchase as buyProgression, recordVictory as creditVictory, validateProgression, type ProgressionPurchaseRequest, type ProgressionState } from '../catalog/progression';
 import { createProgressionMembership } from '../catalog/progression-catalog';
+import { isDifficulty, type Difficulty } from '../game/game-balance';
+import {
+  copyPersonalBestScores,
+  flattenPersonalBestScores,
+  personalBestScoreKey,
+  validateCompletedScore,
+  type PersonalBestScoreResult,
+  type PersonalBestScoreSnapshot,
+  type PersonalBestScoreStore,
+  type StoredPersonalBestScore,
+} from './personal-best-scores';
 
 export const SAVE_STORAGE_KEY = 'shining-stars.save';
 export const SAVE_FORMAT = 'shining-stars-save';
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 const FAVORITES_STORAGE_KEY = 'shining-stars.favorite-song-ids';
 const RATINGS_STORAGE_KEY = 'shining-stars.song-ratings';
@@ -33,6 +44,10 @@ const SESSION_PURCHASE_NOTICE =
 export interface SaveDataSnapshot {
   readonly favorites: FavoriteSnapshot;
   readonly ratings: SongRatingSnapshot;
+  readonly personalBestScores: PersonalBestScoreSnapshot & {
+    readonly persistence: FavoritePersistence;
+    readonly notice: string | null;
+  };
 }
 export type ProgressionSnapshot = ProgressionState & { readonly persistence: FavoritePersistence; readonly notice: string | null };
 export type ProgressionMutationResult = { readonly status: 'applied' | 'session-only' | 'conflict' | 'failed'; readonly notice: string | null; readonly persistence: FavoritePersistence; readonly changed: boolean };
@@ -42,6 +57,7 @@ export type ProgressionImportMode = 'keep-current' | 'replace';
 export interface SaveStore {
   readonly favorites: FavoriteStore;
   readonly songRatings: SongRatingStore;
+  readonly personalBestScores: PersonalBestScoreStore;
   readonly progression: { snapshot(): ProgressionSnapshot; recordVictory(songId: string, difficulty: Difficulty): ProgressionMutationResult; purchase(request: ProgressionPurchaseRequest, target: SaveImportTarget): ProgressionMutationResult };
   snapshot(): SaveDataSnapshot;
   exportJson(): string;
@@ -62,6 +78,12 @@ export type SaveImportStatus =
 export interface SaveImportChanges {
   readonly favorites: { readonly added: number; readonly removed: number };
   readonly ratings: {
+    readonly added: number;
+    readonly improved: number;
+    readonly removed: number;
+    readonly downgraded: number;
+  };
+  readonly personalBestScores: {
     readonly added: number;
     readonly improved: number;
     readonly removed: number;
@@ -89,16 +111,18 @@ interface ImportCandidate {
   readonly revision: number;
   readonly favorites: Set<string>;
   readonly ratings: Map<string, StoredRating>;
+  readonly personalBestScores: Map<string, Map<Difficulty, number>>;
   readonly preview: SaveImportPreview;
   readonly progression: ProgressionState;
 }
 
 interface StoredSave {
   readonly format: typeof SAVE_FORMAT;
-  readonly schemaVersion: 1 | typeof SAVE_SCHEMA_VERSION;
+  readonly schemaVersion: 1 | 2 | typeof SAVE_SCHEMA_VERSION;
   readonly favorites: readonly string[];
   readonly ratings: Readonly<Record<string, StoredRating>>;
   readonly progression?: ProgressionState;
+  readonly personalBestScores?: readonly StoredPersonalBestScore[];
 }
 
 function browserStorage(): FavoriteStorage | null {
@@ -117,17 +141,26 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[])
   return Object.keys(value).every((key) => allowed.includes(key));
 }
 
-function parseCanonical(value: string, membership?: ReturnType<typeof createProgressionMembership>): { favorites: Set<string>; ratings: Map<string, StoredRating>; progression: ProgressionState } {
+function parseCanonical(value: string, membership?: ReturnType<typeof createProgressionMembership>): { favorites: Set<string>; ratings: Map<string, StoredRating>; progression: ProgressionState; personalBestScores: Map<string, Map<Difficulty, number>> } {
   const parsed: unknown = JSON.parse(value);
+  const allowedKeys = isRecord(parsed)
+    ? parsed.schemaVersion === 1
+      ? ['format', 'schemaVersion', 'favorites', 'ratings']
+      : parsed.schemaVersion === 2
+        ? ['format', 'schemaVersion', 'favorites', 'ratings', 'progression']
+        : ['format', 'schemaVersion', 'favorites', 'ratings', 'progression', 'personalBestScores']
+    : [];
   if (
     !isRecord(parsed) ||
-    !hasOnlyKeys(parsed, parsed && isRecord(parsed) && parsed.schemaVersion === 2 ? ['format', 'schemaVersion', 'favorites', 'ratings', 'progression'] : ['format', 'schemaVersion', 'favorites', 'ratings']) ||
+    !hasOnlyKeys(parsed, allowedKeys) ||
     parsed.format !== SAVE_FORMAT ||
-    (parsed.schemaVersion !== 1 && parsed.schemaVersion !== SAVE_SCHEMA_VERSION) ||
+    (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2 && parsed.schemaVersion !== SAVE_SCHEMA_VERSION) ||
     !Array.isArray(parsed.favorites) ||
     parsed.favorites.some((id) => typeof id !== 'string') ||
     !isRecord(parsed.ratings) ||
-    (parsed.schemaVersion === 2 && !Object.hasOwn(parsed, 'progression'))
+    (parsed.schemaVersion !== 1 && !Object.hasOwn(parsed, 'progression')) ||
+    (parsed.schemaVersion === SAVE_SCHEMA_VERSION && !Object.hasOwn(parsed, 'personalBestScores')) ||
+    (parsed.schemaVersion === SAVE_SCHEMA_VERSION && !Array.isArray(parsed.personalBestScores))
   ) {
     throw new TypeError('Stored player save has an invalid envelope.');
   }
@@ -152,7 +185,33 @@ function parseCanonical(value: string, membership?: ReturnType<typeof createProg
   }
 
   const progression = parsed.schemaVersion === 1 ? createProgression() : validateProgression(parsed.progression, membership);
-  return { favorites: new Set(parsed.favorites), ratings, progression };
+  const personalBestScores = new Map<string, Map<Difficulty, number>>();
+  const seenScores = new Set<string>();
+  if (parsed.schemaVersion === SAVE_SCHEMA_VERSION) {
+    const rawScores = parsed.personalBestScores as unknown[];
+    for (const rawScore of rawScores) {
+      if (
+        !isRecord(rawScore) ||
+        !hasOnlyKeys(rawScore, ['songId', 'difficulty', 'score']) ||
+        typeof rawScore.songId !== 'string' ||
+        typeof rawScore.score !== 'number' ||
+        !isDifficulty(rawScore.difficulty)
+      ) {
+        throw new TypeError('Stored personal-best score is invalid.');
+      }
+      validateCompletedScore(rawScore.songId, rawScore.difficulty, rawScore.score);
+      const key = personalBestScoreKey(rawScore.songId, rawScore.difficulty);
+      if (seenScores.has(key)) throw new TypeError('Stored personal-best score is duplicated.');
+      seenScores.add(key);
+      let byDifficulty = personalBestScores.get(rawScore.songId);
+      if (byDifficulty === undefined) {
+        byDifficulty = new Map();
+        personalBestScores.set(rawScore.songId, byDifficulty);
+      }
+      byDifficulty.set(rawScore.difficulty, rawScore.score);
+    }
+  }
+  return { favorites: new Set(parsed.favorites), ratings, progression, personalBestScores };
 }
 
 function savedRating(rating: StoredRating): SongRating {
@@ -163,7 +222,7 @@ function getInitialStorage(): FavoriteStorage | null {
   return browserStorage();
 }
 
-function serializeSave(favorites: ReadonlySet<string>, ratings: ReadonlyMap<string, StoredRating>, progression: ProgressionState): string {
+function serializeSave(favorites: ReadonlySet<string>, ratings: ReadonlyMap<string, StoredRating>, progression: ProgressionState, personalBestScores: ReadonlyMap<string, ReadonlyMap<Difficulty, number>>): string {
   const savedRatings = Object.create(null) as Record<string, StoredRating>;
   for (const [id, rating] of ratings) savedRatings[id] = { ...rating };
   const document: StoredSave = {
@@ -172,6 +231,7 @@ function serializeSave(favorites: ReadonlySet<string>, ratings: ReadonlyMap<stri
     favorites: [...favorites],
     ratings: savedRatings,
     progression,
+    personalBestScores: flattenPersonalBestScores(personalBestScores),
   };
   return JSON.stringify(document);
 }
@@ -181,11 +241,17 @@ function countChanges(
   currentRatings: ReadonlyMap<string, StoredRating>,
   nextFavorites: ReadonlySet<string>,
   nextRatings: ReadonlyMap<string, StoredRating>,
+  currentScores: ReadonlyMap<string, ReadonlyMap<Difficulty, number>>,
+  nextScores: ReadonlyMap<string, ReadonlyMap<Difficulty, number>>,
 ): SaveImportChanges {
   let ratingAdded = 0;
   let ratingImproved = 0;
   let ratingRemoved = 0;
   let ratingDowngraded = 0;
+  let scoreAdded = 0;
+  let scoreImproved = 0;
+  let scoreRemoved = 0;
+  let scoreDowngraded = 0;
   for (const [id, next] of nextRatings) {
     const current = currentRatings.get(id);
     if (current === undefined) ratingAdded += 1;
@@ -195,6 +261,22 @@ function countChanges(
   for (const id of currentRatings.keys()) {
     if (!nextRatings.has(id)) ratingRemoved += 1;
   }
+  const currentScoreValues = new Map<string, number>();
+  const nextScoreValues = new Map<string, number>();
+  for (const [songId, scores] of currentScores)
+    for (const [difficulty, score] of scores)
+      currentScoreValues.set(personalBestScoreKey(songId, difficulty), score);
+  for (const [songId, scores] of nextScores)
+    for (const [difficulty, score] of scores)
+      nextScoreValues.set(personalBestScoreKey(songId, difficulty), score);
+  for (const [key, score] of nextScoreValues) {
+    const current = currentScoreValues.get(key);
+    if (current === undefined) scoreAdded += 1;
+    else if (score > current) scoreImproved += 1;
+    else if (score < current) scoreDowngraded += 1;
+  }
+  for (const key of currentScoreValues.keys())
+    if (!nextScoreValues.has(key)) scoreRemoved += 1;
   return Object.freeze({
     favorites: Object.freeze({
       added: [...nextFavorites].filter((id) => !currentFavorites.has(id)).length,
@@ -206,13 +288,15 @@ function countChanges(
       removed: ratingRemoved,
       downgraded: ratingDowngraded,
     }),
+    personalBestScores: Object.freeze({ added: scoreAdded, improved: scoreImproved, removed: scoreRemoved, downgraded: scoreDowngraded }),
     progression: Object.freeze({ before: Object.freeze({ balance: 0, marks: 0, collectionPurchases: 0, songPurchases: 0 }), after: Object.freeze({ balance: 0, marks: 0, collectionPurchases: 0, songPurchases: 0 }) }),
   });
 }
 
 function hasChanges(changes: SaveImportChanges): boolean {
   return Object.values(changes.favorites).some((count) => count > 0) ||
-    Object.values(changes.ratings).some((count) => count > 0);
+    Object.values(changes.ratings).some((count) => count > 0) ||
+    Object.values(changes.personalBestScores).some((count) => count > 0);
 }
 
 export function createSaveStore(storage: FavoriteStorage | null = getInitialStorage()): SaveStore {
@@ -220,6 +304,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
   const previews = new WeakMap<SaveImportPreview, ImportCandidate>();
   let favorites = new Set<string>();
   let ratings = new Map<string, StoredRating>();
+  let personalBestScores = new Map<string, Map<Difficulty, number>>();
   let progression = createProgression();
   const membership = createProgressionMembership();
   let activeStorage = storage;
@@ -246,6 +331,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         }
         favorites = data.favorites;
         ratings = data.ratings;
+        personalBestScores = data.personalBestScores;
         progression = data.progression;
         loadedCanonical = true;
         console.info('[Save data] storage load succeeded', {
@@ -349,11 +435,19 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
       persistence,
       notice,
     };
-    return { favorites: favoriteSnapshot, ratings: ratingSnapshot };
+    return {
+      favorites: favoriteSnapshot,
+      ratings: ratingSnapshot,
+      personalBestScores: {
+        scores: copyPersonalBestScores(personalBestScores),
+        persistence,
+        notice,
+      },
+    };
   }
 
   function exportJson(): string {
-    return serializeSave(favorites, ratings, progression);
+    return serializeSave(favorites, ratings, progression, personalBestScores);
   }
 
   function persist(): void {
@@ -363,6 +457,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         storageKey: SAVE_STORAGE_KEY,
         favoriteCount: favorites.size,
         ratingCount: ratings.size,
+        personalBestScoreCount: flattenPersonalBestScores(personalBestScores).length,
       });
       const currentSave = activeStorage.getItem(SAVE_STORAGE_KEY);
       const changedSave = currentSave !== observedSave;
@@ -389,6 +484,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         storageKey: SAVE_STORAGE_KEY,
         favoriteCount: favorites.size,
         ratingCount: ratings.size,
+        personalBestScoreCount: flattenPersonalBestScores(personalBestScores).length,
       });
     } catch (error) {
       activeStorage = null;
@@ -432,6 +528,26 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         return savedRating(candidate);
       }
       return savedRating(current);
+    },
+  };
+
+  const personalBestScoreStore: PersonalBestScoreStore = {
+    snapshot: () => ({ scores: copyPersonalBestScores(personalBestScores) }),
+    getBest(songId, difficulty) {
+      return personalBestScores.get(songId)?.get(difficulty) ?? null;
+    },
+    recordCompletedScore(songId, difficulty, score): PersonalBestScoreResult {
+      validateCompletedScore(songId, difficulty, score);
+      const byDifficulty = personalBestScores.get(songId);
+      const previousBest = byDifficulty?.get(difficulty) ?? null;
+      if (previousBest !== null && score <= previousBest)
+        return Object.freeze({ previousBest, best: previousBest, isNewBest: false });
+      const nextByDifficulty = byDifficulty ?? new Map<Difficulty, number>();
+      nextByDifficulty.set(difficulty, score);
+      if (byDifficulty === undefined) personalBestScores.set(songId, nextByDifficulty);
+      revision += 1;
+      persist();
+      return Object.freeze({ previousBest, best: score, isNewBest: true });
     },
   };
 
@@ -485,7 +601,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
           console.warn('[Save data] progression purchase conflict', { trigger: 'explicit-purchase', kind: request.kind, purchaseId, spendAmount, balance: progression.balance, persistence, cause: 'storage-changed' });
           return Object.freeze({ status: 'conflict', notice, persistence, changed: false });
         }
-        const serialized = serializeSave(favorites, ratings, next);
+        const serialized = serializeSave(favorites, ratings, next, personalBestScores);
         backingStorage.setItem(SAVE_STORAGE_KEY, serialized); observedSave = serialized; loadedCanonical = true; progression = next; revision += 1;
         console.info('[Save data] progression purchase outcome', { trigger: 'explicit-purchase', kind: request.kind, purchaseId, spendAmount: progression.balance - next.balance, balance: progression.balance, persistence, outcome: 'applied', changed: true });
         return Object.freeze({ status: 'applied', notice: null, persistence, changed: true });
@@ -502,9 +618,11 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
 
     let nextFavorites: Set<string>;
     let nextRatings: Map<string, StoredRating>;
+    let nextPersonalBestScores: Map<string, Map<Difficulty, number>>;
     if (mode === 'replace') {
       nextFavorites = new Set(imported.favorites);
       nextRatings = new Map(imported.ratings);
+      nextPersonalBestScores = copyPersonalBestScores(imported.personalBestScores);
     } else {
       nextFavorites = new Set(favorites);
       for (const id of imported.favorites) nextFavorites.add(id);
@@ -515,9 +633,22 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
           nextRatings.set(id, { ...incoming });
         }
       }
+      nextPersonalBestScores = copyPersonalBestScores(personalBestScores);
+      for (const [songId, importedScores] of imported.personalBestScores) {
+        let currentScores = nextPersonalBestScores.get(songId);
+        if (currentScores === undefined) {
+          currentScores = new Map();
+          nextPersonalBestScores.set(songId, currentScores);
+        }
+        for (const [difficulty, importedBest] of importedScores) {
+          const currentBest = currentScores.get(difficulty);
+          if (currentBest === undefined || importedBest > currentBest)
+            currentScores.set(difficulty, importedBest);
+        }
+      }
     }
 
-    const changes = countChanges(favorites, ratings, nextFavorites, nextRatings);
+    const changes = countChanges(favorites, ratings, nextFavorites, nextRatings, personalBestScores, nextPersonalBestScores);
     const nextProgression = progressionMode === 'replace' ? imported.progression : progression;
     const progressSummary = (p: ProgressionState) => Object.freeze({ balance: p.balance, marks: Object.values(p.victoryMarks).reduce((sum, tier) => sum + ({ easy: 1, normal: 2, hard: 3 }[tier]), 0), collectionPurchases: Object.keys(p.collectionPurchases).length, songPurchases: Object.keys(p.songPurchases).length });
     const progressChanges = Object.freeze({ before: progressSummary(progression), after: progressSummary(nextProgression) });
@@ -532,6 +663,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
       revision,
       favorites: nextFavorites,
       ratings: nextRatings,
+      personalBestScores: nextPersonalBestScores,
       progression: nextProgression,
       preview,
     });
@@ -544,6 +676,10 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
       ratingsImproved: changes.ratings.improved,
       ratingsRemoved: changes.ratings.removed,
       ratingsDowngraded: changes.ratings.downgraded,
+      personalBestScoresAdded: changes.personalBestScores.added,
+      personalBestScoresImproved: changes.personalBestScores.improved,
+      personalBestScoresRemoved: changes.personalBestScores.removed,
+      personalBestScoresDowngraded: changes.personalBestScores.downgraded,
     });
     return preview;
   }
@@ -576,6 +712,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
       if (changed) {
         favorites = new Set(candidate.favorites);
         ratings = new Map([...candidate.ratings].map(([id, value]) => [id, { ...value }]));
+        personalBestScores = copyPersonalBestScores(candidate.personalBestScores);
         progression = validateProgression(candidate.progression);
       }
       if (changed || persistencePolicyChanged) revision += 1;
@@ -589,6 +726,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         changed,
         favoritesCount: favorites.size,
         ratingsCount: ratings.size,
+        personalBestScoreCount: flattenPersonalBestScores(personalBestScores).length,
       });
       return importResult('session-only', notice, changed);
     }
@@ -613,6 +751,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         mode: candidate.preview.mode,
         favoritesCount: candidate.favorites.size,
         ratingsCount: candidate.ratings.size,
+        personalBestScoreCount: flattenPersonalBestScores(candidate.personalBestScores).length,
       });
       const currentSave = backingStorage.getItem(SAVE_STORAGE_KEY);
       const changedSave = currentSave !== observedSave;
@@ -631,7 +770,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         return importResult('conflict', notice, false);
       }
 
-      const serialized = serializeSave(candidate.favorites, candidate.ratings, candidate.progression);
+      const serialized = serializeSave(candidate.favorites, candidate.ratings, candidate.progression, candidate.personalBestScores);
       if (!changed && loadedCanonical && serialized === observedSave) {
         activeStorage = backingStorage;
         persistence = 'local';
@@ -649,6 +788,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
       loadedCanonical = true;
       favorites = new Set(candidate.favorites);
       ratings = new Map([...candidate.ratings].map(([id, value]) => [id, { ...value }]));
+      personalBestScores = copyPersonalBestScores(candidate.personalBestScores);
       progression = validateProgression(candidate.progression);
       revision += 1;
       activeStorage = backingStorage;
@@ -660,6 +800,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
         outcome: 'local',
         favoritesCount: favorites.size,
         ratingsCount: ratings.size,
+        personalBestScoreCount: flattenPersonalBestScores(personalBestScores).length,
       });
       return importResult('applied', null, true);
     } catch (error) {
@@ -676,6 +817,7 @@ export function createSaveStore(storage: FavoriteStorage | null = getInitialStor
   return {
     favorites: favoriteStore,
     songRatings: songRatingStore,
+    personalBestScores: personalBestScoreStore,
     progression: progressionStore,
     snapshot,
     exportJson,

@@ -6,9 +6,8 @@ import type { FavoriteStorage } from '../catalog/favorites';
  * Proposed phase-one contract for src/app/save-data.ts. The unified store owns
  * the existing favorite/rating domain stores and exposes snapshot() and
  * exportJson(). Persistence uses shining-stars.save with
- * { format: 'shining-stars-save', schemaVersion: 1, favorites: string[],
- *   ratings: { [id]: { played: true, normalStars, goldStars } } }.
- * Snapshot is { favorites: FavoriteSnapshot, ratings: SongRatingSnapshot }.
+ * schema v3 stores favorites, ratings, progression, and personalBestScores in
+ * the canonical save. Older schema v1/v2 saves remain readable.
  * Legacy inputs are shining-stars.favorite-song-ids (JSON string array) and
  * shining-stars.song-ratings (the existing schemaVersion/ratings envelope).
  * This test specifies observable behavior; only module resolution is guarded
@@ -68,10 +67,11 @@ const legacyRatings = (ratings: Record<string, unknown>) =>
   JSON.stringify({ schemaVersion: 1, ratings });
 const save = (favorites: string[], ratings: Record<string, unknown>) => ({
   format: 'shining-stars-save',
-  schemaVersion: 2,
+  schemaVersion: 3,
   favorites,
   ratings,
   progression: { balance: 0, victoryMarks: {}, collectionPurchases: {}, songPurchases: {} },
+  personalBestScores: [],
 });
 const completed = { score: 0, normalMaximum: 10_000, outcome: 'defeat' as const, difficulty: 'normal' as const };
 const throwingLegacyCases: Array<{

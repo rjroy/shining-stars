@@ -20,10 +20,11 @@ const implementation = existsSync(moduleUrl)
 const SAVE_KEY = 'shining-stars.save';
 const save = (favorites: string[], ratings: Record<string, unknown>) => ({
   format: 'shining-stars-save',
-  schemaVersion: 2,
+  schemaVersion: 3,
   favorites,
   ratings,
   progression: { balance: 0, victoryMarks: {}, collectionPurchases: {}, songPurchases: {} },
+  personalBestScores: [],
 });
 type Mode = 'merge' | 'replace';
 type Target = 'local' | 'session';

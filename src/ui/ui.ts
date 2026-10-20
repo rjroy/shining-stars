@@ -1,4 +1,9 @@
 import type { ChartConfig } from '../game/chart';
+import {
+  createPersonalBestResultSnapshot,
+  formatPersonalBestResult,
+} from './personal-best-copy';
+import type { PersonalBestScoreResult } from '../app/personal-best-scores';
 import type { ControllerSnapshot } from '../game/controller';
 import type { GameSnapshot } from '../game/game';
 import {
@@ -47,6 +52,7 @@ export interface TouchPresentation {
 }
 
 export interface GameUI {
+  setCompletedScore(runId: number, comparison: PersonalBestScoreResult): void;
   setTouchPresentation(presentation: TouchPresentation): void;
   render(snapshot: ControllerSnapshot, audioNow: number): void;
   setBusy(message: string | null): void;
@@ -448,6 +454,7 @@ export function createGameUI(
             ${scoreStarsMarkup('result-score')}
             <p class="result-combo">Best combo <strong data-result-score-combo>0</strong> <span data-result-score-multiplier>×1</span></p>
           </div>
+          <p class="result-personal-best" data-result-personal-best role="status" hidden></p>
           <div class="result-grid" data-result-grid></div>
           <button class="primary-button" type="button" data-action="restart" disabled>Sing again <span aria-hidden="true">↗</span></button>
           <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
@@ -634,6 +641,7 @@ export function createGameUI(
   let rendererMessage = 'Loading Brightvale…';
   let pendingPlaybackRequests = false;
   let resultsRendered = false;
+  const completedScore = createPersonalBestResultSnapshot();
   const updateScore = createScoreReadout(root, 'score');
   const updateResultScore = createScoreReadout(root, 'result-score');
   const scoreTransitions = createScoreTransitionTracker();
@@ -1063,7 +1071,14 @@ export function createGameUI(
         feedbackAnnouncement,
       );
 
+    const comparison = completedScore.read(snapshot.runId ?? 1, isResults);
     if (isResults) {
+      setHidden(root, '[data-result-personal-best]', comparison === null);
+      setText(
+        root,
+        '[data-result-personal-best]',
+        comparison === null ? '' : formatPersonalBestResult(comparison),
+      );
       if (!resultsRendered) renderResults(game);
       resultsRendered = true;
     } else {
@@ -1074,6 +1089,10 @@ export function createGameUI(
 
   return {
     setTouchPresentation,
+    setCompletedScore(runId, comparison) {
+      completedScore.record(runId, comparison);
+      resultsRendered = false;
+    },
     render,
     setBusy(message) {
       busyMessage = message;

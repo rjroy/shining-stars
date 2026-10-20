@@ -15,10 +15,10 @@ describe('save progression persistence and imports', () => {
     const legacy = JSON.stringify({ format: 'shining-stars-save', schemaVersion: 1, favorites: ['old'], ratings: { saved: { played: true, normalStars: 4, goldStars: 0 } } });
     const fixture = storage({ [SAVE_STORAGE_KEY]: legacy }); const store = createSaveStore(fixture.api);
     expect(fixture.writes).toEqual([]);
-    expect(JSON.parse(store.exportJson())).toMatchObject({ schemaVersion: 2, favorites: ['old'], progression: empty });
+    expect(JSON.parse(store.exportJson())).toMatchObject({ schemaVersion: 3, favorites: ['old'], progression: empty, personalBestScores: [] });
     expect(store.songRatings.get('saved')).toMatchObject({ normalStars: 4, goldStars: 0 });
     store.favorites.toggle('another');
-    expect(JSON.parse(fixture.values.get(SAVE_STORAGE_KEY)!)).toMatchObject({ schemaVersion: 2, progression: empty });
+    expect(JSON.parse(fixture.values.get(SAVE_STORAGE_KEY)!)).toMatchObject({ schemaVersion: 3, progression: empty, personalBestScores: [] });
   });
   it('awards tier credits once, persists/reloads, and returns defensive snapshots', () => {
     const fixture = storage(); const store = createSaveStore(fixture.api);

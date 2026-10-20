@@ -744,7 +744,12 @@ describe('performance coordinator', () => {
   it('does not report an unfinished run on restart or return, and reports a later completed run', async () => {
     const h = harness();
     const completions: Array<{ songId: string; result: GameResult }> = [];
+    const completionsAtResultsPaint: number[] = [];
     const dependencies = {
+      render: (snapshot: import('../game/controller').ControllerSnapshot) => {
+        if (snapshot.game.status === 'results')
+          completionsAtResultsPaint.push(completions.length);
+      },
       createAudioContext: () => {
         const context = new TestContext();
         h.contexts.push(context);
@@ -773,12 +778,22 @@ describe('performance coordinator', () => {
     context.currentTime = 25;
     expect(coordinator.update()?.game.result?.outcome).toBe('defeat');
     expect(completions).toHaveLength(1);
+    expect(completions[0]).toMatchObject({
+      runId: coordinator.snapshot().controller?.runId,
+    });
+    const firstRunId = coordinator.snapshot().controller?.runId;
 
     await coordinator.restart();
     expect(completions).toHaveLength(1);
     context.currentTime = 47;
     expect(coordinator.update()?.game.result?.outcome).toBe('defeat');
     expect(completions).toHaveLength(2);
+    expect(completions[1]).toMatchObject({
+      runId: coordinator.snapshot().controller?.runId,
+    });
+    expect(coordinator.snapshot().controller?.runId).not.toBe(firstRunId);
+    expect(completionsAtResultsPaint[0]).toBe(1);
+    expect(completionsAtResultsPaint.at(-1)).toBe(2);
     await coordinator.returnToBrowser();
     expect(completions).toHaveLength(2);
   });
