@@ -10,7 +10,7 @@ import wave
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import beat_chart
+from scripts import beat_chart, pitch_lanes
 
 
 def profile_fixture():
@@ -891,6 +891,13 @@ class SongAuthoringConfigTests(unittest.TestCase):
         hard_mapping = {"lane_balance": 2.5}
         song["difficulties"]["normal"]["lane_mapping"] = normal_mapping
         song["difficulties"]["hard"]["lane_mapping"] = hard_mapping
+        controlled_defaults = {
+            "pitch_following": 1,
+            "lane_balance": 1,
+            "repetition_avoidance": 1,
+            "wide_jump_avoidance": 1,
+            "adaptation_block_notes": 32,
+        }
 
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "song-authoring.json"
@@ -912,48 +919,35 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 self.assertNotIn(
                     "lane_mapping", loaded_song["difficulties"]["easy"]
                 )
-            self.assertEqual(
-                beat_chart.validate_lane_mapping(normal_mapping),
-                {
-                    "pitch_following": 0,
-                    "lane_balance": 1,
-                    "repetition_avoidance": 1,
-                    "wide_jump_avoidance": 1,
-                    "adaptation_block_notes": 32,
-                },
-            )
-            self.assertEqual(
-                beat_chart.validate_lane_mapping(hard_mapping),
-                {
-                    "pitch_following": 1,
-                    "lane_balance": 2.5,
-                    "repetition_avoidance": 1,
-                    "wide_jump_avoidance": 1,
-                    "adaptation_block_notes": 32,
-                },
-            )
+            with patch.dict(
+                pitch_lanes.DEFAULT_LANE_MAPPING, controlled_defaults, clear=True
+            ):
+                self.assertEqual(
+                    beat_chart.validate_lane_mapping(normal_mapping),
+                    {**controlled_defaults, "pitch_following": 0},
+                )
+                self.assertEqual(
+                    beat_chart.validate_lane_mapping(hard_mapping),
+                    {**controlled_defaults, "lane_balance": 2.5},
+                )
 
             for difficulty in ("easy", "normal", "hard"):
                 song["difficulties"][difficulty].pop("lane_mapping", None)
             path.write_text(json.dumps(document), encoding="utf-8")
-            for loaded_song in (
-                beat_chart.load_authoring_collection(path)["fixture"],
-                beat_chart.load_song_config(path, "fixture"),
+            with patch.dict(
+                pitch_lanes.DEFAULT_LANE_MAPPING, controlled_defaults, clear=True
             ):
-                for difficulty in ("easy", "normal", "hard"):
-                    self.assertNotIn(
-                        "lane_mapping", loaded_song["difficulties"][difficulty]
-                    )
-                    self.assertEqual(
-                        beat_chart.validate_lane_mapping(),
-                        {
-                            "pitch_following": 1,
-                            "lane_balance": 1,
-                            "repetition_avoidance": 1,
-                            "wide_jump_avoidance": 1,
-                            "adaptation_block_notes": 32,
-                        },
-                    )
+                for loaded_song in (
+                    beat_chart.load_authoring_collection(path)["fixture"],
+                    beat_chart.load_song_config(path, "fixture"),
+                ):
+                    for difficulty in ("easy", "normal", "hard"):
+                        self.assertNotIn(
+                            "lane_mapping", loaded_song["difficulties"][difficulty]
+                        )
+                        self.assertEqual(
+                            beat_chart.validate_lane_mapping(), controlled_defaults
+                        )
 
     def test_difficulty_lane_mapping_override_is_strict_and_bounded(self):
         document = {"schema_version": 2, "songs": {"fixture": self.song_fixture()}}

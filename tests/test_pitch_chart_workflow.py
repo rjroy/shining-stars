@@ -18,7 +18,7 @@ import wave
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import beat_chart
+from scripts import beat_chart, pitch_lanes
 
 
 DIFFICULTIES = ("easy", "normal", "hard")
@@ -339,10 +339,6 @@ class PitchChartWorkflowTests(unittest.TestCase):
             self.settings["difficulties"][difficulty].pop("lane_mapping")
         self.write_config()
 
-        result, _ = self.generate(runner=self.make_runner())
-        self.assertEqual(result, 0)
-        self.assertEqual(len(self.pitch_calls()), 1)
-        report = json.loads(self.report_path().read_text(encoding="utf-8"))
         expected_defaults = {
             "pitch_following": 1,
             "lane_balance": 1,
@@ -350,6 +346,15 @@ class PitchChartWorkflowTests(unittest.TestCase):
             "wide_jump_avoidance": 1,
             "adaptation_block_notes": 32,
         }
+        # Exercise omission/default resolution against a controlled config
+        # boundary, not whichever lane feel is currently selected in production.
+        with patch.dict(
+            pitch_lanes.DEFAULT_LANE_MAPPING, expected_defaults, clear=True
+        ):
+            result, _ = self.generate(runner=self.make_runner())
+        self.assertEqual(result, 0)
+        self.assertEqual(len(self.pitch_calls()), 1)
+        report = json.loads(self.report_path().read_text(encoding="utf-8"))
         self.assertEqual(
             report["controls"],
             {difficulty: expected_defaults for difficulty in DIFFICULTIES},
