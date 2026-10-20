@@ -10,7 +10,9 @@ import {
   reconcileSongSelection,
   selectSongs,
   type SongBrowseFilters,
+  type SongBrowseProgress,
   type SongSelection,
+  type SongSortMode,
 } from '../catalog/selectors';
 import type { FavoriteStore } from '../catalog/favorites';
 import type { SaveStore } from '../app/save-data';
@@ -88,7 +90,7 @@ export function chooseObservatorySong(
   songId: string,
 ): SongSelection | null {
   const song = catalog.songs.find((entry) => entry.id === songId);
-  if (song === undefined) return null;
+  if (song === undefined || song.availability !== 'available') return null;
   return {
     selectedSongId: song.id,
     runDifficulty:
@@ -176,7 +178,9 @@ export function getCreditedSealsMarkup(mark?: Difficulty): string {
   return `<span class="credited-seals" aria-label="Credited victories">${tiers.map((tier, index) => `<span class="credited-seal${index <= level ? ' is-credited' : ''}" aria-label="${tier[0]!.toUpperCase() + tier.slice(1)}: ${index <= level ? 'credited' : 'not credited'}" title="${tier}: ${index <= level ? 'credited' : 'not credited'}">${tier[0]!.toUpperCase()}</span>`).join('')}</span>`;
 }
 
-function createSvgIcon(name: 'heart' | 'search' | 'filter' | 'back'): string {
+function createSvgIcon(
+  name: 'heart' | 'search' | 'filter' | 'sort' | 'back',
+): string {
   const paths = {
     heart:
       '<path d="M20.8 8.8c0 5.1-8.8 10-8.8 10s-8.8-4.9-8.8-10A4.7 4.7 0 0 1 12 6.1a4.7 4.7 0 0 1 8.8 2.7Z"/>',
@@ -184,6 +188,7 @@ function createSvgIcon(name: 'heart' | 'search' | 'filter' | 'back'): string {
     filter:
       '<path d="M3 6h18M6 12h12m-9 6h6"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="11" cy="18" r="2"/>',
     back: '<path d="m14.5 5-7 7 7 7"/>',
+    sort: '<path d="M4 5v14m-3-3 3 3 3-3M11 6h10M11 12h7M11 18h4"/>',
   } satisfies Record<string, string>;
   return `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
 }
@@ -264,6 +269,7 @@ export function createObservatoryUI(
           </label>
           <button class="observatory-tool-button" type="button" data-action="favorites" aria-pressed="false">${createSvgIcon('heart')}<span>Favorites</span></button>
           <button class="observatory-tool-button" type="button" data-action="toggle-filters" aria-expanded="false" aria-controls="observatory-filters">${createSvgIcon('filter')}<span>Filters</span></button>
+          <button class="observatory-tool-button" type="button" data-action="toggle-sort" aria-label="Sort songs" aria-expanded="false" aria-controls="observatory-sort">${createSvgIcon('sort')}<span>Sort</span></button>
         </nav>
       </header>
 
@@ -319,10 +325,22 @@ export function createObservatoryUI(
 
       <section class="observatory-filter-panel" id="observatory-filters" data-filter-panel aria-label="Filter songs" hidden>
         <div class="filter-heading"><h2>Refine your search</h2><button type="button" data-action="clear-filters">Clear filters</button></div>
-        <label>Availability<select data-filter-availability><option value="">All songs</option><option value="available">Available to play</option><option value="unavailable">Unavailable</option></select></label>
-        <label>Difficulty support<select data-filter-difficulty><option value="">Any difficulty</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+         <fieldset class="song-progress-filters">
+           <legend>Progress</legend>
+            <label>Unlock status<select data-filter-unlock-status><option value="all">All songs</option><option value="unlocked">Unlocked</option><option value="locked">Locked</option></select></label>
+           <label class="song-filter-check"><input type="checkbox" data-filter-unplayed>Show Unplayed</label>
+           <label>Undefeated on difficulty<select data-filter-undefeated><option value="">None</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+           <label class="song-filter-check"><input type="checkbox" data-filter-normal-stars>Less than 5 normal stars</label>
+           <label class="song-filter-check"><input type="checkbox" data-filter-gold-stars>Less than 5 golden stars</label>
+         </fieldset>
+         <p class="song-filter-help">All selected filters apply together. Stars use your best result across difficulties.</p>
       </section>
 
+      <section class="observatory-filter-panel" id="observatory-sort" data-sort-panel aria-label="Sort songs" hidden>
+        <div class="filter-heading"><h2>Sort songs</h2></div>
+        <label>Order<select data-song-sort><option value="unsorted">Unsorted</option><option value="alphabetical">Alphabetical</option><option value="length">Length</option><option value="difficulty">Difficulty</option></select></label>
+        <p class="song-filter-help">A–Z, shortest first, or lowest difficulty first. Difficulty is the five-gold target per playable second.</p>
+      </section>
       <div class="observatory-play-status" data-play-status role="status" aria-live="polite" hidden></div>
     </div>`;
 
@@ -358,6 +376,8 @@ export function createObservatoryUI(
   let filters: SongBrowseFilters = {};
   let favoritesOnly = false;
   let filtersOpen = false;
+  let sortOpen = false;
+  let sortMode: SongSortMode = 'unsorted';
   let rendererStatus: BrightvaleRendererStatus = 'loading';
   let rendererMessage = 'The Observatory is lighting its stars…';
   let playStatus: ObservatoryPlayStatus = 'idle';
@@ -445,14 +465,23 @@ export function createObservatoryUI(
   }
 
   function syncFilterControls(): void {
-    const availability = root.querySelector<HTMLSelectElement>(
-      '[data-filter-availability]',
-    );
-    const supports = root.querySelector<HTMLSelectElement>(
-      '[data-filter-difficulty]',
-    );
-    if (availability !== null) availability.value = filters.availability ?? '';
-    if (supports !== null) supports.value = filters.supportsDifficulty ?? '';
+    root.querySelector<HTMLSelectElement>('[data-song-sort]')!.value = sortMode;
+    root
+      .querySelector('[data-action="toggle-sort"]')!
+      .setAttribute('aria-expanded', String(sortOpen));
+    root.querySelector<HTMLElement>('[data-sort-panel]')!.hidden = !sortOpen;
+    root.querySelector<HTMLSelectElement>(
+      '[data-filter-unlock-status]',
+    )!.value = filters.unlockStatus ?? 'all';
+    root.querySelector<HTMLSelectElement>('[data-filter-undefeated]')!.value =
+      filters.undefeatedDifficulty ?? '';
+    for (const [selector, checked] of [
+      ['[data-filter-unplayed]', filters.unplayedOnly],
+      ['[data-filter-normal-stars]', filters.belowFiveNormalStars],
+      ['[data-filter-gold-stars]', filters.belowFiveGoldStars],
+    ] as const)
+      root.querySelector<HTMLInputElement>(selector)!.checked =
+        checked ?? false;
     const favoritesButton = root.querySelector<HTMLButtonElement>(
       '[data-action="favorites"]',
     );
@@ -464,12 +493,28 @@ export function createObservatoryUI(
     filterPanel.hidden = !filtersOpen;
   }
 
+  function browseProgress(): SongBrowseProgress {
+    const state = options.saveStore?.progression.snapshot();
+    return {
+      getRating:
+        options.getSongRating ??
+        ((id) => options.saveStore?.songRatings.get(id) ?? null),
+      isUnlocked: (id) =>
+        state === undefined ||
+        membership === null ||
+        getSongUnlockRequest(id, state, membership) === null,
+      getVictoryDifficulty: (id) => state?.victoryMarks[id],
+    };
+  }
+
   function reconcile(): void {
     currentSelection = reconcileSongSelection(
       catalog,
       { ...filters, favoritesOnly },
       currentSelection,
       favoriteStore.snapshot().ids,
+      browseProgress(),
+      sortMode,
     );
   }
 
@@ -550,6 +595,8 @@ export function createObservatoryUI(
       catalog,
       { ...filters, favoritesOnly },
       favoriteStore.snapshot().ids,
+      browseProgress(),
+      sortMode,
     );
     root.querySelector<HTMLElement>('[data-result-count]')!.textContent =
       `${results.length} ${results.length === 1 ? 'song' : 'songs'}`;
@@ -562,12 +609,9 @@ export function createObservatoryUI(
         options.getSongRating?.(song.id) ?? null,
       );
       const row = document.createElement('div');
-      row.className = `song-row${song.id === currentSelection.selectedSongId ? ' is-selected' : ''}${song.availability === 'unavailable' ? ' is-unavailable' : ''}`;
+      row.className = `song-row${song.id === currentSelection.selectedSongId ? ' is-selected' : ''}`;
       row.setAttribute('role', 'listitem');
-      row.setAttribute(
-        'aria-label',
-        `${song.title}${song.availability === 'unavailable' ? ', unavailable' : ''}`,
-      );
+      row.setAttribute('aria-label', song.title);
       row.dataset.songId = song.id;
       const select = createButton(
         '',
@@ -588,9 +632,7 @@ export function createObservatoryUI(
       status.textContent =
         song.segmentKind === 'excerpt'
           ? `Demo excerpt · play-test chart · ${presentation.durationText}`
-          : song.availability === 'unavailable'
-            ? `Unavailable · ${presentation.durationText}`
-            : `Play-test chart · ${presentation.durationText}`;
+          : `Play-test chart · ${presentation.durationText}`;
       const locked = unlockRequest(song.id);
       if (locked !== null)
         status.textContent = `Locked · ${locked.kind === 'collection' ? 'Unlock collection first' : 'Unlock song · 1 credit'} · ${presentation.durationText}`;
@@ -634,7 +676,12 @@ export function createObservatoryUI(
       const empty = document.createElement('p');
       empty.className = 'song-list-empty';
       empty.textContent =
-        'No songs match these filters. Clear a filter or try another search.';
+        selectSongs(catalog, { collectionId: filters.collectionId }).length ===
+        0
+          ? filters.collectionId === undefined
+            ? 'No songs are available yet. Check back later.'
+            : 'No songs are available in this collection yet. Try All Songs or another collection.'
+          : 'No songs match these filters. Clear a filter or try another search.';
       list.append(empty);
     }
   }
@@ -828,10 +875,14 @@ export function createObservatoryUI(
       collectionEmblem.classList.remove('has-artwork');
       detailArtwork?.remove();
     }
+    const collectionSongCount = selectSongs(catalog, {
+      collectionId: collection?.id,
+    }).length;
+    const collectionCountText = `${collectionSongCount} ${collectionSongCount === 1 ? 'song' : 'songs'}`;
     root.querySelector<HTMLElement>('[data-collection-count]')!.textContent =
-      `${currentCollection()?.songIds.length ?? 0} songs`;
+      collectionCountText;
     root.querySelector<HTMLElement>('.collection-story')!.textContent =
-      `${currentCollection()?.songIds.length ?? 0} songs in the current collection.`;
+      `${collectionCountText} in the current collection.`;
     if (collection !== null && membership !== null && progress !== undefined) {
       const price = membership.collections.get(collection.id);
       if (
@@ -948,6 +999,11 @@ export function createObservatoryUI(
       if (songId !== undefined) selectSong(songId);
     } else if (action === 'toggle-filters') {
       filtersOpen = !filtersOpen;
+      sortOpen = false;
+      syncFilterControls();
+    } else if (action === 'toggle-sort') {
+      sortOpen = !sortOpen;
+      filtersOpen = false;
       syncFilterControls();
     } else if (action === 'clear-filters') {
       filters = { collectionId: filters.collectionId };
@@ -999,16 +1055,39 @@ export function createObservatoryUI(
 
   function onChange(event: Event): void {
     const target = event.target;
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      const key = target.hasAttribute('data-filter-unplayed')
+        ? 'unplayedOnly'
+        : target.hasAttribute('data-filter-normal-stars')
+          ? 'belowFiveNormalStars'
+          : target.hasAttribute('data-filter-gold-stars')
+            ? 'belowFiveGoldStars'
+            : null;
+      if (key === null) return;
+      filters = { ...filters, [key]: target.checked };
+      reconcile();
+      render();
+      return;
+    }
     if (!(target instanceof HTMLSelectElement)) return;
-    if (target.dataset.filterAvailability !== undefined) {
+    if (target.dataset.songSort !== undefined) {
       const value = target.value;
-      const availability =
-        value === 'available' || value === 'unavailable' ? value : undefined;
-      filters = { ...filters, availability };
-    } else if (target.dataset.filterDifficulty !== undefined) {
+      sortMode =
+        value === 'alphabetical' || value === 'length' || value === 'difficulty'
+          ? value
+          : 'unsorted';
+    } else if (target.dataset.filterUnlockStatus !== undefined) {
       filters = {
         ...filters,
-        supportsDifficulty: normalizeDifficulty(target.value) ?? undefined,
+        unlockStatus:
+          target.value === 'locked' || target.value === 'unlocked'
+            ? target.value
+            : 'all',
+      };
+    } else if (target.dataset.filterUndefeated !== undefined) {
+      filters = {
+        ...filters,
+        undefeatedDifficulty: normalizeDifficulty(target.value) ?? undefined,
       };
     } else if (target.dataset.runDifficulty !== undefined) {
       const difficulty = normalizeDifficulty(target.value);
@@ -1041,7 +1120,25 @@ export function createObservatoryUI(
       ?.focus();
   }
 
+  function onDocumentClick(event: MouseEvent): void {
+    if (!filtersOpen && !sortOpen) return;
+    const path = event.composedPath();
+    const toggle = root.querySelector('[data-action="toggle-filters"]');
+    const sortPanel = root.querySelector('[data-sort-panel]')!;
+    const sortToggle = root.querySelector('[data-action="toggle-sort"]')!;
+    if (
+      filtersOpen &&
+      !path.includes(filterPanel) &&
+      (toggle === null || !path.includes(toggle))
+    )
+      filtersOpen = false;
+    if (sortOpen && !path.includes(sortPanel) && !path.includes(sortToggle))
+      sortOpen = false;
+    syncFilterControls();
+  }
+
   root.addEventListener('click', onClick);
+  root.ownerDocument.addEventListener('click', onDocumentClick);
   root.addEventListener('input', onInput);
   root.addEventListener('change', onChange);
   root.addEventListener('keydown', onKeyDown);
@@ -1086,6 +1183,7 @@ export function createObservatoryUI(
       playStatus = status;
       playMessage = message;
       if (status === 'idle') {
+        reconcile();
         render();
       }
       renderDetail();
@@ -1115,6 +1213,7 @@ export function createObservatoryUI(
       saveDialog?.destroy();
       unlockDialog?.destroy();
       root.removeEventListener('click', onClick);
+      root.ownerDocument.removeEventListener('click', onDocumentClick);
       root.removeEventListener('input', onInput);
       root.removeEventListener('change', onChange);
       root.removeEventListener('keydown', onKeyDown);

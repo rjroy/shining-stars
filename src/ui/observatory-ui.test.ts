@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ChartConfig } from '../game/chart';
 import { createSongCatalog } from '../catalog/catalog';
+import { selectSongs } from '../catalog/selectors';
+import { createProgression } from '../catalog/progression';
 import {
   chooseObservatorySong,
   formatSongDuration,
   getObservatoryBrowserTitle,
+  getSongUnlockRequest,
 } from './observatory-ui';
 
 const collection = {
@@ -75,6 +78,32 @@ const catalog = createSongCatalog(
 );
 
 describe('Observatory selection transitions', () => {
+  it('keeps progression-locked songs browsable and selectable through both unlock steps', () => {
+    const membership = {
+      songs: new Map([['mixed', 'paid']]),
+      collections: new Map([['paid', 2]]),
+    };
+    const state = createProgression();
+    expect(selectSongs(catalog).map((song) => song.id)).toContain('mixed');
+    expect(
+      chooseObservatorySong(
+        catalog,
+        { selectedSongId: null, runDifficulty: null },
+        'mixed',
+      ),
+    ).toEqual({ selectedSongId: 'mixed', runDifficulty: 'normal' });
+    expect(getSongUnlockRequest('mixed', state, membership)).toEqual({
+      kind: 'collection',
+      collectionId: 'paid',
+    });
+    expect(
+      getSongUnlockRequest(
+        'mixed',
+        { ...state, collectionPurchases: { paid: 2 } },
+        membership,
+      ),
+    ).toEqual({ kind: 'song', songId: 'mixed' });
+  });
   it.each([
     [8.4, '0:08'],
     [65.8, '1:06'],
@@ -106,6 +135,19 @@ describe('Observatory selection transitions', () => {
       runDifficulty: 'normal' as const,
     };
     expect(chooseObservatorySong(catalog, current, 'missing')).toBeNull();
+    expect(
+      chooseObservatorySong(
+        {
+          ...catalog,
+          songs: catalog.songs.map((song) => ({
+            ...song,
+            availability: 'unavailable' as const,
+          })),
+        },
+        current,
+        'mixed',
+      ),
+    ).toBeNull();
     expect(
       getObservatoryBrowserTitle(catalog, { collectionId: 'all-songs' }, false),
     ).toBe('All Songs');

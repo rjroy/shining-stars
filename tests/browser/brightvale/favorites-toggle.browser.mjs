@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -117,8 +117,7 @@ test(
       };
       const snapshot = () => ({
         query: find('[data-search]').value,
-        availability: find('[data-filter-availability]').value,
-        difficulty: find('[data-filter-difficulty]').value,
+        difficulty: find('[data-filter-unlock-status]').value,
         collection: find('[data-browser-title]').textContent,
         pressed: find('[data-action="favorites"]').getAttribute('aria-pressed'),
         ids: [...document.querySelectorAll('[data-action="select-song"]')].map(row => row.dataset.songId),
@@ -126,8 +125,7 @@ test(
       });
       click('browse-collection');
       click('toggle-favorite');
-      change('[data-filter-availability]', 'available');
-      change('[data-filter-difficulty]', 'normal');
+      change('[data-filter-unlock-status]', 'all');
       change('[data-search]', 'a', 'input');
       const before = snapshot();
       click('favorites');
@@ -142,9 +140,8 @@ test(
       const emptyOff = snapshot();
       return { before, on, off, emptyBefore, emptyOn, emptyOff };
     })()`);
-      const filters = ({ query, availability, difficulty, collection }) => ({
+      const filters = ({ query, difficulty, collection }) => ({
         query,
-        availability,
         difficulty,
         collection,
       });
@@ -171,6 +168,331 @@ test(
       }
       assert.equal(evidence.emptyOn.pressed, 'true');
       assert.equal(evidence.emptyOff.pressed, 'false');
+      const progressionEvidence = await evaluate(`(async () => {
+        const { createObservatoryUI, getSongUnlockRequest } = await import('/src/ui/observatory-ui.ts');
+        const { SONG_CATALOG } = await import('/src/catalog/catalog.ts');
+        const { createSaveStore } = await import('/src/app/save-data.ts');
+        const { createProgressionMembership } = await import('/src/catalog/progression-catalog.ts');
+        const host = document.createElement('div');
+        host.style.cssText = 'position:fixed;inset:0;z-index:1000;background:#0e0d28';
+        document.body.append(host);
+        const store = createSaveStore(null);
+        const blank = store.exportJson();
+        const ui = createObservatoryUI(host, SONG_CATALOG, { onPlay: () => {} }, store.favorites, { saveStore: store });
+        window.__progressionFilterFixture = { host, ui };
+        const find = selector => host.querySelector(selector);
+        const ids = () => {
+          const rows = [...host.querySelectorAll('.song-row')].map(row => row.dataset.songId);
+          if (parseInt(find('[data-result-count]').textContent, 10) !== rows.length || parseInt(find('[data-browser-count]').textContent, 10) !== rows.length) throw new Error('Result counts did not refresh');
+          return rows;
+        };
+        const set = (selector, value) => {
+          const input = find(selector);
+          if (input.type === 'checkbox') input.checked = value; else input.value = value;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        find('[data-action="all-songs"]').click();
+        find('[data-action="toggle-filters"]').click();
+        const defaults = ui.getSelectionSnapshot();
+        const all = ids();
+        const songId = all[0];
+        set('[data-filter-unplayed]', true);
+        store.songRatings.recordCompletedResult(songId, { score: 0, normalMaximum: 100, outcome: 'defeat', difficulty: 'normal' });
+        ui.setPlayStatus('idle');
+        const resultRefresh = !ids().includes(songId) && ui.getSelectionSnapshot().selection.selectedSongId !== songId;
+        store.applyImport(store.previewImport(blank, 'replace', 'replace'), 'session');
+        ui.refreshSavedData();
+        const resetRefresh = ids().includes(songId);
+        const imported = createSaveStore(null);
+        imported.songRatings.recordCompletedResult(songId, { score: 100, normalMaximum: 100, outcome: 'victory', difficulty: 'hard' });
+        imported.progression.recordVictory(songId, 'hard');
+        store.applyImport(store.previewImport(imported.exportJson(), 'replace', 'replace'), 'session');
+        ui.refreshSavedData();
+        const importRefresh = !ids().includes(songId);
+        find('[data-action="clear-filters"]').click();
+        set('[data-filter-normal-stars]', true);
+        const normalBest = !ids().includes(songId);
+        set('[data-filter-normal-stars]', false);
+        set('[data-filter-gold-stars]', true);
+        const goldBest = !ids().includes(songId);
+        set('[data-filter-gold-stars]', false);
+        const beforeDifficulty = ui.getSelectionSnapshot().selection.runDifficulty;
+        set('[data-filter-undefeated]', 'easy');
+        const higherCredit = !ids().includes(songId);
+        set('[data-filter-undefeated]', '');
+        const noOpposite = ids().length === all.length;
+        const independent = ui.getSelectionSnapshot().selection.runDifficulty === beforeDifficulty;
+        const membership = createProgressionMembership(SONG_CATALOG);
+        const locked = all.find(id => getSongUnlockRequest(id, store.progression.snapshot(), membership) !== null);
+        set('[data-filter-unlock-status]', 'locked');
+        const lockedOnly = ids().includes(locked) && ids().every(id => getSongUnlockRequest(id, store.progression.snapshot(), membership) !== null);
+        set('[data-filter-unlock-status]', 'unlocked');
+        const lockedExcluded = locked !== undefined && !ids().includes(locked);
+        if (locked !== undefined) {
+          const parent = membership.songs.get(locked);
+          const needed = (membership.collections.get(parent) ?? 0) + (membership.songPrice ?? 1);
+          for (let index = 0; index < Math.ceil(needed / 3); index++) store.progression.recordVictory('browser-credit-' + index, 'hard');
+          store.progression.purchase({ kind: 'collection', collectionId: parent }, 'session');
+          ui.refreshSavedData();
+          const afterCollection = ids().includes(locked);
+          store.progression.purchase({ kind: 'song', songId: locked }, 'session');
+          ui.refreshSavedData();
+          const unlockRefresh = !afterCollection && ids().includes(locked);
+          set('[data-filter-unlock-status]', 'locked');
+          const lockedRefresh = !ids().includes(locked) && ui.getSelectionSnapshot().selection.selectedSongId !== locked;
+          store.applyImport(store.previewImport(blank, 'replace', 'replace'), 'session');
+          ui.refreshSavedData();
+          const lockedReset = ids().includes(locked);
+          find('[data-action="clear-filters"]').click();
+          return { defaults: defaults.filters, resultRefresh, resetRefresh, importRefresh, normalBest, goldBest, higherCredit, noOpposite, independent, lockedOnly, lockedExcluded, unlockRefresh, lockedRefresh, lockedReset };
+        }
+        throw new Error('The integration catalog needs an unlockable song');
+      })()`);
+      assert.equal(
+        progressionEvidence.defaults.undefeatedDifficulty,
+        undefined,
+      );
+      for (const [check, passed] of Object.entries(progressionEvidence)) {
+        if (check !== 'defaults') assert.equal(passed, true, check);
+      }
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+      ]) {
+        await command('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: width < 600,
+        });
+        await evaluate(
+          `document.querySelector('[data-action="clear-filters"]').click()`,
+        );
+        await evaluate(
+          `if (document.querySelector('[data-filter-panel]').hidden) document.querySelector('[data-action="toggle-filters"]').click()`,
+        );
+        await delay(250);
+        const layout = await evaluate(`(() => {
+          const panel = document.querySelector('[data-filter-panel]');
+          const select = document.querySelector('[data-filter-unlock-status]');
+          const rect = select.getBoundingClientRect();
+          return {
+            noAvailability: !document.querySelector('[data-filter-availability]'),
+            open: !panel.hidden,
+            fits: rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight,
+            usable: rect.height >= 40 && !select.disabled,
+            rows: document.querySelectorAll('.song-row').length,
+          };
+        })()`);
+        assert.equal(layout.noAvailability, true);
+        assert.equal(layout.open, true);
+        assert.equal(
+          layout.fits,
+          true,
+          `${width}px unlock status stays in view`,
+        );
+        assert.equal(layout.usable, true);
+        assert.ok(layout.rows > 0);
+        const dismissal = await evaluate(`(() => {
+          const { host } = window.__progressionFilterFixture;
+          const panel = host.querySelector('[data-filter-panel]');
+          const toggle = host.querySelector('[data-action="toggle-filters"]');
+          const expanded = () => toggle.getAttribute('aria-expanded');
+          if (panel.hidden) toggle.click();
+          const opened = !panel.hidden && expanded() === 'true';
+          panel.querySelector('h2').click();
+          panel.querySelector('[data-filter-unlock-status]').click();
+          panel.querySelector('[data-filter-unplayed]').click();
+          const inside = !panel.hidden && expanded() === 'true';
+          panel.querySelector('[data-filter-unplayed]').click();
+          toggle.querySelector('svg').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          const toggleClosed = panel.hidden && expanded() === 'false';
+          toggle.click();
+          const toggleOpened = !panel.hidden;
+          host.querySelector('[data-browser-title]').click();
+          const outsideInRoot = panel.hidden && expanded() === 'false';
+          toggle.click();
+          document.body.click();
+          const outsideRoot = panel.hidden && expanded() === 'false';
+          toggle.click();
+          return { opened, inside, toggleClosed, toggleOpened, outsideInRoot, outsideRoot };
+        })()`);
+        for (const [check, passed] of Object.entries(dismissal))
+          assert.equal(passed, true, `${width}px ${check}`);
+        if (width < 600) {
+          await command('Emulation.setTouchEmulationEnabled', {
+            enabled: true,
+          });
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [{ x: 10, y: height - 5 }],
+          });
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: [],
+          });
+        } else {
+          for (const type of ['mousePressed', 'mouseReleased'])
+            await command('Input.dispatchMouseEvent', {
+              type,
+              x: 10,
+              y: height - 5,
+              button: 'left',
+              clickCount: 1,
+            });
+        }
+        await delay(100);
+        assert.equal(
+          await evaluate(
+            `window.__progressionFilterFixture.host.querySelector('[data-filter-panel]').hidden`,
+          ),
+          true,
+          `${width}px real outside click/tap dismisses`,
+        );
+        await evaluate(
+          `window.__progressionFilterFixture.host.querySelector('[data-action="toggle-filters"]').click()`,
+        );
+        const progressionLayout = await evaluate(`(() => {
+          const { host } = window.__progressionFilterFixture;
+          const panel = host.querySelector('[data-filter-panel]');
+          const controls = [...panel.querySelectorAll('input, select')];
+          const rect = panel.getBoundingClientRect();
+          const detail = host.querySelector('[data-song-detail]');
+          return {
+            checkboxes: panel.querySelectorAll('input[type="checkbox"]').length,
+            defaults: [...panel.querySelector('[data-filter-undefeated]').options].map(option => option.textContent),
+            fits: rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight,
+            controlsFit: controls.every(input => { const r = input.getBoundingClientRect(); return r.left >= rect.left && r.right <= rect.right && r.top >= rect.top && r.bottom <= rect.bottom; }),
+            detailScroll: detail.scrollHeight > detail.clientHeight + 1,
+          };
+        })()`);
+        assert.equal(progressionLayout.checkboxes, 3);
+        assert.deepEqual(progressionLayout.defaults, [
+          'None',
+          'Easy',
+          'Normal',
+          'Hard',
+        ]);
+        assert.equal(
+          progressionLayout.fits,
+          true,
+          'progression panel fits viewport',
+        );
+        assert.equal(
+          progressionLayout.controlsFit,
+          true,
+          'all separate controls visible',
+        );
+        assert.equal(
+          progressionLayout.detailScroll,
+          false,
+          'details stay compact and non-scrolling',
+        );
+        const sorting = await evaluate(`(() => {
+          const { host, ui } = window.__progressionFilterFixture;
+          const toggle = host.querySelector('[data-action="toggle-sort"]');
+          const panel = host.querySelector('[data-sort-panel]');
+          const filter = host.querySelector('[data-filter-panel]');
+          const select = panel.querySelector('select');
+          const ids = () => [...host.querySelectorAll('.song-row')].map(row => row.dataset.songId);
+          const original = ids();
+          const selection = ui.getSelectionSnapshot().selection;
+          toggle.click();
+          const coordinated = filter.hidden && !panel.hidden;
+          const modes = [...select.options].map(option => option.textContent);
+          select.click();
+          let retained = !panel.hidden;
+          for (const value of ['alphabetical', 'length', 'difficulty', 'unsorted']) {
+            select.value = value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            retained &&= !panel.hidden && JSON.stringify(ui.getSelectionSnapshot().selection) === JSON.stringify(selection);
+          }
+          const restored = JSON.stringify(ids()) === JSON.stringify(original);
+          toggle.querySelector('svg').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          const toggleClosed = panel.hidden;
+          toggle.click();
+          document.body.click();
+          const outside = panel.hidden && toggle.getAttribute('aria-expanded') === 'false';
+          toggle.click();
+          host.querySelector('[data-action="toggle-filters"]').click();
+          const coordinatedBack = panel.hidden && !filter.hidden;
+          toggle.click();
+          const r = panel.getBoundingClientRect();
+          const t = toggle.getBoundingClientRect();
+          const filterToggle = host.querySelector('[data-action="toggle-filters"]').getBoundingClientRect();
+          const s = select.getBoundingClientRect();
+          return { coordinated, retained, restored, toggleClosed, outside, coordinatedBack,
+            modes, besideFilters: Math.abs(t.top - filterToggle.top) < 1, fits: r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && t.left >= 0 && t.right <= innerWidth && s.height >= 40 };
+        })()`);
+        assert.deepEqual(sorting.modes, [
+          'Unsorted',
+          'Alphabetical',
+          'Length',
+          'Difficulty',
+        ]);
+        for (const [check, passed] of Object.entries(sorting))
+          if (check !== 'modes')
+            assert.equal(passed, true, `${width}px sort ${check}`);
+        if (process.env.BRIGHTVALE_SCREENSHOT_DIR) {
+          const { data } = await command('Page.captureScreenshot', {
+            format: 'png',
+          });
+          await writeFile(
+            path.join(
+              process.env.BRIGHTVALE_SCREENSHOT_DIR,
+              `3sh-${width}.png`,
+            ),
+            Buffer.from(data, 'base64'),
+          );
+        }
+        if (width < 600) {
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [{ x: 10, y: height - 5 }],
+          });
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: [],
+          });
+        } else {
+          for (const type of ['mousePressed', 'mouseReleased'])
+            await command('Input.dispatchMouseEvent', {
+              type,
+              x: 10,
+              y: height - 5,
+              button: 'left',
+              clickCount: 1,
+            });
+        }
+        await delay(100);
+        assert.equal(
+          await evaluate(
+            `window.__progressionFilterFixture.host.querySelector('[data-sort-panel]').hidden`,
+          ),
+          true,
+          `${width}px real outside click/tap dismisses sort`,
+        );
+      }
+      const cleanup = await evaluate(`(() => {
+        const { ui, host } = window.__progressionFilterFixture;
+        const original = document.removeEventListener;
+        let removed = 0;
+        document.removeEventListener = function(type, handler, options) {
+          if (type === 'click' && handler.name === 'onDocumentClick') removed++;
+          return original.call(this, type, handler, options);
+        };
+        try { ui.destroy(); ui.destroy(); }
+        finally { document.removeEventListener = original; }
+        host.remove();
+        delete window.__progressionFilterFixture;
+        document.body.click();
+        return removed === 1;
+      })()`);
+      assert.equal(
+        cleanup,
+        true,
+        'dispose removes the outside-click listener exactly once',
+      );
     } finally {
       try {
         socket?.close();

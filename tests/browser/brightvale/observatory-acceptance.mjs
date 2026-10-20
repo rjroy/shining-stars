@@ -568,7 +568,10 @@ async function runAcceptance() {
       songIds:[...collection.songIds],
     };
   })()`);
-  assert.ok(initialCollection, 'The authored catalog must define an initial collection.');
+  assert.ok(
+    initialCollection,
+    'The authored catalog must define an initial collection.',
+  );
   const overview = await cdp.evaluate(`(()=>({
     selectedCollectionId:document.querySelector('[data-action="select-collection"][aria-pressed="true"]')?.dataset.collectionId,
     title:document.querySelector('[data-collection-title]')?.textContent,
@@ -734,7 +737,7 @@ async function runAcceptance() {
     const fixture=createSongCatalog({schemaVersion:1,songs,collections:[{
       id:collectionId,title:'Synthetic scale-only fixture',sortOrder:0,songIds,
     }]},generated,audio);
-    const filters={query:'synthetic scale record',availability:'available',supportsDifficulty:'hard'};
+    const filters={query:'synthetic scale record'};
     const expected=selectSongs(fixture,filters).length;
     const iterations=400;
     const started=performance.now();

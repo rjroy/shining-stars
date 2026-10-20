@@ -9,9 +9,7 @@ import {
 } from './catalog';
 import { canStartSong, selectSongs } from './selectors';
 
-const chart = (
-  difficulty: 'easy' | 'normal' | 'hard',
-): ChartConfig => ({
+const chart = (difficulty: 'easy' | 'normal' | 'hard'): ChartConfig => ({
   sourceStart: 0,
   duration: 20,
   twilightAt: 10,
@@ -108,7 +106,9 @@ describe('song catalog runtime', () => {
 
   it('requires valid generated scoring metadata and nulls it without Normal', () => {
     const bundle = generated['mixed-song.charts.json']!;
-    const withScoring = (scoring: unknown): Readonly<Record<string, unknown>> => ({
+    const withScoring = (
+      scoring: unknown,
+    ): Readonly<Record<string, unknown>> => ({
       ...generated,
       'mixed-song.charts.json': { ...bundle, scoring },
     });
@@ -121,9 +121,9 @@ describe('song catalog runtime', () => {
       { ...bundle.scoring, fiveGoldTarget: 181 },
       { ...bundle.scoring, chartFingerprint: 'not-a-fingerprint' },
     ]) {
-      expect(() => createSongCatalog(metadata, withScoring(scoring), audio)).toThrow(
-        /scoring/,
-      );
+      expect(() =>
+        createSongCatalog(metadata, withScoring(scoring), audio),
+      ).toThrow(/scoring/);
     }
 
     const easyBundle = generated['easy-song.charts.json']!;
@@ -255,9 +255,7 @@ describe('song catalog runtime', () => {
     expect(canStartSong(catalog, mixed, 'normal')).toBe(false);
     expect(canStartSong(catalog, mixed, 'hard')).toBe(true);
     expect(
-      selectSongs(catalog, { supportsDifficulty: 'easy' }).map(
-        (song) => song.id,
-      ),
+      selectSongs(catalog, { query: 'Easy' }).map((song) => song.id),
     ).toEqual(['easy-song']);
   });
 
@@ -294,9 +292,8 @@ describe('song catalog runtime', () => {
     expect(
       selectSongs(catalog, {
         collectionId: 'beta',
-        supportsDifficulty: 'easy',
       }).map(({ id }) => id),
-    ).toEqual(['easy-song']);
+    ).toEqual(['mixed-song', 'easy-song']);
     expect(selectSongs(catalog).map(({ id }) => id)).toEqual([
       'mixed-song',
       'easy-song',

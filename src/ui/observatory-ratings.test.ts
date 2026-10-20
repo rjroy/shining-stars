@@ -185,11 +185,13 @@ describe('Observatory return-time rating refresh policy', () => {
     renderRows: () => void,
     renderDetail: () => void,
     syncStorageNotice: () => void,
+    reconcile: () => void = vi.fn(),
   ) {
     const match = source.match(
       /setPlayStatus\(status, message = ''\) \{([\s\S]*?)\n {4}\},\n {4}focusSelectedSong/,
     );
-    if (match === null) throw new Error('Production setPlayStatus method was not found');
+    if (match === null)
+      throw new Error('Production setPlayStatus method was not found');
     const body = match[1];
     const invoke = new Function(
       'renderRows',
@@ -197,14 +199,34 @@ describe('Observatory return-time rating refresh policy', () => {
       'syncStorageNotice',
       'setNotice',
       'render',
+      'reconcile',
       `let playStatus, playMessage; return function(status, message = '') {${body}}`,
     );
-    invoke(renderRows, renderDetail, syncStorageNotice, vi.fn(), () => {
-      renderRows();
-      renderDetail();
-      syncStorageNotice();
-    })('idle');
+    invoke(
+      renderRows,
+      renderDetail,
+      syncStorageNotice,
+      vi.fn(),
+      () => {
+        renderRows();
+        renderDetail();
+        syncStorageNotice();
+      },
+      reconcile,
+    )('idle');
   }
+
+  it('reconciles save-derived filtered selection before painting the returned catalog', () => {
+    const calls: string[] = [];
+    returnToSelection(
+      () => calls.push('rows'),
+      () => calls.push('detail'),
+      () => calls.push('notice'),
+      () => calls.push('reconcile'),
+    );
+    expect(calls[0]).toBe('reconcile');
+    expect(calls).toContain('rows');
+  });
 
   function combineNotices(
     favorites: string | null,
