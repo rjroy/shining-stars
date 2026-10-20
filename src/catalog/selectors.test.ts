@@ -111,7 +111,7 @@ describe('catalog browsing selectors', () => {
     expect(selectSongs(catalog, { query: 'audio' })).toEqual([]);
   });
 
-  it('intersects search, collection, favorites and supports-difficulty filters', () => {
+  it('intersects search, collection and favorites filters', () => {
     expect(
       selectSongs(
         catalog,
@@ -119,7 +119,6 @@ describe('catalog browsing selectors', () => {
           favoritesOnly: true,
           query: 'CAFÉ',
           collectionId: 'all-songs',
-          supportsDifficulty: 'hard',
         },
         new Set(['mixed', 'easy-only']),
       ).map((song) => song.id),
@@ -128,30 +127,20 @@ describe('catalog browsing selectors', () => {
       selectSongs(catalog, { favoritesOnly: true }, new Set(['unavailable'])),
     ).toEqual([]);
     expect(
-      selectSongs(catalog, { supportsDifficulty: 'easy' }).map(
-        (song) => song.id,
-      ),
+      selectSongs(catalog, { query: 'Quiet' }).map((song) => song.id),
     ).toEqual(['easy-only']);
   });
 
-  it('keeps run difficulty independent of a supports-difficulty filter and reconciles selection by stable ID', () => {
+  it('keeps run difficulty and reconciles selection by stable ID', () => {
     const initiallySelected = {
       selectedSongId: 'mixed',
       runDifficulty: 'hard' as const,
     };
+    expect(reconcileSongSelection(catalog, {}, initiallySelected)).toEqual(
+      initiallySelected,
+    );
     expect(
-      reconcileSongSelection(
-        catalog,
-        { supportsDifficulty: 'hard' },
-        initiallySelected,
-      ),
-    ).toEqual(initiallySelected);
-    expect(
-      reconcileSongSelection(
-        catalog,
-        { supportsDifficulty: 'easy' },
-        initiallySelected,
-      ),
+      reconcileSongSelection(catalog, { query: 'Quiet' }, initiallySelected),
     ).toEqual({
       selectedSongId: 'easy-only',
       runDifficulty: 'easy',

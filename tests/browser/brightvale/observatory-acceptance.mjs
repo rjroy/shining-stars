@@ -737,7 +737,7 @@ async function runAcceptance() {
     const fixture=createSongCatalog({schemaVersion:1,songs,collections:[{
       id:collectionId,title:'Synthetic scale-only fixture',sortOrder:0,songIds,
     }]},generated,audio);
-    const filters={query:'synthetic scale record',supportsDifficulty:'hard'};
+    const filters={query:'synthetic scale record'};
     const expected=selectSongs(fixture,filters).length;
     const iterations=400;
     const started=performance.now();

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -117,7 +117,7 @@ test(
       };
       const snapshot = () => ({
         query: find('[data-search]').value,
-        difficulty: find('[data-filter-difficulty]').value,
+        difficulty: find('[data-filter-unlock-status]').value,
         collection: find('[data-browser-title]').textContent,
         pressed: find('[data-action="favorites"]').getAttribute('aria-pressed'),
         ids: [...document.querySelectorAll('[data-action="select-song"]')].map(row => row.dataset.songId),
@@ -125,7 +125,7 @@ test(
       });
       click('browse-collection');
       click('toggle-favorite');
-      change('[data-filter-difficulty]', 'normal');
+      change('[data-filter-unlock-status]', 'all');
       change('[data-search]', 'a', 'input');
       const before = snapshot();
       click('favorites');
@@ -181,7 +181,11 @@ test(
         const ui = createObservatoryUI(host, SONG_CATALOG, { onPlay: () => {} }, store.favorites, { saveStore: store });
         window.__progressionFilterFixture = { host, ui };
         const find = selector => host.querySelector(selector);
-        const ids = () => [...host.querySelectorAll('.song-row')].map(row => row.dataset.songId);
+        const ids = () => {
+          const rows = [...host.querySelectorAll('.song-row')].map(row => row.dataset.songId);
+          if (parseInt(find('[data-result-count]').textContent, 10) !== rows.length || parseInt(find('[data-browser-count]').textContent, 10) !== rows.length) throw new Error('Result counts did not refresh');
+          return rows;
+        };
         const set = (selector, value) => {
           const input = find(selector);
           if (input.type === 'checkbox') input.checked = value; else input.value = value;
@@ -220,7 +224,9 @@ test(
         const independent = ui.getSelectionSnapshot().selection.runDifficulty === beforeDifficulty;
         const membership = createProgressionMembership(SONG_CATALOG);
         const locked = all.find(id => getSongUnlockRequest(id, store.progression.snapshot(), membership) !== null);
-        set('[data-filter-unlocked]', true);
+        set('[data-filter-unlock-status]', 'locked');
+        const lockedOnly = ids().includes(locked) && ids().every(id => getSongUnlockRequest(id, store.progression.snapshot(), membership) !== null);
+        set('[data-filter-unlock-status]', 'unlocked');
         const lockedExcluded = locked !== undefined && !ids().includes(locked);
         if (locked !== undefined) {
           const parent = membership.songs.get(locked);
@@ -232,8 +238,13 @@ test(
           store.progression.purchase({ kind: 'song', songId: locked }, 'session');
           ui.refreshSavedData();
           const unlockRefresh = !afterCollection && ids().includes(locked);
+          set('[data-filter-unlock-status]', 'locked');
+          const lockedRefresh = !ids().includes(locked) && ui.getSelectionSnapshot().selection.selectedSongId !== locked;
+          store.applyImport(store.previewImport(blank, 'replace', 'replace'), 'session');
+          ui.refreshSavedData();
+          const lockedReset = ids().includes(locked);
           find('[data-action="clear-filters"]').click();
-          return { defaults: defaults.filters, resultRefresh, resetRefresh, importRefresh, normalBest, goldBest, higherCredit, noOpposite, independent, lockedExcluded, unlockRefresh };
+          return { defaults: defaults.filters, resultRefresh, resetRefresh, importRefresh, normalBest, goldBest, higherCredit, noOpposite, independent, lockedOnly, lockedExcluded, unlockRefresh, lockedRefresh, lockedReset };
         }
         throw new Error('The integration catalog needs an unlockable song');
       })()`);
@@ -263,7 +274,7 @@ test(
         await delay(250);
         const layout = await evaluate(`(() => {
           const panel = document.querySelector('[data-filter-panel]');
-          const select = document.querySelector('[data-filter-difficulty]');
+          const select = document.querySelector('[data-filter-unlock-status]');
           const rect = select.getBoundingClientRect();
           return {
             noAvailability: !document.querySelector('[data-filter-availability]'),
@@ -278,10 +289,69 @@ test(
         assert.equal(
           layout.fits,
           true,
-          `${width}px difficulty filter stays in view`,
+          `${width}px unlock status stays in view`,
         );
         assert.equal(layout.usable, true);
         assert.ok(layout.rows > 0);
+        const dismissal = await evaluate(`(() => {
+          const { host } = window.__progressionFilterFixture;
+          const panel = host.querySelector('[data-filter-panel]');
+          const toggle = host.querySelector('[data-action="toggle-filters"]');
+          const expanded = () => toggle.getAttribute('aria-expanded');
+          if (panel.hidden) toggle.click();
+          const opened = !panel.hidden && expanded() === 'true';
+          panel.querySelector('h2').click();
+          panel.querySelector('[data-filter-unlock-status]').click();
+          panel.querySelector('[data-filter-unplayed]').click();
+          const inside = !panel.hidden && expanded() === 'true';
+          panel.querySelector('[data-filter-unplayed]').click();
+          toggle.querySelector('svg').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          const toggleClosed = panel.hidden && expanded() === 'false';
+          toggle.click();
+          const toggleOpened = !panel.hidden;
+          host.querySelector('[data-browser-title]').click();
+          const outsideInRoot = panel.hidden && expanded() === 'false';
+          toggle.click();
+          document.body.click();
+          const outsideRoot = panel.hidden && expanded() === 'false';
+          toggle.click();
+          return { opened, inside, toggleClosed, toggleOpened, outsideInRoot, outsideRoot };
+        })()`);
+        for (const [check, passed] of Object.entries(dismissal))
+          assert.equal(passed, true, `${width}px ${check}`);
+        if (width < 600) {
+          await command('Emulation.setTouchEmulationEnabled', {
+            enabled: true,
+          });
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [{ x: 10, y: height - 5 }],
+          });
+          await command('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: [],
+          });
+        } else {
+          for (const type of ['mousePressed', 'mouseReleased'])
+            await command('Input.dispatchMouseEvent', {
+              type,
+              x: 10,
+              y: height - 5,
+              button: 'left',
+              clickCount: 1,
+            });
+        }
+        await delay(100);
+        assert.equal(
+          await evaluate(
+            `window.__progressionFilterFixture.host.querySelector('[data-filter-panel]').hidden`,
+          ),
+          true,
+          `${width}px real outside click/tap dismisses`,
+        );
+        await evaluate(
+          `window.__progressionFilterFixture.host.querySelector('[data-action="toggle-filters"]').click()`,
+        );
         const progressionLayout = await evaluate(`(() => {
           const { host } = window.__progressionFilterFixture;
           const panel = host.querySelector('[data-filter-panel]');
@@ -296,7 +366,7 @@ test(
             detailScroll: detail.scrollHeight > detail.clientHeight + 1,
           };
         })()`);
-        assert.equal(progressionLayout.checkboxes, 4);
+        assert.equal(progressionLayout.checkboxes, 3);
         assert.deepEqual(progressionLayout.defaults, [
           'None',
           'Easy',
@@ -318,9 +388,38 @@ test(
           false,
           'details stay compact and non-scrolling',
         );
+        if (process.env.BRIGHTVALE_SCREENSHOT_DIR) {
+          const { data } = await command('Page.captureScreenshot', {
+            format: 'png',
+          });
+          await writeFile(
+            path.join(
+              process.env.BRIGHTVALE_SCREENSHOT_DIR,
+              `58a-${width}.png`,
+            ),
+            Buffer.from(data, 'base64'),
+          );
+        }
       }
-      await evaluate(
-        `window.__progressionFilterFixture.ui.destroy(); window.__progressionFilterFixture.host.remove(); delete window.__progressionFilterFixture;`,
+      const cleanup = await evaluate(`(() => {
+        const { ui, host } = window.__progressionFilterFixture;
+        const original = document.removeEventListener;
+        let removed = 0;
+        document.removeEventListener = function(type, handler, options) {
+          if (type === 'click' && handler.name === 'onDocumentClick') removed++;
+          return original.call(this, type, handler, options);
+        };
+        try { ui.destroy(); ui.destroy(); }
+        finally { document.removeEventListener = original; }
+        host.remove();
+        delete window.__progressionFilterFixture;
+        document.body.click();
+        return removed === 1;
+      })()`);
+      assert.equal(
+        cleanup,
+        true,
+        'dispose removes the outside-click listener exactly once',
       );
     } finally {
       try {

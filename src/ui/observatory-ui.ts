@@ -320,10 +320,9 @@ export function createObservatoryUI(
 
       <section class="observatory-filter-panel" id="observatory-filters" data-filter-panel aria-label="Filter songs" hidden>
         <div class="filter-heading"><h2>Refine your search</h2><button type="button" data-action="clear-filters">Clear filters</button></div>
-         <label>Difficulty support<select data-filter-difficulty><option value="">Any difficulty</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
          <fieldset class="song-progress-filters">
            <legend>Progress</legend>
-           <label class="song-filter-check"><input type="checkbox" data-filter-unlocked>Show Unlocked</label>
+            <label>Unlock status<select data-filter-unlock-status><option value="all">All songs</option><option value="unlocked">Unlocked</option><option value="locked">Locked</option></select></label>
            <label class="song-filter-check"><input type="checkbox" data-filter-unplayed>Show Unplayed</label>
            <label>Undefeated on difficulty<select data-filter-undefeated><option value="">None</option><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
            <label class="song-filter-check"><input type="checkbox" data-filter-normal-stars>Less than 5 normal stars</label>
@@ -454,14 +453,12 @@ export function createObservatoryUI(
   }
 
   function syncFilterControls(): void {
-    const supports = root.querySelector<HTMLSelectElement>(
-      '[data-filter-difficulty]',
-    );
-    if (supports !== null) supports.value = filters.supportsDifficulty ?? '';
+    root.querySelector<HTMLSelectElement>(
+      '[data-filter-unlock-status]',
+    )!.value = filters.unlockStatus ?? 'all';
     root.querySelector<HTMLSelectElement>('[data-filter-undefeated]')!.value =
       filters.undefeatedDifficulty ?? '';
     for (const [selector, checked] of [
-      ['[data-filter-unlocked]', filters.unlockedOnly],
       ['[data-filter-unplayed]', filters.unplayedOnly],
       ['[data-filter-normal-stars]', filters.belowFiveNormalStars],
       ['[data-filter-gold-stars]', filters.belowFiveGoldStars],
@@ -1035,15 +1032,13 @@ export function createObservatoryUI(
   function onChange(event: Event): void {
     const target = event.target;
     if (target instanceof HTMLInputElement && target.type === 'checkbox') {
-      const key = target.hasAttribute('data-filter-unlocked')
-        ? 'unlockedOnly'
-        : target.hasAttribute('data-filter-unplayed')
-          ? 'unplayedOnly'
-          : target.hasAttribute('data-filter-normal-stars')
-            ? 'belowFiveNormalStars'
-            : target.hasAttribute('data-filter-gold-stars')
-              ? 'belowFiveGoldStars'
-              : null;
+      const key = target.hasAttribute('data-filter-unplayed')
+        ? 'unplayedOnly'
+        : target.hasAttribute('data-filter-normal-stars')
+          ? 'belowFiveNormalStars'
+          : target.hasAttribute('data-filter-gold-stars')
+            ? 'belowFiveGoldStars'
+            : null;
       if (key === null) return;
       filters = { ...filters, [key]: target.checked };
       reconcile();
@@ -1051,10 +1046,13 @@ export function createObservatoryUI(
       return;
     }
     if (!(target instanceof HTMLSelectElement)) return;
-    if (target.dataset.filterDifficulty !== undefined) {
+    if (target.dataset.filterUnlockStatus !== undefined) {
       filters = {
         ...filters,
-        supportsDifficulty: normalizeDifficulty(target.value) ?? undefined,
+        unlockStatus:
+          target.value === 'locked' || target.value === 'unlocked'
+            ? target.value
+            : 'all',
       };
     } else if (target.dataset.filterUndefeated !== undefined) {
       filters = {
@@ -1092,7 +1090,21 @@ export function createObservatoryUI(
       ?.focus();
   }
 
+  function onDocumentClick(event: MouseEvent): void {
+    if (!filtersOpen) return;
+    const path = event.composedPath();
+    const toggle = root.querySelector('[data-action="toggle-filters"]');
+    if (
+      path.includes(filterPanel) ||
+      (toggle !== null && path.includes(toggle))
+    )
+      return;
+    filtersOpen = false;
+    syncFilterControls();
+  }
+
   root.addEventListener('click', onClick);
+  root.ownerDocument.addEventListener('click', onDocumentClick);
   root.addEventListener('input', onInput);
   root.addEventListener('change', onChange);
   root.addEventListener('keydown', onKeyDown);
@@ -1167,6 +1179,7 @@ export function createObservatoryUI(
       saveDialog?.destroy();
       unlockDialog?.destroy();
       root.removeEventListener('click', onClick);
+      root.ownerDocument.removeEventListener('click', onDocumentClick);
       root.removeEventListener('input', onInput);
       root.removeEventListener('change', onChange);
       root.removeEventListener('keydown', onKeyDown);

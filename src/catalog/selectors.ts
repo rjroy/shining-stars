@@ -11,9 +11,7 @@ export interface SongBrowseFilters {
   readonly query?: string;
   readonly collectionId?: string;
   readonly favoritesOnly?: boolean;
-  /** Filters songs that support this difficulty; does not configure a run. */
-  readonly supportsDifficulty?: Difficulty;
-  readonly unlockedOnly?: boolean;
+  readonly unlockStatus?: 'all' | 'unlocked' | 'locked';
   readonly unplayedOnly?: boolean;
   /** No tier means no condition; independent from the selected run difficulty. */
   readonly undefeatedDifficulty?: Difficulty;
@@ -33,8 +31,9 @@ function matchesProgress(
   filters: SongBrowseFilters,
   progress: SongBrowseProgress,
 ): boolean {
-  if (filters.unlockedOnly && !(progress.isUnlocked?.(songId) ?? true))
-    return false;
+  const unlocked = progress.isUnlocked?.(songId) ?? true;
+  if (filters.unlockStatus === 'unlocked' && !unlocked) return false;
+  if (filters.unlockStatus === 'locked' && unlocked) return false;
   const rating = progress.getRating?.(songId) ?? null;
   if (filters.unplayedOnly && rating !== null) return false;
   if (
@@ -113,9 +112,7 @@ export function selectSongs(
       (filters.collectionId === undefined ||
         song.collections.includes(filters.collectionId)) &&
       (!filters.favoritesOnly || favoriteIds.has(song.id)) &&
-      matchesProgress(song.id, filters, progress) &&
-      (filters.supportsDifficulty === undefined ||
-        getSongDifficulties(song).includes(filters.supportsDifficulty)),
+      matchesProgress(song.id, filters, progress),
   );
 }
 

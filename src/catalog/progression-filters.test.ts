@@ -76,7 +76,12 @@ const results = (
 describe('independent progression browse filters', () => {
   it.each([
     [{}, ['new', 'zero', 'four', 'five', 'gold', 'perfect']],
-    [{ unlockedOnly: true }, ['new', 'zero', 'five', 'gold', 'perfect']],
+    [
+      { unlockStatus: 'all' },
+      ['new', 'zero', 'four', 'five', 'gold', 'perfect'],
+    ],
+    [{ unlockStatus: 'unlocked' }, ['new', 'zero', 'five', 'gold', 'perfect']],
+    [{ unlockStatus: 'locked' }, ['four']],
     [{ unplayedOnly: true }, ['new']],
     [{ belowFiveNormalStars: true }, ['new', 'zero', 'four']],
     [{ belowFiveGoldStars: true }, ['new', 'zero', 'four', 'five', 'gold']],
@@ -93,7 +98,7 @@ describe('independent progression browse filters', () => {
   it('unchecked and None apply no opposite condition; missing save means unplayed and no credited victories', () => {
     expect(
       results({
-        unlockedOnly: false,
+        unlockStatus: 'all',
         unplayedOnly: false,
         belowFiveNormalStars: false,
         belowFiveGoldStars: false,
@@ -120,13 +125,12 @@ describe('independent progression browse filters', () => {
     ).toEqual([]);
   });
 
-  it('ANDs all five criteria with search, collection, favorites and difficulty support', () => {
+  it('ANDs all five criteria with search, collection and favorites', () => {
     const filters: SongBrowseFilters = {
       query: 'FIXTURE',
       collectionId: 'fixture',
       favoritesOnly: true,
-      supportsDifficulty: 'normal',
-      unlockedOnly: true,
+      unlockStatus: 'unlocked',
       unplayedOnly: true,
       undefeatedDifficulty: 'hard',
       belowFiveNormalStars: true,
@@ -134,7 +138,8 @@ describe('independent progression browse filters', () => {
     };
     expect(results(filters)).toEqual(['new']);
     expect(results(filters, progress, new Set(['zero']))).toEqual([]);
-    expect(results({ ...filters, supportsDifficulty: 'hard' })).toEqual([]);
+    expect(results({ ...filters, unlockStatus: 'locked' })).toEqual([]);
+    expect(results({ ...filters, unlockStatus: 'all' })).toEqual(['new']);
     expect(results({ ...filters, collectionId: 'other' })).toEqual([]);
     expect(results({ ...filters, query: 'not present' })).toEqual([]);
   });
@@ -192,9 +197,20 @@ describe('independent progression browse filters', () => {
     expect(
       reconcileSongSelection(catalog, filters, selected, new Set(), state),
     ).toEqual({ selectedSongId: null, runDifficulty: null });
-    expect(results({ unlockedOnly: true }, state)).toEqual([]);
+    expect(results({ unlockStatus: 'unlocked' }, state)).toEqual([]);
+    expect(results({ unlockStatus: 'locked' }, state)).toEqual(results({}));
     unlocked = true;
-    expect(results({ unlockedOnly: true }, state)).toEqual(results({}));
+    expect(results({ unlockStatus: 'unlocked' }, state)).toEqual(results({}));
+    expect(results({ unlockStatus: 'locked' }, state)).toEqual([]);
+    expect(
+      reconcileSongSelection(
+        catalog,
+        { unlockStatus: 'locked' },
+        selected,
+        new Set(),
+        state,
+      ),
+    ).toEqual({ selectedSongId: null, runDifficulty: null });
     currentRating = rating(5, 5);
     credit = 'hard'; // Imported best result and credit.
     expect(results({ belowFiveGoldStars: true }, state)).toEqual([]);
