@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('../game/star-thresholds', () => ({
+  NORMAL_STAR_THRESHOLDS: [0.08, 0.18, 0.3, 0.44, 0.6],
+  GOLD_STAR_THRESHOLDS: [0.7, 0.75, 0.8, 0.85, 0.9],
+}));
 import * as ui from './ui';
 import type { GameResult, GameSnapshot } from '../game/game';
 

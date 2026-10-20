@@ -7,6 +7,7 @@ import {
 } from '../catalog/favorites';
 import {
   parseRatings,
+  isPossibleRating,
   ratingForResult,
   ratingOrdinal,
   validateCompletedResult,
@@ -174,14 +175,14 @@ function parseCanonical(value: string, membership?: ReturnType<typeof createProg
     ) {
       throw new TypeError(`Stored player rating '${songId}' is invalid.`);
     }
-    // Delegate star/domain rules to the existing rating parser, which also
-    // ensures values are copied into plain validated domain records.
-    const ratingEnvelope = JSON.stringify({
-      schemaVersion: 1,
-      ratings: { [songId]: rawRating },
+    if (!isPossibleRating(rawRating)) {
+      throw new TypeError(`Stored player rating '${songId}' is invalid.`);
+    }
+    ratings.set(songId, {
+      played: true,
+      normalStars: rawRating.normalStars,
+      goldStars: rawRating.goldStars,
     });
-    const parsedRatings = parseRatings(ratingEnvelope);
-    ratings.set(songId, parsedRatings.get(songId)!);
   }
 
   const progression = parsed.schemaVersion === 1 ? createProgression() : validateProgression(parsed.progression, membership);

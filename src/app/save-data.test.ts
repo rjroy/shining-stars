@@ -227,6 +227,27 @@ describe('unified player save store (phase one)', () => {
     expect(notice).not.toMatch(/changed|conflict/);
   });
 
+  it('keeps legacy rating extra-key tolerance distinct from canonical rating validation', async () => {
+    const legacyBytes = legacyRatings({
+      legacy: { played: true, normalStars: 2, goldStars: 0, legacyNote: 'ignored' },
+    });
+    const legacyStorage = memoryStorage({ [RATINGS_KEY]: legacyBytes });
+    const legacyStore = await createSaveStore(legacyStorage);
+    expect(legacyStore.songRatings.get('legacy')).toMatchObject({ normalStars: 2, goldStars: 0 });
+    expect(legacyStorage.writes).toEqual([]);
+
+    const canonicalBytes = JSON.stringify(save([], {
+      canonical: { played: true, normalStars: 2, goldStars: 0, unexpected: true },
+    }));
+    const canonicalStorage = memoryStorage({ [SAVE_KEY]: canonicalBytes });
+    const canonicalStore = await createSaveStore(canonicalStorage);
+    expect(canonicalStore.favorites.snapshot().persistence).toBe('session');
+    expect(canonicalStore.favorites.snapshot().notice?.toLowerCase()).toMatch(/invalid|unsupported/);
+    canonicalStore.favorites.toggle('session-only');
+    expect(canonicalStorage.values.get(SAVE_KEY)).toBe(canonicalBytes);
+    expect(canonicalStorage.writes).toEqual([]);
+  });
+
   it('unifies favorite and completed-rating mutations without serializing ordinals', async () => {
     const storage = memoryStorage();
     const store = await createSaveStore(storage);
