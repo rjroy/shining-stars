@@ -13,6 +13,24 @@ from unittest.mock import patch
 from scripts import beat_chart
 
 
+def profile_fixture():
+    profiles = {}
+    for difficulty, perfect_ms, good_ms in (
+        ("easy", 20, 80), ("normal", 30, 100), ("hard", 40, 120),
+    ):
+        profiles[difficulty] = {
+            "twilight_strength": 50,
+            "timing": {"perfect_ms": perfect_ms, "good_ms": good_ms},
+            "audience": {"perfect": 5, "good": 2, "miss": -1},
+            "twilight": {
+                "perfect": {"personal_cost": 0, "damage": 0},
+                "good": {"personal_cost": 1, "damage": 1},
+                "miss": {"personal_cost": 2, "damage": 3},
+            },
+        }
+    return {"profiles": profiles}
+
+
 class BeatChartWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
@@ -22,6 +40,13 @@ class BeatChartWorkflowTests(unittest.TestCase):
         self.artifact = self.root / "data" / "the-first-shining-star.beats.json"
         self.chart = self.root / "src" / "mvp-chart.ts"
         self.calls = []
+        self.profile_path = self.root / "difficulty-profiles.json"
+        self.profile_path.write_text(json.dumps(profile_fixture()), encoding="utf-8")
+        self.profile_patch = patch.object(
+            beat_chart, "DEFAULT_DIFFICULTY_PROFILES", self.profile_path
+        )
+        self.profile_patch.start()
+        self.addCleanup(self.profile_patch.stop)
         self.song_config = self.write_song_config(
             {"the-first-shining-star": self.song_settings(self.source)}
         )
@@ -541,10 +566,7 @@ class BeatChartWorkflowTests(unittest.TestCase):
 
     def test_cached_chart_settings_depend_on_allowed_profile_timing(self):
         profile_path = self.root / "difficulty-profiles.json"
-        profile_document = json.loads(
-            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
-            .read_text(encoding="utf-8")
-        )
+        profile_document = profile_fixture()
         profile_path.write_text(json.dumps(profile_document), encoding="utf-8")
         song_config = self.write_song_config(
             {"the-first-shining-star": self.song_settings(self.source)}
@@ -596,6 +618,8 @@ class GeneratedScoringMetadataTests(unittest.TestCase):
         self.onsets_dir = self.root / "onsets"
         self.reports_dir = self.root / "reports"
         self.pitch_dir = self.root / "pitch"
+        self.profile_path = self.root / "difficulty-profiles.json"
+        self.profile_path.write_text(json.dumps(profile_fixture()), encoding="utf-8")
         self.normal_note_time = 1.0
         self.patches = patch.multiple(
             beat_chart,
@@ -603,6 +627,7 @@ class GeneratedScoringMetadataTests(unittest.TestCase):
             DEFAULT_ONSETS_DIR=self.onsets_dir,
             DEFAULT_REPORTS_DIR=self.reports_dir,
             DEFAULT_PITCH_CACHE_DIR=self.pitch_dir,
+            DEFAULT_DIFFICULTY_PROFILES=self.profile_path,
             _analysis_for_song=self.analysis_cache,
             _pitch_analysis_for_song=self.pitch_cache,
             _source_duration=lambda _source, _runner: 10.0,
@@ -700,6 +725,17 @@ class GeneratedScoringMetadataTests(unittest.TestCase):
 
 
 class SongAuthoringConfigTests(unittest.TestCase):
+    def setUp(self):
+        self.profile_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.profile_dir.cleanup)
+        self.profile_path = Path(self.profile_dir.name) / "difficulty-profiles.json"
+        self.profile_path.write_text(json.dumps(profile_fixture()), encoding="utf-8")
+        self.profile_patch = patch.object(
+            beat_chart, "DEFAULT_DIFFICULTY_PROFILES", self.profile_path
+        )
+        self.profile_patch.start()
+        self.addCleanup(self.profile_patch.stop)
+
     @staticmethod
     def song_fixture(source="fixture.mp3"):
         return {
@@ -757,6 +793,55 @@ class SongAuthoringConfigTests(unittest.TestCase):
             beat_chart._validate_analysis_commands(
                 beat_chart._recorded_commands(), "fixture", "analysis commands", recipe
             )
+
+    def test_recorded_commands_match_builder_for_default_partial_and_full_recipes(self):
+        recipes = (
+            {},
+            {"minioi": 0.125},
+            {"algorithm": "hfc", "threshold": 0.375, "minioi": 0.025, "silence": -70.25},
+        )
+        expected_aubio = (
+            ["aubioonset", "-T", "seconds", "-O", "specflux", "-t0.4", "-M0.032", "-s-20.0", "-i", "{analysisWav}"],
+            ["aubioonset", "-T", "seconds", "-O", "specflux", "-t0.4", "-M0.125", "-s-20.0", "-i", "{analysisWav}"],
+            ["aubioonset", "-T", "seconds", "-O", "hfc", "-t0.375", "-M0.025", "-s-70.25", "-i", "{analysisWav}"],
+        )
+        expected_ffmpeg = [
+            "ffmpeg", "-nostdin", "-y", "-i", "{sourceAudio}", "-ac", "1", "-ar",
+            "44100", "-sample_fmt", "s16", "-c:a", "pcm_s16le", "{analysisWav}",
+        ]
+        for recipe, expected in zip(recipes, expected_aubio):
+            with self.subTest(recipe=recipe):
+                ffmpeg, aubio = beat_chart._build_commands("{sourceAudio}", "{analysisWav}", recipe)
+                self.assertEqual(beat_chart._recorded_commands(recipe), [ffmpeg, aubio])
+                self.assertEqual(beat_chart._recorded_commands(recipe), [expected_ffmpeg, expected])
+
+    def test_malformed_legacy_provenance_is_not_treated_as_stale_recipe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            legacy_path = root / "data/charts/fixture.beats.json"
+            legacy_path.parent.mkdir(parents=True)
+            source = root / "fixture.mp3"
+            source.write_bytes(b"source")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            legacy_path.write_text(json.dumps({
+                "schema_version": 1,
+                "source": {"path": "wrong-source.mp3", "sha256": digest},
+                "source_sha256": digest,
+                "onsets": [1.0],
+                "commands": beat_chart._recorded_commands(),
+                "tools": {"ffmpeg": "ffmpeg", "aubioonset": "aubioonset"},
+            }))
+            calls = []
+            def runner(command, **kwargs):
+                calls.append(command)
+                return subprocess.CompletedProcess(command, 0, "1.0\n", "")
+            with patch.object(beat_chart, "PROJECT_ROOT", root):
+                with self.assertRaisesRegex(ValueError, "source mismatch"):
+                    beat_chart._analysis_for_song(
+                        "fixture", {"algorithm": "complex"}, source, digest,
+                        runner, False, root / "current.beats.json",
+                    )
+            self.assertEqual(calls, [])
 
     def test_stale_legacy_hfc_cache_is_skipped_for_generation_but_fails_check(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -969,10 +1054,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 self.assertEqual(runtime["twilight_strength"], raw["twilight_strength"])
 
     def test_shared_profile_loader_rejects_invalid_timing_and_balance_values(self):
-        original = json.loads(
-            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
-            .read_text(encoding="utf-8")
-        )
+        original = profile_fixture()
         malformed_profiles = []
 
         missing_profile = json.loads(json.dumps(original))
@@ -980,7 +1062,7 @@ class SongAuthoringConfigTests(unittest.TestCase):
         malformed_profiles.append(missing_profile)
 
         invalid_window = json.loads(json.dumps(original))
-        invalid_window["profiles"]["easy"]["timing"]["good_ms"] = 50
+        invalid_window["profiles"]["easy"]["timing"]["good_ms"] = 19
         malformed_profiles.append(invalid_window)
 
         negative_timing = json.loads(json.dumps(original))
@@ -1012,20 +1094,19 @@ class SongAuthoringConfigTests(unittest.TestCase):
                         beat_chart.load_difficulty_profiles(path)
 
     def test_profile_pipeline_accepts_signed_miss_and_chart_has_no_baked_strength(self):
-        original = json.loads(
-            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json")
-            .read_text(encoding="utf-8")
-        )
+        original = profile_fixture()
         original["profiles"]["normal"]["audience"]["miss"] = -2
         original["profiles"]["normal"]["twilight"]["miss"] = {
             "personal_cost": -3,
             "damage": -4,
         }
 
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "difficulty-profiles.json"
-            path.write_text(json.dumps(original), encoding="utf-8")
-            profiles = beat_chart.load_difficulty_profiles(path)
+        profile_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(profile_dir.cleanup)
+        path = Path(profile_dir.name) / "difficulty-profiles.json"
+        path.write_text(json.dumps(original), encoding="utf-8")
+        with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", path):
+            profiles = beat_chart.load_difficulty_profiles()
 
         profile = profiles["normal"]
         self.assertEqual(profile["audience"]["miss"], -2)
@@ -1039,15 +1120,16 @@ class SongAuthoringConfigTests(unittest.TestCase):
                 "normal": {"minimum_delta": 0, "stride": 1}
             },
         }
-        chart, _, count = beat_chart._difficulty_chart(
-            [index * 0.5 for index in range(200)],
-            settings,
-            100,
-            profile,
-            "normal",
-            "signed-miss-fixture",
-            "a" * 64,
-        )
+        with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", path):
+            chart, _, count = beat_chart._difficulty_chart(
+                [index * 0.5 for index in range(200)],
+                settings,
+                100,
+                profile,
+                "normal",
+                "signed-miss-fixture",
+                "a" * 64,
+            )
         self.assertNotIn("twilightStrength", chart)
 
     def test_loads_selected_song_from_collection_with_requested_settings(self):

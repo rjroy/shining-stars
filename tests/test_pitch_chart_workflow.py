@@ -33,6 +33,24 @@ DEFAULT_RECIPE_ARGS = {
 }
 
 
+def profile_fixture():
+    profiles = {}
+    for difficulty, perfect_ms, good_ms in (
+        ("easy", 20, 80), ("normal", 30, 100), ("hard", 40, 120),
+    ):
+        profiles[difficulty] = {
+            "twilight_strength": 50,
+            "timing": {"perfect_ms": perfect_ms, "good_ms": good_ms},
+            "audience": {"perfect": 5, "good": 2, "miss": -1},
+            "twilight": {
+                "perfect": {"personal_cost": 0, "damage": 0},
+                "good": {"personal_cost": 1, "damage": 1},
+                "miss": {"personal_cost": 2, "damage": 3},
+            },
+        }
+    return {"profiles": profiles}
+
+
 class PitchChartWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
@@ -46,9 +64,7 @@ class PitchChartWorkflowTests(unittest.TestCase):
         self.pitch_cache_dir = self.root / "pitch-cache"
         self.reports_dir = self.root / "reports"
         self.profile_path = self.root / "difficulty-profiles.json"
-        self.profile_path.write_bytes(
-            (beat_chart.PROJECT_ROOT / "data/charts/difficulty-profiles.json").read_bytes()
-        )
+        self.profile_path.write_text(json.dumps(profile_fixture()), encoding="utf-8")
         self.settings = self.make_settings()
         self.write_config()
         self.calls = []
@@ -288,28 +304,29 @@ class PitchChartWorkflowTests(unittest.TestCase):
 
         onset_data = json.loads(self.onset_cache_path().read_text(encoding="utf-8"))
         profiles = beat_chart.load_difficulty_profiles(self.profile_path)
-        for difficulty in DIFFICULTIES:
-            expected, _, _ = beat_chart._difficulty_chart(
-                onset_data["onsets"],
-                self.settings,
-                onset_data["source_duration_seconds"],
-                profiles[difficulty],
-                difficulty,
-                self.song_id,
-                onset_data["source_sha256"],
-            )
-            actual = bundle["charts"][difficulty]
-            self.assertEqual(
-                {key: value for key, value in actual.items() if key != "notes"},
-                {key: value for key, value in expected.items() if key != "notes"},
-            )
-            self.assertEqual(
-                [(note["id"], note["time"]) for note in actual["notes"]],
-                [(note["id"], note["time"]) for note in expected["notes"]],
-            )
-            fallback_lanes = [note["lane"] for note in expected["notes"]]
-            self.assertTrue(all(lane in range(4) for lane in fallback_lanes))
-            self.assertIn(difficulty, report["metrics"])
+        with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", self.profile_path):
+            for difficulty in DIFFICULTIES:
+                expected, _, _ = beat_chart._difficulty_chart(
+                    onset_data["onsets"],
+                    self.settings,
+                    onset_data["source_duration_seconds"],
+                    profiles[difficulty],
+                    difficulty,
+                    self.song_id,
+                    onset_data["source_sha256"],
+                )
+                actual = bundle["charts"][difficulty]
+                self.assertEqual(
+                    {key: value for key, value in actual.items() if key != "notes"},
+                    {key: value for key, value in expected.items() if key != "notes"},
+                )
+                self.assertEqual(
+                    [(note["id"], note["time"]) for note in actual["notes"]],
+                    [(note["id"], note["time"]) for note in expected["notes"]],
+                )
+                fallback_lanes = [note["lane"] for note in expected["notes"]]
+                self.assertTrue(all(lane in range(4) for lane in fallback_lanes))
+                self.assertIn(difficulty, report["metrics"])
 
         pitch_call = self.pitch_calls()[0]
         timeout = pitch_call[1].get("timeout")
@@ -541,20 +558,21 @@ class PitchChartWorkflowTests(unittest.TestCase):
         bundle = json.loads(self.generated_path().read_text(encoding="utf-8"))
         onset_data = json.loads(self.onset_cache_path().read_text(encoding="utf-8"))
         profiles = beat_chart.load_difficulty_profiles(self.profile_path)
-        for difficulty in DIFFICULTIES:
-            fallback, _, _ = beat_chart._difficulty_chart(
-                onset_data["onsets"],
-                self.settings,
-                onset_data["source_duration_seconds"],
-                profiles[difficulty],
-                difficulty,
-                self.song_id,
-                onset_data["source_sha256"],
-            )
-            self.assertEqual(
-                [note["lane"] for note in bundle["charts"][difficulty]["notes"]],
-                [note["lane"] for note in fallback["notes"]],
-            )
+        with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", self.profile_path):
+            for difficulty in DIFFICULTIES:
+                fallback, _, _ = beat_chart._difficulty_chart(
+                    onset_data["onsets"],
+                    self.settings,
+                    onset_data["source_duration_seconds"],
+                    profiles[difficulty],
+                    difficulty,
+                    self.song_id,
+                    onset_data["source_sha256"],
+                )
+                self.assertEqual(
+                    [note["lane"] for note in bundle["charts"][difficulty]["notes"]],
+                    [note["lane"] for note in fallback["notes"]],
+                )
 
     def test_direct_script_import_can_invoke_pitch_mapper_without_repository_root(self):
         scripts_dir = Path(beat_chart.__file__).resolve().parent

@@ -5,6 +5,7 @@ import importlib.util
 import re
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "beat_chart.py"
@@ -35,10 +36,21 @@ class ParseOnsetsTests(unittest.TestCase):
 
 
 class SelectNotesTests(unittest.TestCase):
-    @staticmethod
-    def envelope_for(difficulties):
-        profiles = beat_chart.load_difficulty_profiles()
-        return max(profiles[name]["timing"]["good_ms"] for name in difficulties) / 1000 + beat_chart.MAX_INPUT_OFFSET_SECONDS
+    def setUp(self):
+        # Own these timing inputs so selection contracts do not follow live tuning.
+        self.profiles = {
+            "easy": {"timing": {"good_ms": 80}},
+            "normal": {"timing": {"good_ms": 50}},
+            "hard": {"timing": {"good_ms": 120}},
+        }
+        self.profile_patch = patch.object(
+            beat_chart, "load_difficulty_profiles", return_value=self.profiles
+        )
+        self.profile_patch.start()
+        self.addCleanup(self.profile_patch.stop)
+
+    def envelope_for(self, difficulties):
+        return max(self.profiles[name]["timing"]["good_ms"] for name in difficulties) / 1000 + beat_chart.MAX_INPUT_OFFSET_SECONDS
 
     def test_minimum_delta_is_greedy_before_stride_and_keeps_raw_provenance(self):
         source_start = 107.1
@@ -83,8 +95,7 @@ class SelectNotesTests(unittest.TestCase):
 
     def test_timing_guards_run_after_minimum_delta_and_stride_without_reanchoring(self):
         source_start = 107.1
-        edge = self.envelope_for(["normal"])
-        beats = [source_start + offset for offset in (0.2, 0.264, edge - 0.001)]
+        beats = [source_start + offset for offset in (0.2, 0.3)]
         notes = beat_chart.select_notes(
             beats, source_start=source_start, stride=2, minimum_delta_ms=64
         )
@@ -210,6 +221,16 @@ class SelectNotesTests(unittest.TestCase):
 
 class RenderTests(unittest.TestCase):
     def setUp(self):
+        profiles = {
+            "easy": {"timing": {"good_ms": 80}},
+            "normal": {"timing": {"good_ms": 50}},
+            "hard": {"timing": {"good_ms": 120}},
+        }
+        self.profile_patch = patch.object(
+            beat_chart, "load_difficulty_profiles", return_value=profiles
+        )
+        self.profile_patch.start()
+        self.addCleanup(self.profile_patch.stop)
         self.notes = beat_chart.select_notes([108.0 + i * 0.5 for i in range(120)])
         self.digest = hashlib.sha256(b"synthetic source audio").hexdigest()
 

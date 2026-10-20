@@ -682,9 +682,15 @@ def _validate_onset_values(onsets, song_id):
     return validated
 
 
+class _AnalysisCommandMismatch(ValueError):
+    """A provenance command list does not match the supported recipe."""
+
+
 def _validate_analysis_commands(commands, song_id, field_name, recipe):
     if commands != _recorded_commands(recipe):
-        raise ValueError(f"{field_name} for {song_id} is not the supported full-source analysis")
+        raise _AnalysisCommandMismatch(
+            f"{field_name} for {song_id} is not the supported full-source analysis"
+        )
 
 
 def _validate_cache_provenance(cache, song_id, source, digest, recipe, *, legacy=False):
@@ -842,8 +848,8 @@ def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_p
             old = json.loads(legacy.read_text(encoding="utf-8"))
             try:
                 _validate_cache_provenance(old, song_id, source, digest, recipe, legacy=True)
-            except ValueError as error:
-                if check or "legacy commands" not in str(error):
+            except _AnalysisCommandMismatch:
+                if check:
                     raise
                 # Treat only a structurally valid legacy cache with a different
                 # onset recipe as stale; malformed provenance must remain fatal.
@@ -1087,16 +1093,8 @@ def _build_commands(source, wav_path, recipe=None):
 
 def _recorded_commands(recipe=None):
     recipe = {**ONSET_DEFAULTS, **(recipe or {})}
-    format_number = lambda value: repr(float(value))
-    return [
-        [
-            "ffmpeg", "-nostdin", "-y", "-i", "{sourceAudio}", "-ac", "1", "-ar",
-            "44100", "-sample_fmt", "s16", "-c:a", "pcm_s16le", "{analysisWav}",
-        ],
-        ["aubioonset", "-T", "seconds", "-O", recipe["algorithm"],
-         f"-t{format_number(recipe['threshold'])}", f"-M{format_number(recipe['minioi'])}",
-         f"-s{format_number(recipe['silence'])}", "-i", "{analysisWav}"],
-    ]
+    ffmpeg, aubio = _build_commands("{sourceAudio}", "{analysisWav}", recipe)
+    return [ffmpeg, aubio]
 
 
 def _ensure_safe_destinations(source, artifact_path, chart_path):
