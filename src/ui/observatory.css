@@ -1885,9 +1885,20 @@
   }
 }
 
-/* One overview scroller replaces the grid scroller when vertical space is
-   scarce, including short phones and enlarged-text layouts. */
-@container observatory-page (max-height: 640px) {
+/* Moderate desktop heights keep the details beside the grid. Reclaim the
+   duplicate emblem's space before falling back to a shared scroller. */
+@container observatory-page (min-width: 641px) and (max-height: 40rem) {
+  .collection-detail {
+    padding: 16px 20px;
+  }
+  .collection-detail .detail-emblem {
+    display: none;
+  }
+}
+
+/* Phones and genuinely cramped layouts use one overview scroller, never a
+   nested grid scroller. The height limit scales with enlarged text. */
+@container observatory-page (max-width: 640px) or (max-height: 36rem) {
   .observatory-overview {
     display: flex;
     gap: 18px;
