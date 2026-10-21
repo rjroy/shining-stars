@@ -52,8 +52,8 @@ export function attachWaterShimmer(
         float brightvaleCross = sin(dot(vBrightvaleWaterPosition, vec3(-0.8, 0.6, 1.6)) + brightvaleWaterTime * 0.43);
         float brightvaleGlint = smoothstep(0.72, 0.98, brightvaleWave)
           * (0.65 + 0.35 * brightvaleCross) * brightvaleWaterStrength;
-        diffuseColor.rgb += vec3(0.04, 0.07, 0.075) * brightvaleGlint;
-        totalEmissiveRadiance += vec3(0.015, 0.025, 0.028) * brightvaleGlint;
+        diffuseColor.rgb += vec3(0.12, 0.21, 0.225) * brightvaleGlint;
+        totalEmissiveRadiance += vec3(0.045, 0.075, 0.084) * brightvaleGlint;
       `,
     );
   };

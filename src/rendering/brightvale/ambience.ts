@@ -78,7 +78,7 @@ export function projectBrightvaleAmbience(
       0.4 * Math.sin(time * (Math.PI / 17))
     ) +
     0.25 * Math.sin(time * Math.PI);
-  const radiance = 0.5 + 0.5 * Math.sin(time * (Math.PI / 13));
+  const radiance = 0.5 + 0.5 * Math.sin(time * (Math.PI / 11));
   const cloudGrade = (channel: 0 | 1 | 2): number => {
     const twilightGrade =
       TWILIGHT_CLOUD_ION[channel] * (1 - unease) +
@@ -136,7 +136,11 @@ export function windowAmbienceMultiplier(
   }
 
   const wave =
-    0.9 * Math.sin((ambience.time + phase) * (Math.PI / 11)) +
-    0.1 * Math.sin((ambience.time + phase) * (Math.PI / 3));
-  return 20 * (0.50 + wave * 0.50);
+    0.98 * Math.sin((ambience.time + phase) * (Math.PI / 7)) +
+    0.02 * Math.sin(
+      (ambience.time + phase) * (Math.PI / .3) +
+      Math.sin((ambience.time + phase) * (Math.PI))
+    );
+  // 0 to 2
+  return 1 + wave;
 }
