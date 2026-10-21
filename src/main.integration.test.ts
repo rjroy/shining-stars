@@ -336,13 +336,73 @@ describe('real app Observatory-to-gameplay integration', () => {
         `overview after browsing ${title}`,
       );
     }
-    const projectionReport = await evaluate(
-      `(()=>[...document.querySelectorAll('[data-action=select-collection]')].map(e=>{const r=e.getBoundingClientRect();return {id:e.dataset.collectionId,x:r.x+r.width/2,y:r.y+r.height/2,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}}))()`,
-    );
-    expect(projectionReport).toHaveLength(3);
-    expect(
-      projectionReport.every((anchor: { hit: boolean }) => anchor.hit),
-    ).toBe(true);
+    // Unlike projected anchors, a scroll grid need not show every collection at
+    // once. Verify the real medallions remain accessible over the live canvas
+    // after scrolling and renderer frames; growth/Tab/touch behavior has its own
+    // controlled-catalog browser regression.
+    const checkCollectionAccess = async (label: string) => {
+      const report = await evaluate(`(async () => {
+        const grid = document.querySelector('[data-collection-grid]');
+        const buttons = [...document.querySelectorAll('[data-action=select-collection]')];
+        const pressed = () => buttons.filter(button => button.getAttribute('aria-pressed') === 'true').map(button => button.dataset.collectionId);
+        const focusedElement = document.activeElement;
+        const before = { selected: pressed(), focused: document.activeElement?.dataset.collectionId };
+        const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+        const detail = document.querySelector('.collection-detail');
+        const collections = [];
+        for (const button of buttons) {
+          button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const rect = button.getBoundingClientRect();
+          let left = 0, top = 0, right = innerWidth, bottom = innerHeight;
+          for (let parent = button.parentElement; parent; parent = parent.parentElement) {
+            const style = getComputedStyle(parent), bounds = parent.getBoundingClientRect();
+            if (/auto|scroll|hidden|clip/.test(style.overflowX)) {
+              left = Math.max(left, bounds.left); right = Math.min(right, bounds.right);
+            }
+            if (/auto|scroll|hidden|clip/.test(style.overflowY)) {
+              top = Math.max(top, bounds.top); bottom = Math.min(bottom, bounds.bottom);
+            }
+          }
+          const boxes = [rect, ...[...button.querySelectorAll('.constellation-label, img[data-collection-artwork]')].map(node => node.getBoundingClientRect())];
+          const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          collections.push({
+            id: button.dataset.collectionId,
+            nativeNamedButton: button instanceof HTMLButtonElement && !button.disabled && !!button.getAttribute('aria-label'),
+            inGrid: grid?.contains(button) === true,
+            visible: !button.hidden && rect.width >= 44 && rect.height >= 44 && boxes.every(box => box.left >= left - 1 && box.right <= right + 1 && box.top >= top - 1 && box.bottom <= bottom + 1),
+            hit: button.contains(hit),
+            clear: !overlap(rect, detail.getBoundingClientRect()) && buttons.every(other => other === button || !overlap(rect, other.getBoundingClientRect())),
+          });
+        }
+        return { collections, before, after: { selected: pressed(), focused: document.activeElement?.dataset.collectionId }, focusPreserved: document.activeElement === focusedElement };
+      })()`);
+      expect(
+        report.collections.length,
+        `${label}: real collections mounted`,
+      ).toBeGreaterThan(0);
+      for (const collection of report.collections) {
+        expect(
+          collection,
+          `${label}: ${collection.id} remains accessible after scrolling and city frames`,
+        ).toMatchObject({
+          nativeNamedButton: true,
+          inGrid: true,
+          visible: true,
+          hit: true,
+          clear: true,
+        });
+      }
+      expect(
+        report.after,
+        `${label}: scrolling preserves selection and focus`,
+      ).toEqual(report.before);
+      expect(
+        report.focusPreserved,
+        `${label}: the focused control is retained`,
+      ).toBe(true);
+    };
+    await checkCollectionAccess('desktop');
     await screenshot('shining-stars-collections-overview-desktop');
     await evaluate(
       "document.querySelector('[data-collection-id=outside-worlds]')?.focus()",
@@ -352,12 +412,16 @@ describe('real app Observatory-to-gameplay integration', () => {
       key: 'Enter',
       code: 'Enter',
       windowsVirtualKeyCode: 13,
+      nativeVirtualKeyCode: 13,
+      text: '\r',
+      unmodifiedText: '\r',
     });
     await command('Input.dispatchKeyEvent', {
       type: 'keyUp',
       key: 'Enter',
       code: 'Enter',
       windowsVirtualKeyCode: 13,
+      nativeVirtualKeyCode: 13,
     });
     expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
       'outside-worlds',
@@ -376,12 +440,7 @@ describe('real app Observatory-to-gameplay integration', () => {
     expect(await evaluate('document.activeElement?.dataset.collectionId')).toBe(
       'outside-worlds',
     );
-    const resizedProjection = await evaluate(
-      "[...document.querySelectorAll('[data-action=select-collection]')].map(e=>{const r=e.getBoundingClientRect();return {id:e.dataset.collectionId,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}})",
-    );
-    expect(
-      resizedProjection.every((anchor: { hit: boolean }) => anchor.hit),
-    ).toBe(true);
+    await checkCollectionAccess('narrow desktop');
     await screenshot('shining-stars-collections-overview-narrow');
     await command('Emulation.setDeviceMetricsOverride', {
       width: 390,
@@ -394,16 +453,7 @@ describe('real app Observatory-to-gameplay integration', () => {
         (await evaluate('innerWidth === 390 && innerHeight === 844')) || false,
       'portrait mobile viewport',
     );
-    const portraitProjection = await evaluate(
-      "(()=>{const nodes=[...document.querySelectorAll('[data-action=select-collection]')],rects=nodes.map(e=>e.getBoundingClientRect()),detail=document.querySelector('.collection-detail').getBoundingClientRect(),overlap=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1;return nodes.map((e,i)=>{const r=rects[i];return {visible:!e.hidden&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e||e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),clear:!overlap(r,detail)&&rects.every((other,j)=>i===j||!overlap(r,other))}})})()",
-    );
-    expect(portraitProjection).toHaveLength(3);
-    expect(
-      portraitProjection.every(
-        (anchor: { visible: boolean; hit: boolean; clear: boolean }) =>
-          anchor.visible && anchor.hit && anchor.clear,
-      ),
-    ).toBe(true);
+    await checkCollectionAccess('portrait mobile');
     await screenshot('shining-stars-collections-overview-portrait');
     await evaluate(
       "document.querySelector('[data-action=all-songs]')?.click()",

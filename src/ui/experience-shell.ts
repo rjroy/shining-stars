@@ -12,7 +12,7 @@ const shells = new WeakMap<HTMLElement, ExperienceShell>();
 
 /**
  * Create the long-lived scene host once. Individual UI screens can then be
- * replaced without detaching the canvas or invalidating projected CSS anchors.
+ * replaced without detaching the canvas or restarting the city ambience.
  */
 export function ensureExperienceShell(root: HTMLElement): ExperienceShell {
   const existing = shells.get(root);
