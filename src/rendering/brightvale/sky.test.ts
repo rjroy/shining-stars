@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BrightvaleSkyTextures } from './assets';
 import { createBrightvaleSky } from './sky';
 import type { SceneStateProjection } from '../scene-state';
-import { projectBrightvaleAmbience } from './ambience';
+import type { BrightvaleAmbience } from './ambience';
 
 function makeTextures(): BrightvaleSkyTextures {
   const texture = (): THREE.DataTexture => {
@@ -45,7 +45,7 @@ function state(
 }
 
 describe('Brightvale shared sky composition', () => {
-  it('tints existing cloud materials without accumulating tint or changing Observatory', () => {
+  it('applies supplied cloud ambience in gameplay and Observatory without accumulating tint or changing the sky', () => {
     const textures = makeTextures();
     const sky = createBrightvaleSky(textures);
     const cloud = sky.scene.getObjectByName(
@@ -66,25 +66,52 @@ describe('Brightvale shared sky composition', () => {
       'max(dot(brightvaleCloudGrade, brightvaleLumaWeights)',
     );
     const initialChildren = [...sky.scene.children];
-    const ambience = projectBrightvaleAmbience(state(0), 11, false);
-    for (const phase of [state(0), state(1), state(1, true)]) {
-      const ambience = projectBrightvaleAmbience(phase, 11, false);
-      sky.update(phase, 1.6, { ambience });
-      expect(material.color.toArray()).toEqual(ambience.cloudTint);
-      expect(shader.uniforms.brightvaleCloudGrade?.value.toArray()).toEqual(
-        ambience.cloudGradeColor,
-      );
-      expect(shader.uniforms.brightvaleCloudGradeAmount?.value).toBe(
-        ambience.cloudGradeAmount,
-      );
-      expect(cloud.material).toBe(material);
-      expect(sky.scene.children).toEqual(initialChildren);
+    const gradient = sky.scene.getObjectByName('Brightvale.Sky.Gradient') as
+      THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+    const ambience: BrightvaleAmbience = {
+      time: 7,
+      cloudTint: [0.7, 0.8, 0.9],
+      cloudGradeColor: [0.2, 0.4, 0.9],
+      cloudGradeAmount: 0.73,
+      waterStrength: 0,
+      windowsEnabled: false,
+    };
+    for (const observatory of [false, true]) {
+      for (const phase of [state(0), state(1), state(1, true)]) {
+        sky.update(phase, 1.6, { observatory });
+        const skyBefore = Object.fromEntries(
+          Object.entries(gradient.material.uniforms).map(([name, uniform]) => [
+            name,
+            uniform.value instanceof THREE.Color
+              ? uniform.value.toArray()
+              : uniform.value,
+          ]),
+        );
+        const opacityBefore = material.opacity;
+        for (let repeat = 0; repeat < 2; repeat += 1) {
+          sky.update(phase, 1.6, { observatory, ambience });
+          expect.soft(material.color.toArray()).toEqual(ambience.cloudTint);
+          expect
+            .soft(shader.uniforms.brightvaleCloudGrade?.value.toArray())
+            .toEqual(ambience.cloudGradeColor);
+          expect
+            .soft(shader.uniforms.brightvaleCloudGradeAmount?.value)
+            .toBe(ambience.cloudGradeAmount);
+          expect(material.opacity).toBe(opacityBefore);
+          expect(cloud.material).toBe(material);
+          expect(sky.scene.children).toEqual(initialChildren);
+          for (const [name, before] of Object.entries(skyBefore)) {
+            const value = gradient.material.uniforms[name]!.value;
+            expect(
+              value instanceof THREE.Color ? value.toArray() : value,
+            ).toEqual(before);
+          }
+        }
+      }
     }
-    sky.update(state(0), 1.6, { observatory: true, ambience });
-    expect(material.color.toArray()).toEqual([1, 1, 1]);
-    expect(shader.uniforms.brightvaleCloudGradeAmount?.value).toBe(0);
     sky.update(state(0), 1.6);
     expect(material.color.toArray()).toEqual([1, 1, 1]);
+    expect(shader.uniforms.brightvaleCloudGradeAmount?.value).toBe(0);
     sky.dispose();
   });
   it('crossfades the approved clouds and perpetual-twilight palettes across modes', () => {

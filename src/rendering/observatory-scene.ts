@@ -3,6 +3,12 @@ import type { BrightvaleAssets } from './brightvale/assets';
 import type { BrightvaleShellComposition } from './brightvale/scene-shell';
 import type { SongCollection } from '../catalog/catalog';
 import {
+  projectObservatoryAmbience,
+  windowAmbienceMultiplier,
+  type BrightvaleAmbience,
+} from './brightvale/ambience';
+import { attachWaterShimmer } from './brightvale/water-shimmer';
+import {
   fitDirectionalShadowCamera,
   setShadowParticipation,
 } from './brightvale/shadows';
@@ -39,6 +45,43 @@ export function createObservatoryComposition(
   city.name = 'Observatory.BrightvaleCity';
   city.scale.setScalar(0.18);
   city.position.set(0, -2.85, -7);
+  // Own only material clones; imported geometry and textures remain borrowed.
+  // Keep Observatory's lights instead of installing gameplay appearance presets.
+  const materials = new Map<
+    THREE.MeshStandardMaterial,
+    THREE.MeshStandardMaterial
+  >();
+  const ambienceUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
+  const materialFor = (source: THREE.Material): THREE.Material => {
+    if (!(source instanceof THREE.MeshStandardMaterial)) return source;
+    const existing = materials.get(source);
+    if (existing) return existing;
+    const material = source.clone();
+    materials.set(source, material);
+    const role = String(
+      source.userData.city_role || source.userData.role || source.name,
+    );
+    const updateWater = attachWaterShimmer(material, role);
+    if (updateWater) ambienceUpdates.push(updateWater);
+    if (role === 'emissive_window') {
+      const baseline = source.emissiveIntensity;
+      const group =
+        typeof source.userData.source_material === 'string'
+          ? source.userData.source_material
+          : source.name;
+      ambienceUpdates.push((ambience) => {
+        material.emissiveIntensity =
+          baseline * windowAmbienceMultiplier(group, ambience);
+      });
+    }
+    return material;
+  };
+  city.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    object.material = Array.isArray(object.material)
+      ? object.material.map(materialFor)
+      : materialFor(object.material);
+  });
   setShadowParticipation(city, { cast: true, receive: true });
   root.add(city);
 
@@ -66,6 +109,13 @@ export function createObservatoryComposition(
     root,
     camera,
     update(frame) {
+      if (destroyed)
+        throw new Error('Observatory composition has been disposed');
+      const ambience = projectObservatoryAmbience(
+        frame.elapsedSeconds,
+        frame.reducedMotion,
+      );
+      for (const updateAmbience of ambienceUpdates) updateAmbience(ambience);
       width = frame.width;
       height = frame.height;
       const count = Math.max(1, collectionTargets.length);
@@ -115,6 +165,9 @@ export function createObservatoryComposition(
       if (destroyed) return;
       destroyed = true;
       cityKey.shadow.dispose();
+      for (const material of materials.values()) material.dispose();
+      materials.clear();
+      ambienceUpdates.length = 0;
     },
   };
 }

@@ -238,9 +238,7 @@ export function createBrightvaleSky(
       backgroundMaterial.uniforms.observatoryAmount.value = observatoryAmount;
 
       const observatoryDimming = options.observatory ? 0.34 : 1;
-      const ambience = options.observatory
-        ? STATIC_AMBIENCE
-        : (options.ambience ?? STATIC_AMBIENCE);
+      const ambience = options.ambience ?? STATIC_AMBIENCE;
       for (const cloud of [warmClouds, twilightClouds])
         cloud.material.color.setRGB(...ambience.cloudTint);
       cloudGradeColor.value.setRGB(...ambience.cloudGradeColor);
