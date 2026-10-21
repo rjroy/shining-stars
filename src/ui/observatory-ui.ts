@@ -33,14 +33,6 @@ import {
   type BrowsePreferenceStorage,
 } from '../catalog/browse-preferences';
 
-export interface ObservatoryAnchor {
-  readonly collectionId: string;
-  /** Position relative to the stable scene host, in CSS pixels. */
-  readonly x: number;
-  readonly y: number;
-  readonly visible: boolean;
-}
-
 export interface ObservatoryPlayRequest {
   readonly songId: string;
   readonly difficulty: Difficulty;
@@ -82,7 +74,6 @@ export interface ObservatoryUI {
   refreshSavedData(): void;
   getSelectionSnapshot(): ObservatorySelectionSnapshot;
   getViewportSize(): { readonly width: number; readonly height: number };
-  setProjectedAnchors(anchors: readonly ObservatoryAnchor[]): void;
   setRendererStatus(status: BrightvaleRendererStatus, message?: string): void;
   setPlayStatus(status: ObservatoryPlayStatus, message?: string): void;
   focusSelectedSong(): void;
@@ -286,13 +277,18 @@ export function createObservatoryUI(
       </div>
       <p class="observatory-storage-notice" data-storage-notice role="status" hidden></p>
 
+      <div class="observatory-pages">
       <section class="observatory-overview" data-observatory-page="overview" aria-labelledby="observatory-title">
         <div class="overview-copy">
           <p class="observatory-kicker">A song can change tomorrow</p>
           <h1 id="observatory-title">Choose your constellation.</h1>
           <p class="overview-lede">Find your next performance, then carry its song into the city.</p>
         </div>
-        <div class="constellation-anchor-layer" data-anchor-layer role="group" aria-label="Song collections"></div>
+        <div class="overview-layout">
+        <section class="collection-library" aria-labelledby="collection-library-title">
+          <div class="collection-library-heading"><h2 id="collection-library-title">Song collections</h2><span data-collection-total></span></div>
+          <div class="collection-grid" data-collection-grid role="group" aria-label="Song collections"></div>
+        </section>
         <aside class="collection-detail" aria-labelledby="collection-title">
           <div class="detail-emblem" aria-hidden="true">
             <svg viewBox="0 0 220 220" fill="none"><circle cx="110" cy="110" r="85"/><circle cx="110" cy="110" r="71"/><path d="M110 25v170M25 110h170M50 50l120 120M170 50 50 170"/><path d="m110 52 12 44 44 14-44 13-12 45-13-45-44-13 44-14 13-44Z"/><circle cx="110" cy="110" r="5"/><circle cx="72" cy="76" r="3"/><circle cx="151" cy="69" r="3"/><circle cx="155" cy="151" r="3"/><circle cx="64" cy="148" r="3"/></svg>
@@ -303,6 +299,7 @@ export function createObservatoryUI(
           <p class="collection-story">Songs in the current collection.</p>
           <button class="observatory-gold-button browse-collection-button" type="button" data-action="browse-collection">Browse Collection <span aria-hidden="true">→</span></button>
         </aside>
+        </div>
         <div class="overview-shortcuts" aria-label="Quick song routes">
           <button type="button" data-action="overview-all">Open All Songs</button>
           <span aria-hidden="true">✦</span>
@@ -330,6 +327,7 @@ export function createObservatoryUI(
         </div>
       </section>
 
+      </div>
       <section class="observatory-filter-panel" id="observatory-filters" data-filter-panel aria-label="Filter songs" hidden>
         <div class="filter-heading"><h2>Refine your search</h2><button type="button" data-action="clear-filters">Clear filters</button></div>
          <fieldset class="song-progress-filters">
@@ -361,6 +359,9 @@ export function createObservatoryUI(
     '[data-observatory-page="browser"]',
   )!;
   const filterPanel = root.querySelector<HTMLElement>('[data-filter-panel]')!;
+  const collectionGrid = root.querySelector<HTMLElement>(
+    '[data-collection-grid]',
+  )!;
   const list = root.querySelector<HTMLElement>('[data-song-list]')!;
   const detail = root.querySelector<HTMLElement>('[data-song-detail]')!;
   let selectedCollectionId = catalog.collections[0]?.id ?? null;
@@ -399,7 +400,9 @@ export function createObservatoryUI(
   let rendererMessage = 'The Observatory is lighting its stars…';
   let playStatus: ObservatoryPlayStatus = 'idle';
   let playMessage = '';
-  let projectedAnchors: readonly ObservatoryAnchor[] = [];
+  let overviewScrollTop = 0;
+  let collectionScrollTop = 0;
+  let overviewReturnFocus: HTMLElement | null = null;
   let disposed = false;
   const membership =
     options.saveStore === undefined
@@ -447,7 +450,7 @@ export function createObservatoryUI(
     '[data-action="save-data"]',
   )!;
   saveEntry.hidden = saveDialog === null;
-  const anchorButtons = new Map<string, HTMLButtonElement>();
+  const collectionButtons = new Map<string, HTMLButtonElement>();
 
   function currentSong() {
     return (
@@ -549,41 +552,27 @@ export function createObservatoryUI(
     });
   }
 
-  function renderAnchors(): void {
-    const layer = root.querySelector<HTMLElement>('[data-anchor-layer]');
-    if (layer === null) return;
-    const byCollection = new Map(
-      projectedAnchors.map((anchor) => [anchor.collectionId, anchor]),
-    );
-    const hostRect = shell.surface.getBoundingClientRect();
-    const layerRect = layer.getBoundingClientRect();
-    const hostStyle = getComputedStyle(shell.surface);
-    const contentLeft =
-      hostRect.left +
-      (Number.parseFloat(hostStyle.borderLeftWidth) || 0) +
-      (Number.parseFloat(hostStyle.paddingLeft) || 0);
-    const contentTop =
-      hostRect.top +
-      (Number.parseFloat(hostStyle.borderTopWidth) || 0) +
-      (Number.parseFloat(hostStyle.paddingTop) || 0);
+  function renderCollections(): void {
+    root.querySelector<HTMLElement>('[data-collection-total]')!.textContent =
+      `${catalog.collections.length} ${catalog.collections.length === 1 ? 'constellation' : 'constellations'}`;
     const collectionIds = new Set(catalog.collections.map((item) => item.id));
-    for (const [collectionId, button] of anchorButtons) {
+    for (const [collectionId, button] of collectionButtons) {
       if (collectionIds.has(collectionId)) continue;
       button.remove();
-      anchorButtons.delete(collectionId);
+      collectionButtons.delete(collectionId);
     }
     for (const item of catalog.collections) {
-      const anchor = byCollection.get(item.id);
-      let button = anchorButtons.get(item.id);
+      let button = collectionButtons.get(item.id);
       if (button === undefined) {
         button = createButton(
           item.title,
           'select-collection',
           'constellation-hotspot',
-          starGlyph(0),
+          `<span class="constellation-art" aria-hidden="true">${starGlyph(0)}</span>`,
         );
-        anchorButtons.set(item.id, button);
-        layer.append(button);
+        button.lastElementChild!.classList.add('constellation-label');
+        collectionButtons.set(item.id, button);
+        collectionGrid.append(button);
       }
       let artwork = button.querySelector<HTMLImageElement>(
         'img[data-collection-artwork]',
@@ -597,7 +586,7 @@ export function createObservatoryUI(
           artwork.setAttribute('aria-hidden', 'true');
           artwork.decoding = 'async';
           artwork.draggable = false;
-          button.prepend(artwork);
+          button.querySelector('.constellation-art')!.prepend(artwork);
         }
         if (artwork.dataset.artworkUrl !== item.artworkUrl) {
           artwork.src = item.artworkUrl;
@@ -614,9 +603,6 @@ export function createObservatoryUI(
         String(item.id === selectedCollectionId),
       );
       button.setAttribute('aria-label', `Select ${item.title} constellation`);
-      button.style.left = `${anchor === undefined ? overview.clientWidth * 0.33 : anchor.x + contentLeft - layerRect.left}px`;
-      button.style.top = `${anchor === undefined ? overview.clientHeight * 0.42 : anchor.y + contentTop - layerRect.top}px`;
-      button.hidden = anchor !== undefined && !anchor.visible;
     }
   }
 
@@ -939,7 +925,7 @@ export function createObservatoryUI(
       }
     }
     syncFilterControls();
-    renderAnchors();
+    renderCollections();
     renderRows();
     renderDetail();
     syncStorageNotice();
@@ -955,7 +941,34 @@ export function createObservatoryUI(
     render();
   }
 
-  function openBrowser(collectionId?: string, focusSearch = true): void {
+  function rememberOverview(opener: HTMLElement | null): void {
+    if (screen !== 'overview') return;
+    overviewScrollTop = overview.scrollTop;
+    collectionScrollTop = collectionGrid.scrollTop;
+    overviewReturnFocus = opener;
+  }
+
+  function returnToOverview(): void {
+    screen = 'overview';
+    render();
+    overview.scrollTop = overviewScrollTop;
+    collectionGrid.scrollTop = collectionScrollTop;
+    const opener = overviewReturnFocus?.isConnected
+      ? overviewReturnFocus
+      : root.querySelector<HTMLButtonElement>(
+          '[data-action="browse-collection"]',
+        );
+    opener?.focus({ preventScroll: true });
+    // Resizing while browsing can move the opener into the short-window flow.
+    opener?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  function openBrowser(
+    collectionId?: string,
+    focusSearch = true,
+    opener: HTMLElement | null = null,
+  ): void {
+    rememberOverview(opener);
     filters = { ...filters, collectionId };
     screen = 'browser';
     reconcile();
@@ -988,18 +1001,14 @@ export function createObservatoryUI(
     } else if (action === 'all-songs' || action === 'overview-all') {
       favoritesOnly = false;
       persistBrowsePreferences();
-      openBrowser(undefined);
+      openBrowser(undefined, true, button);
     } else if (action === 'browse-collection') {
-      openBrowser(selectedCollectionId ?? undefined, false);
+      openBrowser(selectedCollectionId ?? undefined, false, button);
       root
         .querySelector<HTMLButtonElement>('[data-action="back-overview"]')
         ?.focus();
     } else if (action === 'back-overview') {
-      screen = 'overview';
-      render();
-      root
-        .querySelector<HTMLButtonElement>('[data-action="browse-collection"]')
-        ?.focus();
+      returnToOverview();
     } else if (action === 'select-collection') {
       const id = button.dataset.collectionId;
       if (
@@ -1018,6 +1027,7 @@ export function createObservatoryUI(
           ?.focus();
       }
     } else if (action === 'favorites') {
+      rememberOverview(button);
       favoritesOnly = !favoritesOnly;
       persistBrowsePreferences();
       screen = 'browser';
@@ -1026,7 +1036,7 @@ export function createObservatoryUI(
     } else if (action === 'overview-favorites') {
       favoritesOnly = true;
       persistBrowsePreferences();
-      openBrowser(undefined);
+      openBrowser(undefined, true, button);
     } else if (action === 'toggle-favorite') {
       const songId = button.dataset.songId;
       if (songId !== undefined) {
@@ -1093,7 +1103,10 @@ export function createObservatoryUI(
     )
       return;
     filters = { ...filters, query: target.value };
-    if (target.value.length > 0 && screen === 'overview') screen = 'browser';
+    if (target.value.length > 0 && screen === 'overview') {
+      rememberOverview(target);
+      screen = 'browser';
+    }
     reconcile();
     render();
     const nextInput = root.querySelector<HTMLInputElement>('[data-search]');
@@ -1165,11 +1178,7 @@ export function createObservatoryUI(
     )
       return;
     event.preventDefault();
-    screen = 'overview';
-    render();
-    root
-      .querySelector<HTMLButtonElement>('[data-action="browse-collection"]')
-      ?.focus();
+    returnToOverview();
   }
 
   function onDocumentClick(event: MouseEvent): void {
@@ -1205,10 +1214,6 @@ export function createObservatoryUI(
         width: shell.surface.clientWidth,
         height: shell.surface.clientHeight,
       };
-    },
-    setProjectedAnchors(anchors) {
-      projectedAnchors = anchors;
-      renderAnchors();
     },
     setRendererStatus(status, message) {
       rendererStatus = status;
@@ -1269,7 +1274,7 @@ export function createObservatoryUI(
       root.removeEventListener('input', onInput);
       root.removeEventListener('change', onChange);
       root.removeEventListener('keydown', onKeyDown);
-      anchorButtons.clear();
+      collectionButtons.clear();
       shell.removeScreen('observatory');
     },
   };

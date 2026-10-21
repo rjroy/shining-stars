@@ -11,7 +11,6 @@ import type { BrightvaleSky } from './brightvale/sky';
 import {
   createObservatoryComposition,
   type ObservatoryComposition,
-  type ObservatoryProjectedAnchor,
 } from './observatory-scene';
 import { loadBrightvaleRuntimeAssets } from './brightvale/assets-runtime';
 import {
@@ -41,7 +40,6 @@ import {
   projectBrightvaleAmbience,
   projectObservatoryAmbience,
 } from './brightvale/ambience';
-import type { SongCollection } from '../catalog/catalog';
 import type {
   BrightvaleRendererStatus,
   BrightvaleViewportLayout,
@@ -60,7 +58,6 @@ export interface BrightvaleScene {
     readonly elapsedSeconds: number;
     readonly reducedMotion: boolean;
   }): BrightvaleRendererStatus;
-  getObservatoryAnchors(): readonly ObservatoryProjectedAnchor[];
   destroy(): void;
 }
 
@@ -310,7 +307,6 @@ export function createBrightvaleScene(
   rendererFactory: SceneRendererFactory = (parameters) =>
     new THREE.WebGLRenderer(parameters),
   dependencies?: BrightvaleSceneDependencies,
-  collections: readonly SongCollection[] = [],
 ): BrightvaleScene | null {
   let renderer: SceneRenderer;
   try {
@@ -1053,10 +1049,7 @@ export function createBrightvaleScene(
       sky = createBrightvaleSky(assets.skyTextures);
     }
     if (mode === 'observatory') {
-      observatoryComposition = createObservatoryComposition(
-        assets,
-        collections,
-      );
+      observatoryComposition = createObservatoryComposition(assets);
       return observatoryComposition;
     }
     const frame = lastFrame;
@@ -1262,9 +1255,6 @@ export function createBrightvaleScene(
         viewportUsable: frame.width > 0 && frame.height > 0,
         mode: 'observatory',
       });
-    },
-    getObservatoryAnchors() {
-      return observatoryComposition?.anchors() ?? [];
     },
     destroy(): void {
       cleanup();

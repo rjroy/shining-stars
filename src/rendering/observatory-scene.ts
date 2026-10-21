@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { BrightvaleAssets } from './brightvale/assets';
 import type { BrightvaleShellComposition } from './brightvale/scene-shell';
-import type { SongCollection } from '../catalog/catalog';
 import {
   projectObservatoryAmbience,
   windowAmbienceMultiplier,
@@ -20,23 +19,14 @@ export interface ObservatorySceneFrame {
   readonly reducedMotion: boolean;
 }
 
-export interface ObservatoryProjectedAnchor {
-  readonly collectionId: string;
-  readonly x: number;
-  readonly y: number;
-  readonly visible: boolean;
-}
-
 export interface ObservatoryComposition extends BrightvaleShellComposition {
   readonly camera: THREE.Camera;
   update(frame: ObservatorySceneFrame): void;
-  anchors(): readonly ObservatoryProjectedAnchor[];
 }
 
-/** Celestial Observatory city and anchors; the shared sky renders behind it. */
+/** Celestial Observatory city; collection navigation lives in the DOM. */
 export function createObservatoryComposition(
   assets: BrightvaleAssets,
-  collections: readonly SongCollection[] = [],
 ): ObservatoryComposition {
   const root = new THREE.Group();
   root.name = 'Brightvale.Observatory';
@@ -96,14 +86,6 @@ export function createObservatoryComposition(
   const camera = new THREE.OrthographicCamera(-8, 8, 5, -5, 0.1, 80);
   camera.position.set(0, 4, 16);
   camera.lookAt(0, 2, 0);
-  const collectionTargets = collections.map((collection) => {
-    const target = new THREE.Group();
-    target.name = `Observatory.CollectionAnchor.${collection.id}`;
-    root.add(target);
-    return { collection, target };
-  });
-  let width = 1;
-  let height = 1;
   let destroyed = false;
   return {
     root,
@@ -116,50 +98,13 @@ export function createObservatoryComposition(
         frame.reducedMotion,
       );
       for (const updateAmbience of ambienceUpdates) updateAmbience(ambience);
-      width = frame.width;
-      height = frame.height;
-      const count = Math.max(1, collectionTargets.length);
-      const columns = Math.min(count, width < 1100 || width < height ? 2 : 3);
-      const horizontalSpan = width < height ? 1 : width < 1100 ? 0.56 : 0.78;
-      collectionTargets.forEach(({ target }, index) => {
-        const col = index % columns;
-        const row = Math.floor(index / columns);
-        target.position.set(
-          (-8 * width) / height +
-            (col + 0.5) *
-              ((((16 * width) / height) * horizontalSpan) / columns),
-          1.15 - row * (width < height ? 1.5 : 2.1),
-          1.1,
-        );
-      });
+      const { width, height } = frame;
       camera.left = (-8 * width) / height;
       camera.right = (8 * width) / height;
       camera.top = 5;
       camera.bottom = -5;
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld(true);
-    },
-    anchors() {
-      root.updateMatrixWorld(true);
-      return collectionTargets.map(({ collection, target }) => {
-        const anchor = new THREE.Vector3(0, 0, 0);
-        target.localToWorld(anchor);
-        const projected = anchor.project(camera);
-        const x = ((projected.x + 1) / 2) * width;
-        const y = ((1 - projected.y) / 2) * height;
-        return {
-          collectionId: collection.id,
-          x,
-          y,
-          visible:
-            width > 0 &&
-            height > 0 &&
-            x >= 0 &&
-            x <= width &&
-            y >= 0 &&
-            y <= height,
-        };
-      });
     },
     dispose() {
       if (destroyed) return;
