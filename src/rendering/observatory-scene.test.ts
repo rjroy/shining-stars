@@ -122,6 +122,87 @@ describe('Observatory scene composition', () => {
     empty.dispose();
   });
 
+  it('owns cached animated material clones while borrowing city geometry and maps', () => {
+    const assets = createAssets();
+    const geometry = new THREE.BoxGeometry();
+    const texture = new THREE.Texture();
+    const water = new THREE.MeshPhysicalMaterial({
+      map: texture,
+      roughness: 0.37,
+      clearcoat: 0.28,
+    });
+    water.userData.city_role = 'city.water.surface';
+    const window = new THREE.MeshStandardMaterial({
+      emissive: 0xffbb88,
+      emissiveIntensity: 1.3,
+      emissiveMap: texture,
+    });
+    window.userData.city_role = 'emissive_window';
+    window.userData.source_material = 'District detail | Left lit glazing';
+    const surface = new THREE.Mesh(geometry, [water, window]);
+    surface.name = 'Test.SharedCitySurface';
+    const repeated = new THREE.Mesh(geometry, water);
+    repeated.name = 'Test.RepeatedWater';
+    assets.roots.city.add(surface, repeated);
+    const borrowedDisposals = [geometry, texture, water, window].map(
+      (resource) => vi.spyOn(resource, 'dispose'),
+    );
+    const composition = createObservatoryComposition(assets);
+    try {
+      const cloned = composition.root.getObjectByName(surface.name);
+      const clonedRepeated = composition.root.getObjectByName(repeated.name);
+      if (
+        !(cloned instanceof THREE.Mesh) ||
+        !Array.isArray(cloned.material) ||
+        !(clonedRepeated instanceof THREE.Mesh)
+      ) {
+        throw new Error(
+          'Expected cloned city meshes with their material slots',
+        );
+      }
+      const [ownedWater, ownedWindow] = cloned.material;
+      if (
+        !(ownedWater instanceof THREE.MeshPhysicalMaterial) ||
+        !(ownedWindow instanceof THREE.MeshStandardMaterial)
+      ) {
+        throw new Error('Expected authored PBR material types to be retained');
+      }
+      expect(ownedWater).not.toBe(water);
+      expect(ownedWindow).not.toBe(window);
+      expect(clonedRepeated.material).toBe(ownedWater);
+      expect(cloned.geometry).toBe(geometry);
+      expect(ownedWater.map).toBe(texture);
+      expect(ownedWindow.emissiveMap).toBe(texture);
+      expect(ownedWater.roughness).toBe(water.roughness);
+      expect(ownedWater.clearcoat).toBe(water.clearcoat);
+      const ownedDisposals = [ownedWater, ownedWindow].map((material) =>
+        vi.spyOn(material, 'dispose'),
+      );
+      for (const elapsedSeconds of [0, 6, 18, 6]) {
+        composition.update({
+          width: 1200,
+          height: 800,
+          elapsedSeconds,
+          reducedMotion: false,
+        });
+      }
+      expect(window.emissiveIntensity).toBe(1.3);
+      composition.dispose();
+      composition.dispose();
+      for (const dispose of ownedDisposals)
+        expect(dispose).toHaveBeenCalledTimes(1);
+      for (const dispose of borrowedDisposals)
+        expect(dispose).not.toHaveBeenCalled();
+      expect(assets.dispose).not.toHaveBeenCalled();
+    } finally {
+      composition.dispose();
+      geometry.dispose();
+      texture.dispose();
+      water.dispose();
+      window.dispose();
+    }
+  });
+
   it('builds the Observatory city without duplicating shared sky effects or owning city resources', () => {
     const assets = createAssets();
     const cityGeometry = (assets.roots.city.children[0] as THREE.Mesh).geometry;

@@ -1,6 +1,6 @@
 import type { SceneStateProjection } from '../scene-state';
 
-/** Saved song time only: no wall clock, random state, or independent lifecycle. */
+/** Caller-owned time only: no wall clock, random state, or independent lifecycle. */
 export interface BrightvaleAmbience {
   readonly time: number;
   readonly cloudTint: readonly [number, number, number];
@@ -10,7 +10,7 @@ export interface BrightvaleAmbience {
   readonly windowsEnabled: boolean;
 }
 
-/** Default for Observatory and callers that do not opt into gameplay ambience. */
+/** Default for callers that do not supply animated ambience. */
 export const STATIC_AMBIENCE: BrightvaleAmbience = {
   time: 0,
   cloudTint: [1, 1, 1],
@@ -34,7 +34,10 @@ const RADIANT_CLOUD_GOLD = [1, 0.48, 0.035] as const;
 const RADIANT_CLOUD_ROSE = [0.95, 0.10, 0.35] as const;
 
 export function projectBrightvaleAmbience(
-  state: SceneStateProjection,
+  state: Pick<
+    SceneStateProjection,
+    'transitionProgress' | 'radiantProgress' | 'victory'
+  >,
   transportTime: number,
   reducedMotion: boolean,
 ): BrightvaleAmbience {
@@ -101,6 +104,18 @@ export function projectBrightvaleAmbience(
     waterStrength: 1,
     windowsEnabled: true,
   };
+}
+
+/** Calm Audience variation behind Observatory's unchanged nighttime sky. */
+export function projectObservatoryAmbience(
+  elapsedSeconds: number,
+  reducedMotion: boolean,
+): BrightvaleAmbience {
+  return projectBrightvaleAmbience(
+    { transitionProgress: 0, radiantProgress: 0, victory: false },
+    elapsedSeconds,
+    reducedMotion,
+  );
 }
 
 /** Authored material groups, not individual windows or added real light sources. */

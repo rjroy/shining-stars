@@ -678,6 +678,120 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect(assets.dispose).toHaveBeenCalledTimes(1);
   });
 
+  it('drives Observatory cloud, water and window effects from elapsed time and freezes them for reduced motion', async () => {
+    const renderer = makeRenderer();
+    const assets = makeAssets();
+    const geometry = (assets.roots.city.children[0] as THREE.Mesh).geometry;
+    const sourceWater = new THREE.MeshStandardMaterial({ roughness: 0.4 });
+    sourceWater.userData.city_role = 'city.water.surface';
+    const sourceWindow = new THREE.MeshStandardMaterial({
+      emissive: 0xffaa66,
+      emissiveIntensity: 2,
+    });
+    sourceWindow.userData.city_role = 'emissive_window';
+    sourceWindow.userData.source_material =
+      'District detail | Left lit glazing';
+    for (const [name, source] of [
+      ['Test.Observatory.Water', sourceWater],
+      ['Test.Observatory.Window', sourceWindow],
+    ] as const) {
+      const mesh = new THREE.Mesh(geometry, source);
+      mesh.name = name;
+      assets.roots.city.add(mesh);
+    }
+    const scene = makeScene(makeHost(), vi.fn(), () => renderer.renderer, {
+      loadAssets: vi.fn(async () => assets),
+      createComposition: vi.fn(() => ({
+        root: new THREE.Group(),
+        dispose: vi.fn(),
+      })),
+    });
+    if (scene === null) throw new Error('scene did not initialize');
+    try {
+      const frame = (elapsedSeconds: number, reducedMotion = false) => ({
+        width: 1600,
+        height: 900,
+        elapsedSeconds,
+        reducedMotion,
+      });
+      expect(scene.updateObservatoryFrame(frame(0))).toBe('loading');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(scene.updateObservatoryFrame(frame(0))).toBe('rendered');
+      const world = renderer.calls.at(-1)!.scene;
+      const water = world.getObjectByName('Test.Observatory.Water') as
+        THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+      const window = world.getObjectByName('Test.Observatory.Window') as
+        THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+      const cloud = renderer.skyCalls.at(-1)!.scene.getObjectByName(
+        'Brightvale.Sky.Clouds.Warm',
+      ) as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+      const shaderFor = (
+        material: THREE.Material,
+        library: THREE.ShaderLibShader,
+      ) => {
+        // Exercise the real effect hooks without a GPU or production assets.
+        const shader = {
+          vertexShader: library.vertexShader,
+          fragmentShader: library.fragmentShader,
+          uniforms: {},
+        } as THREE.WebGLProgramParametersWithUniforms;
+        material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+        return shader;
+      };
+      const waterShader = shaderFor(water.material, THREE.ShaderLib.standard);
+      const cloudShader = shaderFor(cloud.material, THREE.ShaderLib.basic);
+      const snapshot = (time: number, reducedMotion = false) => {
+        const worldPasses = renderer.calls.length;
+        const skyPasses = renderer.skyCalls.length;
+        expect(scene.updateObservatoryFrame(frame(time, reducedMotion))).toBe(
+          'rendered',
+        );
+        expect(renderer.calls.length - worldPasses).toBe(1);
+        expect(renderer.skyCalls.length - skyPasses).toBe(1);
+        return {
+          waterTime: waterShader.uniforms.brightvaleWaterTime?.value,
+          waterStrength: waterShader.uniforms.brightvaleWaterStrength?.value,
+          windowEmission: window.material.emissiveIntensity,
+          cloudGrade:
+            cloudShader.uniforms.brightvaleCloudGrade?.value.toArray(),
+          cloudGradeAmount:
+            cloudShader.uniforms.brightvaleCloudGradeAmount?.value,
+        };
+      };
+      const active = [0, 6, 18].map((time) => snapshot(time));
+      expect.soft(active.map(({ waterTime }) => waterTime)).toEqual([0, 6, 18]);
+      for (const sample of active) {
+        expect.soft(sample.waterStrength).toBeGreaterThan(0);
+        expect.soft(sample.cloudGradeAmount).toBeGreaterThan(0);
+        expect.soft(Number.isFinite(sample.windowEmission)).toBe(true);
+      }
+      expect
+        .soft(new Set(active.map(({ windowEmission }) => windowEmission)).size)
+        .toBeGreaterThan(1);
+      expect
+        .soft(
+          new Set(active.map(({ cloudGrade }) => JSON.stringify(cloudGrade)))
+            .size,
+        )
+        .toBeGreaterThan(1);
+      expect.soft(snapshot(6)).toEqual(active[1]);
+      const frozen = snapshot(6, true);
+      expect.soft(snapshot(18, true)).toEqual(frozen);
+      expect.soft(frozen).toEqual(active[0]);
+      expect.soft(water.material).not.toBe(sourceWater);
+      expect.soft(window.material).not.toBe(sourceWindow);
+      expect(water.geometry).toBe(geometry);
+      expect(sourceWindow.emissiveIntensity).toBe(2);
+      expect(sourceWater.roughness).toBe(0.4);
+    } finally {
+      scene.destroy();
+      sourceWater.dispose();
+      sourceWindow.dispose();
+      geometry.dispose();
+    }
+  });
+
   it('keeps the active Observatory mode on a late gameplay layout measurement until gameplay is explicitly selected', async () => {
     const host = makeHost();
     const renderer = makeRenderer();

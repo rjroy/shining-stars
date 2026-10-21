@@ -37,7 +37,10 @@ import {
   type BrightvaleShellComposition,
 } from './brightvale/scene-shell';
 import type { SceneStateProjection } from './scene-state';
-import { projectBrightvaleAmbience } from './brightvale/ambience';
+import {
+  projectBrightvaleAmbience,
+  projectObservatoryAmbience,
+} from './brightvale/ambience';
 import type { SongCollection } from '../catalog/catalog';
 import type {
   BrightvaleRendererStatus,
@@ -750,7 +753,13 @@ export function createBrightvaleScene(
         sky.update(
           lastFrame?.city ?? observatorySkyState,
           layout.width / layout.height,
-          { observatory: true },
+          {
+            observatory: true,
+            ambience: projectObservatoryAmbience(
+              observatoryFrame.elapsedSeconds,
+              observatoryFrame.reducedMotion,
+            ),
+          },
         );
         renderer.render(sky.scene, sky.camera);
         if (shadowScene !== observatoryScene) {
