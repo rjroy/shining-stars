@@ -94,8 +94,8 @@ export function createObservatoryComposition(
   fitDirectionalShadowCamera(cityKey, [city]);
 
   const camera = new THREE.OrthographicCamera(-8, 8, 5, -5, 0.1, 80);
-  camera.position.set(0, 0, 16);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(0, 4, 16);
+  camera.lookAt(0, 2, 0);
   const collectionTargets = collections.map((collection) => {
     const target = new THREE.Group();
     target.name = `Observatory.CollectionAnchor.${collection.id}`;
