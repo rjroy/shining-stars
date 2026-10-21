@@ -100,10 +100,10 @@ test('mounted Observatory refreshes ratings, notices, and filtered selection on 
       let ratings={zero:null,other:null};
       let ratingNotice=null;
       const host=document.createElement('div'); document.body.append(host);
-      const ui=createObservatoryUI(host,catalog,{onPlay:()=>{}},store.favorites,{getSongRating:id=>ratings[id],getRatingNotice:()=>ratingNotice});
-      ui.setRendererStatus('rendered');
+      const makeUI=()=>{const ui=createObservatoryUI(host,catalog,{onPlay:()=>{}},store.favorites,{getSongRating:id=>ratings[id],getRatingNotice:()=>ratingNotice});ui.setRendererStatus('rendered');return ui};
+      let ui=makeUI();
       host.querySelector('[data-action="all-songs"]').click();
-      window.__ratingHarness={host,ui,setRating(id,value){ratings[id]=value},setNotice(value){ratingNotice=value},dispose(){ui.destroy();host.remove()}};
+      window.__ratingHarness={host,get ui(){return ui},setRating(id,value){ratings[id]=value},setNotice(value){ratingNotice=value},recreate(){ui.destroy();ui=makeUI()},dispose(){ui.destroy();host.remove()}};
     })()`);
     const waitFor = async (expr) => {
       for (let i = 0; i < 100; i++) { if (await evaluate(expr)) return; await delay(50); }
@@ -133,6 +133,21 @@ test('mounted Observatory refreshes ratings, notices, and filtered selection on 
     assert.deepEqual(reconciled.rows, ['other']);
     assert.equal(reconciled.selection.selectedSongId, 'other');
     assert.equal(reconciled.detail, 'other');
+    await evaluate(`(()=>{const h=window.__ratingHarness;const change=(selector,value)=>{const control=h.host.querySelector(selector);if(control.type==='checkbox')control.checked=value;else control.value=value;control.dispatchEvent(new Event('change',{bubbles:true}))};change('[data-filter-unlock-status]','locked');change('[data-filter-unplayed]',true);change('[data-filter-undefeated]','hard');change('[data-filter-normal-stars]',true);change('[data-filter-gold-stars]',true);change('[data-song-sort]','difficulty');const search=h.host.querySelector('[data-search]');search.value='Fixture';search.dispatchEvent(new Event('input',{bubbles:true}));h.host.querySelector('[data-action="toggle-filters"]').click();h.recreate()})()`);
+    const restored = await evaluate(`(()=>{const h=window.__ratingHarness.host;return {unlock:h.querySelector('[data-filter-unlock-status]').value,unplayed:h.querySelector('[data-filter-unplayed]').checked,undefeated:h.querySelector('[data-filter-undefeated]').value,normal:h.querySelector('[data-filter-normal-stars]').checked,gold:h.querySelector('[data-filter-gold-stars]').checked,sort:h.querySelector('[data-song-sort]').value,filterExpanded:h.querySelector('[data-action="toggle-filters"]').getAttribute('aria-expanded'),search:h.querySelector('[data-search]').value}})()`);
+    assert.deepEqual(restored, { unlock: 'locked', unplayed: true, undefeated: 'hard', normal: true, gold: true, sort: 'difficulty', filterExpanded: 'false', search: '' });
+    await evaluate(`(()=>{const h=window.__ratingHarness;h.host.querySelector('[data-action="favorites"]').click();h.recreate()})()`);
+    const favoritesRestored = await evaluate(`(()=>({pressed:window.__ratingHarness.host.querySelector('[data-action="favorites"]').getAttribute('aria-pressed')}))()`);
+    assert.equal(favoritesRestored.pressed, 'true');
+    await evaluate(`(()=>{window.__ratingHarness.host.querySelector('[data-action="browse-collection"]').click()})()`);
+    const afterBrowserEntry = await evaluate(`(()=>({pressed:window.__ratingHarness.host.querySelector('[data-action="favorites"]').getAttribute('aria-pressed')}))()`);
+    assert.equal(afterBrowserEntry.pressed, 'true');
+    await evaluate(`(()=>{const h=window.__ratingHarness.host;h.querySelector('[data-action="toggle-filters"]').click();h.querySelector('[data-action="clear-filters"]').click()})()`);
+    const cleared = await evaluate(`(()=>{const h=window.__ratingHarness.host;return {unlock:h.querySelector('[data-filter-unlock-status]').value,unplayed:h.querySelector('[data-filter-unplayed]').checked,undefeated:h.querySelector('[data-filter-undefeated]').value,normal:h.querySelector('[data-filter-normal-stars]').checked,gold:h.querySelector('[data-filter-gold-stars]').checked,sort:h.querySelector('[data-song-sort]').value}})()`);
+    assert.deepEqual(cleared, { unlock: 'all', unplayed: false, undefeated: '', normal: false, gold: false, sort: 'difficulty' });
+    await evaluate(`window.__ratingHarness.recreate()`);
+    const clearedRestored = await evaluate(`(()=>{const h=window.__ratingHarness.host;return {unlock:h.querySelector('[data-filter-unlock-status]').value,unplayed:h.querySelector('[data-filter-unplayed]').checked,undefeated:h.querySelector('[data-filter-undefeated]').value,normal:h.querySelector('[data-filter-normal-stars]').checked,gold:h.querySelector('[data-filter-gold-stars]').checked,sort:h.querySelector('[data-song-sort]').value,favorites:h.querySelector('[data-action="favorites"]').getAttribute('aria-pressed')}})()`);
+    assert.deepEqual(clearedRestored, { unlock: 'all', unplayed: false, undefeated: '', normal: false, gold: false, sort: 'difficulty', favorites: 'false' });
     await evaluate(`window.__ratingHarness.dispose();delete window.__ratingHarness`);
   } finally {
     const cleanupErrors = [];

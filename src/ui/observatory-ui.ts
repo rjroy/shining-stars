@@ -28,6 +28,10 @@ import { createSaveDataDialog } from './save-data-dialog';
 import type { SongRating } from '../catalog/song-ratings';
 import { ensureExperienceShell } from './experience-shell';
 import type { BrightvaleRendererStatus } from '../rendering/brightvale/viewport';
+import {
+  createBrowsePreferenceStore,
+  type BrowsePreferenceStorage,
+} from '../catalog/browse-preferences';
 
 export interface ObservatoryAnchor {
   readonly collectionId: string;
@@ -53,6 +57,7 @@ export interface ObservatoryUIOptions {
   readonly saveStore?: SaveStore;
   readonly getSongRating?: (songId: string) => SongRating | null;
   readonly getRatingNotice?: () => string | null;
+  readonly browsePreferenceStorage?: BrowsePreferenceStorage | null;
 }
 
 /** Keep each independent local-storage warning visible without replacing it. */
@@ -383,6 +388,13 @@ export function createObservatoryUI(
   let filtersOpen = false;
   let sortOpen = false;
   let sortMode: SongSortMode = 'unsorted';
+  const browsePreferences = createBrowsePreferenceStore(
+    options.browsePreferenceStorage,
+  );
+  const savedBrowsePreferences = browsePreferences.read();
+  filters = { ...savedBrowsePreferences.filters };
+  favoritesOnly = savedBrowsePreferences.favoritesOnly;
+  sortMode = savedBrowsePreferences.sortMode;
   let rendererStatus: BrightvaleRendererStatus = 'loading';
   let rendererMessage = 'The Observatory is lighting its stars…';
   let playStatus: ObservatoryPlayStatus = 'idle';
@@ -521,6 +533,20 @@ export function createObservatoryUI(
       browseProgress(),
       sortMode,
     );
+  }
+
+  function persistBrowsePreferences(): void {
+    const {
+      query: _query,
+      collectionId: _collectionId,
+      favoritesOnly: _favoritesOnly,
+      ...persistentFilters
+    } = filters;
+    browsePreferences.write({
+      filters: persistentFilters,
+      sortMode,
+      favoritesOnly,
+    });
   }
 
   function renderAnchors(): void {
@@ -961,6 +987,7 @@ export function createObservatoryUI(
       saveDialog?.open();
     } else if (action === 'all-songs' || action === 'overview-all') {
       favoritesOnly = false;
+      persistBrowsePreferences();
       openBrowser(undefined);
     } else if (action === 'browse-collection') {
       openBrowser(selectedCollectionId ?? undefined, false);
@@ -992,11 +1019,13 @@ export function createObservatoryUI(
       }
     } else if (action === 'favorites') {
       favoritesOnly = !favoritesOnly;
+      persistBrowsePreferences();
       screen = 'browser';
       reconcile();
       render();
     } else if (action === 'overview-favorites') {
       favoritesOnly = true;
+      persistBrowsePreferences();
       openBrowser(undefined);
     } else if (action === 'toggle-favorite') {
       const songId = button.dataset.songId;
@@ -1026,6 +1055,7 @@ export function createObservatoryUI(
     } else if (action === 'clear-filters') {
       filters = { collectionId: filters.collectionId };
       favoritesOnly = false;
+      persistBrowsePreferences();
       searchInput.value = '';
       reconcile();
       render();
@@ -1083,6 +1113,7 @@ export function createObservatoryUI(
             : null;
       if (key === null) return;
       filters = { ...filters, [key]: target.checked };
+      persistBrowsePreferences();
       reconcile();
       render();
       return;
@@ -1094,6 +1125,7 @@ export function createObservatoryUI(
         value === 'alphabetical' || value === 'length' || value === 'difficulty'
           ? value
           : 'unsorted';
+      persistBrowsePreferences();
     } else if (target.dataset.filterUnlockStatus !== undefined) {
       filters = {
         ...filters,
@@ -1102,11 +1134,13 @@ export function createObservatoryUI(
             ? target.value
             : 'all',
       };
+      persistBrowsePreferences();
     } else if (target.dataset.filterUndefeated !== undefined) {
       filters = {
         ...filters,
         undefeatedDifficulty: normalizeDifficulty(target.value) ?? undefined,
       };
+      persistBrowsePreferences();
     } else if (target.dataset.runDifficulty !== undefined) {
       const difficulty = normalizeDifficulty(target.value);
       if (
