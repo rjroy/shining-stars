@@ -7,10 +7,10 @@ from collections.abc import Mapping, Sequence
 
 
 DEFAULT_LANE_MAPPING = {
-    "pitch_following": 1,
+    "pitch_following": 2,
     "lane_balance": 1,
     "repetition_avoidance": 1,
-    "wide_jump_avoidance": 1,
+    "wide_jump_avoidance": 0.5,
     "adaptation_block_notes": 32,
 }
 BEAM_WIDTH = 64

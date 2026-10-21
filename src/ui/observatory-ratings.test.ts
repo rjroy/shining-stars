@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as observatory from './observatory-ui';
 import type { SongCatalogEntry } from '../catalog/catalog';
 import type { Difficulty } from '../game/game-balance';
@@ -146,88 +145,9 @@ describe('Observatory saved song-rating presentation', () => {
     expect(value.targetBasisText).toBe('No Normal chart');
   });
 
-  it('wires the shared presentation and injected ratings into the real list and detail', () => {
-    const source = readFileSync(
-      new URL('./observatory-ui.ts', import.meta.url),
-      'utf8',
-    );
-    const rows =
-      source
-        .split('function renderRows(): void {')[1]
-        ?.split('function renderDetail(): void {')[0] ?? '';
-    const detail =
-      source
-        .split('function renderDetail(): void {')[1]
-        ?.split('function render(): void {')[0] ?? '';
-    expect(source).toMatch(/getSongRating\??\s*:/);
-    for (const render of [rows, detail]) {
-      expect(render).toContain('getObservatorySongPresentation(');
-      expect(render).toContain('getSongRating');
-      expect(render).toContain('starsMarkup');
-      expect(render).toContain('durationText');
-      expect(render).toContain('bestText');
-      expect(render).not.toContain('score-echo');
-    }
-    expect(detail).toContain('fiveGoldTargetText');
-    expect(detail).toContain('Five-gold target');
-    expect(detail).toContain('Personal best');
-  });
 });
 
-describe('Observatory return-time rating refresh policy', () => {
-  // Execute the production lifecycle method, not a replacement implementation.
-  // Render doubles observe injected state; this is not DOM/browser coverage.
-  const source = readFileSync(
-    new URL('./observatory-ui.ts', import.meta.url),
-    'utf8',
-  );
-  function returnToSelection(
-    renderRows: () => void,
-    renderDetail: () => void,
-    syncStorageNotice: () => void,
-    reconcile: () => void = vi.fn(),
-  ) {
-    const match = source.match(
-      /setPlayStatus\(status, message = ''\) \{([\s\S]*?)\n {4}\},\n {4}focusSelectedSong/,
-    );
-    if (match === null)
-      throw new Error('Production setPlayStatus method was not found');
-    const body = match[1];
-    const invoke = new Function(
-      'renderRows',
-      'renderDetail',
-      'syncStorageNotice',
-      'setNotice',
-      'render',
-      'reconcile',
-      `let playStatus, playMessage; return function(status, message = '') {${body}}`,
-    );
-    invoke(
-      renderRows,
-      renderDetail,
-      syncStorageNotice,
-      vi.fn(),
-      () => {
-        renderRows();
-        renderDetail();
-        syncStorageNotice();
-      },
-      reconcile,
-    )('idle');
-  }
-
-  it('reconciles save-derived filtered selection before painting the returned catalog', () => {
-    const calls: string[] = [];
-    returnToSelection(
-      () => calls.push('rows'),
-      () => calls.push('detail'),
-      () => calls.push('notice'),
-      () => calls.push('reconcile'),
-    );
-    expect(calls[0]).toBe('reconcile');
-    expect(calls).toContain('rows');
-  });
-
+describe('Observatory storage notice policy', () => {
   function combineNotices(
     favorites: string | null,
     ratings: string | null,
@@ -243,38 +163,6 @@ describe('Observatory return-time rating refresh policy', () => {
       ) => string | null
     )(favorites, ratings);
   }
-
-  it.each([
-    [
-      null,
-      { played: true, normalStars: 3, goldStars: 0, achievementOrdinal: 18 },
-    ],
-    [
-      { played: true, normalStars: 3, goldStars: 0, achievementOrdinal: 18 },
-      { played: true, normalStars: 5, goldStars: 2, achievementOrdinal: 32 },
-    ],
-  ] as const)(
-    'refreshes both list and detail from the changed getter on idle return',
-    (before, after) => {
-      let rating: Rating | null = before;
-      const options = { getSongRating: () => rating };
-      const read = () => present(song, options.getSongRating()).bestText;
-      let row = read();
-      let detail = read();
-      rating = after;
-      returnToSelection(
-        () => {
-          row = read();
-        },
-        () => {
-          detail = read();
-        },
-        vi.fn(),
-      );
-      expect(row).toBe(`${after.normalStars} normal · ${after.goldStars} gold`);
-      expect(detail).toBe(row);
-    },
-  );
 
   it('shows rating storage trouble even when Favorites storage is healthy', () => {
     expect(
@@ -292,15 +180,4 @@ describe('Observatory return-time rating refresh policy', () => {
     expect(combined).toContain(ratings);
   });
 
-  it('reads a fresh rating-storage notice after a result write falls back to session storage', () => {
-    let ratingNotice: string | null = null;
-    const options = { getRatingNotice: () => ratingNotice };
-    let displayedNotice: string | null = null;
-    const syncStorageNotice = () => {
-      displayedNotice = combineNotices(null, options.getRatingNotice());
-    };
-    ratingNotice = 'Song ratings are available for this session only.';
-    returnToSelection(vi.fn(), vi.fn(), syncStorageNotice);
-    expect(displayedNotice).toBe(ratingNotice);
-  });
 });

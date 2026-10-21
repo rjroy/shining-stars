@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:brightvale:browser": "node --test tests/browser/brightvale/responsive.test.mjs tests/browser/brightvale/acceptance-plan.test.mjs tests/browser/brightvale/cli.test.mjs && node tests/browser/brightvale/cli.mjs",
     "test:brightvale:favorites": "node --test tests/browser/brightvale/favorites-toggle.browser.mjs",
+    "test:brightvale:ratings": "node --test tests/browser/brightvale/observatory-ratings.browser.mjs",
     "test:brightvale:acceptance": "node tests/browser/brightvale/observatory-acceptance.mjs smoke",
     "test:brightvale:acceptance:exhaustive": "node tests/browser/brightvale/observatory-acceptance.mjs exhaustive",
     "chart:generate": "python3 scripts/beat_chart.py --all",

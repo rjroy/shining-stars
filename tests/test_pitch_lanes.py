@@ -8,6 +8,7 @@ import importlib.util
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,21 +51,24 @@ class PitchLanesProductionContractTests(unittest.TestCase):
             "wide_jump_avoidance": 1,
             "adaptation_block_notes": 32,
         }
-        self.assertEqual(mapper.DEFAULT_LANE_MAPPING, expected_defaults)
-        self.assertEqual(mapper.validate_lane_mapping(), expected_defaults)
-        self.assertEqual(mapper.validate_lane_mapping({}), expected_defaults)
-        self.assertEqual(
-            mapper.validate_lane_mapping({"pitch_following": 0}),
-            {**expected_defaults, "pitch_following": 0},
-        )
-        fallback = [
-            fixture["fallback_pattern"][i % len(fixture["fallback_pattern"])]
-            for i in range(len(fixture["pitch_records"]))
-        ]
-        self.assertEqual(
-            mapper.map_lanes(fixture["pitch_records"], fallback),
-            fixture["expected_lanes"],
-        )
+        # Defaults are an input boundary, not an assertion about mutable
+        # production tuning. Pin the test-owned profile while checking that
+        # omitted and partial mappings resolve through that boundary.
+        with patch.dict(mapper.DEFAULT_LANE_MAPPING, expected_defaults, clear=True):
+            self.assertEqual(mapper.validate_lane_mapping(), expected_defaults)
+            self.assertEqual(mapper.validate_lane_mapping({}), expected_defaults)
+            self.assertEqual(
+                mapper.validate_lane_mapping({"pitch_following": 0}),
+                {**expected_defaults, "pitch_following": 0},
+            )
+            fallback = [
+                fixture["fallback_pattern"][i % len(fixture["fallback_pattern"])]
+                for i in range(len(fixture["pitch_records"]))
+            ]
+            self.assertEqual(
+                mapper.map_lanes(fixture["pitch_records"], fallback),
+                fixture["expected_lanes"],
+            )
 
     def test_zero_pitch_following_leaves_stable_pitch_uninformed(self):
         mapper = self.require_production_api()
@@ -181,17 +185,24 @@ class PitchLanesProductionContractTests(unittest.TestCase):
     def test_adaptation_block_size_preserves_transposed_contour_without_forcing_identity(self):
         mapper = self.require_production_api()
         motif = [48 + index * 4 for index in range(8)]
-        pitches = motif + [pitch + 12 for pitch in motif]
+        transposed_motif = [pitch + 12 for pitch in motif]
+        pitches = motif + transposed_motif
         records = [
             {"pitch": pitch, "coverage": 1.0, "mad": 0.0, "stable": True}
             for pitch in pitches
         ]
         fallback = [0] * len(records)
+        controls = {
+            "pitch_following": 1,
+            "lane_balance": 1,
+            "repetition_avoidance": 1,
+            "wide_jump_avoidance": 1,
+        }
         adapted = mapper.map_lanes(
-            records, fallback, {"adaptation_block_notes": 8}
+            records, fallback, {**controls, "adaptation_block_notes": 8}
         )
         pooled = mapper.map_lanes(
-            records, fallback, {"adaptation_block_notes": 32}
+            records, fallback, {**controls, "adaptation_block_notes": 32}
         )
         adapted_distance = sum(a != b for a, b in zip(adapted[:8], adapted[8:]))
         pooled_distance = sum(a != b for a, b in zip(pooled[:8], pooled[8:]))

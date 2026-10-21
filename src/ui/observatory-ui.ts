@@ -92,15 +92,16 @@ export function chooseObservatorySong(
 ): SongSelection | null {
   const song = catalog.songs.find((entry) => entry.id === songId);
   if (song === undefined || song.availability !== 'available') return null;
+  const supportedDifficulties = getSongDifficulties(song);
   return {
     selectedSongId: song.id,
     runDifficulty:
       selection.runDifficulty !== null &&
-      getSongDifficulties(song).includes(selection.runDifficulty)
+      supportedDifficulties.includes(selection.runDifficulty)
         ? selection.runDifficulty
-        : getSongDifficulties(song).includes('normal')
-          ? 'normal'
-          : (getSongDifficulties(song)[0] ?? null),
+        : supportedDifficulties.length === 0
+          ? null
+          : defaultDifficulty(supportedDifficulties),
   };
 }
 
@@ -363,14 +364,17 @@ export function createObservatoryUI(
     null;
   const initialSong =
     catalog.songs.find((song) => song.availability === 'available') ?? null;
+  const initialDifficulties =
+    initialSong === null ? [] : getSongDifficulties(initialSong);
   const selection: SongSelection =
     initialSong === null
       ? { selectedSongId: null, runDifficulty: null }
       : {
           selectedSongId: initialSong.id,
-          runDifficulty: getSongDifficulties(initialSong).includes('normal')
-            ? 'normal'
-            : (getSongDifficulties(initialSong)[0] ?? null),
+          runDifficulty:
+            initialDifficulties.length === 0
+              ? null
+              : defaultDifficulty(initialDifficulties),
         };
   let currentSelection = selection;
   let screen: 'overview' | 'browser' = 'overview';

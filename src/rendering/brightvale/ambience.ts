@@ -31,7 +31,7 @@ const AUDIENCE_CLOUD_COOL = [0.72, 0.44, 1] as const;
 const TWILIGHT_CLOUD_EMBER = [1, 0.025, 0.16] as const;
 const TWILIGHT_CLOUD_ION = [0.025, 0.32, 1] as const;
 const RADIANT_CLOUD_GOLD = [1, 0.48, 0.035] as const;
-const RADIANT_CLOUD_ROSE = [0.6, 0.045, 0.85] as const;
+const RADIANT_CLOUD_ROSE = [0.95, 0.10, 0.35] as const;
 
 export function projectBrightvaleAmbience(
   state: SceneStateProjection,
@@ -42,26 +42,26 @@ export function projectBrightvaleAmbience(
     reducedMotion || !Number.isFinite(transportTime)
       ? 0
       : Math.max(0, transportTime);
-  const gentle = Math.sin(time * 0.12);
+  const gentle = Math.sin(time * (Math.PI / 17));
   // Grade the painted clouds, rather than expecting a near-white multiplier to
   // visibly recolor them. Reach orange at six seconds and violet at eighteen.
-  const warmth = 0.5 + 0.5 * Math.sin(time * (Math.PI / 8));
+  const warmth = 0.5 + 0.5 * Math.sin(time * (Math.PI / 11));
   const audienceGrade = (channel: 0 | 1 | 2): number =>
     AUDIENCE_CLOUD_COOL[channel] * (1 - warmth) +
     AUDIENCE_CLOUD_WARM[channel] * warmth;
   // Interference, not noise or stepped randomness: restless but always continuous.
   const restless =
-    0.45 * Math.sin(time * 0.36) +
-    0.35 * Math.sin(time * 0.20 + 0.4) +
-    0.2 * Math.sin(time * 0.065 + 1);
-  const serene = Math.sin(time * 0.08);
-  const audience = [1, 0.975 + gentle * 0.02, 0.94 + gentle * 0.04] as const;
+    0.45 * Math.sin(time *(Math.PI / 5)) +
+    0.35 * Math.sin(time *(Math.PI / 7) + 0.4) +
+    0.2 * Math.sin(time * (Math.PI / 11) + 1);
+  const serene = Math.sin(time * (Math.PI / 11));
+  const audience = [1, 0.8 + gentle * 0.2, 0.7 + gentle * 0.3] as const;
   const twilight = [
-    0.94 + restless * 0.05,
-    0.94 + restless * 0.035,
+    0.80 + restless * 0.2,
+    0.75 + restless * 0.25,
     1,
   ] as const;
-  const radiant = [1, 0.98 + serene * 0.015, 0.94 + serene * 0.025] as const;
+  const radiant = [1, 0.8 + serene * 0.2, 0.7 + serene * 0.3] as const;
   const twilightAmount = clamp01(state.transitionProgress);
   const radiantAmount = state.victory ? clamp01(state.radiantProgress) : 0;
   // Phase-warped oscillation: no random jumps or short repeated beat. The 13s
@@ -70,12 +70,12 @@ export function projectBrightvaleAmbience(
     0.5 +
     0.25 *
     Math.sin(
-      time * (Math.PI / 8) +
-      0.85 * Math.sin(time * (Math.PI / 10)) +
-      0.4 * Math.sin(time * (Math.PI / 15))
+      time * (Math.PI / 7) +
+      0.85 * Math.sin(time * (Math.PI / 13)) +
+      0.4 * Math.sin(time * (Math.PI / 17))
     ) +
     0.25 * Math.sin(time * Math.PI);
-  const radiance = 0.5 + 0.5 * Math.sin(time * (Math.PI / 12));
+  const radiance = 0.5 + 0.5 * Math.sin(time * (Math.PI / 13));
   const cloudGrade = (channel: 0 | 1 | 2): number => {
     const twilightGrade =
       TWILIGHT_CLOUD_ION[channel] * (1 - unease) +
@@ -105,10 +105,10 @@ export function projectBrightvaleAmbience(
 
 /** Authored material groups, not individual windows or added real light sources. */
 const WINDOW_PHASES: Readonly<Record<string, number>> = {
-  'Citadel detail | amber glazing 0': 0.3,
-  'Ravine detail | amber': 2.1,
-  'District detail | Left lit glazing': 3.8,
-  'District detail | Right lit glazing': 5.4,
+  'Citadel detail | amber glazing 0': 2,
+  'Ravine detail | amber': 3,
+  'District detail | Left lit glazing': 5,
+  'District detail | Right lit glazing': 7,
 };
 
 export function windowAmbienceMultiplier(
@@ -121,7 +121,7 @@ export function windowAmbienceMultiplier(
   }
 
   const wave =
-    0.9 * Math.sin(ambience.time * (Math.PI / 8) + phase) +
-    0.1 * Math.sin(ambience.time * (Math.PI / 2) + phase * 1.7);
-  return 30 * (0.50 + wave * 0.50);
+    0.9 * Math.sin((ambience.time + phase) * (Math.PI / 11)) +
+    0.1 * Math.sin((ambience.time + phase) * (Math.PI / 3));
+  return 20 * (0.50 + wave * 0.50);
 }

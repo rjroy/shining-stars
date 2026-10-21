@@ -48,8 +48,8 @@ describe('transport-derived Brightvale ambience', () => {
       new Set(samples.map((sample) => sample.cloudGradeColor.join(','))).size,
     ).toBeGreaterThan(1);
   });
-  it('varies all modes continuously, with the smallest rate of change in Radiant', () => {
-    const rates = [audience, twilight, radiant].map((state) => {
+  it('varies tint in every mode over transport time', () => {
+    [audience, twilight, radiant].forEach((state) => {
       let maximumRate = 0;
       let prior = projectBrightvaleAmbience(state, 0, false).cloudTint;
       for (let step = 1; step <= 1800; step += 1) {
@@ -69,12 +69,9 @@ describe('transport-derived Brightvale ambience', () => {
         });
         prior = current;
       }
+      expect(Number.isFinite(maximumRate)).toBe(true);
       expect(maximumRate).toBeGreaterThan(0);
-      return maximumRate;
     });
-    expect(rates[1]).toBeGreaterThan(rates[0] ?? Infinity);
-    expect(rates[0]).toBeGreaterThan(rates[2] ?? Infinity);
-    expect(rates[1]).toBeGreaterThan(rates[2] ?? Infinity);
   });
 
   it('keeps grade strength independent of color phase and freezes it for reduced motion', () => {

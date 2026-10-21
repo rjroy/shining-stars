@@ -3,23 +3,23 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 1,
+      "pitch_following": 2,
       "repetition_avoidance": 1,
-      "wide_jump_avoidance": 1
+      "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
@@ -44,20 +44,20 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7469135802469136,
+      "candidateExtractedF0DirectionAgreement": 0.7716049382716049,
       "candidateHandCounts": [
         258,
         258
       ],
       "candidateLaneCounts": [
-        128,
-        130,
+        129,
+        129,
         130,
         128
       ],
       "candidateLaneShares": [
-        0.24806201550387597,
-        0.25193798449612403,
+        0.25,
+        0.25,
         0.25193798449612403,
         0.24806201550387597
       ],
@@ -90,7 +90,7 @@
       ],
       "baselineLongestLaneRun": 1,
       "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.766743648960739,
+      "candidateExtractedF0DirectionAgreement": 0.7829099307159353,
       "candidateHandCounts": [
         400,
         397
@@ -153,7 +153,7 @@
         0.2508038585209003,
         0.24758842443729903
       ],
-      "candidateLongestLaneRun": 3,
+      "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 622,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
