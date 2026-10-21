@@ -37,7 +37,6 @@ interface BatchSource {
   readonly mesh: THREE.Mesh;
   readonly material: THREE.Material;
   readonly materialIndex: number;
-  readonly placement?: THREE.Matrix4;
 }
 
 function matrix(values: readonly number[]): THREE.Matrix4 {
@@ -91,19 +90,14 @@ function batchGeometry(source: BatchSource): THREE.BufferGeometry {
 }
 
 function copyAppearanceMaterials(
-  sourceRoot: THREE.Object3D,
   cloneRoot: THREE.Object3D,
   materialFor: (material: THREE.Material) => BrightvaleSurfaceMaterial,
 ): void {
-  const originals = meshes(sourceRoot);
-  const copies = meshes(cloneRoot);
-  originals.forEach((source, index) => {
-    const copy = copies[index];
-    if (!copy) return;
-    copy.material = Array.isArray(source.material)
-      ? source.material.map(materialFor)
-      : materialFor(source.material);
-  });
+  for (const mesh of meshes(cloneRoot)) {
+    mesh.material = Array.isArray(mesh.material)
+      ? mesh.material.map(materialFor)
+      : materialFor(mesh.material);
+  }
 }
 
 /** Assemble the approved layout while borrowing all imported GLB geometry. */
@@ -125,6 +119,12 @@ export function createBrightvaleComposition(
   let appearance: ReturnType<typeof createBrightvaleAppearance> | undefined;
   let disposed = false;
   const generatedInstances = new Set<THREE.InstancedMesh>();
+  const releaseResources = (): void => {
+    for (const batch of generatedInstances) batch.dispose();
+    for (const geometry of generatedGeometries) geometry.dispose();
+    appearance?.dispose();
+    for (const material of ownedSourceMaterials) material.dispose();
+  };
 
   try {
     const groundSources = new THREE.Group();
@@ -170,7 +170,7 @@ export function createBrightvaleComposition(
       wrapper.name = `Brightvale.Asset.${name}`;
       const source = assets.roots[name];
       const clone = source.clone(true);
-      copyAppearanceMaterials(source, clone, appearance!.materialFor);
+      copyAppearanceMaterials(clone, appearance!.materialFor);
       if (name === 'platform') hideFrontPlatformCaps(clone);
       setShadowParticipation(clone, { cast: true, receive: true });
       wrapper.add(clone);
@@ -241,7 +241,7 @@ export function createBrightvaleComposition(
 
     const batchSources = new Map<
       THREE.Object3D,
-      Map<THREE.BufferGeometry, Map<BrightvaleSurfaceMaterial, BatchSource[]>>
+      Map<THREE.BufferGeometry, Map<BrightvaleSurfaceMaterial, THREE.Matrix4[]>>
     >();
     const splitGeometryCache = new WeakMap<
       THREE.Mesh,
@@ -251,11 +251,9 @@ export function createBrightvaleComposition(
       destination: THREE.Object3D,
       sourceRoot: THREE.Object3D,
       placement: THREE.Matrix4,
-      objectFilter?: (mesh: THREE.Mesh) => boolean,
     ): void => {
       sourceRoot.updateMatrixWorld(true);
       for (const mesh of meshes(sourceRoot)) {
-        if (objectFilter && !objectFilter(mesh)) continue;
         for (const part of sourceParts(mesh)) {
           const material = appearance!.materialFor(part.material);
           let byMaterialIndex = splitGeometryCache.get(mesh);
@@ -278,10 +276,7 @@ export function createBrightvaleComposition(
           if (!sources) byMaterial.set(material, (sources = []));
           // Keep source pose in source-local coordinates for each repeated instance.
           const matrixForMesh = relativeMatrix(sourceRoot, mesh);
-          sources.push({
-            ...part,
-            placement: placement.clone().multiply(matrixForMesh),
-          });
+          sources.push(placement.clone().multiply(matrixForMesh));
         }
       }
     };
@@ -326,11 +321,9 @@ export function createBrightvaleComposition(
           );
           generatedInstances.add(batch);
           batch.name = `Brightvale.Batch.${material.userData.brightvaleRole ?? material.name}`;
-          sources.forEach((source, index) => {
-            if (!source.placement)
-              throw new Error('Missing instance placement matrix');
-            batch.setMatrixAt(index, source.placement);
-          });
+          sources.forEach((placement, index) =>
+            batch.setMatrixAt(index, placement),
+          );
           batch.instanceMatrix.needsUpdate = true;
           destination.add(batch);
         }
@@ -361,17 +354,11 @@ export function createBrightvaleComposition(
       dispose() {
         if (disposed) return;
         disposed = true;
-        for (const batch of generatedInstances) batch.dispose();
-        for (const geometry of generatedGeometries) geometry.dispose();
-        appearance?.dispose();
-        for (const material of ownedSourceMaterials) material.dispose();
+        releaseResources();
       },
     };
   } catch (error) {
-    for (const batch of generatedInstances) batch.dispose();
-    for (const geometry of generatedGeometries) geometry.dispose();
-    appearance?.dispose();
-    for (const material of ownedSourceMaterials) material.dispose();
+    releaseResources();
     throw error;
   }
 }
