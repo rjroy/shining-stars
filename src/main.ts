@@ -8,6 +8,7 @@ import type { ChartConfig } from './game/chart';
 import type { Difficulty } from './game/game-balance';
 import { projectGameplayFrame } from './rendering/gameplay-frame';
 import { createBrightvaleScene, type BrightvaleScene } from './rendering/scene';
+import { loadBrightvaleGameplayAssets } from './rendering/brightvale/silhouette-crowd-assets';
 import { projectSceneState } from './rendering/scene-state';
 import { createObservatoryUI } from './ui/observatory-ui';
 import { createGameUI, type GameUI } from './ui/ui';
@@ -117,6 +118,8 @@ function createRenderer(): void {
   const generationScene = createBrightvaleScene(
     shell.surface,
     handleRendererUnavailable,
+    undefined,
+    { loadAssets: loadBrightvaleGameplayAssets },
   );
   if (generationScene === null) {
     handleRendererUnavailable();

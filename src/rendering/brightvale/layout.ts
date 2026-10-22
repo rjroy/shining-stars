@@ -48,6 +48,18 @@ export interface BrightvaleRuntimeLayout {
     readonly referenceResolution: readonly number[];
   };
   readonly crowdPlacements: readonly BrightvaleCrowdPlacement[];
+  /** Explicit population seam; absent means the bounded gameplay pilot layout. */
+  readonly silhouetteCrowdPlacements?: readonly BrightvaleSilhouetteCrowdPlacement[];
+}
+
+export interface BrightvaleSilhouetteCrowdPlacement extends BrightvaleMatrixLayout {
+  readonly id: string;
+  readonly figure: string;
+  readonly motionPhase: number;
+  readonly motionRate: number;
+  /** Arm swing in radians; zero holds the arm still. Omitted keeps its default. */
+  readonly waveAmplitude?: number;
+  readonly stickColor?: number;
 }
 
 /** Versioned projection of the authoritative layout and approved review fill. */

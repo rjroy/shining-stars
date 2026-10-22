@@ -43,9 +43,9 @@ interface LightPreset {
 }
 
 const GROUND_EMISSIVE = {
-  audience: { city: 0x78bf8f, plaza: 0xc5c1ec },
-  twilight: { city: 0x82c79b, plaza: 0xb6adff },
-  radiant: { city: 0xa5ca8b, plaza: 0xe3d8fa },
+  audience: { city: 0x78bf8f, plaza: 0x09090e },
+  twilight: { city: 0x82c79b, plaza: 0x0d0b14 },
+  radiant: { city: 0xa5ca8b, plaza: 0x14111a },
 } as const;
 
 const PRESETS: Readonly<
@@ -342,7 +342,7 @@ export function createBrightvaleAppearance(
         material.emissiveIntensity = emissiveIntensity * currentCityBrightness;
       }
       if (groundSurface) {
-        material.color.set(groundSurface === 'city' ? 0x77b78a : 0xffffff);
+        material.color.set(groundSurface === 'city' ? 0x77b78a : 0x33333f);
         material.emissive.set(GROUND_EMISSIVE.audience[groundSurface]);
       }
       return material;

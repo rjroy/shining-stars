@@ -2,11 +2,19 @@
 
 ## Current approval
 
-The user explicitly approved `pilot-candidate-shoulder-cleaned.png`, SHA-256
-`9f5785def1d7bec9339b908a6e926b370a1715196af26bf2d9524f87624598ba`,
-after viewing the six-pose shoulder-cleaned preview. Minor contour notches were
-disclosed. This approves source artwork only, not production derivatives or
-runtime integration. Earlier review entries below are historical.
+The user explicitly approved the recreated `pilot-candidate-waist-up.png`, SHA-256
+`92cbcf67c40fea19978aaba31cb49ce0600f7bbfe886d7d076c34ce2b2d5c5ed`,
+and requested rebuilding the crowd at roughly 120 people. The **new hand holds
+the stick vertically**; the prior 45-degree counterclockwise instruction is
+superseded. This source is the current authority; the cancelled SVG extension
+and older candidates are history, not visual anchors for this rebuild.
+
+Derivative-only preparation lives in
+[`../../production/brightvale-silhouette-crowd/`](../../production/brightvale-silhouette-crowd/).
+The new atlas retains the approved pixels and lower alpha without repairs or
+restyling; it awaits independent derivative verification before runtime wiring.
+Earlier reviewer concerns below are historical and superseded by the user's
+exact-source acceptance, not ongoing requests to alter fists, rims or fade.
 
 Later inspection corrected the initial alpha concern: 86.5% of nonzero pixels
 have alpha at least 250, and 94.9% of covered interior neighborhoods meet that
@@ -37,6 +45,34 @@ Subjects: two distinct anonymous human head/shoulder/upper-torso silhouettes, na
 Each body OMITS its raised right arm (viewer's left shoulder), leaving a natural shoulder attachment region; other arm quiet and merged into torso. Each matching separate right arm is ONE connected shoulder-to-upper-arm-to-softly-bent-elbow-to-forearm-to-hand silhouette, raised upward, anatomically sized to its matching body. Keep shared pixel anatomical scale between bodies and arms: do not enlarge the arms to fill their cells. Shoulder end broad enough to overlap invisibly under matching body. Hands visibly form an EMPTY stick grip with a small transparent opening between curled fingers and thumb, clearly readable as grasping an absent narrow upright stick. Absolutely no stick or object in either hand. Single connected silhouette per cell.
 Style: crisp high-quality clean 2D near-black interiors; extremely restrained discontinuous thin warm-neutral rim accents on a few selected edges only. Flat anonymous shapes, no internal clothing shading. Consistent style and front-view framing across all four parts. No complete luminous outlines, baked shadows, glow sticks, halos, bloom, scenery, extra parts, extra limbs, animation, lettering or watermarks.
 Transparent background is mandatory; preserve actual alpha pixels and soft antialiased edges.
+```
+
+## Recreated waist-up sheet (approved source; generation record)
+
+The user authorized a fresh recreation; earlier candidates were experiments, not visual anchors. This new source is not required to preserve earlier head, hair, body, or arm shapes. The exact file/hash was subsequently approved and the crowd rebuild authorized, with independent derivative verification before runtime work. Generated 2026-10-22 with configured built-in Codex imagegen via codex-cli 0.163.0; image model/version not exposed. Exactly one generation, no reroll or image edits.
+
+Native staging: `/home/rjroy/.codex/generated_images/01a161f7-438f-77d3-91ff-1a1cb70ead2a/exec-5c844c23-a932-4aa4-b0e8-f0be3c610789.png`. Byte-identical candidate: `pilot-candidate-waist-up.png`. SHA-256: `92cbcf67c40fea19978aaba31cb49ce0600f7bbfe886d7d076c34ce2b2d5c5ed`. First experiment and corrected experiment remain preserved unchanged at `pilot-candidate.png` and `pilot-candidate-revised.png` with hashes above.
+
+Actual output: 1254 × 1254 PNG, sRGBA, sRGB colorspace as identified by ImageMagick, no embedded profile reported. Requested 2048 × 2048 was not supplied. Alpha extracted and counted by ImageMagick: 1,171,027 fully transparent pixels, 82,932 with alpha 1–252, 256,920 with alpha 253–254, and 794 fully opaque pixels. The 253/254 pixels are nearly opaque, not transparency failures; the opacity distribution is still a concern because opaque interiors are nearly absent and the opaque-pixel count alone does not establish solid interior coverage. Alpha is present, but the background shows substantial scattered partial-alpha speckling, visible as noisy matte artifacts on both dark and light composites.
+
+Historical pre-approval visual review: two front-facing audience figures and corresponding detached arms are present, with waist continuation and a soft lower fade. The reviewer raised concerns about hands for the then-requested diagonal stick, rims/details, padding and alpha speckles. The user accepted this exact artwork, liked the concert-participant look, and superseded the diagonal instruction with a vertical grip. These historical concerns are not current quality failures or authority for source repair. No retry was made.
+
+QA-only evidence, not source art or production derivatives: `inspection-waist-up-dark-light.png` contains dark and light composites of the untouched source; `inspection-waist-up-overlap.png` shows a small repeated-bank context. Composite inspection confirms noisy alpha/matte artifacts. The still-generated arms are not attached to bodies in these source-sheet QA views; final attachment and 45° stick pivot are runtime concerns, not tested here.
+
+### Exact prompt sent to the authorized Codex route
+
+```text
+Task-specific authorization: User explicitly authorizes RECREATE production artwork through this configured Codex image route. Generate exactly ONE new coherent production sheet for review. Earlier candidates were experiments, not immutable visual anchors; do not preserve their heads/arms as visual references. Do not overwrite or delete any existing source/evidence. Destination will be copied after generation to assets/authoring/brightvale-silhouette-crowd/pilot-candidate-waist-up.png. Report native absolute output path. No rerolls, no derivatives, no runtime integration, no unrelated file changes.
+
+Current planning file .lore/local/plans/silhouette-crowd.md has obsolete controlled-SVG extension instructions: disregard that authoring route. Use this approved revised brief instead:
+
+Purpose: source parts for a large layered audience crowd, eventually roughly 120 simple figures. Judge anonymous crowd readability, not standalone character realism. Two varied anonymous near-black natural human silhouettes FACING PLAYER/viewer, genuine waist-up anatomy. Show head, neck, shoulders, chest and torso continuing through waist. The torso should softly fade in alpha below the chest toward the lower waist edge, not stop at a hard chest crop. Flat simple shapes, no detailed facial features, clothing/fabric/folds/logos, muscles/chest modeling, elaborate hairstyles/hair ornaments. Preserve natural human proportions without individual character portrait detail.
+
+Sheet: request square 2048 × 2048 RGBA with four equal cells, one part each: body A, matching detached raised arm A, body B, matching detached arm B. Use ample transparent padding, no parts touching/crossing cell edges. Match anatomical scale across each body's shoulder and its arm. Bodies omit the raised arm at one shoulder. Each corresponding detached arm is a single connected shoulder-to-hand shape, softly bent, anatomically scaled and visibly attachable at that shoulder. Hands should plausibly grip a stick whose visible direction is ~45 degrees counterclockwise from a near-upright orientation in the camera plane; make the palm/finger shape read as holding a stick oriented on that diagonal, without drawing the stick. Runtime stick later pivots at palm. Do not include any baked stick, halo, glow, shadow, scenery, labels, grid lines, text, animation, or extra parts.
+
+Material: genuine transparent background and real alpha. Silhouette interiors should be near-black and effectively opaque; partial alpha belongs at antialiased edges and intentional softly faded lower torso only. Distinguish torso fade from unintended translucent head/arm/body interiors. Sparse subdued discontinuous warm-neutral rim accents only; no bright/full outline. Set remains cohesive and simple, suitable for repeated overlapping crowd use.
+
+Generate actual artwork with normal image output. Report native absolute path and actual dimensions. If alpha is not real or output materially misses the brief, report that; do not try again.
 ```
 
 ## Corrected candidate (single authorized correction)

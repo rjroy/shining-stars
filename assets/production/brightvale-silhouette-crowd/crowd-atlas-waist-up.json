@@ -1,0 +1,305 @@
+{
+  "schema": "brightvale-silhouette-crowd-v1",
+  "status": "derivative candidate; independent verification pending",
+  "source": {
+    "path": "assets/authoring/brightvale-silhouette-crowd/pilot-candidate-waist-up.png",
+    "sha256": "92cbcf67c40fea19978aaba31cb49ce0600f7bbfe886d7d076c34ce2b2d5c5ed",
+    "width": 1254,
+    "height": 1254
+  },
+  "atlas": {
+    "file": "crowd-atlas-waist-up.png",
+    "sha256": "18622fe47a150ab19c4252ad677e203f23dfc7c798288eaa2aa1e9adc7a03bf5",
+    "width": 1440,
+    "height": 1120,
+    "encoded_bytes": 512733,
+    "decoded_rgba_bytes": 6451200,
+    "gutter_px": 16,
+    "color_space": "srgb (interpretation of untagged approved source; RGB values unchanged)",
+    "alpha": "straight, original 8-bit values retained; no alpha normalization",
+    "flip_y": true,
+    "wrap": "ClampToEdgeWrapping",
+    "min_filter": "LinearFilter",
+    "mag_filter": "LinearFilter",
+    "generate_mipmaps": false,
+    "premultiply_alpha": false
+  },
+  "coordinates": {
+    "rects": "top-left pixel edges [x,y,width,height]; half-open",
+    "landmarks": "new approved source pixel coordinates; no additional half-pixel offset, mirroring or source resampling",
+    "card_local": "x right, y up, z toward viewer; XY card plane",
+    "card_bounds": "[left,bottom,right,top] relative to part origin",
+    "uv_rect": "[u_min,v_min,u_span,v_span], bottom-left; ordinary plane UVs, Texture.flipY=true",
+    "units": "provisional local units, not meters; 560 original pixels = 1 unit for ALL new parts",
+    "source_pixels_per_unit": 560,
+    "rotation": "Three.js rotation.z radians = negative image-space inspection degrees * pi/180",
+    "assembly": "body at root; arm origin at shoulder_body_local; rotate arm and stick together about that origin",
+    "depth": "body in front of arm; original fist in front of stick and halo; choose small depth offsets in consumer"
+  },
+  "inspection": {
+    "image_angles_degrees": [
+      -15,
+      0,
+      15
+    ],
+    "pixels_per_local_unit": 192,
+    "source_approval_sha256": "92cbcf67c40fea19978aaba31cb49ce0600f7bbfe886d7d076c34ce2b2d5c5ed",
+    "stick_orientation": "vertical at neutral; previous 45deg CCW direction is superseded"
+  },
+  "parts": [
+    {
+      "id": "A.body",
+      "source_rect_px": [
+        145,
+        30,
+        485,
+        620
+      ],
+      "tile_rect_px": [
+        16,
+        16,
+        485,
+        620
+      ],
+      "padded_rect_px": [
+        0,
+        0,
+        517,
+        652
+      ],
+      "origin_px": [
+        242.5,
+        620
+      ],
+      "uv_rect_bottom_left": [
+        0.011111111111111112,
+        0.43214285714285716,
+        0.3368055555555556,
+        0.5535714285714286
+      ],
+      "card_bounds_local": [
+        -0.4330357142857143,
+        0.0,
+        0.4330357142857143,
+        1.1071428571428572
+      ],
+      "content_rgba_sha256": "1e541eab57468569596852d9c41c984498a3fae9f82f16a6278adb14941c54ff",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [
+        444,
+        345
+      ],
+      "lower_torso_source_rect_px": [
+        270,
+        475,
+        290,
+        155
+      ],
+      "lower_torso_tile_rect_px": [
+        141,
+        461,
+        290,
+        155
+      ],
+      "lower_torso_note": "Approved waist/lower-torso pixels, including authored alpha; region annotation only, no fade or cleanup added."
+    },
+    {
+      "id": "A.arm",
+      "source_rect_px": [
+        720,
+        40,
+        400,
+        500
+      ],
+      "tile_rect_px": [
+        1015,
+        16,
+        400,
+        500
+      ],
+      "padded_rect_px": [
+        999,
+        0,
+        432,
+        532
+      ],
+      "origin_px": [
+        347,
+        413
+      ],
+      "uv_rect_bottom_left": [
+        0.7048611111111112,
+        0.5392857142857144,
+        0.2777777777777778,
+        0.44642857142857145
+      ],
+      "card_bounds_local": [
+        -0.6196428571428572,
+        -0.15535714285714286,
+        0.09464285714285714,
+        0.7375
+      ],
+      "content_rgba_sha256": "837729ddac0565b6f0edd2fd695608d5de9189dde8ae38803c89eae7fa45be8f",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [
+        347,
+        413
+      ],
+      "grip_px": [
+        71,
+        86
+      ]
+    },
+    {
+      "id": "B.body",
+      "source_rect_px": [
+        170,
+        650,
+        450,
+        594
+      ],
+      "tile_rect_px": [
+        533,
+        16,
+        450,
+        594
+      ],
+      "padded_rect_px": [
+        517,
+        0,
+        482,
+        626
+      ],
+      "origin_px": [
+        225.0,
+        594
+      ],
+      "uv_rect_bottom_left": [
+        0.3701388888888889,
+        0.4553571428571429,
+        0.3125,
+        0.5303571428571429
+      ],
+      "card_bounds_local": [
+        -0.4017857142857143,
+        0.0,
+        0.4017857142857143,
+        1.0607142857142857
+      ],
+      "content_rgba_sha256": "e5b88df33b826260ffa7011c8c2eeb7b3c18aa551eaa0819690833df1ad1af67",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [
+        402,
+        357
+      ],
+      "lower_torso_source_rect_px": [
+        290,
+        1090,
+        250,
+        140
+      ],
+      "lower_torso_tile_rect_px": [
+        653,
+        456,
+        250,
+        140
+      ],
+      "lower_torso_note": "Approved waist/lower-torso pixels, including authored alpha; region annotation only, no fade or cleanup added."
+    },
+    {
+      "id": "B.arm",
+      "source_rect_px": [
+        720,
+        650,
+        400,
+        540
+      ],
+      "tile_rect_px": [
+        1015,
+        548,
+        400,
+        540
+      ],
+      "padded_rect_px": [
+        999,
+        532,
+        432,
+        572
+      ],
+      "origin_px": [
+        347,
+        431
+      ],
+      "uv_rect_bottom_left": [
+        0.7048611111111112,
+        0.02857142857142858,
+        0.2777777777777778,
+        0.48214285714285715
+      ],
+      "card_bounds_local": [
+        -0.6196428571428572,
+        -0.19464285714285715,
+        0.09464285714285714,
+        0.7696428571428572
+      ],
+      "content_rgba_sha256": "3cadc17c4500da06ab797ebecd48895d1d13b77919da8e4e6a8cdc66286b524c",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [
+        347,
+        431
+      ],
+      "grip_px": [
+        76,
+        100
+      ]
+    }
+  ],
+  "figures": [
+    {
+      "id": "A",
+      "body_part": "A.body",
+      "arm_part": "A.arm",
+      "shoulder_body_local": [
+        0.35982142857142857,
+        0.49107142857142855
+      ],
+      "grip_arm_local": [
+        -0.4928571428571429,
+        0.5839285714285715
+      ],
+      "stick_top_arm_local": [
+        -0.4928571428571429,
+        0.8357142857142857
+      ],
+      "stick_bottom_arm_local": [
+        -0.4928571428571429,
+        0.5
+      ],
+      "neutral_stick_orientation": "vertical in the source/card plane; follows the existing arm wave, no additional 45-degree offset",
+      "inspection_color": "#55ddff"
+    },
+    {
+      "id": "B",
+      "body_part": "B.body",
+      "arm_part": "B.arm",
+      "shoulder_body_local": [
+        0.31607142857142856,
+        0.4232142857142857
+      ],
+      "grip_arm_local": [
+        -0.48392857142857143,
+        0.5910714285714286
+      ],
+      "stick_top_arm_local": [
+        -0.48392857142857143,
+        0.8428571428571429
+      ],
+      "stick_bottom_arm_local": [
+        -0.48392857142857143,
+        0.5071428571428571
+      ],
+      "neutral_stick_orientation": "vertical in the source/card plane; follows the existing arm wave, no additional 45-degree offset",
+      "inspection_color": "#ff65c7"
+    }
+  ]
+}

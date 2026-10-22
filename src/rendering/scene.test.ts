@@ -12,6 +12,7 @@ import {
 } from './brightvale/assets-runtime';
 import { BRIGHTVALE_RUNTIME_LAYOUT } from './brightvale/layout';
 import * as brightvaleProjection from './brightvale/projection';
+import * as silhouetteCrowd from './brightvale/silhouette-crowd';
 import type { BrightvaleShellComposition } from './brightvale/scene-shell';
 import type {
   BrightvaleRendererStatus,
@@ -549,6 +550,163 @@ function productionSurfaceHeightAt(
 }
 
 describe('Brightvale scene facade and renderer lifecycle', () => {
+  it.each([
+    { label: 'four actual samples', samples: 4, coverage: true },
+    { label: 'zero actual samples', samples: 0, coverage: false },
+    { label: 'unavailable sample query', samples: undefined, coverage: false },
+  ])(
+    'selects crowd alpha handling from $label through the real composition',
+    async ({ samples, coverage }) => {
+      installSceneGlobals();
+      const renderer = makeRenderer();
+      const base = makeAssets();
+      // Complete the synthetic surfaces and framing shadow casters; no
+      // production GLBs, atlas or crowd recipe are inputs to this test.
+      for (const name of ['endcaps', 'framingLong', 'framingPost'] as const)
+        base.roots[name].add(
+          new THREE.Mesh(
+            new THREE.BoxGeometry(2, 1, 2),
+            new THREE.MeshBasicMaterial(),
+          ),
+        );
+      const texture = new THREE.DataTexture(
+        new Uint8Array([0, 0, 0, 0, 5, 5, 5, 128]),
+        2,
+        1,
+      );
+      const assets: BrightvaleAssets = {
+        ...base,
+        silhouetteCrowd: {
+          texture,
+          metadata: {
+            schema: 'brightvale-silhouette-crowd-v1',
+            atlas: { width: 2, height: 1, gutter_px: 0 },
+            coordinates: { source_pixels_per_unit: 7 },
+            parts: [
+              {
+                id: 'body',
+                card_bounds_local: [-0.4, 0, 0.4, 1],
+                uv_rect_bottom_left: [0, 0, 0.5, 1],
+              },
+              {
+                id: 'arm',
+                card_bounds_local: [-0.2, -0.1, 0.3, 0.8],
+                uv_rect_bottom_left: [0.5, 0, 0.5, 1],
+              },
+            ],
+            figures: [
+              {
+                id: 'fixture',
+                body_part: 'body',
+                arm_part: 'arm',
+                shoulder_body_local: [0.3, 0.5],
+                grip_arm_local: [0.2, 0.6],
+                stick_top_arm_local: [0.2, 0.9],
+                stick_bottom_arm_local: [0.2, 0.4],
+              },
+            ],
+          },
+        },
+        dispose() {
+          base.dispose();
+          texture.dispose();
+        },
+      };
+      const placement = vi
+        .spyOn(silhouetteCrowd, 'createSilhouettePilotPlacements')
+        .mockReturnValue([
+          {
+            id: 'test-person',
+            figure: 'fixture',
+            matrixColumnMajor: new THREE.Matrix4().toArray(),
+            motionPhase: 0,
+            motionRate: 1,
+          },
+        ]);
+      // Camera fitting is not this test's boundary. The synthetic surfaces must
+      // not depend on the production camera/HUD fit to reach the real materials.
+      const projection = vi
+        .spyOn(brightvaleProjection, 'createBrightvaleCameraProjection')
+        .mockReturnValue({
+          camera: new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 200),
+          usable: true,
+          resize: () => true,
+          project: (point) => ({ x: point.x, y: point.y }),
+        });
+      const context = {
+        SAMPLES: 0x80a9,
+        // Deliberately misleading: requested/context antialias alone must not
+        // override a framebuffer with zero actual samples.
+        getContextAttributes: () => ({ antialias: true }),
+        getParameter: vi.fn((parameter: number): unknown => {
+          expect(parameter).toBe(context.SAMPLES);
+          return samples;
+        }),
+      };
+      const rendererForScene =
+        samples === undefined
+          ? renderer.renderer
+          : Object.assign(renderer.renderer, { getContext: () => context });
+      const unavailable = vi.fn();
+      const scene = createBrightvaleScene(
+        makeHost(),
+        unavailable,
+        () => rendererForScene,
+        {
+          loadAssets: async () => assets,
+        },
+      );
+      if (scene === null)
+        throw new Error('sample-capability fixture failed to initialize');
+      try {
+        expect(scene.updateFrame(makeFrame())).toBe('loading');
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(scene.updateFrame(makeFrame())).toBe('rendered');
+        expect(unavailable).not.toHaveBeenCalled();
+        const world = renderer.calls.at(-2)!.scene;
+        for (const role of ['Body', 'Arm']) {
+          const card = world.getObjectByName(
+            `Brightvale.Crowd.${role}.fixture`,
+          );
+          expect(card).toBeInstanceOf(THREE.InstancedMesh);
+          if (
+            !(card instanceof THREE.InstancedMesh) ||
+            !(card.material instanceof THREE.MeshBasicMaterial)
+          )
+            throw new Error(
+              'sample-capability fixture must reach actual crowd card materials',
+            );
+          expect(card.count).toBe(1);
+          expect(card.material.map).toBe(texture);
+          expect(card.material.alphaToCoverage).toBe(coverage);
+          expect(card.material.alphaHash).toBe(!coverage);
+          expect(card.material.transparent).toBe(false);
+          expect(card.material.depthWrite).toBe(true);
+        }
+        if (samples !== undefined)
+          expect(context.getParameter).toHaveBeenCalledWith(context.SAMPLES);
+      } finally {
+        scene.destroy();
+        placement.mockRestore();
+        projection.mockRestore();
+        const geometries = new Set<THREE.BufferGeometry>();
+        const materials = new Set<THREE.Material>();
+        for (const root of Object.values(base.roots))
+          root.traverse((object) => {
+            if (!(object instanceof THREE.Mesh)) return;
+            geometries.add(object.geometry);
+            for (const material of Array.isArray(object.material)
+              ? object.material
+              : [object.material])
+              materials.add(material);
+          });
+        geometries.forEach((geometry) => geometry.dispose());
+        materials.forEach((material) => material.dispose());
+      }
+    },
+  );
+
   it('stays loading until bundle resolution, then renders the shared sky before the world and overlay passes', async () => {
     installSceneGlobals();
     const host = makeHost();
@@ -691,13 +849,18 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       await Promise.resolve();
       expect(scene.updateObservatoryFrame(frame(0))).toBe('rendered');
       const world = renderer.calls.at(-1)!.scene;
-      const water = world.getObjectByName('Test.Observatory.Water') as
-        THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
-      const window = world.getObjectByName('Test.Observatory.Window') as
-        THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
-      const cloud = renderer.skyCalls.at(-1)!.scene.getObjectByName(
-        'Brightvale.Sky.Clouds.Warm',
-      ) as THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+      const water = world.getObjectByName(
+        'Test.Observatory.Water',
+      ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+      const window = world.getObjectByName(
+        'Test.Observatory.Window',
+      ) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+      const cloud = renderer.skyCalls
+        .at(-1)!
+        .scene.getObjectByName('Brightvale.Sky.Clouds.Warm') as THREE.Mesh<
+        THREE.PlaneGeometry,
+        THREE.MeshBasicMaterial
+      >;
       const shaderFor = (
         material: THREE.Material,
         library: THREE.ShaderLibShader,
