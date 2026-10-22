@@ -23,13 +23,6 @@ export interface BrightvaleGroundSurface extends BrightvaleMatrixLayout {
   };
 }
 
-export interface BrightvaleCrowdPlacement extends BrightvaleMatrixLayout {
-  readonly id: string;
-  readonly variant: 'A' | 'B' | 'C';
-  readonly pose: 'Calm' | 'Cheering' | 'Reaching';
-  readonly source: 'saved-study' | 'scene-review-fill';
-}
-
 export interface BrightvaleRuntimeLayout {
   readonly schemaVersion: 'brightvale-runtime-layout-v1';
   readonly coordinateSystem: 'gltf-y-up';
@@ -47,7 +40,18 @@ export interface BrightvaleRuntimeLayout {
     readonly quaternionXyzw: readonly number[];
     readonly referenceResolution: readonly number[];
   };
-  readonly crowdPlacements: readonly BrightvaleCrowdPlacement[];
+  /** Explicit population seam; absent means the bounded gameplay pilot layout. */
+  readonly silhouetteCrowdPlacements?: readonly BrightvaleSilhouetteCrowdPlacement[];
+}
+
+export interface BrightvaleSilhouetteCrowdPlacement extends BrightvaleMatrixLayout {
+  readonly id: string;
+  readonly figure: string;
+  readonly motionPhase: number;
+  readonly motionRate: number;
+  /** Arm swing in radians; zero holds the arm still. Omitted keeps its default. */
+  readonly waveAmplitude?: number;
+  readonly stickColor?: number;
 }
 
 /** Versioned projection of the authoritative layout and approved review fill. */

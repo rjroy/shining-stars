@@ -1,5 +1,10 @@
 # Preserved composition intent
 
+Historical brief for the retained crowd-inclusive scene. The 3D crowd pass and
+its placement constraints are retired; use the waist-up atlas/runtime pipeline
+for current crowd behavior. The non-crowd playfield, framing, city and ground
+intent below remains context for the shared-scene review.
+
 The highway dominates a low, player-side perspective. Four lane surfaces and
 the fitted platform/endcaps form one coherent playfield: generator-built
 42-unit road, shared 14° tilt, no source mesh stretching or junction redesign.

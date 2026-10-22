@@ -15,9 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 # deliverable must be encoded as WebP with the shared quality/alpha settings.
 PREVIEW_SCRIPTS = (
     "assets/authoring/brightvale-city/preview.py",
-    "assets/authoring/brightvale-crowd/neutral-base/preview.py",
-    "assets/authoring/brightvale-crowd/rigged/preview.py",
-    "assets/authoring/brightvale-crowd/variants/preview.py",
     "assets/authoring/brightvale-distant-city/preview.py",
     "assets/authoring/brightvale-highway/preview.py",
     "assets/authoring/brightvale-outer-framing/preview.py",
@@ -26,15 +23,11 @@ PREVIEW_SCRIPTS = (
     "assets/authoring/neon-twilight-platform/mode-preview.py",
     "assets/authoring/neon-twilight-platform/preview-slot-cues.py",
     "assets/authoring/neon-twilight-platform/preview.py",
-    "assets/production/brightvale-crowd/compare.py",
     "assets/production/brightvale-distant-city/preview.py",
 )
 
 PNG_RENDER_SCRIPTS = (
     "assets/authoring/brightvale-city/preview.py",
-    "assets/authoring/brightvale-crowd/neutral-base/preview.py",
-    "assets/authoring/brightvale-crowd/rigged/preview.py",
-    "assets/authoring/brightvale-crowd/variants/preview.py",
     "assets/authoring/brightvale-scene-review/preview.py",
     "assets/authoring/brightvale-distant-city/preview.py",
 )
@@ -123,56 +116,6 @@ class PreviewOutputContractTest(unittest.TestCase):
                                         f"{relative} must check for PNG collisions")
                 self.assertLess(preflight, render,
                                 f"{relative} must reject collisions before rendering")
-
-    def test_brightvale_variants_render_png_before_encoding_webp(self):
-        """Keep Blender's PNG render target separate from the WebP deliverable."""
-        path = ROOT / "assets/authoring/brightvale-crowd/variants/preview.py"
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        render = next(node for node in tree.body
-                      if isinstance(node, ast.FunctionDef) and node.name == "render")
-        loop = next(node for node in ast.walk(render)
-                    if isinstance(node, ast.For)
-                    and any(isinstance(child, ast.Call)
-                            and isinstance(child.func, ast.Attribute)
-                            and child.func.attr == "render"
-                            for child in ast.walk(node)))
-
-        render_path_assignment = next(
-            (node for node in loop.body if isinstance(node, ast.Assign)
-             and any(isinstance(target, ast.Name)
-                     and target.id == "render_path" for target in node.targets)),
-            None,
-        )
-        self.assertIsNotNone(render_path_assignment,
-                             "each WebP output needs a separate PNG render path")
-        render_path = ast.unparse(render_path_assignment.value)
-        self.assertIn("with_suffix('.png')", render_path)
-
-        filepath_assignment = next(
-            node for node in ast.walk(loop)
-            if isinstance(node, ast.Assign)
-            and any(isinstance(target, ast.Attribute)
-                    and target.attr == "filepath" for target in node.targets)
-        )
-        self.assertEqual(ast.unparse(filepath_assignment.value), "str(render_path)",
-                         "Blender must render to the intermediate PNG path")
-        encoder_call = next(
-            node for node in ast.walk(loop)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "encode_preview"
-        )
-        self.assertEqual(ast.unparse(encoder_call.args[0]), "render_path",
-                         "the encoder must consume the rendered PNG, not the WebP name")
-
-        with tempfile.TemporaryDirectory() as td:
-            webp = Path(td) / "group-front.webp"
-            png = eval(compile(ast.Expression(render_path_assignment.value),
-                               str(path), "eval"),
-                       {"path": webp})
-            self.assertEqual(png, webp.with_suffix(".png"))
-            self.assertNotEqual(png, webp,
-                                "render and encoded output paths must not collide")
 
     def test_sky_review_and_ground_documented_route_encode_webp(self):
         sky = ROOT / "assets/authoring/brightvale-sky/build-review.sh"

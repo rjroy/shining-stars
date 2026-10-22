@@ -10,6 +10,11 @@ import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleAmbience } from './ambience';
 import type { BrightvaleRuntimeLayout } from './layout';
+import {
+  createSilhouetteCrowd,
+  createSilhouettePilotPlacements,
+  type SilhouetteCrowd,
+} from './silhouette-crowd';
 
 export interface BrightvaleComposition extends BrightvaleShellComposition {
   /** Applies visual state without rebuilding the assembled scene. */
@@ -105,6 +110,7 @@ export function createBrightvaleComposition(
   assets: BrightvaleAssets,
   layout: BrightvaleRuntimeLayout,
   scene: THREE.Scene,
+  multisampledFramebuffer = false,
 ): BrightvaleComposition {
   const root = new THREE.Group();
   root.name = 'Brightvale.Composition';
@@ -117,9 +123,11 @@ export function createBrightvaleComposition(
   const generatedGeometries = new Set<THREE.BufferGeometry>();
   const ownedSourceMaterials = new Set<THREE.Material>();
   let appearance: ReturnType<typeof createBrightvaleAppearance> | undefined;
+  let silhouettes: SilhouetteCrowd | undefined;
   let disposed = false;
   const generatedInstances = new Set<THREE.InstancedMesh>();
   const releaseResources = (): void => {
+    silhouettes?.dispose();
     for (const batch of generatedInstances) batch.dispose();
     for (const geometry of generatedGeometries) geometry.dispose();
     appearance?.dispose();
@@ -293,22 +301,13 @@ export function createBrightvaleComposition(
         matrix(placement.matrixColumnMajor),
       );
 
-    for (const placement of layout.crowdPlacements) {
-      const poseName = `Crowd.${placement.variant}.${placement.pose}`;
-      let poseRoot: THREE.Object3D | undefined;
-      assets.roots.crowd.traverse((object) => {
-        if (
-          (object.name === poseName || object.userData.name === poseName) &&
-          object.userData.variant_id === placement.variant &&
-          object.userData.pose === placement.pose
-        )
-          poseRoot = object;
-      });
-      if (!poseRoot)
-        throw new Error(
-          `Missing crowd pose ${placement.variant}/${placement.pose}`,
-        );
-      addPlacement(crowdGroup, poseRoot, matrix(placement.matrixColumnMajor));
+    if (assets.silhouetteCrowd) {
+      silhouettes = createSilhouetteCrowd(
+        assets.silhouetteCrowd,
+        layout.silhouetteCrowdPlacements ?? createSilhouettePilotPlacements(),
+        multisampledFramebuffer,
+      );
+      crowdGroup.add(silhouettes.root);
     }
 
     for (const [destination, byGeometry] of batchSources) {
@@ -332,13 +331,16 @@ export function createBrightvaleComposition(
 
     setShadowParticipation(cityGroup, { cast: true, receive: true });
     setShadowParticipation(framingGroup, { cast: true, receive: true });
-    setShadowParticipation(crowdGroup, { cast: true, receive: true });
     const key = scene.getObjectByName('Brightvale.Key');
     if (!(key instanceof THREE.DirectionalLight))
       throw new Error('Brightvale key light is required for scene shadows');
     fitDirectionalShadowCamera(
       key,
-      [cityGroup, playfield, framingGroup, crowdGroup],
+      [
+        cityGroup,
+        playfield,
+        framingGroup,
+      ],
       groundGroup.children,
     );
 
@@ -350,6 +352,7 @@ export function createBrightvaleComposition(
           throw new Error('Brightvale composition has been disposed');
         appearanceState = state;
         appearance!.update(appearanceState, ambience);
+        silhouettes?.update(ambience?.time ?? 0);
       },
       dispose() {
         if (disposed) return;

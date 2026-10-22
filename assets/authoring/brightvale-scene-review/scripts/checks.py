@@ -8,8 +8,8 @@ import math
 import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
-import crowd as C
-G, F = C.G, C.G.F
+import ground as G
+F = G.F
 
 
 def make_tree(o):
@@ -83,9 +83,8 @@ def ground_checks():
     assert max(abs(r-radius) for r in radii)<2e-6, 'Disk extends beyond frame radius'
     frame=[o for o in scene.objects if o.get('review_asset')=='framing']
     assert abs(G.bounds(frame)[0][2]-plaza.location.z)<2e-6, 'Frame interior ground changed'
-    assert abs(G.bounds([o for o in scene.objects if o.get('review_asset')=='crowd'])[0][2]-plaza.location.z)<2e-6, 'Crowd interior ground changed'
     footprints={}
-    for asset in ('platform','endcaps','highway','crowd'):
+    for asset in ('platform','endcaps','highway'):
         maximum=max(math.hypot(p[0]-plaza.location.x,p[1]-plaza.location.y) for p in G.evaluated_points([o for o in scene.objects if o.get('review_asset')==asset]))
         assert maximum<radius-.05, ('Disk fails to cover footprint',asset,maximum)
         footprints[asset]=radius-maximum

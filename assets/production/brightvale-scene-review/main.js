@@ -329,35 +329,6 @@ function instanceStaticGroup(container, label) {
     boundsError: maxBoundsError,
   };
 }
-function visibleCheck(root) {
-  const frustum = new THREE.Frustum().setFromProjectionMatrix(
-    new THREE.Matrix4().multiplyMatrices(
-      camera.projectionMatrix,
-      camera.matrixWorldInverse,
-    ),
-  );
-  let onCamera = 0,
-    projected = 0;
-  const bounds = new THREE.Box3();
-  root.traverse((o) => {
-    if (o.isMesh) {
-      o.geometry.computeBoundingSphere();
-      const s = o.geometry.boundingSphere.clone().applyMatrix4(o.matrixWorld);
-      bounds.union(
-        new THREE.Box3().setFromCenterAndSize(
-          s.center,
-          new THREE.Vector3(s.radius * 2, s.radius * 2, s.radius * 2),
-        ),
-      );
-      if (frustum.intersectsSphere(s)) onCamera++;
-    }
-  });
-  return {
-    meshSpheresInFrustum: onCamera,
-    bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() },
-  };
-}
-
 async function run() {
   const started = performance.now();
   assertTriangleAccounting();
@@ -385,7 +356,6 @@ async function run() {
     long: 'brightvale-outer-framing/long.glb',
     post: 'brightvale-outer-framing/post.glb',
     city: 'brightvale-distant-city/city.glb',
-    crowd: 'brightvale-crowd/crowd.glb',
   };
   const loaded = {};
   for (const [key, path] of Object.entries(paths))
@@ -398,13 +368,12 @@ async function run() {
   );
   const expectedHashes = {
     platform:
-      'dd540482fbb77616b93b900f563da1520f65e81f35a60365741d2b362f9e7571',
+      '1ad2308e0a73dd245feb18e6e5567e0664ac9d45ff09aeefc1c0a2647709e9f1',
     highway: 'e650f6d7b65b2710e5605ba8231741a1d893effd96e5d53116e31d39d30da751',
     endcaps: '76301ee2ab5915a299c4fd54949dceee26a5db4023e767bfa8ceba893390c2b5',
     long: '8cb0f33f672b366a7725158f21524a42bc55afe2d21153575030a991a9b4d012',
     post: '54b718163e06fb27b357bd3ac3255319b345a747e84159c5b618a233fec1a6fb',
     city: '47bfaf2f18ed154cc86e5495102e0b4b888dca8cded12c1c8f47ec67fe040579',
-    crowd: '57a36fc257fef491946d1d616445e2845bca9cad7ed9a575db4afa3fbdf3b5bb',
   };
   for (const [key, digest] of Object.entries(expectedHashes))
     assert(loaded[key].hash === digest, `${key} source GLB SHA-256 unchanged`);
@@ -412,13 +381,12 @@ async function run() {
     Object.entries(loaded).map(([k, v]) => [k, triangles(v.root)]),
   );
   const expectedAssetTriangles = {
-    platform: 24446,
+    platform: 24426,
     highway: 11336,
     endcaps: 2568,
     long: 2668,
     post: 968,
     city: 216633,
-    crowd: 18214,
   };
   for (const [key, count] of Object.entries(expectedAssetTriangles))
     assert(
@@ -509,78 +477,6 @@ async function run() {
   const framingBatch = instanceStaticGroup(framingGroup, 'framing');
   for (const surface of layout.ground_surfaces) makeGround(surface);
 
-  // The GLB is a pose library: use the original ten layout sample spots and fill
-  // the open audience-side plaza with a restrained, staggered second/third rank.
-  const crowdScene = loaded.crowd.root;
-  const variants = new Map();
-  crowdScene.traverse((o) => {
-    const variant = o.userData?.variant_id;
-    const pose = o.userData?.pose;
-    if (
-      ['A', 'B', 'C'].includes(variant) &&
-      ['Calm', 'Cheering', 'Reaching'].includes(pose)
-    )
-      variants.set(`Crowd.${variant}.${pose}`, o);
-  });
-  assert(variants.size === 9, `nine crowd pose groups, found ${variants.size}`);
-  const samples = layout.existing_crowd_sample_roots;
-  const placements = samples.map((s) => ({
-    id: s.instance_id,
-    variant: s.variant,
-    pose: s.pose,
-    matrix: matrixFrom(s),
-    source: 'saved study sample',
-  }));
-  const extraPoints = [];
-  for (const z of [-5, -8, -11, -14, -17, -20])
-    for (const ax of [11, 13, 15]) {
-      const x = ax + ((Math.abs(Math.round(z)) / 3) % 2 ? 0.45 : 0);
-      if (
-        x * x + (z + 20) * (z + 20) < 25.2 * 25.2 &&
-        x > 7.4 &&
-        x < 0.62 * (15 - z)
-      )
-        extraPoints.push([x, z]);
-    }
-  const poses = ['Calm', 'Cheering', 'Reaching'];
-  const variantsCycle = ['A', 'B', 'C'];
-  extraPoints.forEach(([ax, z], i) => {
-    const side = i % 2 ? 1 : -1;
-    const x = side * ax;
-    const variant = variantsCycle[(i + 1) % 3],
-      pose = poses[(i * 2 + 1) % 3];
-    const yaw = Math.atan2(-x, 15 - z); // +Z-forward figures face the player camera.
-    const m = new THREE.Matrix4().compose(
-      new THREE.Vector3(x, 8.25, z),
-      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw),
-      new THREE.Vector3(1, 1, 1),
-    );
-    placements.push({
-      id: `extra-${String(i + 1).padStart(2, '0')}`,
-      variant,
-      pose,
-      matrix: m,
-      source: 'review-only distributed plaza fill',
-    });
-  });
-  const people = [];
-  const audienceGroup = new THREE.Group();
-  audienceGroup.name = 'audience-assembly';
-  scene.add(audienceGroup);
-  for (const p of placements) {
-    const group = variants.get(`Crowd.${p.variant}.${p.pose}`);
-    assert(group, `selected crowd pose exists: ${p.variant}/${p.pose}`);
-    const person = group.clone(true);
-    person.name = `Audience.${p.id}.${p.variant}.${p.pose}`;
-    const holder = new THREE.Group();
-    holder.name = person.name;
-    holder.matrixAutoUpdate = false;
-    holder.matrix.copy(p.matrix);
-    holder.add(person);
-    audienceGroup.add(holder);
-    people.push(holder);
-  }
-
   camera.updateMatrixWorld(true);
   scene.updateMatrixWorld(true);
   const cityBounds = new THREE.Box3().setFromObject(cityPlaced);
@@ -589,15 +485,6 @@ async function run() {
     playfieldBounds.union(
       new THREE.Box3().setFromObject(scene.getObjectByName(`placed:${key}`)),
     );
-  const crowdChecks = people.map((p) => ({ name: p.name, ...visibleCheck(p) }));
-  assert(
-    crowdChecks.every((p) => p.meshSpheresInFrustum > 0),
-    `every selected crowd member has geometry inside camera frustum: ${crowdChecks
-      .filter((p) => !p.meshSpheresInFrustum)
-      .map((p) => `${p.name}@${p.bounds.min}`)
-      .join('; ')}`,
-  );
-  const crowdBatch = instanceStaticGroup(audienceGroup, 'audience');
   assert(
     cityBounds.min.toArray().every(Number.isFinite) &&
       playfieldBounds.min.toArray().every(Number.isFinite),
@@ -617,10 +504,6 @@ async function run() {
     Math.abs(cityBounds.min.z + 89.65) < 0.02 &&
       Math.abs(cityBounds.max.z + 50.8) < 0.02,
     'full city depth bounds match transformed GLB contract',
-  );
-  assert(
-    placements.every((p) => Math.abs(p.matrix.elements[12]) > 7.2),
-    'audience positions stay outside four gameplay lanes',
   );
   assert(
     Math.abs(layout.ground_surfaces[0].positions_local_gltf[0][1] - -0.65) <
@@ -666,21 +549,10 @@ async function run() {
     assembly: {
       framingLongSections: 26,
       wholePosts: 27,
-      crowdIndividuals: people.length,
-      crowdOriginalStudySamples: samples.length,
-      crowdAddedForReview: people.length - samples.length,
       batching: {
         city: cityBatch,
         framing: framingBatch,
-        audience: crowdBatch,
       },
-      crowdInstances: placements.map((p) => ({
-        id: p.id,
-        variant: p.variant,
-        pose: p.pose,
-        source: p.source,
-        matrix: p.matrix.toArray(),
-      })),
       cityWorldBounds: {
         min: cityBounds.min.toArray(),
         max: cityBounds.max.toArray(),
@@ -689,7 +561,6 @@ async function run() {
         min: playfieldBounds.min.toArray(),
         max: playfieldBounds.max.toArray(),
       },
-      crowdVisibility: crowdChecks,
     },
     materialTreatment:
       'All source GLBs remain unchanged. Browser-only shared MeshToonMaterial instances use a nearest-filtered three-step ramp; original base-color and emissive channels/strengths are retained separately. PBR roughness/metallic/environment response is not reproduced. Procedural mineral fine noise remains unbaked; source constant base colors and roughness are used.',
@@ -759,7 +630,7 @@ async function run() {
     },
     loaderWarnings: warnings,
     limitations: [
-      'Static crowd poses only; no animation. Audience count/layout beyond the ten original study samples is a review visualization choice, not an approved population target.',
+      'Crowd is intentionally excluded; this shared-source scene review covers city and playfield assets only.',
       'Background is fixed; verify mode difference on scene surfaces.',
       'Software renderer metrics are local structural evidence only, not mobile/device budgets.',
       'No mineral noise bake, texture synthesis, game integration, collision/support claims, or changes to source geometry/assets.',

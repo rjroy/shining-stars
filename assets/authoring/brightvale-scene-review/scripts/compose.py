@@ -33,8 +33,7 @@ def group_matrix():
     return Matrix.Translation(PIVOT) @ Matrix.Rotation(math.radians(TILT), 4, 'X') @ Matrix.Translation(-PIVOT)
 
 def tangent(side, y):
-    # Integrate a shallow continuous curve, x minimum near y=10. Both sides
-    # remain outside the unchanged sample crowd. Rigid stock, never bent.
+    # Integrate a shallow continuous curve, x minimum near y=10. Rigid stock, never bent.
     return Vector((side * .006 * (y - 10), 1, 0)).normalized()
 
 def wall_layout():
@@ -112,8 +111,7 @@ def compose(road, output):
     scene['status'] = 'Composition revision CANDIDATE; parent/designer/user review pending'
     scene['composition_revision'] = json.dumps({'length': LENGTH, 'tilt_degrees': TILT, 'pivot': list(PIVOT),
         'uniform_playfield_scale': 1, 'city_position': CITY_POSITION, 'city_scale': CITY_SCALE,
-        'wall_count_each_side': WALL_COUNT, 'nominal_body_overlap': WALL_OVERLAP,
-        'crowd': 'Unchanged original sample, including world transforms and actions'}, sort_keys=True)
+        'wall_count_each_side': WALL_COUNT, 'nominal_body_overlap': WALL_OVERLAP}, sort_keys=True)
     # Preserve original checkpoint provenance, not the scratch serialization.
     scene['road_candidate_sha256'] = HISTORICAL_ROAD_SHA
     # Remove only unused data from the NEW scene, not source data on disk.

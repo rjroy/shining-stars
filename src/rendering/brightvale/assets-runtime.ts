@@ -4,7 +4,6 @@ import cityUrl from '../../../assets/production/brightvale-city/city-meshopt.glb
 import highwayUrl from '../../../assets/production/brightvale-highway/highway.glb?url';
 import platformUrl from '../../../assets/production/brightvale-platform/platform.glb?url';
 import endcapsUrl from '../../../assets/production/brightvale-platform-endcaps/endcaps.glb?url';
-import crowdUrl from '../../../assets/production/brightvale-crowd/crowd.glb?url';
 import framingLongUrl from '../../../assets/production/brightvale-outer-framing/long.glb?url';
 import framingPostUrl from '../../../assets/production/brightvale-outer-framing/post.glb?url';
 import warmSkyUrl from '../../../assets/production/brightvale-sky/audience-radiant-clouds.png?url';
@@ -31,7 +30,6 @@ export const BRIGHTVALE_PRODUCTION_ASSET_URLS: BrightvaleAssetUrls = {
   highway: highwayUrl,
   platform: platformUrl,
   endcaps: endcapsUrl,
-  crowd: crowdUrl,
   framingLong: framingLongUrl,
   framingPost: framingPostUrl,
 };
@@ -174,17 +172,6 @@ const requiredNodes: Readonly<Record<BrightvaleAssetName, readonly string[]>> =
       'Endcap | left | sculpted body and gold edging',
       'Endcap | right | sculpted body and gold edging',
     ],
-    crowd: [
-      'Crowd.A.Calm',
-      'Crowd.A.Cheering',
-      'Crowd.A.Reaching',
-      'Crowd.B.Calm',
-      'Crowd.B.Cheering',
-      'Crowd.B.Reaching',
-      'Crowd.C.Calm',
-      'Crowd.C.Cheering',
-      'Crowd.C.Reaching',
-    ],
     framingLong: ['Framing | long masonry section'],
     framingPost: [
       'Framing | post inset amber lens',
@@ -203,7 +190,6 @@ const requiredMaterials: Readonly<
     'Endcap body | midnight-blue enamel',
     'Endcap edging | warm brushed gold',
   ],
-  crowd: ['Skin'],
   framingLong: ['Framing | midnight stone'],
   framingPost: ['Framing | amber lens', 'Framing | warm metal'],
 };
@@ -220,7 +206,6 @@ export function validateBrightvaleAsset(
   }
 
   const nodes = new Map<string, THREE.Object3D[]>();
-  const crowdPoseNodes = new Map<string, THREE.Object3D[]>();
   const materials = new Set<string>();
   let hasMesh = false;
   let transformError: string | undefined;
@@ -233,12 +218,6 @@ export function validateBrightvaleAsset(
       const namedObjects = nodes.get(normalizedName) ?? [];
       namedObjects.push(object);
       nodes.set(normalizedName, namedObjects);
-    }
-    const poseId = object.userData.pose_id;
-    if (typeof poseId === 'string') {
-      const poseObjects = crowdPoseNodes.get(poseId) ?? [];
-      poseObjects.push(object);
-      crowdPoseNodes.set(poseId, poseObjects);
     }
     const transformValues = [
       object.position.x,
@@ -304,20 +283,7 @@ export function validateBrightvaleAsset(
   for (const nodeName of requiredNodes[name]) {
     const normalizedName = THREE.PropertyBinding.sanitizeNodeName(nodeName);
     const namedObjects = nodes.get(normalizedName) ?? [];
-    const poseObjects =
-      name === 'crowd'
-        ? crowdPoseNodes
-            .get(nodeName)
-            ?.filter(
-              (object) =>
-                THREE.PropertyBinding.sanitizeNodeName(object.name) ===
-                normalizedName,
-            )
-        : undefined;
-    const candidates =
-      name === 'crowd' && crowdPoseNodes.size > 0
-        ? (poseObjects ?? [])
-        : namedObjects;
+    const candidates = namedObjects;
 
     // GLTFLoader may represent a named Group with a direct, same-named Mesh child.
     // Treat that wrapper pair as one source node, but reject sibling/nested collisions.

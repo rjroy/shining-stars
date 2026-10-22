@@ -37,7 +37,6 @@ const sourceFiles: Record<BrightvaleAssetName, string> = {
   highway: 'brightvale-highway/highway.glb',
   platform: 'brightvale-platform/platform.glb',
   endcaps: 'brightvale-platform-endcaps/endcaps.glb',
-  crowd: 'brightvale-crowd/crowd.glb',
   framingLong: 'brightvale-outer-framing/long.glb',
   framingPost: 'brightvale-outer-framing/post.glb',
 };
@@ -49,17 +48,6 @@ const requiredNodes: Record<BrightvaleAssetName, readonly string[]> = {
   endcaps: [
     'Endcap | left | sculpted body and gold edging',
     'Endcap | right | sculpted body and gold edging',
-  ],
-  crowd: [
-    'Crowd.A.Calm',
-    'Crowd.A.Cheering',
-    'Crowd.A.Reaching',
-    'Crowd.B.Calm',
-    'Crowd.B.Cheering',
-    'Crowd.B.Reaching',
-    'Crowd.C.Calm',
-    'Crowd.C.Cheering',
-    'Crowd.C.Reaching',
   ],
   framingLong: ['Framing | long masonry section'],
   framingPost: [
@@ -77,7 +65,6 @@ const requiredMaterials: Record<BrightvaleAssetName, readonly string[]> = {
     'Endcap body | midnight-blue enamel',
     'Endcap edging | warm brushed gold',
   ],
-  crowd: ['Skin'],
   framingLong: ['Framing | midnight stone'],
   framingPost: ['Framing | amber lens', 'Framing | warm metal'],
 };
@@ -87,7 +74,6 @@ const productionFiles: Record<BrightvaleAssetName, string> = {
   highway: '../../../assets/production/brightvale-highway/highway.glb',
   platform: '../../../assets/production/brightvale-platform/platform.glb',
   endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',
-  crowd: '../../../assets/production/brightvale-crowd/crowd.glb',
   framingLong: '../../../assets/production/brightvale-outer-framing/long.glb',
   framingPost: '../../../assets/production/brightvale-outer-framing/post.glb',
 };
@@ -126,7 +112,7 @@ function makeSourceShapedRoot(
     const material = allMaterials[index % allMaterials.length];
     if (material !== undefined) {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
-      mesh.name = name === 'crowd' ? `${nodeName}.Surface` : nodeName;
+      mesh.name = nodeName;
       if (index === 0 && options.nonFiniteVertex !== undefined) {
         mesh.geometry.attributes.position.setX(0, options.nonFiniteVertex);
       }
@@ -306,7 +292,7 @@ describe('Brightvale production runtime asset boundary', () => {
     expect(groundTextures.dispose).toHaveBeenCalledTimes(1);
   });
 
-  it('loads and validates all seven real production GLBs through the installed GLTFLoader', async () => {
+  it('loads and validates all production GLBs through the installed GLTFLoader', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const fetch = vi.fn(async (url: string, _signal: AbortSignal) => {

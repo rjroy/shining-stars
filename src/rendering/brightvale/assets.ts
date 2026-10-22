@@ -6,7 +6,6 @@ export const BRIGHTVALE_ASSET_NAMES = [
   'highway',
   'platform',
   'endcaps',
-  'crowd',
   'framingLong',
   'framingPost',
 ] as const;
@@ -20,8 +19,39 @@ export interface BrightvaleAssets {
   readonly skyTextures?: BrightvaleSkyTextures;
   /** Flat ground maps owned by the runtime bundle. */
   readonly groundTextures?: BrightvaleGroundTextures;
+  /** Optional stock for gameplay; borrowed by compositions, owned by this bundle. */
+  readonly silhouetteCrowd?: BrightvaleSilhouetteCrowdAssets;
   /** Releases imported resources owned by this bundle; safe to call repeatedly. */
   dispose(): void;
+}
+
+export interface BrightvaleSilhouetteCrowdAssets {
+  readonly texture: THREE.Texture;
+  readonly metadata: BrightvaleSilhouetteAtlas;
+}
+
+export interface BrightvaleSilhouetteAtlas {
+  readonly schema: string;
+  readonly atlas: {
+    readonly width: number;
+    readonly height: number;
+    readonly gutter_px: number;
+  };
+  readonly coordinates: { readonly source_pixels_per_unit: number };
+  readonly parts: readonly {
+    readonly id: string;
+    readonly card_bounds_local: readonly number[];
+    readonly uv_rect_bottom_left: readonly number[];
+  }[];
+  readonly figures: readonly {
+    readonly id: string;
+    readonly body_part: string;
+    readonly arm_part: string;
+    readonly shoulder_body_local: readonly number[];
+    readonly grip_arm_local: readonly number[];
+    readonly stick_top_arm_local: readonly number[];
+    readonly stick_bottom_arm_local: readonly number[];
+  }[];
 }
 
 export interface BrightvaleGroundTextures {

@@ -69,6 +69,11 @@ export interface SceneRenderer {
   toneMapping: THREE.ToneMapping;
   toneMappingExposure: number;
   shadowMap: THREE.WebGLRenderer['shadowMap'];
+  /** Actual framebuffer samples, not the requested antialias setting. */
+  getContext?(): {
+    readonly SAMPLES: number;
+    getParameter(parameter: number): unknown;
+  };
   setClearColor(color: THREE.ColorRepresentation, alpha?: number): void;
   setPixelRatio(value: number): void;
   setSize(width: number, height: number, updateStyle?: boolean): void;
@@ -1070,10 +1075,21 @@ export function createBrightvaleScene(
         timingProgress(frame.gameplay),
         composition.profile,
       );
+      // This app renders directly into the default framebuffer. Query its
+      // actual samples: requesting antialias does not guarantee multisampling.
+      const context = renderer.getContext?.();
+      const samples = context?.getParameter(context.SAMPLES);
+      const multisampledFramebuffer =
+        typeof samples === 'number' && Number.isFinite(samples) && samples > 1;
+      console.info('[Brightvale] crowd alpha mode selected', {
+        samples: typeof samples === 'number' ? samples : null,
+        mode: multisampledFramebuffer ? 'coverage' : 'hash',
+      });
       composition.current = createBrightvaleComposition(
         assets,
         BRIGHTVALE_RUNTIME_LAYOUT,
         worldScene,
+        multisampledFramebuffer,
       );
     } else {
       composition.playfield = createBrightvalePlayfieldContract();
