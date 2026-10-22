@@ -276,7 +276,38 @@ describe('Brightvale production composition', () => {
       if ((object as THREE.Mesh).isMesh)
         groundMeshes.push(object as THREE.Mesh);
     });
-    expect(groundMeshes).toHaveLength(layout.groundSurfaces.length);
+    const apron = groundMeshes.find(
+      (mesh) => mesh.name === 'Brightvale.Ground.AudienceApron',
+    );
+    const plaza = groundMeshes.find(
+      (mesh) => mesh.name === 'Review.LocalGround.Circle',
+    );
+    expect(apron, 'runtime-only foreground extension').toBeDefined();
+    expect(apron?.material).toBe(plaza?.material);
+    expect(apron?.receiveShadow).toBe(true);
+    expect(apron?.castShadow).toBe(false);
+    expect(groundMeshes).toHaveLength(layout.groundSurfaces.length + 1);
+    const apronPositions = apron!.geometry.getAttribute('position');
+    const apronUv = apron!.geometry.getAttribute('uv');
+    const plazaMapping = BRIGHTVALE_GROUND_UV.plaza;
+    for (let index = 0; index < apronPositions.count; index += 1) {
+      const point = new THREE.Vector3().fromBufferAttribute(
+        apronPositions,
+        index,
+      );
+      const cosine = Math.cos(plazaMapping.rotationRadians);
+      const sine = Math.sin(plazaMapping.rotationRadians);
+      expect(apronUv.getX(index)).toBeCloseTo(
+        (point.x * cosine + point.z * sine) / plazaMapping.repeatWorldUnits +
+          plazaMapping.offset[0],
+        5,
+      );
+      expect(apronUv.getY(index)).toBeCloseTo(
+        (-point.x * sine + point.z * cosine) / plazaMapping.repeatWorldUnits +
+          plazaMapping.offset[1],
+        5,
+      );
+    }
     for (const surface of layout.groundSurfaces) {
       const mesh = groundMeshes.find(
         (candidate) => candidate.name === surface.name,
@@ -478,12 +509,12 @@ describe('Brightvale production composition', () => {
     const generatedInstances = batches.map((batch) =>
       vi.spyOn(batch, 'dispose'),
     );
-    const generatedGround = composition.root.getObjectByName('Review.Ground');
-    const groundGeometry = (generatedGround as THREE.Mesh | undefined)
-      ?.geometry;
-    if (!groundGeometry)
-      throw new Error('generated ground geometry is required');
-    const groundDispose = vi.spyOn(groundGeometry, 'dispose');
+    const generatedGround =
+      composition.root.getObjectByName('Brightvale.Ground');
+    if (!generatedGround) throw new Error('generated ground is required');
+    const groundDisposals = generatedGround.children.map((mesh) =>
+      vi.spyOn((mesh as THREE.Mesh).geometry, 'dispose'),
+    );
     const generatedMaterials = allMaterials(composition.root).filter(
       (material) => material instanceof THREE.MeshToonMaterial,
     );
@@ -504,7 +535,8 @@ describe('Brightvale production composition', () => {
 
     for (const dispose of generatedInstances)
       expect(dispose).toHaveBeenCalledTimes(1);
-    expect(groundDispose).toHaveBeenCalledTimes(1);
+    for (const dispose of groundDisposals)
+      expect(dispose).toHaveBeenCalledTimes(1);
     for (const dispose of toonDisposals)
       expect(dispose).toHaveBeenCalledTimes(1);
     for (const dispose of cityMaterialDisposals)

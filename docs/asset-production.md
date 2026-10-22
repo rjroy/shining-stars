@@ -85,6 +85,17 @@ Toon treatment only, not the historical findings above. See the
 [current city contract](../assets/production/brightvale-city/README.md#materials-and-excluded-presentation).
 No baking, normal-map asset creation or automatic performance claim follows.
 
+## Audience foreground ground
+
+Gameplay retains the authored audience disk and adds a runtime-only coplanar
+apron outside its player-facing semicircle. The apron follows the existing rim,
+continues to the city ground's existing front limit, and shares the disk's exact
+plaza material and world-space UV mapping. This covers the foreground exposed
+when portrait camera fitting pulls back, without changing the city-facing curve,
+crowd placements, camera fitting, canopy treatment, or authored layout/source
+model. It is deliberately bounded by the existing scene ground, not an infinite
+floor or a replacement asset; no new model export is needed.
+
 ## Reference documents
 
 - [Approved visual direction and mockup context](asset-direction.md), plus the

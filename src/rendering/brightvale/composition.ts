@@ -9,7 +9,11 @@ import { hideFrontPlatformCaps } from './platform';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleAmbience } from './ambience';
-import type { BrightvaleRuntimeLayout } from './layout';
+import type {
+  BrightvaleGroundSurface,
+  BrightvaleRuntimeLayout,
+} from './layout';
+import { createAudienceGroundApron } from './audience-ground';
 import {
   createSilhouetteCrowd,
   createSilhouettePilotPlacements,
@@ -209,7 +213,10 @@ export function createBrightvaleComposition(
     const groundGroup = new THREE.Group();
     groundGroup.name = 'Brightvale.Ground';
     root.add(groundGroup);
-    for (const surface of layout.groundSurfaces) {
+    const addGround = (
+      surface: BrightvaleGroundSurface,
+      material: BrightvaleSurfaceMaterial,
+    ): void => {
       const geometry = new THREE.BufferGeometry();
       const isCityGround = surface.name === 'Review.Ground';
       const uv = isCityGround
@@ -236,19 +243,25 @@ export function createBrightvaleComposition(
       geometry.setIndex(surface.triangleIndices.flat());
       geometry.computeVertexNormals();
       generatedGeometries.add(geometry);
-      const sourceMaterial = [...ownedSourceMaterials][
-        layout.groundSurfaces.indexOf(surface)
-      ];
-      if (!sourceMaterial)
-        throw new Error(`Missing ground material for ${surface.name}`);
-      const mesh = new THREE.Mesh(
-        geometry,
-        appearance.materialFor(sourceMaterial),
-      );
+      const mesh = new THREE.Mesh(geometry, material);
       mesh.name = surface.name;
       mesh.matrixAutoUpdate = false;
       mesh.matrix.copy(surfaceMatrix);
       groundGroup.add(mesh);
+    };
+    const cityGround = layout.groundSurfaces.find(
+      (surface) => surface.name === 'Review.Ground',
+    );
+    for (const [index, surface] of layout.groundSurfaces.entries()) {
+      const sourceMaterial = [...ownedSourceMaterials][index];
+      if (!sourceMaterial)
+        throw new Error(`Missing ground material for ${surface.name}`);
+      const material = appearance.materialFor(sourceMaterial);
+      addGround(surface, material);
+      if (surface.name === 'Review.LocalGround.Circle' && cityGround) {
+        const apron = createAudienceGroundApron(surface, cityGround);
+        if (apron) addGround(apron, material);
+      }
     }
     setShadowParticipation(groundGroup, { cast: false, receive: true });
 
