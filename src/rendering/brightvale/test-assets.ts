@@ -62,6 +62,12 @@ export async function loadBrightvaleProductionAssets(): Promise<BrightvaleAssets
         1,
         THREE.RGBAFormat,
       ),
+      cityNormal: new THREE.DataTexture(
+        new Uint8Array([128, 128, 255, 255]),
+        1,
+        1,
+        THREE.RGBAFormat,
+      ),
       plaza: new THREE.DataTexture(
         new Uint8Array([100, 100, 150, 255]),
         1,

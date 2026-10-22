@@ -142,6 +142,7 @@ function makeOverrides(): BrightvaleRuntimeOverrides {
     loadSkyTextures: vi.fn(async () => makeSkyTextures()),
     loadGroundTextures: vi.fn(async () => ({
       city: new THREE.Texture(),
+      cityNormal: new THREE.Texture(),
       plaza: new THREE.Texture(),
       dispose: vi.fn(),
     })),
@@ -239,10 +240,19 @@ describe('Brightvale production runtime asset boundary', () => {
 
   it('uses injected browser-boundary seams and logs each asset attempt and outcome', async () => {
     const skyTextures = makeSkyTextures();
+    const city = new THREE.Texture();
+    const cityNormal = new THREE.Texture();
+    const cityNormalDispose = vi.spyOn(cityNormal, 'dispose');
+    const plaza = new THREE.Texture();
     const groundTextures = {
-      city: new THREE.Texture(),
-      plaza: new THREE.Texture(),
-      dispose: vi.fn(),
+      city,
+      cityNormal,
+      plaza,
+      dispose: vi.fn(() => {
+        city.dispose();
+        cityNormal.dispose();
+        plaza.dispose();
+      }),
     };
     const overrides: BrightvaleRuntimeOverrides = {
       ...makeOverrides(),
@@ -290,6 +300,7 @@ describe('Brightvale production runtime asset boundary', () => {
     assets.dispose();
     expect(skyTextures.dispose).toHaveBeenCalledTimes(1);
     expect(groundTextures.dispose).toHaveBeenCalledTimes(1);
+    expect(cityNormalDispose).toHaveBeenCalledTimes(1);
   });
 
   it('loads and validates all production GLBs through the installed GLTFLoader', async () => {
@@ -314,6 +325,7 @@ describe('Brightvale production runtime asset boundary', () => {
         loadSkyTextures: async () => makeSkyTextures(),
         loadGroundTextures: async () => ({
           city: new THREE.Texture(),
+          cityNormal: new THREE.Texture(),
           plaza: new THREE.Texture(),
           dispose() {},
         }),
@@ -368,6 +380,7 @@ describe('Brightvale production runtime asset boundary', () => {
     const skyTextures = makeSkyTextures();
     const groundTextures = {
       city: new THREE.Texture(),
+      cityNormal: new THREE.Texture(),
       plaza: new THREE.Texture(),
       dispose: vi.fn(),
     };

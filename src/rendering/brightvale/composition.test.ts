@@ -71,11 +71,34 @@ async function loadProductionAssets(): Promise<BrightvaleAssets> {
         },
       };
     },
-    loadGroundTextures: async () => ({
-      city: new THREE.Texture(),
-      plaza: new THREE.Texture(),
-      dispose() {},
-    }),
+    loadGroundTextures: async () => {
+      const city = new THREE.Texture();
+      city.wrapS = city.wrapT = THREE.RepeatWrapping;
+      city.minFilter = THREE.LinearMipmapLinearFilter;
+      city.magFilter = THREE.LinearFilter;
+      city.generateMipmaps = true;
+      city.anisotropy = 4;
+      const cityNormal = new THREE.Texture();
+      cityNormal.colorSpace = THREE.NoColorSpace;
+      cityNormal.wrapS = city.wrapS;
+      cityNormal.wrapT = city.wrapT;
+      cityNormal.minFilter = city.minFilter;
+      cityNormal.magFilter = city.magFilter;
+      cityNormal.generateMipmaps = city.generateMipmaps;
+      cityNormal.anisotropy = city.anisotropy;
+      cityNormal.mapping = city.mapping;
+      cityNormal.channel = city.channel;
+      cityNormal.rotation = city.rotation;
+      cityNormal.center.copy(city.center);
+      cityNormal.offset.copy(city.offset);
+      cityNormal.repeat.copy(city.repeat);
+      return {
+        city,
+        cityNormal,
+        plaza: new THREE.Texture(),
+        dispose() {},
+      };
+    },
   });
 }
 
@@ -296,8 +319,39 @@ describe('Brightvale production composition', () => {
           ? loadedAssets?.groundTextures?.city
           : loadedAssets?.groundTextures?.plaza,
       );
-      expect(material.emissiveMap).toBe(material.map);
-      expect(material.emissiveIntensity).toBeGreaterThan(0);
+      if (surface.name === 'Review.Ground') {
+        const normalMap = loadedAssets?.groundTextures?.cityNormal;
+        expect(material.normalMap).toBe(normalMap);
+        expect(normalMap?.colorSpace).toBe(THREE.NoColorSpace);
+        expect(normalMap?.wrapS).toBe(material.map?.wrapS);
+        expect(normalMap?.wrapT).toBe(material.map?.wrapT);
+        expect(normalMap?.minFilter).toBe(material.map?.minFilter);
+        expect(normalMap?.magFilter).toBe(material.map?.magFilter);
+        expect(normalMap?.anisotropy).toBe(material.map?.anisotropy);
+        expect(normalMap?.mapping).toBe(material.map?.mapping);
+        expect(normalMap?.channel).toBe(material.map?.channel);
+        expect(normalMap?.rotation).toBe(material.map?.rotation);
+        expect(normalMap?.center.toArray()).toEqual(
+          material.map?.center.toArray(),
+        );
+        expect(normalMap?.offset.toArray()).toEqual(
+          material.map?.offset.toArray(),
+        );
+        expect(normalMap?.repeat.toArray()).toEqual(
+          material.map?.repeat.toArray(),
+        );
+        expect(material.normalScale.toArray()).toEqual([1, 1]);
+      } else {
+        expect(material.normalMap).toBeNull();
+      }
+      if (surface.name === 'Review.Ground') {
+        expect(material.emissiveMap).toBeNull();
+        expect(material.emissive.getHex()).toBe(0x000000);
+        expect(material.emissiveIntensity).toBe(0);
+      } else {
+        expect(material.emissiveMap).toBe(material.map);
+        expect(material.emissiveIntensity).toBeGreaterThan(0);
+      }
 
       const normals = mesh?.geometry.getAttribute('normal');
       expect(normals, `${surface.name} normals`).toBeDefined();

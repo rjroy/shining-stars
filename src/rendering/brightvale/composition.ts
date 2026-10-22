@@ -157,12 +157,14 @@ export function createBrightvaleComposition(
       });
       if (texture) {
         material.map = texture;
-        material.emissiveMap = texture;
+        if (isCity && assets.groundTextures?.cityNormal)
+          material.normalMap = assets.groundTextures.cityNormal;
         material.color.set(0xffffff);
-        material.emissive.set(isCity ? 0x78bf8f : 0xc5c1ec);
-        // A restrained texture-matched fill lifts the map from the dark toon
-        // ramp while the lit diffuse term still carries the existing shadows.
-        material.emissiveIntensity = isCity ? 0.38 : 0.42;
+        if (!isCity) {
+          material.emissiveMap = texture;
+          material.emissive.set(0xc5c1ec);
+          material.emissiveIntensity = 0.42;
+        }
         material.userData.brightvaleGround = isCity ? 'city' : 'plaza';
       }
       ownedSourceMaterials.add(material);
@@ -336,11 +338,7 @@ export function createBrightvaleComposition(
       throw new Error('Brightvale key light is required for scene shadows');
     fitDirectionalShadowCamera(
       key,
-      [
-        cityGroup,
-        playfield,
-        framingGroup,
-      ],
+      [cityGroup, playfield, framingGroup],
       groundGroup.children,
     );
 

@@ -9,6 +9,7 @@ import framingPostUrl from '../../../assets/production/brightvale-outer-framing/
 import warmSkyUrl from '../../../assets/production/brightvale-sky/audience-radiant-clouds.png?url';
 import twilightSkyUrl from '../../../assets/production/brightvale-sky/twilight-cosmic-clouds.png?url';
 import cityGroundUrl from '../../../assets/production/brightvale-ground/city-ground.png?url';
+import cityGroundNormalUrl from '../../../assets/production/brightvale-ground/city-ground-normal.png?url';
 import audiencePlazaUrl from '../../../assets/production/brightvale-ground/audience-plaza.png?url';
 import { BRIGHTVALE_ASSET_NAMES, loadBrightvaleAssets } from './assets';
 import type {
@@ -53,6 +54,7 @@ async function loadGroundTextures(
   const loader = new THREE.TextureLoader();
   const settled = Promise.allSettled([
     loader.loadAsync(cityGroundUrl),
+    loader.loadAsync(cityGroundNormalUrl),
     loader.loadAsync(audiencePlazaUrl),
   ]);
   let abortHandler: (() => void) | undefined;
@@ -67,10 +69,10 @@ async function loadGroundTextures(
     );
     const failure = results.find((result) => result.status === 'rejected');
     if (failure?.status === 'rejected') throw failure.reason;
-    const [city, plaza] = loaded;
-    if (!city || !plaza)
+    const [city, cityNormal, plaza] = loaded;
+    if (!city || !cityNormal || !plaza)
       throw new Error('Brightvale ground textures are incomplete');
-    for (const texture of loaded) {
+    for (const texture of [city, plaza]) {
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -80,9 +82,24 @@ async function loadGroundTextures(
       texture.anisotropy = GROUND_TEXTURE_ANISOTROPY;
       texture.needsUpdate = true;
     }
+    cityNormal.colorSpace = THREE.NoColorSpace;
+    cityNormal.wrapS = city.wrapS;
+    cityNormal.wrapT = city.wrapT;
+    cityNormal.minFilter = city.minFilter;
+    cityNormal.magFilter = city.magFilter;
+    cityNormal.generateMipmaps = city.generateMipmaps;
+    cityNormal.anisotropy = city.anisotropy;
+    cityNormal.mapping = city.mapping;
+    cityNormal.channel = city.channel;
+    cityNormal.rotation = city.rotation;
+    cityNormal.center.copy(city.center);
+    cityNormal.offset.copy(city.offset);
+    cityNormal.repeat.copy(city.repeat);
+    cityNormal.needsUpdate = true;
     let disposed = false;
     return {
       city,
+      cityNormal,
       plaza,
       dispose() {
         if (disposed) return;

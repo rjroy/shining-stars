@@ -56,6 +56,7 @@ export interface BrightvaleSilhouetteAtlas {
 
 export interface BrightvaleGroundTextures {
   readonly city: THREE.Texture;
+  readonly cityNormal: THREE.Texture;
   readonly plaza: THREE.Texture;
   dispose(): void;
 }

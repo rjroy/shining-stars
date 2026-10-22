@@ -27,6 +27,8 @@ type SourceSurfaceMaterial = THREE.Material & {
   readonly emissiveIntensity?: number;
   readonly flatShading?: boolean;
   readonly map?: THREE.Texture | null;
+  readonly normalMap?: THREE.Texture | null;
+  readonly normalScale?: THREE.Vector2;
   readonly emissiveMap?: THREE.Texture | null;
 };
 
@@ -43,9 +45,9 @@ interface LightPreset {
 }
 
 const GROUND_EMISSIVE = {
-  audience: { city: 0x78bf8f, plaza: 0x09090e },
-  twilight: { city: 0x82c79b, plaza: 0x0d0b14 },
-  radiant: { city: 0xa5ca8b, plaza: 0x14111a },
+  audience: { plaza: 0x09090e },
+  twilight: { plaza: 0x0d0b14 },
+  radiant: { plaza: 0x14111a },
 } as const;
 
 const PRESETS: Readonly<
@@ -235,6 +237,10 @@ export function createBrightvaleAppearance(
     const fromGround = GROUND_EMISSIVE.audience;
     const toGround = GROUND_EMISSIVE.twilight;
     for (const [material, surface] of groundMaterials) {
+      if (surface === 'city') {
+        material.emissive.set(0x000000);
+        continue;
+      }
       material.emissive.set(fromGround[surface]);
       groundTargetColor.set(toGround[surface]);
       material.emissive.lerp(groundTargetColor, amount);
@@ -290,11 +296,17 @@ export function createBrightvaleAppearance(
       const color = properties.color?.clone() ?? new THREE.Color(0xffffff);
       const emissive =
         properties.emissive?.clone() ?? new THREE.Color(0x000000);
-      const emissiveIntensity = properties.emissiveIntensity ?? 1;
       const groundSurface = source.userData.brightvaleGround as
         'city' | 'plaza' | undefined;
       const map = properties.map ?? null;
-      const emissiveMap = properties.emissiveMap ?? null;
+      const normalMap = properties.normalMap ?? null;
+      const normalScale =
+        properties.normalScale?.clone() ?? new THREE.Vector2(1, 1);
+      let emissiveMap = properties.emissiveMap ?? null;
+      if (groundSurface === 'city') emissive.set(0x000000);
+      if (groundSurface === 'city') emissiveMap = null;
+      const emissiveIntensity =
+        groundSurface === 'city' ? 0 : (properties.emissiveIntensity ?? 1);
       const signature = [
         role,
         color.getHexString(),
@@ -302,6 +314,9 @@ export function createBrightvaleAppearance(
         emissiveIntensity,
         source.side,
         map?.uuid ?? '',
+        normalMap?.uuid ?? '',
+        normalScale.x,
+        normalScale.y,
         emissiveMap?.uuid ?? '',
         groundSurface ?? '',
       ].join('|');
@@ -316,6 +331,8 @@ export function createBrightvaleAppearance(
           emissive,
           emissiveIntensity,
           map,
+          normalMap,
+          normalScale,
           emissiveMap,
         });
         // Preserve black-based pure emitters; their glow remains in emissive.
@@ -343,7 +360,9 @@ export function createBrightvaleAppearance(
       }
       if (groundSurface) {
         material.color.set(groundSurface === 'city' ? 0x77b78a : 0x33333f);
-        material.emissive.set(GROUND_EMISSIVE.audience[groundSurface]);
+        material.emissive.set(
+          groundSurface === 'city' ? 0x000000 : GROUND_EMISSIVE.audience.plaza,
+        );
       }
       return material;
     },
