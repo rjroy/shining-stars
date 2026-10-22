@@ -308,24 +308,7 @@ export function createBrightvaleComposition(
         multisampledFramebuffer,
       );
       crowdGroup.add(silhouettes.root);
-    } else
-      for (const placement of layout.crowdPlacements) {
-        const poseName = `Crowd.${placement.variant}.${placement.pose}`;
-        let poseRoot: THREE.Object3D | undefined;
-        assets.roots.crowd.traverse((object) => {
-          if (
-            (object.name === poseName || object.userData.name === poseName) &&
-            object.userData.variant_id === placement.variant &&
-            object.userData.pose === placement.pose
-          )
-            poseRoot = object;
-        });
-        if (!poseRoot)
-          throw new Error(
-            `Missing crowd pose ${placement.variant}/${placement.pose}`,
-          );
-        addPlacement(crowdGroup, poseRoot, matrix(placement.matrixColumnMajor));
-      }
+    }
 
     for (const [destination, byGeometry] of batchSources) {
       for (const [geometry, byMaterial] of byGeometry) {
@@ -348,8 +331,6 @@ export function createBrightvaleComposition(
 
     setShadowParticipation(cityGroup, { cast: true, receive: true });
     setShadowParticipation(framingGroup, { cast: true, receive: true });
-    if (!silhouettes)
-      setShadowParticipation(crowdGroup, { cast: true, receive: true });
     const key = scene.getObjectByName('Brightvale.Key');
     if (!(key instanceof THREE.DirectionalLight))
       throw new Error('Brightvale key light is required for scene shadows');
@@ -359,7 +340,6 @@ export function createBrightvaleComposition(
         cityGroup,
         playfield,
         framingGroup,
-        ...(silhouettes ? [] : [crowdGroup]),
       ],
       groundGroup.children,
     );

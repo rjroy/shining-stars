@@ -1,6 +1,6 @@
 """Reproduce the current study from immutable sibling sources, never overwrite.
 
-The five historical stages are executed in owned temporary scratch, not exposed
+The five shared-scene stages are executed in owned temporary scratch, not exposed
 as maintained candidate directories. Successful scratch is removed; failure
 scratch is preserved and reported. No export or runtime work.
 """
@@ -36,17 +36,16 @@ def main():
         run(PACKAGE/'scripts/compose.py', '--input', scratch/'base.blend', '--road', scratch/'road/highway-candidate.blend', '--output', scratch/'composition.blend')
         run(PACKAGE/'scripts/framing.py', '--input', scratch/'composition.blend', '--output', scratch/'framing.blend')
         run(PACKAGE/'scripts/ground.py', '--input', scratch/'framing.blend', '--output', scratch/'ground.blend')
-        run(PACKAGE/'scripts/crowd.py', '--input', scratch/'ground.blend', '--output', scratch/'scene-review.blend')
-        cmd = ['blender', '--background', str(scratch/'scene-review.blend'), '--threads', '8',
-               '--python-exit-code', '1', '--python', str(PACKAGE/'validate.py'), '--',
-               '--report', str(scratch/'validation.json')]
+        cmd = ['blender', '--background', str(scratch/'ground.blend'), '--threads', '8',
+                '--python-exit-code', '1', '--python', str(PACKAGE/'validate.py'), '--',
+                '--report', str(scratch/'validation.json'), '--negative-test']
         print('BUILD VALIDATION ATTEMPT', cmd, flush=True)
         subprocess.run(cmd, check=True, timeout=240)
-        print('BUILD VALIDATION SUCCESS; pinned current semantics match', flush=True)
+        print('BUILD VALIDATION SUCCESS; shared city/playfield checks passed', flush=True)
         # Exclusive creation protects maintained files even if another process
         # creates the destination after the initial check.
         print('BUILD COPY ATTEMPT', dest, flush=True)
-        with dest.open('xb') as output, (scratch/'scene-review.blend').open('rb') as source:
+        with dest.open('xb') as output, (scratch/'ground.blend').open('rb') as source:
             shutil.copyfileobj(source, output)
         print('BUILD COPY SUCCESS', dest, flush=True)
     except BaseException:

@@ -15,7 +15,6 @@ const PRODUCTION_FILES: Readonly<Record<BrightvaleAssetName, string>> = {
   highway: '../../../assets/production/brightvale-highway/highway.glb',
   platform: '../../../assets/production/brightvale-platform/platform.glb',
   endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',
-  crowd: '../../../assets/production/brightvale-crowd/crowd.glb',
   framingLong: '../../../assets/production/brightvale-outer-framing/long.glb',
   framingPost: '../../../assets/production/brightvale-outer-framing/post.glb',
 };

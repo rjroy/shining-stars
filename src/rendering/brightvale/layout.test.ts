@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import * as THREE from 'three';
 import authoritativeLayout from '../../../assets/production/brightvale-structure-layout.json';
 import { describe, expect, it } from 'vitest';
 import { BRIGHTVALE_RUNTIME_LAYOUT, type BrightvaleRuntimeLayout } from './layout';
@@ -15,48 +14,6 @@ function runtimeLayoutForAssertion(): BrightvaleRuntimeLayout {
     throw new Error('Brightvale runtime layout extraction is not implemented');
   }
   return BRIGHTVALE_RUNTIME_LAYOUT;
-}
-
-function reviewFillPlacements(): {
-  readonly id: string;
-  readonly variant: 'A' | 'B' | 'C';
-  readonly pose: 'Calm' | 'Cheering' | 'Reaching';
-  readonly matrixColumnMajor: readonly number[];
-}[] {
-  const extraPoints: [number, number][] = [];
-  for (const z of [-5, -8, -11, -14, -17, -20]) {
-    for (const ax of [11, 13, 15]) {
-      const x = ax + ((Math.abs(Math.round(z)) / 3) % 2 ? 0.45 : 0);
-      if (
-        x * x + (z + 20) * (z + 20) < 25.2 * 25.2 &&
-        x > 7.4 &&
-        x < 0.62 * (15 - z)
-      ) {
-        extraPoints.push([x, z]);
-      }
-    }
-  }
-
-  const poses = ['Calm', 'Cheering', 'Reaching'] as const;
-  const variants = ['A', 'B', 'C'] as const;
-  return extraPoints.map(([ax, z], index) => {
-    const x = index % 2 ? ax : -ax;
-    const yaw = Math.atan2(-x, 15 - z);
-    const matrix = new THREE.Matrix4().compose(
-      new THREE.Vector3(x, 8.25, z),
-      new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        yaw,
-      ),
-      new THREE.Vector3(1, 1, 1),
-    );
-    return {
-      id: `extra-${String(index + 1).padStart(2, '0')}`,
-      variant: variants[(index + 1) % 3],
-      pose: poses[(index * 2 + 1) % 3],
-      matrixColumnMajor: matrix.toArray(),
-    };
-  });
 }
 
 function expectFiniteMatrix(matrix: readonly number[]): void {
@@ -138,29 +95,4 @@ describe('Brightvale runtime layout correspondence', () => {
     expect(reviewMain).toContain('camera.position.set(0, 13.8999996185, 15)');
   });
 
-  it('retains ten saved samples and exactly the fifteen accepted review-fill placements', async () => {
-    const layout = runtimeLayoutForAssertion();
-    const reviewMain = await readFile(reviewMainUrl, 'utf8');
-    const savedSamples = authoritativeLayout.existing_crowd_sample_roots.map((sample) => ({
-      id: sample.instance_id,
-      variant: sample.variant,
-      pose: sample.pose,
-      source: 'saved-study' as const,
-      matrixColumnMajor: sample.gltf.matrix_column_major,
-    }));
-    const reviewSamples = reviewFillPlacements().map((placement) => ({
-      ...placement,
-      source: 'scene-review-fill' as const,
-    }));
-
-    expect(reviewMain).toContain('for (const z of [-5, -8, -11, -14, -17, -20])');
-    expect(reviewMain).toContain('for (const ax of [11, 13, 15])');
-    expect(reviewMain).toContain('const yaw = Math.atan2(-x, 15 - z)');
-    expect(reviewSamples).toHaveLength(15);
-    expect(layout.crowdPlacements).toHaveLength(25);
-    expect(layout.crowdPlacements).toEqual([...savedSamples, ...reviewSamples]);
-    for (const placement of layout.crowdPlacements) {
-      expectFiniteMatrix(placement.matrixColumnMajor);
-    }
-  });
 });

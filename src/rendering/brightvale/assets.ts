@@ -6,7 +6,6 @@ export const BRIGHTVALE_ASSET_NAMES = [
   'highway',
   'platform',
   'endcaps',
-  'crowd',
   'framingLong',
   'framingPost',
 ] as const;

@@ -90,7 +90,7 @@ def build(output):
     print('[crowd-atlas] reading approved source', flush=True)
     source_bytes=SOURCE.read_bytes()
     assert sha(source_bytes)==SOURCE_HASH, 'Approved source identity mismatch'
-    protected={p.name:sha(p.read_bytes()) for p in SOURCE.parent.glob('pilot-candidate*.png')}
+    protected={SOURCE.name:sha(SOURCE.read_bytes())}
     raw=decode(SOURCE)
     assert len(raw)==1254*1254*4
     atlas=bytearray(WIDTH*HEIGHT*4)

@@ -38,12 +38,12 @@ No generator is executed and no authoring file is saved or edited.
 [layout.py](layout.py) extracts/validates the **current saved study**, never a
 deleted candidate or historical scene property. It records the source hash,
 common playfield matrix, city source-layout root, exact 26 long-section and 27
-complete-post placement matrices, existing ten crowd sample root mappings,
+complete-post placement matrices,
 camera basis/FOV/clips, four lights/preset values, and **exact** lower-ground and
 520-triangle circular-plaza meshes/material/placement. These planes may be
 created by the browser from data; no unrelated ground asset was generated.
-There are **no crowd population, density or animation rules**. City/crowd
-production lanes own their derivative-local mappings; do not transform twice.
+Crowd placement is not part of this shared layout contract. The waist-up crowd
+runtime owns its own population and attachment mappings.
 
 Camera: glTF position `(0,13.89999962,15)`, vertical FOV **39.76070473°** at
 1600×900, 28 mm/36 mm sensor. Lower ground Y `−.65`; plaza center

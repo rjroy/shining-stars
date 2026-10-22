@@ -123,13 +123,7 @@ function fixture(verticalStick = false, waveAmplitude?: number) {
     BRIGHTVALE_ASSET_NAMES.map((name) => {
       const root = new THREE.Group();
       const mesh = new THREE.Mesh(geometry, material);
-      if (name === 'crowd') {
-        const pose = new THREE.Group();
-        pose.name = 'Crowd.A.Calm';
-        pose.userData = { variant_id: 'A', pose: 'Calm' };
-        pose.add(mesh);
-        root.add(pose);
-      } else root.add(mesh);
+      root.add(mesh);
       return [name, root];
     }),
   ) as BrightvaleAssets['roots'];
@@ -215,13 +209,6 @@ function fixture(verticalStick = false, waveAmplitude?: number) {
       quaternionXyzw: [0, 0, 0, 1],
       referenceResolution: [600, 600],
     },
-    crowdPlacements: placements.map((p) => ({
-      id: p.id,
-      variant: 'A',
-      pose: 'Calm',
-      source: 'saved-study',
-      matrixColumnMajor: p.matrixColumnMajor,
-    })),
     silhouetteCrowdPlacements: placements,
   };
   const scene = new THREE.Scene();

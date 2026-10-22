@@ -30,7 +30,6 @@ const productionFiles: Readonly<Record<BrightvaleAssetName, string>> = {
   highway: '../../../assets/production/brightvale-highway/highway.glb',
   platform: '../../../assets/production/brightvale-platform/platform.glb',
   endcaps: '../../../assets/production/brightvale-platform-endcaps/endcaps.glb',
-  crowd: '../../../assets/production/brightvale-crowd/crowd.glb',
   framingLong: '../../../assets/production/brightvale-outer-framing/long.glb',
   framingPost: '../../../assets/production/brightvale-outer-framing/post.glb',
 };
@@ -123,28 +122,6 @@ function unionBounds(bounds: Iterable<THREE.Box3>): THREE.Box3 {
   return result;
 }
 
-function poseRoot(
-  crowd: THREE.Group,
-  variant: string,
-  pose: string,
-): THREE.Object3D {
-  const semanticName = `Crowd.${variant}.${pose}`;
-  const sanitizedName = THREE.PropertyBinding.sanitizeNodeName(semanticName);
-  const matches: THREE.Object3D[] = [];
-  crowd.traverse((object) => {
-    if (
-      object.userData.variant_id === variant &&
-      object.userData.pose === pose &&
-      (object.userData.name === semanticName ||
-        object.userData.pose_id === semanticName ||
-        object.name === sanitizedName)
-    )
-      matches.push(object);
-  });
-  expect(matches, `unique actual crowd pose ${semanticName}`).toHaveLength(1);
-  return matches[0]!;
-}
-
 function expectBoundsClose(actual: THREE.Box3, expected: THREE.Box3): void {
   for (const key of ['min', 'max'] as const) {
     const actualValues = actual[key].toArray();
@@ -231,7 +208,7 @@ describe('Brightvale production composition', () => {
     composition.dispose();
   });
 
-  it('retains exact layout ground, framing, and crowd placements with bounded role batches', () => {
+  it('retains exact layout ground and framing with bounded role batches', () => {
     const assets = requireAssets();
     const scene = new THREE.Scene();
     const layout = BRIGHTVALE_RUNTIME_LAYOUT;
@@ -269,19 +246,7 @@ describe('Brightvale production composition', () => {
     );
     expect(layout.framingInstances).toHaveLength(53);
 
-    const expectedCrowd = unionBounds(
-      layout.crowdPlacements.map((placement) =>
-        boundsForPlacedRoot(
-          poseRoot(assets.roots.crowd, placement.variant, placement.pose),
-          placement.matrixColumnMajor,
-        ),
-      ),
-    );
-    expectBoundsClose(
-      new THREE.Box3().setFromObject(crowdGroup),
-      expectedCrowd,
-    );
-    expect(layout.crowdPlacements).toHaveLength(25);
+    expect(crowdGroup.children).toHaveLength(0);
 
     const groundMeshes: THREE.Mesh[] = [];
     groundGroup.traverse((object) => {
@@ -374,17 +339,14 @@ describe('Brightvale production composition', () => {
 
     const cityBatches = instancesIn(cityGroup);
     const framingBatches = instancesIn(framingGroup);
-    const crowdBatches = instancesIn(crowdGroup);
     expect(cityBatches).toHaveLength(2304);
     expect(framingBatches).toHaveLength(10);
-    expect(crowdBatches).toHaveLength(98);
     expect(cityBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(2304);
     expect(framingBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(
       266,
     );
-    expect(crowdBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(350);
 
-    const allBatches = [...cityBatches, ...framingBatches, ...crowdBatches];
+    const allBatches = [...cityBatches, ...framingBatches];
     expect(allBatches.every((batch) => batch.castShadow)).toBe(true);
     expect(allBatches.every((batch) => batch.receiveShadow)).toBe(true);
     const ground = composition.root.getObjectByName('Review.Ground') as

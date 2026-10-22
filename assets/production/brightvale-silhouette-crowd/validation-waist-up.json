@@ -3,9 +3,6 @@
   "atlas_sha256": "18622fe47a150ab19c4252ad677e203f23dfc7c798288eaa2aa1e9adc7a03bf5",
   "metadata_sha256": "a6365b70a217f7df7918619c27b7cd9ee9554867b39bdb4c71d856e176d53c0d",
   "source_original_hashes_unchanged": {
-    "pilot-candidate.png": "d3ccd17ebda314ba3c686b6fa229749867a4efe4cb8c36611bfb4572fbd57a3d",
-    "pilot-candidate-revised.png": "da92baf81297a97b5e529095b942aac7dd3d60d1ad854d9608e554eadad34545",
-    "pilot-candidate-shoulder-cleaned.png": "9f5785def1d7bec9339b908a6e926b370a1715196af26bf2d9524f87624598ba",
     "pilot-candidate-waist-up.png": "92cbcf67c40fea19978aaba31cb49ce0600f7bbfe886d7d076c34ce2b2d5c5ed"
   },
   "parts": [

@@ -14,7 +14,7 @@ revisions and do not automatically establish present-day validity or approval.
 | Platform endcaps | [`assets/production/brightvale-platform-endcaps/`](../assets/production/brightvale-platform-endcaps/) | Completed GLB transfer/material pilot, not production-approved game integration or final-appearance approval. Immutable authoring source and approval history: [`assets/authoring/brightvale-platform-endcaps/README.md`](../assets/authoring/brightvale-platform-endcaps/README.md). |
 | Distant city | [`assets/production/brightvale-distant-city/`](../assets/production/brightvale-distant-city/) | Full-city derivative recorded ready for assembled browser review under `shining-stars-4f4.31`; that status does not mean final appearance, device performance, or game integration is accepted. Authoring authority: [`assets/authoring/brightvale-distant-city/`](../assets/authoring/brightvale-distant-city/). |
 | Approved replacement city source | [`assets/authoring/brightvale-city/`](../assets/authoring/brightvale-city/) | User-approved native editable master copied byte-for-byte from the Brightvale experiment; intended to replace the current distant city after separate production and integration gates. Existing `brightvale-distant-city` authoring source and `assets/production/brightvale-distant-city/produce.py` remain unchanged and continue to identify the old source until a separately authorized production change. See the new package README for hash, references, bounds, limitations, and checks. |
-| Crowd | [`assets/production/brightvale-crowd/`](../assets/production/brightvale-crowd/) | Reduced static nine-pose bank prepared for combined browser review. Static is a scoped review choice; required future motion and runtime population remain unresolved. Source rigs/variants: [`assets/authoring/brightvale-crowd/variants/README.md`](../assets/authoring/brightvale-crowd/variants/README.md). |
+| Crowd | [`assets/production/brightvale-silhouette-crowd/`](../assets/production/brightvale-silhouette-crowd/) | Current approved waist-up atlas and reproducible source derivative. See its README and retained provenance for the current runtime contract. The former static 3D pose bank has been retired. |
 | Structure layout | [`assets/production/brightvale-structure-layout.json`](../assets/production/brightvale-structure-layout.json) | Assembly transform authority for the recorded combined review; preserve documented transforms and apply each exactly once. |
 | Combined browser review | [`assets/production/brightvale-scene-review/`](../assets/production/brightvale-scene-review/) | Isolated Three.js 0.186.1 review harness and paired captures, not game integration, runtime acceptance, or target-device benchmark. |
 
@@ -45,7 +45,7 @@ targets, universal thresholds, or authorization to repeat their work.
   not browser appearance approval. Its 1600×900 study view inherited a spire
   crop of 187 px. Units were provisional, not agreed meters. README:
   [`brightvale-distant-city/README.md`](../assets/production/brightvale-distant-city/README.md).
-- **Crowd — reduced static pose bank.** Nine poses changed from 50,520 to
+- **Crowd — retired static pose bank (historical).** Nine poses changed from 50,520 to
   18,214 triangles (63.95% fewer); the assigned three-pose lineup was 6,072
   triangles. At a documented study camera, ten full projected bodies measured
   65.60–149.70 px; this is projected bounds, not visible pixels after
@@ -53,7 +53,7 @@ targets, universal thresholds, or authorization to repeat their work.
   runtime scale, final population and device performance were unresolved in the
   README. Its 25-person combined-review composition is explicitly not an
   approved final count. README:
-  [`brightvale-crowd/README.md`](../assets/production/brightvale-crowd/README.md).
+  its production package has been removed; these measurements are historical only.
 - **Combined browser review — historical capture.** The pipeline reference
   records 401,581 assembled-scene triangles, 401,177 rendered-frame triangles,
   and 485 draw calls under local SwiftShader. These are capture-specific

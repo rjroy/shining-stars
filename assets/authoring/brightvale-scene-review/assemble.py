@@ -2,12 +2,11 @@
 import argparse
 import hashlib
 import json
-import math
 import sys
 sys.dont_write_bytecode=True
 from pathlib import Path
 import bpy
-from mathutils import Vector, Euler
+from mathutils import Vector
 
 PACKAGE=Path(__file__).resolve().parent
 SOURCES={
@@ -16,7 +15,6 @@ SOURCES={
  'highway':('brightvale-highway/highway.blend','2f2eca2987cd42b105c579420ca2e2cbc71ad75d73bcbf164aca60afe32652e5',['CANDIDATE | static highway | UNAPPROVED']),
  'framing':('brightvale-outer-framing/framing.blend','cd17e3162c434ce4054f6c32d86d4b6a885e9dbad44c1841b563513fffd75542',['CANDIDATE | outer framing | UNAPPROVED']),
  'city':('brightvale-distant-city/city.blend','4beb993e9b580bb0b6dd47e5523a0ad9aecc8c26804a4b4cbdc42cc5488caa2c',['CITY_ASSET']),
- 'crowd':('brightvale-crowd/variants/variants.blend','854a120872c1152c0c7722e5f49f2d78572da69d485afbc646a5a6bcdba1b397',['A.Original','B.Bob','C.Gathered']),
 }
 CAMERA_POSITION=(0,-18,7.5)
 CAMERA_TARGET=(0,12,3)
@@ -24,12 +22,6 @@ CAMERA_LENS=28.
 CITY_POSITION=(1.5,44,1.04)
 CITY_SCALE=.13
 GROUND_Z=-.65
-# id, source variant, saved action, X, Y, uniform scene-instance scale.
-CROWD=[('L01','B','Cheering',-8.,1.3,1.02),('L02','A','Reaching',-9.3,5.0,1.),
-       ('L03','C','Calm',-7.5,8.6,.98),('L04','B','Reaching',-9.2,9.4,1.03),
-       ('L05','A','Cheering',-7.8,16.6,1.),('R01','C','Calm',8.,.8,1.02),
-       ('R02','A','Cheering',9.2,3.7,.97),('R03','B','Reaching',7.8,10.4,1.),
-       ('R04','C','Cheering',9.3,11.7,1.03),('R05','A','Calm',7.5,18.,1.)]
 FRAMING={'long':2.8,'post':8.5,'short':14.0}
 FRAMING_X=10.5
 MODES={
@@ -64,10 +56,6 @@ def load_asset(key):
     with bpy.data.libraries.load(str(PACKAGE.parent/rel),link=False) as (src,dst):
         assert all(n in src.collections for n in names),(key,src.collections)
         dst.collections=names
-        if key=='crowd':
-            actions=sorted({variant+'.Pose.'+pose for _,variant,pose,_,_,_ in CROWD})
-            assert all(n in src.actions for n in actions)
-            dst.actions=actions
     collections=list(dst.collections)
     objects=[o for c in collections for o in c.all_objects]
     assert len(objects)==len(set(objects)),('Nested duplicate',key)
@@ -91,14 +79,6 @@ def collection(name):
 def annotate(key,objects):
     for o in objects:
         o['review_asset']=key;o['source_object']=o.name;o.name=key+'::'+o.name
-
-
-def pose_instance(rig,variant,name):
-    assert name!='Rest','No T-pose spectators'
-    definitions=json.loads(rig['pose_definitions']);assert name in definitions
-    rig.animation_data_create();rig.animation_data.action=bpy.data.actions[variant+'.Pose.'+name]
-    rig['review_pose']=name
-    bpy.context.scene.frame_set(1);bpy.context.view_layer.update()
 
 
 def set_mode(mode):
@@ -127,26 +107,6 @@ def assemble(output):
                 side='left' if 'left' in root['source_object'] else 'right'
                 kind=next(k for k in FRAMING if k in root['source_object'])
                 root.location=(( -1 if side=='left' else 1)*FRAMING_X,FRAMING[kind],GROUND_Z)
-    cols,templates=load_asset('crowd')
-    for iid,variant,pose,x,y,scale in CROWD:
-        src=[o for o in templates if o.get('character_id')==variant]
-        coll=collection('CROWD.'+iid+'.'+variant+'.'+pose)
-        copies={o:o.copy() for o in src}
-        for original,o in copies.items():
-            o.name='crowd.'+iid+'::'+original['source_role'];coll.objects.link(o)
-            o['review_asset']='crowd';o['source_object']=original.name;o['instance_id']=iid
-            if original.parent:o.parent=copies[original.parent]
-            for mod in o.modifiers:
-                if mod.type=='ARMATURE':mod.object=copies[mod.object]
-        root=next(o for o in copies.values() if o['source_role']=='NeutralBase')
-        root.location=(x,y,GROUND_Z);root.scale=(scale,)*3
-        # -Y is the character's forward. Turn toward the player-side camera,
-        # not the city or an invisible stage. Positive determinant only.
-        root.rotation_euler=(0,0,math.atan2(CAMERA_POSITION[0]-x,y-CAMERA_POSITION[1]))
-        root['review_pose']=pose;root['review_variant']=variant
-        rig=next(o for o in copies.values() if o.type=='ARMATURE');pose_instance(rig,variant,pose)
-    for o in templates:bpy.data.objects.remove(o,do_unlink=True)
-    for c in cols:bpy.data.collections.remove(c)
     # Appended originals are not retained as hidden population or nested sets.
     review=collection('REVIEW_ONLY.CameraLightsGround')
     mesh=bpy.data.meshes.new('Review.Ground.Mesh')
@@ -175,7 +135,7 @@ def assemble(output):
     scene['status']='Assembled scene REVIEW CANDIDATE; user review pending; no runtime approval'
     scene['sources']=json.dumps({k:v[:2] for k,v in SOURCES.items()},sort_keys=True)
     scene['camera_contract']='One provisional study camera; not either existing runtime camera'
-    scene['crowd_sample']='Ten static pose instances only; not final population'
+    scene['crowd']='Excluded; crowd is authored and reviewed through the current waist-up atlas pipeline.'
     set_mode('neutral')
     # Excluded platform studio objects must not leave their unused ground mesh,
     # camera/light data or charcoal material inside the maintained review file.

@@ -57,8 +57,6 @@ def measure():
     for root in [o for o in frame if o.get('arc_role')=='post']:
         assert abs(math.hypot(root.location.x-center[0],root.location.y-center[1])-radius)<1e-5
         assert abs(root.location.z-local_z)<1e-6
-    crowd_bounds=bounds([o for o in scene.objects if o.get('review_asset')=='crowd'])
-    assert abs(crowd_bounds[0][2]-local_z)<2e-6,'Reference crowd/frame ground mismatch'
     delta=world_z-city_bounds[0][2]
     assert delta>0,'City does not need the approved upward ground correction'
     return {'world_ground_z':world_z,'city_bounds_before':city_bounds,'local_ground_z_before':local_z,

@@ -53,14 +53,14 @@ done
 curl --silent --fail "$URL" >/dev/null || { echo "Vite did not become ready" >&2; exit 1; }
 
 FLAGS=(--headless --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --hide-scrollbars --virtual-time-budget=30000 --dump-dom)
-"$CHROMIUM" "${FLAGS[@]}" "$URL?case=negative&crowd=../missing-crowd.glb" >"$SCRATCH/missing.html" 2>"$SCRATCH/chromium-negative.log"
+"$CHROMIUM" "${FLAGS[@]}" "$URL?case=negative&platform=../missing-platform.glb" >"$SCRATCH/missing.html" 2>"$SCRATCH/chromium-negative.log"
 python3 - "$SCRATCH/missing.html" <<'PY'
 from pathlib import Path
 import sys
 html=Path(sys.argv[1]).read_text()
 assert 'data-state="failed"' in html, 'missing GLB route was not rejected'
 assert ('GLB magic/header' in html or 'JSON' in html), 'missing asset failure was not explicit'
-print('Negative browser route: invalid GLB rejected; missing crowd export rejected even when Vite returns its SPA fallback.')
+print('Negative browser route: invalid playfield GLB rejected even when Vite returns its SPA fallback.')
 PY
 
 for mode in audience twilight; do
@@ -76,11 +76,9 @@ assert report_match, 'report element missing'
 report=json.loads(report_match.group(1))
 assert report['mode']==mode
 assert report['assembly']['framingLongSections']==26 and report['assembly']['wholePosts']==27
-assert report['assembly']['crowdIndividuals']>=20, report['assembly']['crowdIndividuals']
-assert all(x['meshSpheresInFrustum']>0 for x in report['assembly']['crowdVisibility'])
-assert report['renderer']['calls']>0 and report['renderer']['triangles']>300000
+assert report['renderer']['calls']>0 and report['renderer']['triangles']>250000
 assert report['loaderWarnings']==[], report['loaderWarnings']
-assert len(report['inputs'])==7
+assert len(report['inputs'])==6
 match=re.search(r'<pre id="evidence"[^>]*>(.*?)</pre>',html,re.S)
 assert match, 'evidence node missing'
 evidence=json.loads(match.group(1))
@@ -89,7 +87,7 @@ image=base64.b64decode(evidence['dataUrl'].split(',',1)[1])
 assert image[:4]==b'RIFF' and image[8:12]==b'WEBP'
 Path(image_path).write_bytes(image)
 Path(report_path).write_text(json.dumps(report,indent=2)+'\n')
-print(f'{mode}: assembled scene passed; {report["assembly"]["crowdIndividuals"]} people; {report["renderer"]["calls"]} calls / {report["renderer"]["triangles"]} tris; WebP captured.')
+print(f'{mode}: shared city/playfield scene passed; {report["renderer"]["calls"]} calls / {report["renderer"]["triangles"]} tris; WebP captured.')
 PY
 done
 

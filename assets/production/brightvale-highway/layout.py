@@ -1,8 +1,4 @@
-"""Extract pure assembly data from the CURRENT saved study; never save Blender.
-
-No crowd population recipe: only the ten existing sample root placements are
-identified, so another lane can match its approved pose exports to this study.
-"""
+"""Extract shared playfield, framing, city and camera data; never save Blender."""
 import argparse, ast, json, math, sys
 from pathlib import Path
 sys.dont_write_bytecode=True
@@ -42,12 +38,6 @@ def extract(source):
  assert sum(r['module']=='long' for r in roots)==26 and sum(r['module']=='post' for r in roots)==27
  assert all(r['components']==(3 if r['module']=='post' else 1) for r in roots)
  city=next(o for o in scene.objects if o.get('source_object')=='CITY.ProvisionalLayout')
- samples=[]
- for o in sorted(scene.objects,key=lambda o:o.name):
-  if o.get('review_asset')=='crowd' and o.get('source_role')=='NeutralBase':
-   samples.append({'name':o.name,'instance_id':o['instance_id'],'variant':o['review_variant'],
-    'pose':o['review_pose'],**transform(o)})
- assert len(samples)==10
  planes=[]
  for name in ('Review.Ground','Review.LocalGround.Circle'):
   o=bpy.data.objects[name];o.data.calc_loop_triangles()
@@ -84,8 +74,6 @@ def extract(source):
   'city':{'source_root':city.name,**transform(city),
     'root_mapping':'Study source-layout root mapping only. City production lane owns derived-local-origin/instance contracts; do not apply its root transform twice.'},
   'framing_instances':roots,
-  'existing_crowd_sample_roots':samples,
-  'crowd_contract':'Exact existing study samples only, no density/population/repetition/motion rules. Crowd production lane owns derivative pose/origin mappings.',
   'ground_surfaces':planes,
   'camera':{'name':camera.name,'type':camera.data.type,'lens_mm':camera.data.lens,
    'sensor_width_mm':camera.data.sensor_width,'sensor_fit':camera.data.sensor_fit,
@@ -139,8 +127,10 @@ def main():
  if args.output:
   with out.open('x') as f:json.dump(data,f,indent=2);f.write('\n')
  assert S.sha(args.source)==before
- with report.open('x') as f:json.dump({'pass':True,'source_sha256':before,'section_count':26,'complete_post_count':27,
-   'existing_sample_root_count':10,'negative_tests':results},f,indent=2);f.write('\n')
+ report_data={'pass':True,'source_sha256':before,'section_count':26,'complete_post_count':27,
+  'negative_tests':results}
+ with report.open('x') as f:
+  json.dump(report_data,f,indent=2);f.write('\n')
  print('LAYOUT EXACT EXTRACTION/VALIDATION SUCCESS',flush=True)
 
 if __name__=='__main__':main()
