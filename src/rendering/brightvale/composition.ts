@@ -27,7 +27,7 @@ export interface BrightvaleComposition extends BrightvaleShellComposition {
 /** Rotated planar mapping keeps grass variation legible at grazing angles. */
 export const BRIGHTVALE_GROUND_UV = {
   city: {
-    repeatWorldUnits: 100,
+    repeatWorldUnits: 200,
     rotationRadians: Math.PI / 5,
     offset: [0.5, 0.5],
   },
@@ -157,8 +157,11 @@ export function createBrightvaleComposition(
       });
       if (texture) {
         material.map = texture;
-        if (isCity && assets.groundTextures?.cityNormal)
+        if (isCity && assets.groundTextures?.cityNormal) {
           material.normalMap = assets.groundTextures.cityNormal;
+          // Deliberately legible relief; keep the canonical normal asset intact.
+          material.normalScale.setScalar(5);
+        }
         material.color.set(0xffffff);
         if (!isCity) {
           material.emissiveMap = texture;

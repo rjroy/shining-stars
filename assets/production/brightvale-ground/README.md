@@ -15,7 +15,7 @@ provenance, historical repeat reviews and correction tooling are in
 
 The renderer uses sRGB, repeat wrapping, linear magnification, trilinear
 mipmaps, and fixed anisotropy 4 (not queried from renderer capabilities). UVs
-are rotated, world-space planar XZ. City span is 100 world units with a 36°
+are rotated, world-space planar XZ. City span is 200 world units with a 36°
 rotation and a half-tile center offset; plaza span is 22.5 units with an 18° rotation (about 2.4 repeats over
 its ~54-unit diameter). Approved texture values are used directly, without
 shader contrast adjustment. City normal uses linear `NoColorSpace`, the same
