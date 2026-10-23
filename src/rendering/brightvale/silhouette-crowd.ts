@@ -273,7 +273,7 @@ export function createSilhouetteCrowd(
       const shoulder = new THREE.Vector3(
         figure.shoulder_body_local[0]!,
         figure.shoulder_body_local[1]!,
-        -0.004,
+        0.004,
       );
       const grip = new THREE.Vector3(
         -figure.grip_arm_local[0]!,

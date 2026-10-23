@@ -432,8 +432,8 @@ describe('silhouette pilot through the existing composition update boundary', ()
         expectXY(shoulder, figure.shoulder_body_local);
         expect(
           shoulder.z,
-          'body must occlude its overlapping arm root',
-        ).toBeLessThan(0);
+          'arm card must sit in front of the overlapping body card',
+        ).toBeGreaterThan(0);
         armPoses.push(
           bodyMatrix.clone().invert().multiply(armMatrix).toArray(),
         );
