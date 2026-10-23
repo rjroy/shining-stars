@@ -34,12 +34,18 @@ const state: SceneStateProjection = {
   twilightConsumed: false,
 };
 
-function atlasMetadata(verticalStick = false) {
-  // Deliberately unlike the real atlas: a different pixel scale and off-center
-  // attachment detect hardcoded production coordinates/independent arm scaling.
+function atlasMetadata(
+  verticalStick = false,
+  width = 64,
+  height = 32,
+  offset = 0,
+) {
+  const twilightAtlas = width !== 64;
+  // Fixture-owned atlas dimensions and offsets expose accidental assumptions
+  // about shared UV coordinates or production atlas sizing.
   return {
     schema: 'brightvale-silhouette-crowd-v1',
-    atlas: { width: 64, height: 32, gutter_px: 2 },
+    atlas: { width, height, gutter_px: 2 },
     coordinates: { source_pixels_per_unit: 10 },
     parts: [
       {
@@ -49,8 +55,15 @@ function atlasMetadata(verticalStick = false) {
         padded_rect_px: [0, 0, 12, 16],
         origin_px: [4, 12],
         shoulder_px: [7, 6],
-        uv_rect_bottom_left: [2 / 64, 18 / 32, 8 / 64, 12 / 32],
-        card_bounds_local: [-0.4, 0, 0.4, 1.2],
+        uv_rect_bottom_left: [
+          (2 + offset) / width,
+          (height - 14) / height,
+          8 / width,
+          12 / height,
+        ],
+        card_bounds_local: twilightAtlas
+          ? [-0.15, -0.1, 0.5, 1.1]
+          : [-0.4, 0, 0.4, 1.2],
         source_pixels_per_atlas_pixel: 1,
       },
       {
@@ -61,8 +74,15 @@ function atlasMetadata(verticalStick = false) {
         origin_px: [2, 8],
         shoulder_px: [2, 8],
         grip_px: [3, 1],
-        uv_rect_bottom_left: [18 / 64, 20 / 32, 6 / 64, 10 / 32],
-        card_bounds_local: [-0.2, -0.2, 0.4, 0.8],
+        uv_rect_bottom_left: [
+          (18 + offset) / width,
+          (height - 12) / height,
+          6 / width,
+          10 / height,
+        ],
+        card_bounds_local: twilightAtlas
+          ? [-0.35, -0.1, 0.3, 0.9]
+          : [-0.2, -0.2, 0.4, 0.8],
         source_pixels_per_atlas_pixel: 1,
       },
     ],
@@ -119,6 +139,11 @@ function fixture(verticalStick = false, waveAmplitude?: number) {
     64,
     32,
   );
+  const twilightTexture = new THREE.DataTexture(
+    new Uint8Array(80 * 40 * 4).fill(180),
+    80,
+    40,
+  );
   const roots = Object.fromEntries(
     BRIGHTVALE_ASSET_NAMES.map((name) => {
       const root = new THREE.Group();
@@ -128,16 +153,26 @@ function fixture(verticalStick = false, waveAmplitude?: number) {
     }),
   ) as BrightvaleAssets['roots'];
   const silhouetteCrowd = { texture, metadata: atlasMetadata(verticalStick) };
-  const assets: BrightvaleAssets & { silhouetteCrowd: typeof silhouetteCrowd } =
-    {
-      roots,
-      silhouetteCrowd,
-      dispose() {
-        geometry.dispose();
-        material.dispose();
-        texture.dispose();
-      },
-    };
+  const silhouetteCrowdTwilight = {
+    texture: twilightTexture,
+    metadata: atlasMetadata(verticalStick, 80, 40, 30),
+  };
+  const assets: BrightvaleAssets & {
+    silhouetteCrowd: typeof silhouetteCrowd;
+    silhouetteCrowdTwilight: typeof silhouetteCrowdTwilight;
+  } = {
+    roots,
+    silhouetteCrowd,
+    // Proposed runtime seam: keep both phase atlases loaded as one owned bundle;
+    // the composition selects the matching texture and geometry/UV metadata.
+    silhouetteCrowdTwilight,
+    dispose() {
+      geometry.dispose();
+      material.dispose();
+      texture.dispose();
+      twilightTexture.dispose();
+    },
+  };
   const placements: FixturePlacement[] = [
     {
       id: 'lit-left',
@@ -218,6 +253,7 @@ function fixture(verticalStick = false, waveAmplitude?: number) {
     geometry,
     material,
     texture,
+    twilightTexture,
     placements,
     scene,
     composition,
@@ -272,10 +308,12 @@ function update(
   f: ReturnType<typeof fixture>,
   time: number,
   reducedMotion = false,
+  overrides: Partial<SceneStateProjection> = {},
 ): void {
+  const phaseState = { ...state, ...overrides };
   f.composition.updateAppearance(
-    state,
-    projectBrightvaleAmbience(state, time, reducedMotion),
+    phaseState,
+    projectBrightvaleAmbience(phaseState, time, reducedMotion),
   );
   f.composition.root.updateWorldMatrix(true, true);
 }
@@ -320,6 +358,137 @@ afterEach(() => {
 });
 
 describe('silhouette pilot through the existing composition update boundary', () => {
+  it('blends registered atlas UVs through Twilight and Radiant without rebuilding material or batches', () => {
+    const f = fixture();
+    update(f, 1.25, false, { phase: 'audience' });
+    const originalBatches = batches(crowd(f));
+    const body = batch(f, 'Body.A');
+    const arm = batch(f, 'Arm.A');
+    const bodyGeometry = body.geometry;
+    const armGeometry = arm.geometry;
+    const cardMaterial = body.material as THREE.MeshBasicMaterial;
+    const shaderUniforms = cardMaterial.userData.silhouetteCrowdUniforms as
+      | {
+          twilightMap: { value: THREE.Texture };
+          blend: { value: number };
+        }
+      | undefined;
+
+    expect(shaderUniforms).toBeDefined();
+    if (!shaderUniforms) throw new Error('Crowd blend shader uniforms missing');
+    expect(cardMaterial.map).toBe(f.texture);
+    expect(shaderUniforms.twilightMap.value).toBe(f.twilightTexture);
+    const audienceBodyUv = bodyGeometry.getAttribute('uv').array.slice();
+    const audienceArmUv = armGeometry.getAttribute('uv').array.slice();
+    const twilightBodyUv = bodyGeometry
+      .getAttribute('crowdTwilightUv')
+      .array.slice();
+    const twilightArmUv = armGeometry
+      .getAttribute('crowdTwilightUv')
+      .array.slice();
+    expect(twilightBodyUv).not.toEqual(audienceBodyUv);
+    expect(twilightArmUv).not.toEqual(audienceArmUv);
+    expect(
+      f.assets.silhouetteCrowdTwilight.metadata.parts.map(
+        (part) => part.card_bounds_local,
+      ),
+    ).not.toEqual(
+      f.assets.silhouetteCrowd.metadata.parts.map(
+        (part) => part.card_bounds_local,
+      ),
+    );
+    const armTwilightPart = f.assets.silhouetteCrowdTwilight.metadata.parts[1];
+    const [armTwilightU, , armTwilightWidth] =
+      armTwilightPart.uv_rect_bottom_left;
+    const originalArmPart = f.assets.silhouetteCrowd.metadata.parts[1];
+    const unionArmRight = Math.max(
+      originalArmPart.card_bounds_local[2]!,
+      armTwilightPart.card_bounds_local[2]!,
+    );
+    const unionRightArmUv = arm.geometry
+      .getAttribute('crowdTwilightUv')
+      .getX(1);
+    expect(
+      unionRightArmUv,
+      'sinister UV stays affine past its narrower local bound; fragment mask handles outside pixels',
+    ).toBeCloseTo(
+      armTwilightU +
+        ((unionArmRight - armTwilightPart.card_bounds_local[0]!) /
+          (armTwilightPart.card_bounds_local[2]! -
+            armTwilightPart.card_bounds_local[0]!)) *
+          armTwilightWidth,
+      6,
+    );
+    expect(unionRightArmUv).toBeGreaterThan(armTwilightU + armTwilightWidth);
+    expect(shaderUniforms.blend.value).toBe(0);
+    const materialVersion = cardMaterial.version;
+
+    expect(f.assets.silhouetteCrowd.metadata.atlas).toEqual({
+      width: 64,
+      height: 32,
+      gutter_px: 2,
+    });
+
+    update(f, 1.25, false, {
+      phase: 'twilight',
+      transitionProgress: 0.4,
+    });
+    expect(batches(crowd(f))).toEqual(originalBatches);
+    expect(shaderUniforms.blend.value).toBe(0.4);
+    update(f, 2.5, false, {
+      phase: 'twilight',
+      transitionProgress: 0.8,
+    });
+    expect(shaderUniforms.blend.value).toBe(0.8);
+    expect(cardMaterial.version).toBe(materialVersion);
+    expect(body.geometry).toBe(bodyGeometry);
+    expect(arm.geometry).toBe(armGeometry);
+    expect(f.assets.silhouetteCrowdTwilight.metadata.atlas).toEqual({
+      width: 80,
+      height: 40,
+      gutter_px: 2,
+    });
+    expect(batches(crowd(f))).toHaveLength(originalBatches.length);
+
+    // Radiant is a victory blend, not a GamePhase. During its exit, the game
+    // phase remains Twilight while radiantProgress advances from 0 to 1.
+    update(f, 2.75, false, {
+      phase: 'twilight',
+      victory: true,
+      radiantProgress: 0.25,
+    });
+    expect(shaderUniforms.blend.value).toBe(0.75);
+    update(f, 3, false, {
+      phase: 'twilight',
+      victory: true,
+      radiantProgress: 0.5,
+    });
+    expect(shaderUniforms.blend.value).toBe(0.5);
+    update(f, 3.25, false, {
+      phase: 'twilight',
+      victory: true,
+      radiantProgress: 1,
+    });
+    expect(shaderUniforms.blend.value).toBe(0);
+    expect(cardMaterial.map).toBe(f.texture);
+    expect(body.geometry.getAttribute('uv').array).toEqual(audienceBodyUv);
+    expect(arm.geometry.getAttribute('uv').array).toEqual(audienceArmUv);
+    expect(body.geometry.getAttribute('crowdTwilightUv').array).toEqual(
+      twilightBodyUv,
+    );
+    expect(arm.geometry.getAttribute('crowdTwilightUv').array).toEqual(
+      twilightArmUv,
+    );
+    expect(cardMaterial.version).toBe(materialVersion);
+    expect(batches(crowd(f))).toEqual(originalBatches);
+
+    update(f, 1.25, false, { phase: 'audience' });
+    expect(batches(crowd(f))).toEqual(originalBatches);
+    expect(cardMaterial.map).toBe(f.texture);
+    expect(body.geometry.getAttribute('uv').array).toEqual(audienceBodyUv);
+    expect(arm.geometry.getAttribute('uv').array).toEqual(audienceArmUv);
+  });
+
   it('moves existing crowd instances from absolute transport time, replays/seeks deterministically and freezes with reduced motion', () => {
     const f = fixture();
     const root = f.composition.root;
@@ -355,9 +524,17 @@ describe('silhouette pilot through the existing composition update boundary', ()
       f.placements.filter((p) => p.stickColor !== undefined).length,
     );
     expect(batch(f, 'StickHalo').count).toBe(batch(f, 'StickCore').count);
-    for (const { card, part } of [
-      { card: body, part: f.assets.silhouetteCrowd.metadata.parts[0] },
-      { card: arm, part: f.assets.silhouetteCrowd.metadata.parts[1] },
+    for (const { card, originalPart, twilightPart } of [
+      {
+        card: body,
+        originalPart: f.assets.silhouetteCrowd.metadata.parts[0],
+        twilightPart: f.assets.silhouetteCrowdTwilight.metadata.parts[0],
+      },
+      {
+        card: arm,
+        originalPart: f.assets.silhouetteCrowd.metadata.parts[1],
+        twilightPart: f.assets.silhouetteCrowdTwilight.metadata.parts[1],
+      },
     ]) {
       expect(card.material).toBeInstanceOf(THREE.MeshBasicMaterial);
       expect((card.material as THREE.MeshBasicMaterial).map).toBe(f.texture);
@@ -365,9 +542,20 @@ describe('silhouette pilot through the existing composition update boundary', ()
       expect(card.receiveShadow).toBe(false);
       const positions = card.geometry.getAttribute('position');
       const uv = card.geometry.getAttribute('uv');
-      const [left, bottom, right, top] = part.card_bounds_local;
-      const [u, v, width, height] = part.uv_rect_bottom_left;
+      const twilightUv = card.geometry.getAttribute('crowdTwilightUv');
+      const [originalLeft, originalBottom, originalRight, originalTop] =
+        originalPart.card_bounds_local;
+      const [twilightLeft, twilightBottom, twilightRight, twilightTop] =
+        twilightPart.card_bounds_local;
+      const left = Math.min(originalLeft, twilightLeft);
+      const bottom = Math.min(originalBottom, twilightBottom);
+      const right = Math.max(originalRight, twilightRight);
+      const top = Math.max(originalTop, twilightTop);
+      const [u, v, width, height] = originalPart.uv_rect_bottom_left;
+      const [twilightU, twilightV, twilightWidth, twilightHeight] =
+        twilightPart.uv_rect_bottom_left;
       expect(uv.count).toBe(positions.count);
+      expect(twilightUv.count).toBe(positions.count);
       const xs = Array.from({ length: positions.count }, (_, vertex) =>
         positions.getX(vertex),
       );
@@ -375,21 +563,46 @@ describe('silhouette pilot through the existing composition update boundary', ()
       // The body remains unchanged; no reflected instance matrices are needed.
       expect(Math.min(...xs)).toBeCloseTo(card === arm ? -right : left, 6);
       expect(Math.max(...xs)).toBeCloseTo(card === arm ? -left : right, 6);
+      const ys = Array.from({ length: positions.count }, (_, vertex) =>
+        positions.getY(vertex),
+      );
+      expect(Math.min(...ys)).toBeCloseTo(bottom, 6);
+      expect(Math.max(...ys)).toBeCloseTo(top, 6);
       // Match the fixture tile, with +V upward from its bottom edge. Checking
       // against positions rather than vertex order catches flipped V as well
       // as wrong rectangles without requiring a particular triangulation.
       for (let vertex = 0; vertex < positions.count; vertex += 1) {
+        const localX = (card === arm ? -1 : 1) * positions.getX(vertex);
+        const localY = positions.getY(vertex);
         expect(uv.getX(vertex)).toBeCloseTo(
           u +
-            (((card === arm ? -1 : 1) * positions.getX(vertex) - left) /
-              (right - left)) *
-              width,
+            ((localX - originalLeft) / (originalRight - originalLeft)) * width,
           6,
         );
         expect(uv.getY(vertex)).toBeCloseTo(
-          v + ((positions.getY(vertex) - bottom) / (top - bottom)) * height,
+          v +
+            ((localY - originalBottom) / (originalTop - originalBottom)) *
+              height,
           6,
         );
+        expect(twilightUv.getX(vertex)).toBeCloseTo(
+          twilightU +
+            ((localX - twilightLeft) / (twilightRight - twilightLeft)) *
+              twilightWidth,
+          6,
+        );
+        expect(twilightUv.getY(vertex)).toBeCloseTo(
+          twilightV +
+            ((localY - twilightBottom) / (twilightTop - twilightBottom)) *
+              twilightHeight,
+          6,
+        );
+      }
+      // For the body's union-left corner, this is deliberately outside the
+      // Twilight card: its affine UV must remain unclamped and be masked in
+      // the fragment shader instead of stretching its UV rectangle.
+      if (card === body) {
+        expect(twilightUv.getX(0)).toBeLessThan(twilightU);
       }
     }
 
@@ -548,8 +761,8 @@ describe('silhouette pilot through the existing composition update boundary', ()
     const owned = [...meshes, ...geometries, ...materials].map((resource) =>
       vi.spyOn(resource, 'dispose'),
     );
-    const borrowed = [f.geometry, f.material, f.texture].map((resource) =>
-      vi.spyOn(resource, 'dispose'),
+    const borrowed = [f.geometry, f.material, f.texture, f.twilightTexture].map(
+      (resource) => vi.spyOn(resource, 'dispose'),
     );
     f.composition.dispose();
     f.composition.dispose();

@@ -333,6 +333,7 @@ export function createBrightvaleComposition(
     if (assets.silhouetteCrowd) {
       silhouettes = createSilhouetteCrowd(
         assets.silhouetteCrowd,
+        assets.silhouetteCrowdTwilight,
         layout.silhouetteCrowdPlacements ?? createSilhouettePilotPlacements(),
         multisampledFramebuffer,
       );
@@ -377,6 +378,17 @@ export function createBrightvaleComposition(
           throw new Error('Brightvale composition has been disposed');
         appearanceState = state;
         appearance!.update(appearanceState, ambience);
+        const twilightAtlasBlend =
+          state.phase !== 'twilight'
+            ? 0
+            : THREE.MathUtils.clamp(
+                state.victory
+                  ? 1 - state.radiantProgress
+                  : state.transitionProgress,
+                0,
+                1,
+              );
+        silhouettes?.setAtlasBlend(twilightAtlasBlend);
         silhouettes?.update(ambience?.time ?? 0);
       },
       dispose() {

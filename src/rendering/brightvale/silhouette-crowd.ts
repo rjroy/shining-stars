@@ -5,6 +5,7 @@ import type { BrightvaleSilhouetteCrowdPlacement } from './layout';
 export interface SilhouetteCrowd {
   readonly root: THREE.Group;
   update(time: number): void;
+  setAtlasBlend(blend: number): void;
   dispose(): void;
 }
 
@@ -56,30 +57,94 @@ export function createSilhouettePilotPlacements(): readonly BrightvaleSilhouette
   );
 }
 
-function quad(
-  bounds: readonly number[],
-  uv: readonly number[],
+function dualAtlasQuad(
+  originalPart: BrightvaleSilhouetteAtlasPart,
+  twilightPart: BrightvaleSilhouetteAtlasPart,
+  mirrored = false,
 ): THREE.BufferGeometry {
-  const [left, bottom, right, top] = bounds;
-  const [u, v, width, height] = uv;
+  const originalBounds = originalPart.card_bounds_local;
+  const twilightBounds = twilightPart.card_bounds_local;
+  const [left, bottom, right, top] = [
+    Math.min(originalBounds[0]!, twilightBounds[0]!),
+    Math.min(originalBounds[1]!, twilightBounds[1]!),
+    Math.max(originalBounds[2]!, twilightBounds[2]!),
+    Math.max(originalBounds[3]!, twilightBounds[3]!),
+  ];
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    'position',
-    new THREE.Float32BufferAttribute(
-      [left!, bottom!, 0, right!, bottom!, 0, right!, top!, 0, left!, top!, 0],
-      3,
-    ),
+  const local = [
+    [left, bottom],
+    [right, bottom],
+    [right, top],
+    [left, top],
+  ];
+  const uvFor = (
+    point: readonly number[],
+    bounds: readonly number[],
+    rect: readonly number[],
+  ): number[] => {
+    // Keep UVs affine across the enclosing quad. Fragments outside this
+    // variant's card bounds are masked below; clamping corners stretches its
+    // sprite over the other variant's wider local extent.
+    const x = (point[0]! - bounds[0]!) / (bounds[2]! - bounds[0]!);
+    const y = (point[1]! - bounds[1]!) / (bounds[3]! - bounds[1]!);
+    return [rect[0]! + x * rect[2]!, rect[1]! + y * rect[3]!];
+  };
+  const positions = local.flatMap(([x, y]) => [mirrored ? -x! : x!, y!, 0]);
+  const uv = local.flatMap((point) =>
+    uvFor(point, originalBounds, originalPart.uv_rect_bottom_left),
+  );
+  const twilightUv = local.flatMap((point) =>
+    uvFor(point, twilightBounds, twilightPart.uv_rect_bottom_left),
   );
   geometry.setAttribute(
-    'uv',
+    'position',
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setAttribute(
+    'crowdTwilightUv',
+    new THREE.Float32BufferAttribute(twilightUv, 2),
+  );
+  geometry.setAttribute(
+    'crowdSourceLocal',
     new THREE.Float32BufferAttribute(
-      [u!, v!, u! + width!, v!, u! + width!, v! + height!, u!, v! + height!],
+      local.flatMap((point) => point),
       2,
     ),
   );
+  geometry.setAttribute(
+    'crowdOriginalBounds',
+    new THREE.Float32BufferAttribute(
+      Array.from({ length: 4 }, () => originalBounds).flatMap((bounds) => [
+        bounds[0]!,
+        bounds[1]!,
+        bounds[2]!,
+        bounds[3]!,
+      ]),
+      4,
+    ),
+  );
+  geometry.setAttribute(
+    'crowdTwilightBounds',
+    new THREE.Float32BufferAttribute(
+      Array.from({ length: 4 }, () => twilightBounds).flatMap((bounds) => [
+        bounds[0]!,
+        bounds[1]!,
+        bounds[2]!,
+        bounds[3]!,
+      ]),
+      4,
+    ),
+  );
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
+  if (mirrored) geometry.setIndex([0, 2, 1, 0, 3, 2]);
   geometry.computeBoundingSphere();
   return geometry;
+}
+
+interface BrightvaleSilhouetteAtlasPart {
+  readonly card_bounds_local: readonly number[];
+  readonly uv_rect_bottom_left: readonly number[];
 }
 
 function rod(
@@ -147,9 +212,89 @@ function haloTexture(): THREE.DataTexture {
   return texture;
 }
 
+function configureCrowdAtlasBlend(
+  material: THREE.MeshBasicMaterial,
+  twilightTexture: THREE.Texture,
+): {
+  readonly twilightMap: { value: THREE.Texture };
+  readonly blend: { value: number };
+} {
+  const uniforms = {
+    twilightMap: { value: twilightTexture },
+    blend: { value: 0 },
+  };
+  material.userData.silhouetteCrowdUniforms = uniforms;
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.crowdTwilightMap = uniforms.twilightMap;
+    shader.uniforms.crowdAtlasBlend = uniforms.blend;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+attribute vec2 crowdTwilightUv;
+attribute vec2 crowdSourceLocal;
+attribute vec4 crowdOriginalBounds;
+attribute vec4 crowdTwilightBounds;
+varying vec2 vCrowdTwilightUv;
+varying vec2 vCrowdSourceLocal;
+varying vec4 vCrowdOriginalBounds;
+varying vec4 vCrowdTwilightBounds;`,
+      )
+      .replace(
+        '#include <uv_vertex>',
+        `#include <uv_vertex>
+vCrowdTwilightUv = crowdTwilightUv;
+vCrowdSourceLocal = crowdSourceLocal;
+vCrowdOriginalBounds = crowdOriginalBounds;
+vCrowdTwilightBounds = crowdTwilightBounds;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform sampler2D crowdTwilightMap;
+uniform float crowdAtlasBlend;
+varying vec2 vCrowdTwilightUv;
+varying vec2 vCrowdSourceLocal;
+varying vec4 vCrowdOriginalBounds;
+varying vec4 vCrowdTwilightBounds;`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#ifdef USE_MAP
+vec4 crowdOriginalSample = texture2D( map, vMapUv );
+vec4 crowdTwilightSample = texture2D( crowdTwilightMap, vCrowdTwilightUv );
+float crowdOriginalInside = step(vCrowdOriginalBounds.x, vCrowdSourceLocal.x)
+  * step(vCrowdSourceLocal.x, vCrowdOriginalBounds.z)
+  * step(vCrowdOriginalBounds.y, vCrowdSourceLocal.y)
+  * step(vCrowdSourceLocal.y, vCrowdOriginalBounds.w);
+float crowdTwilightInside = step(vCrowdTwilightBounds.x, vCrowdSourceLocal.x)
+  * step(vCrowdSourceLocal.x, vCrowdTwilightBounds.z)
+  * step(vCrowdTwilightBounds.y, vCrowdSourceLocal.y)
+  * step(vCrowdSourceLocal.y, vCrowdTwilightBounds.w);
+crowdOriginalSample.a *= crowdOriginalInside;
+crowdTwilightSample.a *= crowdTwilightInside;
+float crowdBlendedAlpha = mix(crowdOriginalSample.a, crowdTwilightSample.a, crowdAtlasBlend);
+vec3 crowdBlendedPremultiplied = mix(
+  crowdOriginalSample.rgb * crowdOriginalSample.a,
+  crowdTwilightSample.rgb * crowdTwilightSample.a,
+  crowdAtlasBlend
+);
+vec3 crowdBlendedStraight = crowdBlendedAlpha > 1e-6
+  ? crowdBlendedPremultiplied / crowdBlendedAlpha
+  : vec3(0.0);
+diffuseColor *= vec4(crowdBlendedStraight, crowdBlendedAlpha);
+#endif`,
+      );
+  };
+  material.customProgramCacheKey = () => 'brightvale-crowd-atlas-blend-v1';
+  return uniforms;
+}
+
 /** Shared local chain: placement * quiet body sway * shoulder * arm wave * grip. */
 export function createSilhouetteCrowd(
   assets: BrightvaleSilhouetteCrowdAssets,
+  twilightAssets: BrightvaleSilhouetteCrowdAssets | undefined,
   placements: readonly BrightvaleSilhouetteCrowdPlacement[],
   multisampledFramebuffer = false,
 ): SilhouetteCrowd {
@@ -195,6 +340,10 @@ export function createSilhouetteCrowd(
       side: THREE.DoubleSide,
       toneMapped: false,
     });
+    const atlasUniforms = configureCrowdAtlasBlend(
+      cardMaterial,
+      (twilightAssets ?? assets).texture,
+    );
     const coreMaterial = new THREE.MeshBasicMaterial({
       side: THREE.DoubleSide,
       toneMapped: false,
@@ -241,32 +390,43 @@ export function createSilhouetteCrowd(
       instances.push(mesh);
       return mesh;
     };
+    const twilightMetadata = twilightAssets?.metadata ?? metadata;
+    if (twilightMetadata.schema !== 'brightvale-silhouette-crowd-v1')
+      throw new Error('Unsupported Twilight silhouette atlas schema');
     const records = metadata.figures.flatMap((figure) => {
       const selected = placements.filter((p) => p.figure === figure.id);
       if (selected.length === 0) return [];
-      const part = (id: string): THREE.BufferGeometry => {
-        const data = metadata.parts.find((p) => p.id === id);
+      const parts = (
+        atlas: typeof metadata,
+        id: string,
+      ): BrightvaleSilhouetteAtlasPart => {
+        const part = atlas.parts.find((item) => item.id === id);
         if (
-          !data ||
-          data.card_bounds_local.length !== 4 ||
-          data.uv_rect_bottom_left.length !== 4 ||
-          ![...data.card_bounds_local, ...data.uv_rect_bottom_left].every(
+          !part ||
+          part.card_bounds_local.length !== 4 ||
+          part.uv_rect_bottom_left.length !== 4 ||
+          ![...part.card_bounds_local, ...part.uv_rect_bottom_left].every(
             Number.isFinite,
-          )
+          ) ||
+          part.card_bounds_local[2]! <= part.card_bounds_local[0]! ||
+          part.card_bounds_local[3]! <= part.card_bounds_local[1]!
         )
           throw new Error(`Invalid silhouette atlas part ${id}`);
-        return quad(data.card_bounds_local, data.uv_rect_bottom_left);
+        return part;
       };
-      const bodyGeometry = part(figure.body_part);
+      const bodyGeometry = dualAtlasQuad(
+        parts(metadata, figure.body_part),
+        parts(twilightMetadata, figure.body_part),
+      );
       geometries.add(bodyGeometry);
-      const armGeometry = part(figure.arm_part);
+      const armGeometry = dualAtlasQuad(
+        parts(metadata, figure.arm_part),
+        parts(twilightMetadata, figure.arm_part),
+        true,
+      );
       geometries.add(armGeometry);
       // Reflect the artwork about its shoulder origin, not the tile center.
-      // Bake it into owned geometry: reflected InstancedMesh matrices are not
-      // supported. Keep source UVs and restore the front-face winding.
-      armGeometry.scale(-1, 1, 1);
-      armGeometry.setIndex([0, 2, 1, 0, 3, 2]);
-      armGeometry.computeBoundingSphere();
+      // Both UV registrations use the unmirrored local card coordinates.
       const radius = (geometry: THREE.BufferGeometry): number =>
         geometry.boundingSphere!.center.length() +
         geometry.boundingSphere!.radius;
@@ -354,6 +514,7 @@ export function createSilhouetteCrowd(
       return [
         {
           selected,
+          figure,
           body,
           arm,
           core,
@@ -413,9 +574,18 @@ export function createSilhouetteCrowd(
       });
     };
     update(0);
+    const setAtlasBlend = (blend: number): void => {
+      if (disposed) throw new Error('Silhouette crowd has been disposed');
+      atlasUniforms.blend.value = THREE.MathUtils.clamp(
+        Number.isFinite(blend) ? blend : 0,
+        0,
+        1,
+      );
+    };
     return {
       root,
       update,
+      setAtlasBlend,
       dispose() {
         if (disposed) return;
         disposed = true;

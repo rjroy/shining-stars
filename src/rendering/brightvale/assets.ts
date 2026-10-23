@@ -21,6 +21,8 @@ export interface BrightvaleAssets {
   readonly groundTextures?: BrightvaleGroundTextures;
   /** Optional stock for gameplay; borrowed by compositions, owned by this bundle. */
   readonly silhouetteCrowd?: BrightvaleSilhouetteCrowdAssets;
+  /** Separate sinister atlas and attachment metadata, selected only in Twilight. */
+  readonly silhouetteCrowdTwilight?: BrightvaleSilhouetteCrowdAssets;
   /** Releases imported resources owned by this bundle; safe to call repeatedly. */
   dispose(): void;
 }
