@@ -8,6 +8,7 @@ tests without installing or invoking audio tools.
 """
 
 import hashlib
+import io
 import json
 import os
 import subprocess
@@ -15,6 +16,7 @@ import sys
 import tempfile
 import unittest
 import wave
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -51,6 +53,16 @@ def profile_fixture():
     return {"profiles": profiles}
 
 
+def controlled_lane_mapping(pitch_following):
+    return {
+        "pitch_following": pitch_following,
+        "lane_balance": 1.25,
+        "repetition_avoidance": 0.5,
+        "wide_jump_avoidance": 0.75,
+        "adaptation_block_notes": 16,
+    }
+
+
 class PitchChartWorkflowTests(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
@@ -84,22 +96,22 @@ class PitchChartWorkflowTests(unittest.TestCase):
             "start_time": 10,
             "duration": 80,
             "twilight_time": 50,
-            "lane_rules": {"type": "pattern", "data": [0, 2, 1, 3]},
+            "lane_rules": {"type": "pattern", "data": [0, 1, 2, 3, 2, 1]},
             "difficulties": {
                 "easy": {
                     "minimum_delta": 10,
                     "stride": 1,
-                    "lane_mapping": {"pitch_following": 0},
+                    "lane_mapping": controlled_lane_mapping(0),
                 },
                 "normal": {
                     "minimum_delta": 10,
                     "stride": 1,
-                    "lane_mapping": {"pitch_following": 1},
+                    "lane_mapping": controlled_lane_mapping(1),
                 },
                 "hard": {
                     "minimum_delta": 10,
                     "stride": 1,
-                    "lane_mapping": {"pitch_following": 4},
+                    "lane_mapping": controlled_lane_mapping(4),
                 },
             },
         }
@@ -256,6 +268,49 @@ class PitchChartWorkflowTests(unittest.TestCase):
     def pitch_cache_files(self):
         return sorted(self.pitch_cache_dir.rglob("*.json"))
 
+    def remove_temporary_pitch_cache(self):
+        for path in self.pitch_cache_files():
+            path.unlink()
+        if self.pitch_cache_dir.exists():
+            self.pitch_cache_dir.rmdir()
+
+    def run_artifact_check(self):
+        output, errors = io.StringIO(), io.StringIO()
+
+        def forbidden_runner(*_args, **_kwargs):
+            self.fail("artifact check must not invoke audio or pitch tools")
+
+        with ExitStack() as stack:
+            self.add_output_patches(stack)
+            stack.enter_context(
+                patch.object(
+                    beat_chart,
+                    "_pitch_tool_identity",
+                    side_effect=AssertionError("artifact check must not inspect tools"),
+                )
+            )
+            with redirect_stdout(output), redirect_stderr(errors):
+                try:
+                    result = beat_chart.main(
+                        ["--song-config", str(self.song_config), "--artifact-check", "--all"],
+                        runner=forbidden_runner,
+                    )
+                except SystemExit as error:
+                    result = error.code
+        return result, output.getvalue(), errors.getvalue()
+
+    def prepare_artifact_check(self):
+        result, _ = self.generate(runner=self.make_runner())
+        self.assertEqual(result, 0)
+        self.remove_temporary_pitch_cache()
+        self.calls.clear()
+
+    def assert_artifact_check_failure(self, expected_text):
+        result, output, errors = self.run_artifact_check()
+        self.assertEqual(result, 1, f"stdout={output!r}, stderr={errors!r}")
+        self.assertIn(expected_text, errors)
+        self.assertEqual(self.calls, [])
+
     def published_snapshot(self):
         result = {}
         for directory in (
@@ -296,17 +351,22 @@ class PitchChartWorkflowTests(unittest.TestCase):
         self.assertEqual(report["pitch_analysis_key"], cache["analysis_key"])
         self.assertTrue(report["mapper_version"])
         self.assertEqual(set(report["controls"]), set(DIFFICULTIES))
-        self.assertEqual(report["controls"]["easy"]["pitch_following"], 0)
-        self.assertEqual(report["controls"]["normal"]["pitch_following"], 1)
-        self.assertEqual(report["controls"]["hard"]["pitch_following"], 4)
-        self.assertEqual(report["controls"]["easy"]["lane_balance"], 1)
+        self.assertEqual(
+            report["controls"],
+            {
+                difficulty: controlled_lane_mapping(pitch_following)
+                for difficulty, pitch_following in zip(
+                    DIFFICULTIES, (0, 1, 4), strict=True
+                )
+            },
+        )
         self.assertEqual(set(report["metrics"]), set(DIFFICULTIES))
 
         onset_data = json.loads(self.onset_cache_path().read_text(encoding="utf-8"))
         profiles = beat_chart.load_difficulty_profiles(self.profile_path)
         with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", self.profile_path):
             for difficulty in DIFFICULTIES:
-                expected, _, _ = beat_chart._difficulty_chart(
+                expected, _, _, analysis = beat_chart._difficulty_chart(
                     onset_data["onsets"],
                     self.settings,
                     onset_data["source_duration_seconds"],
@@ -314,18 +374,13 @@ class PitchChartWorkflowTests(unittest.TestCase):
                     difficulty,
                     self.song_id,
                     onset_data["source_sha256"],
+                    cache["frames"],
+                    with_analysis=True,
                 )
                 actual = bundle["charts"][difficulty]
-                self.assertEqual(
-                    {key: value for key, value in actual.items() if key != "notes"},
-                    {key: value for key, value in expected.items() if key != "notes"},
-                )
-                self.assertEqual(
-                    [(note["id"], note["time"]) for note in actual["notes"]],
-                    [(note["id"], note["time"]) for note in expected["notes"]],
-                )
-                fallback_lanes = [note["lane"] for note in expected["notes"]]
-                self.assertTrue(all(lane in range(4) for lane in fallback_lanes))
+                self.assertEqual(actual, expected)
+                self.assertEqual(report["controls"][difficulty], analysis["controls"])
+                self.assertEqual(report["metrics"][difficulty], analysis["metrics"])
                 self.assertIn(difficulty, report["metrics"])
 
         pitch_call = self.pitch_calls()[0]
@@ -542,7 +597,80 @@ class PitchChartWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(len(self.pitch_calls()), 0)
 
+    def test_cache_free_artifact_check_accepts_synthetic_bundle_without_tools(self):
+        self.prepare_artifact_check()
+        result, output, errors = self.run_artifact_check()
+        self.assertEqual(result, 0, f"stdout={output!r}, stderr={errors!r}")
+        self.assertEqual(self.calls, [])
+        self.assertFalse(self.pitch_cache_dir.exists())
+
+    def test_cache_free_artifact_check_rejects_stale_source_projection_and_profile(self):
+        self.prepare_artifact_check()
+        source_before = self.source.read_bytes()
+        self.source.write_bytes(source_before + b" changed")
+        self.assert_artifact_check_failure("source")
+        self.source.write_bytes(source_before)
+
+        settings_before = json.loads(self.song_config.read_text(encoding="utf-8"))
+        changed_settings = json.loads(json.dumps(settings_before))
+        changed_settings["songs"][self.song_id]["start_time"] += 1
+        self.song_config.write_text(json.dumps(changed_settings), encoding="utf-8")
+        self.assert_artifact_check_failure("projection")
+        self.song_config.write_text(json.dumps(settings_before), encoding="utf-8")
+
+        profiles_before = self.profile_path.read_bytes()
+        profiles = json.loads(profiles_before)
+        profiles["profiles"]["normal"]["timing"]["good_ms"] += 1
+        self.profile_path.write_text(json.dumps(profiles), encoding="utf-8")
+        self.assert_artifact_check_failure("projection")
+        self.profile_path.write_bytes(profiles_before)
+
+    def test_cache_free_artifact_check_rejects_stale_note_timing_or_ids(self):
+        self.prepare_artifact_check()
+        original = self.generated_path().read_bytes()
+        bundle = json.loads(original)
+        bundle["charts"]["normal"]["notes"][0]["time"] += 0.25
+        self.generated_path().write_text(json.dumps(bundle), encoding="utf-8")
+        self.assert_artifact_check_failure("chart")
+
+        bundle = json.loads(original)
+        bundle["charts"]["normal"]["notes"][0]["id"] = "wrong-id"
+        self.generated_path().write_text(json.dumps(bundle), encoding="utf-8")
+        self.assert_artifact_check_failure("chart")
+        self.generated_path().write_bytes(original)
+
+    def test_cache_free_artifact_check_rejects_stale_scoring_and_report(self):
+        self.prepare_artifact_check()
+        original_bundle = self.generated_path().read_bytes()
+        bundle = json.loads(original_bundle)
+        bundle["scoring"]["fiveGoldTarget"] += 1
+        self.generated_path().write_text(json.dumps(bundle), encoding="utf-8")
+        self.assert_artifact_check_failure("scoring")
+        self.generated_path().write_bytes(original_bundle)
+
+        original_report = self.report_path().read_bytes()
+        report = json.loads(original_report)
+        report["metrics"]["normal"]["candidateLaneCounts"][0] += 1
+        self.report_path().write_text(json.dumps(report), encoding="utf-8")
+        self.assert_artifact_check_failure("report")
+        self.report_path().write_bytes(original_report)
+
+    def test_cache_free_artifact_check_rejects_missing_or_extra_inventory(self):
+        self.prepare_artifact_check()
+        extra_bundle = self.generated_dir / "unexpected.charts.json"
+        extra_bundle.write_text("{}", encoding="utf-8")
+        self.assert_artifact_check_failure("stale")
+        extra_bundle.unlink()
+
+        report = self.report_path()
+        original_report = report.read_bytes()
+        report.unlink()
+        self.assert_artifact_check_failure("missing")
+        report.write_bytes(original_report)
+
     def test_unknown_full_source_pitch_uses_authored_cyclic_fallback(self):
+        bounce_pattern = [0, 1, 2, 3, 2, 1]
+        self.settings["lane_rules"]["data"] = bounce_pattern
         zero_controls = {
             "pitch_following": 0,
             "lane_balance": 0,
@@ -561,23 +689,13 @@ class PitchChartWorkflowTests(unittest.TestCase):
         self.assertTrue(all(frame["pitch"] == 0 for frame in cache["frames"]))
 
         bundle = json.loads(self.generated_path().read_text(encoding="utf-8"))
-        onset_data = json.loads(self.onset_cache_path().read_text(encoding="utf-8"))
-        profiles = beat_chart.load_difficulty_profiles(self.profile_path)
-        with patch.object(beat_chart, "DEFAULT_DIFFICULTY_PROFILES", self.profile_path):
-            for difficulty in DIFFICULTIES:
-                fallback, _, _ = beat_chart._difficulty_chart(
-                    onset_data["onsets"],
-                    self.settings,
-                    onset_data["source_duration_seconds"],
-                    profiles[difficulty],
-                    difficulty,
-                    self.song_id,
-                    onset_data["source_sha256"],
-                )
-                self.assertEqual(
-                    [note["lane"] for note in bundle["charts"][difficulty]["notes"]],
-                    [note["lane"] for note in fallback["notes"]],
-                )
+        for difficulty in DIFFICULTIES:
+            lanes = [note["lane"] for note in bundle["charts"][difficulty]["notes"]]
+            self.assertGreater(len(lanes), len(bounce_pattern))
+            self.assertEqual(
+                lanes,
+                [bounce_pattern[index % len(bounce_pattern)] for index in range(len(lanes))],
+            )
 
     def test_direct_script_import_can_invoke_pitch_mapper_without_repository_root(self):
         scripts_dir = Path(beat_chart.__file__).resolve().parent

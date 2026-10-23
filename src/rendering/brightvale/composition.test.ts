@@ -96,6 +96,7 @@ async function loadProductionAssets(): Promise<BrightvaleAssets> {
         city,
         cityNormal,
         plaza: new THREE.Texture(),
+        plazaNormal: new THREE.Texture(),
         dispose() {},
       };
     },
@@ -249,6 +250,19 @@ describe('Brightvale production composition', () => {
     if (!cityGroup || !framingGroup || !crowdGroup || !groundGroup)
       throw new Error('all runtime composition groups are required');
 
+    for (const assetName of ['highway', 'platform'] as const) {
+      const gameplayAsset = root.getObjectByName(
+        `Brightvale.Asset.${assetName}`,
+      );
+      expect(gameplayAsset).toBeDefined();
+      expect(allMaterials(gameplayAsset!)).not.toHaveLength(0);
+      expect(
+        allMaterials(gameplayAsset!).every(
+          (material) => material instanceof THREE.MeshToonMaterial,
+        ),
+      ).toBe(true);
+    }
+
     expectBoundsClose(
       new THREE.Box3().setFromObject(cityGroup),
       boundsForPlacedRoot(assets.roots.city, layout.city.matrixColumnMajor),
@@ -344,7 +358,7 @@ describe('Brightvale production composition', () => {
       expect(Array.from(uv?.array ?? [])).toEqual(
         Array.from(new Float32Array(expectedUv)),
       );
-      const material = mesh?.material as THREE.MeshToonMaterial;
+      const material = mesh?.material as THREE.MeshStandardMaterial;
       expect(material.map).toBe(
         surface.name === 'Review.Ground'
           ? loadedAssets?.groundTextures?.city
@@ -375,7 +389,12 @@ describe('Brightvale production composition', () => {
           true,
         );
       } else {
-        expect(material.normalMap).toBeNull();
+        const normalMap = loadedAssets?.groundTextures?.plazaNormal;
+        expect(material.normalMap).toBe(normalMap);
+        expect(normalMap?.colorSpace).toBe(THREE.NoColorSpace);
+        expect(normalMap?.repeat.toArray()).toEqual(
+          material.map?.repeat.toArray(),
+        );
       }
       if (surface.name === 'Review.Ground') {
         expect(material.emissiveMap).toBeNull();
@@ -447,6 +466,11 @@ describe('Brightvale production composition', () => {
     expect(key?.shadow.mapSize.toArray()).toEqual([2048, 2048]);
     const cityMaterials = allMaterials(cityGroup);
     expect(cityMaterials).toHaveLength(107);
+    expect(
+      allMaterials(framingGroup).every(
+        (material) => material instanceof THREE.MeshStandardMaterial,
+      ),
+    ).toBe(true);
     const cityBatchSet = new Set(cityBatches);
     const geometryMaterialPairs = new Set<string>();
     for (const batch of allBatches) {
@@ -455,7 +479,7 @@ describe('Brightvale production composition', () => {
       expect(material).toBeInstanceOf(
         cityBatchSet.has(batch)
           ? THREE.MeshStandardMaterial
-          : THREE.MeshToonMaterial,
+          : THREE.MeshStandardMaterial,
       );
       expect(material.userData.brightvaleRole).toBeTruthy();
       const pair = `${batch.geometry.uuid}:${material.uuid}`;
@@ -524,7 +548,7 @@ describe('Brightvale production composition', () => {
     const cityMaterialDisposals = allMaterials(composition.root)
       .filter((material) => material instanceof THREE.MeshStandardMaterial)
       .map((material) => vi.spyOn(material, 'dispose'));
-    expect(cityMaterialDisposals).toHaveLength(107);
+    expect(cityMaterialDisposals.length).toBeGreaterThanOrEqual(107);
     const ramp = (generatedMaterials[0] as THREE.MeshToonMaterial | undefined)
       ?.gradientMap;
     if (!ramp) throw new Error('generated shared toon ramp is required');

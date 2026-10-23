@@ -42,7 +42,8 @@ npm test             # Vitest unit and app integration tests; integration needs 
 npm run typecheck
 npm run build
 npm run test:chart
-npm run chart:check  # verify cached, generated chart outputs
+npm run chart:artifact-check # verify committed chart artifact consistency without pitch caches
+npm run chart:check  # strict full pitch-cache-backed recomputation
 ```
 
 Chart authoring uses FFmpeg/FFprobe and aubio tools when cached analysis is unavailable. These are offline tools, not browser dependencies. `npm run chart:generate` processes the configured catalog. See the [beat-chart workflow](docs/beat-chart-workflow.md) for authoring inputs, provenance, and cache details. Do not modify or redistribute source recordings based on the software license alone.

@@ -55,8 +55,8 @@ jobs:
       - name: Run chart Python tests
         run: npm run test:chart
 
-      - name: Verify generated chart caches
-        run: npm run chart:check
+      - name: Verify generated chart artifacts (cache-free)
+        run: npm run chart:artifact-check
 
       - name: Type-check TypeScript
         run: npm run typecheck

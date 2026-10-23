@@ -246,7 +246,7 @@ describe('Brightvale imported city appearance', () => {
     appearance.dispose();
   });
 
-  it('preserves existing non-city Toon signature sharing and isolates city mapping', () => {
+  it('uses Toon only for explicitly routed gameplay sources and clones environment sources', () => {
     const first = sourceMaterial('highway');
     const second = first.clone();
     const city = first.clone();
@@ -254,12 +254,30 @@ describe('Brightvale imported city appearance', () => {
     const { scene, root } = makeSourceScene(first);
     for (const source of [second, city])
       root.add(new THREE.Mesh(new THREE.BoxGeometry(), source));
-    const appearance = createBrightvaleAppearance(scene, [root]);
+    const appearance = createBrightvaleAppearance(
+      scene,
+      [root],
+      new Set([first, second]),
+    );
     const mapped = appearance.materialFor(first);
     expect(mapped).toBeInstanceOf(THREE.MeshToonMaterial);
-    expect(appearance.materialFor(second)).toBe(mapped);
+    expect(appearance.materialFor(second)).toBeInstanceOf(
+      THREE.MeshToonMaterial,
+    );
     expect(appearance.materialFor(city)).toBeInstanceOf(
       THREE.MeshStandardMaterial,
+    );
+    appearance.dispose();
+  });
+
+  it('rejects unsupported non-PBR environment materials instead of converting them to Toon', () => {
+    const source = new THREE.MeshBasicMaterial({ color: 0x6688aa });
+    source.name = 'unlit environment fixture';
+    const { scene, root } = makeSourceScene(source);
+    const appearance = createBrightvaleAppearance(scene, [root]);
+
+    expect(() => appearance.materialFor(source)).toThrow(
+      'Unsupported Brightvale environment material type: MeshBasicMaterial',
     );
     appearance.dispose();
   });
@@ -332,11 +350,15 @@ describe('Brightvale imported city appearance', () => {
   });
 });
 
-describe('Brightvale shared appearance', () => {
-  it('maps borrowed source materials through the accepted three-step nearest toon ramp', () => {
+describe('Brightvale gameplay appearance', () => {
+  it('maps explicitly routed gameplay materials through the nearest toon ramp', () => {
     const source = sourceMaterial('stone_trim');
     const { scene, root } = makeSourceScene(source);
-    const appearance = createBrightvaleAppearance(scene, [root]);
+    const appearance = createBrightvaleAppearance(
+      scene,
+      [root],
+      new Set([source]),
+    );
     const toon = appearance.materialFor(source);
     if (!(toon instanceof THREE.MeshToonMaterial))
       throw new Error('Expected non-city Toon');
@@ -371,8 +393,8 @@ describe('Brightvale shared appearance', () => {
     const { scene, root } = makeSourceScene(trim);
     root.add(new THREE.Mesh(new THREE.BoxGeometry(), roof));
     const appearance = createBrightvaleAppearance(scene, [root]);
-    const toonTrim = appearance.materialFor(trim);
-    const toonRoof = appearance.materialFor(roof);
+    const toonTrim = appearance.materialFor(trim) as THREE.MeshStandardMaterial;
+    const toonRoof = appearance.materialFor(roof) as THREE.MeshStandardMaterial;
 
     expect(toonTrim).not.toBe(toonRoof);
     expect(toonTrim.name).toContain('stone_trim');
@@ -427,6 +449,9 @@ describe('Brightvale shared appearance', () => {
     expect(material.emissiveIntensity).toBe(0);
     expect(plazaMaterial.map).toBe(plazaMap);
     expect(plazaMaterial.emissiveMap).toBe(plazaMap);
+    expect(plazaMaterial.emissive.getHex()).toBe(0x000000);
+    appearance.update(projection({ phase: 'audience', transitionProgress: 0 }));
+    expect(plazaMaterial.emissive.getHex()).toBe(0x09090e);
     appearance.update(projection({ phase: 'twilight', transitionProgress: 1 }));
     expect(material.emissive.getHex()).toBe(0x000000);
     expect(material.emissiveIntensity).toBe(0);
@@ -479,11 +504,12 @@ describe('Brightvale shared appearance', () => {
 
   it('wires canopy time only to mapped city ground, freezes for reduced motion and releases owned materials once', () => {
     const normal = new THREE.Texture();
+    const plazaNormal = new THREE.Texture();
     const city = sourceMaterial('ground');
     city.normalMap = normal;
     city.userData.brightvaleGround = 'city';
     const plaza = sourceMaterial('ground');
-    plaza.normalMap = normal;
+    plaza.normalMap = plazaNormal;
     plaza.userData.brightvaleGround = 'plaza';
     const { scene, root, geometry } = makeSourceScene(city);
     root.add(new THREE.Mesh(geometry, plaza));
@@ -493,34 +519,51 @@ describe('Brightvale shared appearance', () => {
     appearance.update(state, projectBrightvaleAmbience(state, 4, false));
     const material = appearance.materialFor(city);
     const shader = {
-      vertexShader: THREE.ShaderLib.toon.vertexShader,
-      fragmentShader: THREE.ShaderLib.toon.fragmentShader,
+      vertexShader: THREE.ShaderLib.standard.vertexShader,
+      fragmentShader: THREE.ShaderLib.standard.fragmentShader,
       uniforms: {},
     } as THREE.WebGLProgramParametersWithUniforms;
     material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
     const time = shader.uniforms.brightvaleCanopyTime;
     expect(time?.value).toBe(4);
-    expect(appearance.materialFor(plaza).onBeforeCompile).toBe(
-      THREE.Material.prototype.onBeforeCompile,
+    const plazaMaterial = appearance.materialFor(plaza);
+    expect(plazaMaterial.normalMap).toBe(plazaNormal);
+    const plazaShader = {
+      vertexShader: THREE.ShaderLib.standard.vertexShader,
+      fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+      uniforms: {},
+    } as THREE.WebGLProgramParametersWithUniforms;
+    plazaMaterial.onBeforeCompile(plazaShader, {} as THREE.WebGLRenderer);
+    const plazaTime = plazaShader.uniforms.brightvalePlazaTime;
+    expect(plazaTime?.value).toBe(2);
+    expect(plazaShader.fragmentShader).toContain('brightvalePlazaTime');
+    expect(plazaShader.fragmentShader).not.toContain(
+      '#include <gradientmap_pars_fragment>',
     );
+    expect(plazaShader.fragmentShader).not.toContain('brightvaleCanopyRelief');
     for (const sample of [4, 4, 9, 2]) {
       appearance.update(state, projectBrightvaleAmbience(state, sample, false));
       expect(time?.value).toBe(sample);
+      expect(plazaTime?.value).toBe(sample * 0.5);
     }
     for (const sample of [5, 20]) {
       appearance.update(state, projectBrightvaleAmbience(state, sample, true));
       expect(time?.value).toBe(0);
+      expect(plazaTime?.value).toBe(0);
     }
     appearance.update(state, projectBrightvaleAmbience(state, 9, false));
     expect(time?.value).toBe(9);
     const ownedDispose = vi.spyOn(material, 'dispose');
     const textureDispose = vi.spyOn(normal, 'dispose');
+    const plazaTextureDispose = vi.spyOn(plazaNormal, 'dispose');
     appearance.dispose();
     appearance.dispose();
     expect(ownedDispose).toHaveBeenCalledTimes(1);
     expect(textureDispose).not.toHaveBeenCalled();
+    expect(plazaTextureDispose).not.toHaveBeenCalled();
     expect(() => appearance.update(state)).toThrow('disposed');
     normal.dispose();
+    plazaNormal.dispose();
     city.dispose();
     plaza.dispose();
     geometry.dispose();
@@ -533,7 +576,11 @@ describe('Brightvale shared appearance', () => {
       emissiveIntensity: 3.2,
     });
     const { scene, root } = makeSourceScene(emitter);
-    const appearance = createBrightvaleAppearance(scene, [root]);
+    const appearance = createBrightvaleAppearance(
+      scene,
+      [root],
+      new Set([emitter]),
+    );
     const toon = appearance.materialFor(emitter);
 
     expect(toon.color.r + toon.color.g + toon.color.b).toBe(0);
@@ -692,7 +739,11 @@ describe('Brightvale shared appearance', () => {
   it('reuses mapped materials, ramp, and lights across mode updates', () => {
     const source = sourceMaterial('body');
     const { scene, root } = makeSourceScene(source);
-    const appearance = createBrightvaleAppearance(scene, [root]);
+    const appearance = createBrightvaleAppearance(
+      scene,
+      [root],
+      new Set([source]),
+    );
     const toon = appearance.materialFor(source);
     if (!(toon instanceof THREE.MeshToonMaterial))
       throw new Error('Expected non-city Toon');
@@ -722,7 +773,11 @@ describe('Brightvale shared appearance', () => {
     const mapDispose = vi.spyOn(borrowedMap, 'dispose');
     const { scene, root, geometry } = makeSourceScene(source);
     const geometryDispose = vi.spyOn(geometry, 'dispose');
-    const appearance = createBrightvaleAppearance(scene, [root]);
+    const appearance = createBrightvaleAppearance(
+      scene,
+      [root],
+      new Set([source]),
+    );
     const toon = appearance.materialFor(source);
     if (!(toon instanceof THREE.MeshToonMaterial))
       throw new Error('Expected non-city Toon');

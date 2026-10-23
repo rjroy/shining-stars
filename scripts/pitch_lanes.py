@@ -7,9 +7,9 @@ from collections.abc import Mapping, Sequence
 
 
 DEFAULT_LANE_MAPPING = {
-    "pitch_following": 2,
+    "pitch_following": 3,
     "lane_balance": 1,
-    "repetition_avoidance": 1,
+    "repetition_avoidance": 0.25,
     "wide_jump_avoidance": 0.5,
     "adaptation_block_notes": 32,
 }
@@ -17,6 +17,7 @@ BEAM_WIDTH = 64
 PITCH_PREFERENCE_WEIGHT = 0.15
 OPPOSITE_CONTOUR_WEIGHT = 0.8
 UNKNOWN_BASELINE_WEIGHT = 0.015
+REPETITION_LIMIT = 2
 REPETITION_COST_PER_NOTE = 0.55
 WIDE_JUMP_COST = 0.35
 LANE_SHARE_BALANCE_WEIGHT = 0.08
@@ -172,9 +173,9 @@ def map_lanes(
                         candidate_cost += pitch_scale * OPPOSITE_CONTOUR_WEIGHT
 
                 next_run = run_length + 1 if previous_lane == lane else 1
-                if next_run > 3:
+                if next_run > REPETITION_LIMIT:
                     candidate_cost += repetition_scale * REPETITION_COST_PER_NOTE
-                if previous_lane is not None and abs(lane - previous_lane) == 3:
+                if previous_lane is not None and abs(lane - previous_lane) >= 2:
                     candidate_cost += jump_scale * WIDE_JUMP_COST
 
                 next_counts_list = list(counts)

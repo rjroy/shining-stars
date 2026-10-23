@@ -149,7 +149,7 @@ function makeAssets(dispose = vi.fn()): BrightvaleAssets {
   roots.city.add(
     new THREE.Mesh(
       new THREE.BoxGeometry(2, 2, 2),
-      new THREE.MeshBasicMaterial(),
+      new THREE.MeshStandardMaterial(),
     ),
   );
   for (const name of ['highway', 'platform'] as const) {
@@ -412,6 +412,12 @@ async function renderWithProductionAssets(
           1,
           THREE.RGBAFormat,
         ),
+        plazaNormal: new THREE.DataTexture(
+          new Uint8Array([128, 128, 255, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
         dispose() {},
       }),
     },
@@ -460,6 +466,12 @@ async function renderWithProductionAssets(
         ),
         plaza: new THREE.DataTexture(
           new Uint8Array([100, 100, 150, 255]),
+          1,
+          1,
+          THREE.RGBAFormat,
+        ),
+        plazaNormal: new THREE.DataTexture(
+          new Uint8Array([128, 128, 255, 255]),
           1,
           1,
           THREE.RGBAFormat,
@@ -577,7 +589,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         base.roots[name].add(
           new THREE.Mesh(
             new THREE.BoxGeometry(2, 1, 2),
-            new THREE.MeshBasicMaterial(),
+            new THREE.MeshStandardMaterial(),
           ),
         );
       const texture = new THREE.DataTexture(
@@ -695,6 +707,17 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           expect(card.material.transparent).toBe(false);
           expect(card.material.depthWrite).toBe(true);
         }
+        const body = world.getObjectByName(
+          'Brightvale.Crowd.Body.fixture',
+        ) as THREE.InstancedMesh;
+        const arm = world.getObjectByName(
+          'Brightvale.Crowd.Arm.fixture',
+        ) as THREE.InstancedMesh;
+        const bodyMatrix = new THREE.Matrix4();
+        const armMatrix = new THREE.Matrix4();
+        body.getMatrixAt(0, bodyMatrix);
+        arm.getMatrixAt(0, armMatrix);
+        expect(armMatrix.elements[14]).toBeGreaterThan(bodyMatrix.elements[14]);
         if (samples !== undefined)
           expect(context.getParameter).toHaveBeenCalledWith(context.SAMPLES);
       } finally {

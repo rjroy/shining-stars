@@ -3,65 +3,65 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.45980707395498394,
+      "baselineExtractedF0DirectionAgreement": 0.4758842443729904,
       "baselineHandCounts": [
         272,
         272
       ],
       "baselineLaneCounts": [
-        136,
-        136,
-        136,
-        136
+        91,
+        181,
+        181,
+        91
       ],
       "baselineLaneShares": [
-        0.25,
-        0.25,
-        0.25,
-        0.25
+        0.16727941176470587,
+        0.3327205882352941,
+        0.3327205882352941,
+        0.16727941176470587
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7717041800643086,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7781350482315113,
       "candidateHandCounts": [
-        273,
-        271
+        272,
+        272
       ],
       "candidateLaneCounts": [
+        136,
+        136,
         137,
-        136,
-        136,
         135
       ],
       "candidateLaneShares": [
+        0.25,
+        0.25,
         0.25183823529411764,
-        0.25,
-        0.25,
         0.24816176470588236
       ],
-      "candidateLongestLaneRun": 4,
+      "candidateLongestLaneRun": 6,
       "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 544,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -71,44 +71,44 @@
       "unknownPitchCount": 92
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.5238095238095238,
+      "baselineExtractedF0DirectionAgreement": 0.5541125541125541,
       "baselineHandCounts": [
         420,
         420
       ],
       "baselineLaneCounts": [
-        210,
-        210,
-        210,
-        210
+        140,
+        280,
+        280,
+        140
       ],
       "baselineLaneShares": [
-        0.25,
-        0.25,
-        0.25,
-        0.25
+        0.16666666666666666,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.16666666666666666
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7943722943722944,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7878787878787878,
       "candidateHandCounts": [
-        421,
-        419
+        423,
+        417
       ],
       "candidateLaneCounts": [
+        211,
+        212,
         210,
-        211,
-        211,
-        208
+        207
       ],
       "candidateLaneShares": [
+        0.2511904761904762,
+        0.2523809523809524,
         0.25,
-        0.2511904761904762,
-        0.2511904761904762,
-        0.24761904761904763
+        0.24642857142857144
       ],
-      "candidateLongestLaneRun": 4,
-      "candidateWorstRolling32Concentration": 0.375,
+      "candidateLongestLaneRun": 6,
+      "candidateWorstRolling32Concentration": 0.4375,
       "noteCount": 840,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 717,
@@ -117,43 +117,43 @@
       "unknownPitchCount": 123
     },
     "normal": {
-      "baselineExtractedF0DirectionAgreement": 0.4583333333333333,
+      "baselineExtractedF0DirectionAgreement": 0.4505208333333333,
       "baselineHandCounts": [
-        333,
-        332
+        332,
+        333
       ],
       "baselineLaneCounts": [
-        167,
-        166,
-        166,
-        166
+        111,
+        221,
+        222,
+        111
       ],
       "baselineLaneShares": [
-        0.2511278195488722,
-        0.24962406015037594,
-        0.24962406015037594,
-        0.24962406015037594
+        0.16691729323308271,
+        0.3323308270676692,
+        0.33383458646616543,
+        0.16691729323308271
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8046875,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7838541666666666,
       "candidateHandCounts": [
-        333,
-        332
+        334,
+        331
       ],
       "candidateLaneCounts": [
+        167,
+        167,
         166,
-        167,
-        167,
         165
       ],
       "candidateLaneShares": [
+        0.2511278195488722,
+        0.2511278195488722,
         0.24962406015037594,
-        0.2511278195488722,
-        0.2511278195488722,
         0.24812030075187969
       ],
-      "candidateLongestLaneRun": 4,
+      "candidateLongestLaneRun": 5,
       "candidateWorstRolling32Concentration": 0.4375,
       "noteCount": 665,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -163,7 +163,7 @@
       "unknownPitchCount": 98
     }
   },
-  "pitch_analysis_key": "61e251596cb167ead13bb3eaa0465455ff92dc7a9d3e529f1a3915e9ba912a4e",
+  "pitch_analysis_key": "64624fba21cbf84017d9ccd8e2d8b6235969d8b90f3ad2cd3f4bd1848343b71e",
   "schema_version": 1,
   "song_id": "never-again",
   "source_sha256": "c504fde831b82f938cf2c0c0facc0ceea1a9d93e55ed99c21cfff4a415022620"

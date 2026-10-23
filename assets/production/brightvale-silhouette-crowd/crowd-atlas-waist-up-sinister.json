@@ -1,0 +1,129 @@
+{
+  "schema": "brightvale-silhouette-crowd-v1",
+  "status": "Runtime registration verified in close-up browser views at neutral and both wave extrema; artwork unchanged",
+  "source": {
+    "path": "assets/production/brightvale-silhouette-crowd/crowd-atlas-waist-up-sinister.png",
+    "sha256": "90e35683815dbe53f7ce7f7483da708d3ef487c39acf7816b6e257c8368af70d",
+    "width": 1422,
+    "height": 1106
+  },
+  "atlas": {
+    "file": "crowd-atlas-waist-up-sinister.png",
+    "width": 1422,
+    "height": 1106,
+    "decoded_rgba_bytes": 6290928,
+    "gutter_px": 16,
+    "color_space": "srgb (interpretation of untagged approved source; RGB values unchanged)",
+    "alpha": "straight, original 8-bit values retained; no alpha normalization",
+    "flip_y": true,
+    "wrap": "ClampToEdgeWrapping",
+    "min_filter": "LinearFilter",
+    "mag_filter": "LinearFilter",
+    "generate_mipmaps": false,
+    "premultiply_alpha": false,
+    "sha256": "90e35683815dbe53f7ce7f7483da708d3ef487c39acf7816b6e257c8368af70d",
+    "encoded_bytes": 639477
+  },
+  "coordinates": {
+    "rects": "top-left pixel edges [x,y,width,height]; half-open",
+    "landmarks": "Sinister atlas coordinates registered independently per sprite to the original runtime anchors; fractional pixel-edge crops preserve the common 0.9875 image scale",
+    "card_local": "x right, y up, z toward viewer; XY card plane",
+    "card_bounds": "[left,bottom,right,top] relative to part origin",
+    "uv_rect": "[u_min,v_min,u_span,v_span], bottom-left; ordinary plane UVs, Texture.flipY=true",
+    "units": "provisional local units; 560 original-atlas pixels = 553 sinister-atlas pixels = 1 local unit",
+    "source_pixels_per_unit": 553,
+    "rotation": "Three.js rotation.z radians = negative image-space inspection degrees * pi/180",
+    "assembly": "body at root; arm origin at shoulder_body_local; rotate arm and stick together about that origin",
+    "depth": "Arm in front of body at shoulder Z +0.004; fist in front of stick and halo; consumer-owned depth offsets",
+    "note": "Per-part UV registration preserves the original card-space shoulders and grips. Arm right-side transparent padding is shortened to keep UVs inside the supplied image. No image pixels are modified.",
+    "content_hash_rects": "content_rgba_sha256 hashes decoded RGBA bytes of the enclosing integer atlas crop: floor origin, ceil right/bottom"
+  },
+  "inspection": {
+    "image_angles_degrees": [-15, 0, 15],
+    "pixels_per_local_unit": 192,
+    "source_approval_sha256": "90e35683815dbe53f7ce7f7483da708d3ef487c39acf7816b6e257c8368af70d",
+    "stick_orientation": "vertical at neutral; previous 45deg CCW direction is superseded"
+  },
+  "parts": [
+    {
+      "id": "A.body",
+      "source_rect_px": [19.75, 17.775, 478.9375, 612.25],
+      "tile_rect_px": [19.75, 17.775, 478.9375, 612.25],
+      "padded_rect_px": [11.75, 9.775, 494.9375, 628.25],
+      "origin_px": [239.46875, 612.25],
+      "uv_rect_bottom_left": [0.013888888888888888, 0.4303571428571429, 0.3368055555555556, 0.5535714285714286],
+      "card_bounds_local": [-0.4330357142857143, 0, 0.4330357142857143, 1.1071428571428572],
+      "content_rgba_sha256": "74db0811e5f80b37d6d8e2b806df9772ee10149b98adb3151421a0fcdd003de0",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [438.45, 340.6875],
+      "lower_torso_source_rect_px": [143.1875, 457.2125, 286.375, 153.0625],
+      "lower_torso_tile_rect_px": [143.1875, 457.2125, 286.375, 153.0625],
+      "lower_torso_note": "Registered lower torso region in the supplied sinister atlas; its authored alpha is retained without adding a fade or cleanup."
+    },
+    {
+      "id": "A.arm",
+      "source_rect_px": [1030.95, 22.7125, 389.075, 493.75],
+      "tile_rect_px": [1030.95, 22.7125, 389.075, 493.75],
+      "padded_rect_px": [1022.95, 14.7125, 399.05, 509.75],
+      "origin_px": [342.6625, 407.8375],
+      "uv_rect_bottom_left": [0.725, 0.5330357142857143, 0.27361111111111114, 0.44642857142857145],
+      "card_bounds_local": [-0.6196428571428572, -0.15535714285714286, 0.08392857142857142, 0.7375],
+      "content_rgba_sha256": "1cab1b08f1a769e3ae5b4ccb4a82ac0a641026ee68fa0c9b4ece6b0bf4ca6c76",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [342.6625, 407.8375],
+      "grip_px": [70.1125, 84.925]
+    },
+    {
+      "id": "B.body",
+      "source_rect_px": [545.1, 20.7375, 444.375, 586.575],
+      "tile_rect_px": [545.1, 20.7375, 444.375, 586.575],
+      "padded_rect_px": [537.1, 12.7375, 460.375, 602.575],
+      "origin_px": [222.1875, 586.575],
+      "uv_rect_bottom_left": [0.38333333333333336, 0.4508928571428571, 0.3125, 0.5303571428571429],
+      "card_bounds_local": [-0.4017857142857143, 0, 0.4017857142857143, 1.0607142857142857],
+      "content_rgba_sha256": "16df19a05459c26715a0aa24db2f6da790f2d29c7aebc5d194377d4d17927778",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [396.975, 352.5375],
+      "lower_torso_source_rect_px": [663.6, 455.2375, 246.875, 138.25],
+      "lower_torso_tile_rect_px": [663.6, 455.2375, 246.875, 138.25],
+      "lower_torso_note": "Registered lower torso region in the supplied sinister atlas; its authored alpha is retained without adding a fade or cleanup."
+    },
+    {
+      "id": "B.arm",
+      "source_rect_px": [1028.975, 557.9375, 391.05, 533.25],
+      "tile_rect_px": [1028.975, 557.9375, 391.05, 533.25],
+      "padded_rect_px": [1020.975, 549.9375, 401.025, 549.25],
+      "origin_px": [342.6625, 425.6125],
+      "uv_rect_bottom_left": [0.7236111111111112, 0.013392857142857095, 0.275, 0.48214285714285715],
+      "card_bounds_local": [-0.6196428571428572, -0.19464285714285715, 0.0875, 0.7696428571428572],
+      "content_rgba_sha256": "1b2072af3a407a8b02c4450f13a0bd056d3bf5f13a527065ea94587067be1ce3",
+      "source_pixels_per_atlas_pixel": 1,
+      "shoulder_px": [342.6625, 425.6125],
+      "grip_px": [75.05, 98.75]
+    }
+  ],
+  "figures": [
+    {
+      "id": "A",
+      "body_part": "A.body",
+      "arm_part": "A.arm",
+      "shoulder_body_local": [0.35982142857142857, 0.49107142857142855],
+      "grip_arm_local": [-0.4928571428571429, 0.5839285714285715],
+      "stick_top_arm_local": [-0.4928571428571429, 0.8357142857142857],
+      "stick_bottom_arm_local": [-0.4928571428571429, 0.5],
+      "neutral_stick_orientation": "vertical in the source/card plane; follows the existing arm wave, no additional 45-degree offset",
+      "inspection_color": "#55ddff"
+    },
+    {
+      "id": "B",
+      "body_part": "B.body",
+      "arm_part": "B.arm",
+      "shoulder_body_local": [0.31607142857142856, 0.4232142857142857],
+      "grip_arm_local": [-0.48392857142857143, 0.5910714285714286],
+      "stick_top_arm_local": [-0.48392857142857143, 0.8428571428571429],
+      "stick_bottom_arm_local": [-0.48392857142857143, 0.5071428571428571],
+      "neutral_stick_orientation": "vertical in the source/card plane; follows the existing arm wave, no additional 45-degree offset",
+      "inspection_color": "#ff65c7"
+    }
+  ]
+}

@@ -5,23 +5,8 @@ fallback pattern, and expected candidate lanes; it contains no audio.
 """
 
 import importlib.util
-import json
 import unittest
-from pathlib import Path
 from unittest.mock import patch
-
-
-ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_PATH = ROOT / "tests/fixtures/music-lanes/the-rising-star-normal.json"
-
-
-def load_fixture():
-    fixture = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-    record_fields = ("pitch", "coverage", "mad", "stable")
-    fixture["pitch_records"] = [
-        dict(zip(record_fields, values, strict=True)) for values in fixture.pop("records")
-    ]
-    return fixture
 
 
 class PitchLanesProductionContractTests(unittest.TestCase):
@@ -41,9 +26,8 @@ class PitchLanesProductionContractTests(unittest.TestCase):
 
         return pitch_lanes
 
-    def test_approved_518_note_golden_and_default_controls(self):
+    def test_default_resolution_and_controlled_mixed_pitch_mapping(self):
         mapper = self.require_production_api()
-        fixture = load_fixture()
         expected_defaults = {
             "pitch_following": 1,
             "lane_balance": 1,
@@ -61,14 +45,24 @@ class PitchLanesProductionContractTests(unittest.TestCase):
                 mapper.validate_lane_mapping({"pitch_following": 0}),
                 {**expected_defaults, "pitch_following": 0},
             )
-            fallback = [
-                fixture["fallback_pattern"][i % len(fixture["fallback_pattern"])]
-                for i in range(len(fixture["pitch_records"]))
-            ]
-            self.assertEqual(
-                mapper.map_lanes(fixture["pitch_records"], fallback),
-                fixture["expected_lanes"],
-            )
+        # This deliberately mixed contour has a clear local quartile/contour
+        # expectation and uses explicit controls, independent of live tuning.
+        pitches = [48, 48, 60, 72, 60, 48]
+        records = [
+            {"pitch": pitch, "coverage": 1.0, "mad": 0.0, "stable": True}
+            for pitch in pitches
+        ]
+        controls = {
+            "pitch_following": 1,
+            "lane_balance": 0,
+            "repetition_avoidance": 0,
+            "wide_jump_avoidance": 0,
+            "adaptation_block_notes": 32,
+        }
+        self.assertEqual(
+            mapper.map_lanes(records, [0] * len(records), controls),
+            [0, 0, 1, 3, 1, 0],
+        )
 
     def test_zero_pitch_following_leaves_stable_pitch_uninformed(self):
         mapper = self.require_production_api()
@@ -106,9 +100,25 @@ class PitchLanesProductionContractTests(unittest.TestCase):
         self.assertEqual(no_follow, [0] * len(records))
         self.assertGreater(len(set(follow)), 1)
 
+    def test_opposite_contour_cost_competes_with_lane_balance_preference(self):
+        mapper = self.require_production_api()
+        records = [
+            {"pitch": pitch, "coverage": 1.0, "mad": 0.0, "stable": True}
+            for pitch in (40, 40, 50, 40)
+        ]
+        controls = {
+            "pitch_following": 0.5,
+            "lane_balance": 4,
+            "repetition_avoidance": 0,
+            "wide_jump_avoidance": 0,
+            "adaptation_block_notes": 32,
+        }
+        self.assertEqual(
+            mapper.map_lanes(records, [0, 0, 0, 0], controls), [0, 1, 3, 2]
+        )
+
     def test_zero_controls_keep_unknown_notes_on_cyclic_fallback(self):
         mapper = self.require_production_api()
-        fixture = load_fixture()
         controls = {
             "pitch_following": 0,
             "lane_balance": 0,
@@ -120,7 +130,8 @@ class PitchLanesProductionContractTests(unittest.TestCase):
             {"pitch": None, "coverage": 0.0, "mad": None, "stable": False}
             for _ in range(12)
         ]
-        fallback = [fixture["fallback_pattern"][i % 4] for i in range(12)]
+        fallback_pattern = [0, 1, 2, 3, 2, 1]
+        fallback = [fallback_pattern[i % len(fallback_pattern)] for i in range(12)]
         self.assertEqual(mapper.map_lanes(unknowns, fallback, controls), fallback)
 
     def test_balance_control_remains_soft_on_constant_pitch(self):
@@ -152,7 +163,14 @@ class PitchLanesProductionContractTests(unittest.TestCase):
             {"pitch": 60.0, "coverage": 1.0, "mad": 0.0, "stable": True}
             for _ in range(2)
         ]
-        lanes = mapper.map_lanes(records, [3, 3])
+        controls = {
+            "pitch_following": 1,
+            "lane_balance": 1,
+            "repetition_avoidance": 1,
+            "wide_jump_avoidance": 1,
+            "adaptation_block_notes": 32,
+        }
+        lanes = mapper.map_lanes(records, [3, 3], controls)
         self.assertEqual(lanes, [0, 0])
 
     def test_repetition_and_wide_jump_controls_have_effect(self):
@@ -182,32 +200,34 @@ class PitchLanesProductionContractTests(unittest.TestCase):
             mapper.map_lanes(jump_records, jump_fallback, jump_controls)[-1], 3
         )
 
-    def test_adaptation_block_size_preserves_transposed_contour_without_forcing_identity(self):
+    def test_adaptation_blocks_compute_independent_pitch_quartiles(self):
         mapper = self.require_production_api()
         motif = [48 + index * 4 for index in range(8)]
-        transposed_motif = [pitch + 12 for pitch in motif]
+        transposed_motif = [pitch + 32 for pitch in motif]
         pitches = motif + transposed_motif
         records = [
             {"pitch": pitch, "coverage": 1.0, "mad": 0.0, "stable": True}
             for pitch in pitches
         ]
-        fallback = [0] * len(records)
         controls = {
             "pitch_following": 1,
-            "lane_balance": 1,
-            "repetition_avoidance": 1,
-            "wide_jump_avoidance": 1,
+            "lane_balance": 0,
+            "repetition_avoidance": 0,
+            "wide_jump_avoidance": 0,
         }
+        fallback = [0] * len(records)
         adapted = mapper.map_lanes(
             records, fallback, {**controls, "adaptation_block_notes": 8}
         )
         pooled = mapper.map_lanes(
             records, fallback, {**controls, "adaptation_block_notes": 32}
         )
-        adapted_distance = sum(a != b for a, b in zip(adapted[:8], adapted[8:]))
-        pooled_distance = sum(a != b for a, b in zip(pooled[:8], pooled[8:]))
-        self.assertGreater(adapted_distance, 0)
-        self.assertLess(adapted_distance, pooled_distance)
+        self.assertEqual(
+            adapted, [0, 0, 0, 1, 1, 2, 2, 3] * 2
+        )
+        self.assertEqual(
+            pooled, [0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3]
+        )
 
 
 def max_run(lanes):

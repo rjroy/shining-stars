@@ -22,6 +22,7 @@
     "test:brightvale:acceptance:exhaustive": "node tests/browser/brightvale/observatory-acceptance.mjs exhaustive",
     "chart:generate": "python3 scripts/beat_chart.py --all",
     "chart:check": "python3 scripts/beat_chart.py --check --all",
+    "chart:artifact-check": "python3 scripts/beat_chart.py --artifact-check --all",
     "test:chart": "python3 -m unittest tests/test_beat_chart.py tests/test_beat_chart_workflow.py tests/test_beat_chart_migration.py tests/test_pitch_lanes.py tests/test_pitch_chart_workflow.py tests/test_pitch_experiment.py tests/test_chart_density.py tests/test_tune_song.py",
     "lint": "eslint .",
     "format": "prettier --write package.json package-lock.json tsconfig.json vite.config.ts eslint.config.js .prettierrc.json index.html 'src/**/*.{ts,css}' README.md",

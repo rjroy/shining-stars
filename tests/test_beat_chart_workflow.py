@@ -1,6 +1,7 @@
 """Workflow contract tests using a fake subprocess runner and synthetic input."""
 
 import hashlib
+import io
 import json
 import math
 import subprocess
@@ -8,6 +9,7 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from contextlib import redirect_stderr
 from unittest.mock import patch
 
 from scripts import beat_chart, pitch_lanes
@@ -90,6 +92,38 @@ class BeatChartWorkflowTests(unittest.TestCase):
 
     def generate(self, runner=None):
         return beat_chart.main(self.args(), runner=runner or self.make_runner())
+
+    def test_chart_config_uses_authoring_values_when_cli_options_are_omitted(self):
+        settings = self.song_settings(self.source)
+        args = beat_chart._argument_parser().parse_args(
+            ["--song-config", str(self.song_config), str(self.source)]
+        )
+
+        config = beat_chart._chart_config(args, "the-first-shining-star", settings)
+
+        self.assertEqual(config["source_start"], settings["start_time"])
+        self.assertEqual(config["duration"], settings["duration"])
+        self.assertEqual(config["boundary"], settings["twilight_time"])
+
+        args = beat_chart._argument_parser().parse_args(
+            [
+                "--song-config", str(self.song_config), str(self.source),
+                "--source-start", "12.5", "--duration", "30", "--boundary", "12",
+            ]
+        )
+        config = beat_chart._chart_config(args, "the-first-shining-star", settings)
+        self.assertEqual(
+            (config["source_start"], config["duration"], config["boundary"]),
+            (12.5, 30, 12),
+        )
+
+    def test_strict_and_cache_free_check_modes_are_mutually_exclusive(self):
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                beat_chart._argument_parser().parse_args(
+                    ["--check", "--artifact-check", "--all"]
+                )
+        self.assertEqual(error.exception.code, 2)
 
     def song_settings(self, source):
         return {

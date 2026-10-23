@@ -3,66 +3,66 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.4896551724137931,
+      "baselineExtractedF0DirectionAgreement": 0.496551724137931,
       "baselineHandCounts": [
-        180,
-        179
+        179,
+        180
       ],
       "baselineLaneCounts": [
-        90,
-        90,
-        90,
-        89
+        60,
+        119,
+        120,
+        60
       ],
       "baselineLaneShares": [
-        0.25069637883008355,
-        0.25069637883008355,
-        0.25069637883008355,
-        0.2479108635097493
+        0.1671309192200557,
+        0.33147632311977715,
+        0.3342618384401114,
+        0.1671309192200557
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
+      "baselineWorstRolling32Concentration": 0.34375,
       "candidateExtractedF0DirectionAgreement": 0.8206896551724138,
       "candidateHandCounts": [
-        180,
-        179
+        181,
+        178
       ],
       "candidateLaneCounts": [
         90,
+        91,
         90,
-        90,
-        89
+        88
       ],
       "candidateLaneShares": [
         0.25069637883008355,
+        0.25348189415041783,
         0.25069637883008355,
-        0.25069637883008355,
-        0.2479108635097493
+        0.24512534818941503
       ],
       "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.375,
+      "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 359,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 246,
@@ -71,26 +71,26 @@
       "unknownPitchCount": 113
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.44,
+      "baselineExtractedF0DirectionAgreement": 0.45714285714285713,
       "baselineHandCounts": [
         239,
         238
       ],
       "baselineLaneCounts": [
-        120,
-        119,
-        119,
-        119
+        80,
+        159,
+        159,
+        79
       ],
       "baselineLaneShares": [
-        0.25157232704402516,
-        0.24947589098532494,
-        0.24947589098532494,
-        0.24947589098532494
+        0.16771488469601678,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.16561844863731656
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7942857142857143,
       "candidateHandCounts": [
         239,
         238
@@ -98,16 +98,16 @@
       "candidateLaneCounts": [
         119,
         120,
-        119,
-        119
+        120,
+        118
       ],
       "candidateLaneShares": [
         0.24947589098532494,
         0.25157232704402516,
-        0.24947589098532494,
-        0.24947589098532494
+        0.25157232704402516,
+        0.24737945492662475
       ],
-      "candidateLongestLaneRun": 3,
+      "candidateLongestLaneRun": 6,
       "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 477,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -117,44 +117,44 @@
       "unknownPitchCount": 152
     },
     "normal": {
-      "baselineExtractedF0DirectionAgreement": 0.5225806451612903,
+      "baselineExtractedF0DirectionAgreement": 0.4838709677419355,
       "baselineHandCounts": [
         194,
         193
       ],
       "baselineLaneCounts": [
-        97,
-        97,
-        97,
-        96
+        65,
+        129,
+        129,
+        64
       ],
       "baselineLaneShares": [
-        0.25064599483204136,
-        0.25064599483204136,
-        0.25064599483204136,
-        0.24806201550387597
+        0.16795865633074936,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.165374677002584
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8064516129032258,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.8,
       "candidateHandCounts": [
-        194,
-        193
+        195,
+        192
       ],
       "candidateLaneCounts": [
+        96,
+        99,
         97,
-        97,
-        97,
-        96
+        95
       ],
       "candidateLaneShares": [
+        0.24806201550387597,
+        0.2558139534883721,
         0.25064599483204136,
-        0.25064599483204136,
-        0.25064599483204136,
-        0.24806201550387597
+        0.2454780361757106
       ],
-      "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.34375,
+      "candidateLongestLaneRun": 4,
+      "candidateWorstRolling32Concentration": 0.375,
       "noteCount": 387,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 267,
@@ -163,7 +163,7 @@
       "unknownPitchCount": 120
     }
   },
-  "pitch_analysis_key": "92568a2441da105ca8b75765e334c0c679b858359f8bbd1714c1f5e941be2f2a",
+  "pitch_analysis_key": "e546fb94be64d089c20fdde51b5cab7d51b146406bab3eb01e601953a8976841",
   "schema_version": 1,
   "song_id": "workshop-warriors",
   "source_sha256": "4694678e77e42c8b7dac05412d2d9653b743e53a87254490995b9e5d44fb8f9f"

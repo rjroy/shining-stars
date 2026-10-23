@@ -122,22 +122,31 @@ class SelectNotesTests(unittest.TestCase):
 
     def test_selection_is_anchored_to_full_track_onset_indices(self):
         onsets = [float(index) for index in range(180)]
-        notes = beat_chart.select_notes(onsets, stride=4)
+        notes = beat_chart.select_notes(
+            onsets, source_start=0, duration=180, boundary=90, stride=4
+        )
         self.assertTrue(notes)
         self.assertEqual([n["source_onset_index"] for n in notes], sorted(n["source_onset_index"] for n in notes))
         self.assertTrue(all(n["source_onset_index"] % 4 == 0 for n in notes))
-        self.assertEqual(notes[0]["source_onset_index"], 108)
+        self.assertEqual(notes[0]["source_onset_index"], 4)
 
     def test_records_source_onset_and_excerpt_relative_times(self):
-        notes = beat_chart.select_notes([107.1, 108.0, 109.2], stride=1)
+        notes = beat_chart.select_notes(
+            [107.1, 108.0, 109.2], source_start=107.1, duration=20,
+            boundary=10, stride=1,
+        )
         note = next(n for n in notes if n["source_time"] == 109.2)
         self.assertEqual(note["relative_time"], 2.1)
         self.assertEqual(note["source_onset_index"], 2)
 
     def test_lane_pattern_cycles_by_selected_beat_slot(self):
         onsets = [110.0 + i for i in range(40)]
-        notes = beat_chart.select_notes(onsets, stride=1, lane_pattern=(3, 1))
-        self.assertEqual([n["lane"] for n in notes[:4]], [3, 1, 3, 1])
+        notes = beat_chart.select_notes(
+            onsets, source_start=100, duration=50, boundary=1, stride=1,
+            lane_pattern=(0, 1, 2, 3, 2, 1),
+        )
+        expected = [0, 1, 2, 3, 2, 1] * 6 + [0, 1, 2, 3]
+        self.assertEqual([note["lane"] for note in notes], expected)
 
     def test_rejects_invalid_stride_and_lane_pattern(self):
         for stride in (0, -1):
@@ -231,20 +240,35 @@ class RenderTests(unittest.TestCase):
         )
         self.profile_patch.start()
         self.addCleanup(self.profile_patch.stop)
-        self.notes = beat_chart.select_notes([108.0 + i * 0.5 for i in range(120)])
+        self.notes = beat_chart.select_notes(
+            [108.0 + i * 0.5 for i in range(120)], source_start=107.1,
+            duration=65.8, boundary=39.2,
+        )
         self.digest = hashlib.sha256(b"synthetic source audio").hexdigest()
 
     def test_renders_deterministic_mvp_chart_typescript_with_provenance(self):
-        rendered = beat_chart.render_mvp_chart(self.notes, source_sha256=self.digest)
-        self.assertEqual(rendered, beat_chart.render_mvp_chart(self.notes, source_sha256=self.digest))
+        render_options = {
+            "source_start": 107.1,
+            "duration": 65.8,
+            "twilight_at": 39.2,
+            "source_sha256": self.digest,
+        }
+        rendered = beat_chart.render_mvp_chart(self.notes, **render_options)
+        self.assertEqual(rendered, beat_chart.render_mvp_chart(self.notes, **render_options))
         self.assertIn("MVP_CHART", rendered)
         self.assertIn("ChartConfig", rendered)
         self.assertIn(self.digest, rendered)
         self.assertIn("sourceStart: 107.1", rendered)
 
     def test_render_precision_matches_source_mapping_within_one_microsecond(self):
-        notes = beat_chart.select_notes([108.0, 108.123456789], stride=1)
-        rendered = beat_chart.render_mvp_chart(notes, source_sha256=self.digest)
+        notes = beat_chart.select_notes(
+            [108.0, 108.123456789], source_start=107.1, duration=20,
+            boundary=10, stride=1,
+        )
+        rendered = beat_chart.render_mvp_chart(
+            notes, source_start=107.1, duration=20, twilight_at=10,
+            source_sha256=self.digest,
+        )
         relative = next(n["relative_time"] for n in notes if n["source_time"] == 108.123456789)
         self.assertIn(f"{relative:.6f}", rendered)
         self.assertLessEqual(abs(float(f"{relative:.6f}") - relative), 1e-6)

@@ -6,15 +6,17 @@ import {
   type BrightvaleAmbience,
 } from './ambience';
 import { attachWaterShimmer } from './water-shimmer';
-import { attachCanopySway } from './canopy-sway';
+import { attachCanopySway, attachPlazaSway } from './canopy-sway';
 
-/** Physical materials inherit MeshStandardMaterial; non-city surfaces remain Toon. */
+/** Physical environment materials stay physical; gameplay surfaces use Toon. */
 export type BrightvaleSurfaceMaterial =
-  THREE.MeshStandardMaterial | THREE.MeshToonMaterial;
+  | THREE.MeshStandardMaterial
+  | THREE.MeshPhysicalMaterial
+  | THREE.MeshToonMaterial;
 
 /** Shared source-material mapping and mode lighting for one Brightvale scene. */
 export interface BrightvaleAppearance {
-  /** Return an owned city PBR clone or non-city Toon replacement. */
+  /** Return a gameplay Toon replacement or an owned physical environment clone. */
   materialFor(source: THREE.Material): BrightvaleSurfaceMaterial;
   /** Apply the existing projected mode/brightness state without rebuilding resources. */
   update(state: SceneStateProjection, ambience?: BrightvaleAmbience): void;
@@ -110,10 +112,11 @@ function lerpColor(
   target.copy(from).lerp(to, amount);
 }
 
-/** Approved city PBR/non-city Toon mapping and unchanged state-driven lighting. */
+/** Physical environment mapping, explicit gameplay Toon routing, and mode lighting. */
 export function createBrightvaleAppearance(
   scene: THREE.Scene,
   sourceRoots: readonly THREE.Object3D[],
+  gameplaySources: ReadonlySet<THREE.Material> = new Set(),
 ): BrightvaleAppearance {
   const sources = new Set<THREE.Material>();
   for (const root of sourceRoots) {
@@ -146,7 +149,11 @@ export function createBrightvaleAppearance(
   const windowGroups = new Map<BrightvaleSurfaceMaterial, string>();
   const waterUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
   const canopyUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
-  const groundMaterials = new Map<THREE.MeshToonMaterial, 'city' | 'plaza'>();
+  const plazaUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
+  const groundMaterials = new Map<
+    THREE.MeshStandardMaterial,
+    'city' | 'plaza'
+  >();
   const hemisphere = new THREE.HemisphereLight(
     PRESETS.audience.sky,
     PRESETS.audience.ground,
@@ -232,6 +239,7 @@ export function createBrightvaleAppearance(
     currentAmbience = ambience;
     for (const updateWater of waterUpdates) updateWater(ambience);
     for (const updateCanopy of canopyUpdates) updateCanopy(ambience);
+    for (const updatePlaza of plazaUpdates) updatePlaza(ambience);
     for (const [material, baseline] of cityEmissionBaselines)
       material.emissiveIntensity =
         baseline *
@@ -264,24 +272,26 @@ export function createBrightvaleAppearance(
 
       const properties = sourceProperties(source);
       const role = roleOf(source);
-      // City surfaces preserve the approved imported PBR response.
+      const isCitySurface =
+        role.startsWith('city.') || role === 'emissive_window';
+      // Only highway/platform source materials are explicitly routed to Toon.
+      // Keep every standard/physical environment material's authored response.
       if (
-        (role.startsWith('city.') || role === 'emissive_window') &&
+        !gameplaySources.has(source) &&
         source instanceof THREE.MeshStandardMaterial
       ) {
-        // Keep authored properties/maps and isolate mode updates from borrowed
-        // materials shared with Observatory. Cache by source, not Toon signature:
-        // equal colors do not imply equal roughness, metalness or normal maps.
         const material = source.clone();
         material.userData.brightvaleRole = role;
         materialBySource.set(source, material);
         ownedMaterials.add(material);
-        const updateWater = attachWaterShimmer(material, role);
-        if (updateWater) {
-          waterUpdates.push(updateWater);
-          updateWater(currentAmbience);
+        if (isCitySurface) {
+          const updateWater = attachWaterShimmer(material, role);
+          if (updateWater) {
+            waterUpdates.push(updateWater);
+            updateWater(currentAmbience);
+          }
         }
-        if (role === 'emissive_window') {
+        if (isCitySurface && role === 'emissive_window') {
           cityEmissionBaselines.set(material, source.emissiveIntensity);
           const group =
             typeof source.userData.source_material === 'string'
@@ -293,9 +303,33 @@ export function createBrightvaleAppearance(
             currentCityBrightness *
             windowAmbienceMultiplier(group, currentAmbience);
         }
+        const groundSurface = source.userData.brightvaleGround as
+          'city' | 'plaza' | undefined;
+        if (groundSurface) {
+          groundMaterials.set(material, groundSurface);
+          if (groundSurface === 'city') {
+            material.emissive.set(0);
+            material.emissiveMap = null;
+            material.emissiveIntensity = 0;
+          } else material.emissive.set(0);
+          material.color.set(groundSurface === 'city' ? 0x77b78a : 0x303060);
+          if (groundSurface === 'city' && material.normalMap) {
+            const updateCanopy = attachCanopySway(material);
+            canopyUpdates.push(updateCanopy);
+            updateCanopy(currentAmbience);
+          } else if (groundSurface === 'plaza' && material.normalMap) {
+            const updatePlaza = attachPlazaSway(material);
+            plazaUpdates.push(updatePlaza);
+            updatePlaza(currentAmbience);
+          }
+        }
         return material;
       }
-      // Non-city surfaces keep the existing Toon mapping.
+      if (!gameplaySources.has(source))
+        throw new Error(
+          `Unsupported Brightvale environment material type: ${source.type} (${role})`,
+        );
+      // Only explicitly allowlisted highway/platform materials use Toon.
       const color = properties.color?.clone() ?? new THREE.Color(0xffffff);
       const emissive =
         properties.emissive?.clone() ?? new THREE.Color(0x000000);
@@ -353,24 +387,12 @@ export function createBrightvaleAppearance(
         material.userData.brightvaleRole = role;
         materialBySignature.set(signature, material);
         ownedMaterials.add(material);
-        if (groundSurface) groundMaterials.set(material, groundSurface);
-        if (groundSurface === 'city' && normalMap) {
-          const updateCanopy = attachCanopySway(material);
-          canopyUpdates.push(updateCanopy);
-          updateCanopy(currentAmbience);
-        }
       }
 
       materialBySource.set(source, material);
       if (role === 'emissive_window') {
         cityEmissionBaselines.set(material, emissiveIntensity);
         material.emissiveIntensity = emissiveIntensity * currentCityBrightness;
-      }
-      if (groundSurface) {
-        material.color.set(groundSurface === 'city' ? 0x77b78a : 0x33333f);
-        material.emissive.set(
-          groundSurface === 'city' ? 0x000000 : GROUND_EMISSIVE.audience.plaza,
-        );
       }
       return material;
     },

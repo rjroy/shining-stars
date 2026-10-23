@@ -1,14 +1,40 @@
 import * as THREE from 'three';
 import type { BrightvaleAmbience } from './ambience';
 
-/** Continuous diffuse relief and bounded normal-only sway of the painted canopy. */
+/** Bounded normal-only sway of the painted canopy under standard lighting. */
 export function attachCanopySway(
-  material: THREE.MeshToonMaterial,
+  material: THREE.MeshStandardMaterial,
+): (ambience: BrightvaleAmbience) => void {
+  return attachNormalMapSway(
+    material,
+    'brightvaleCanopyTime',
+    'brightvale-canopy-sway-v3',
+    1,
+  );
+}
+
+/** Plaza uses the same normal-only motion at half time. */
+export function attachPlazaSway(
+  material: THREE.MeshStandardMaterial,
+): (ambience: BrightvaleAmbience) => void {
+  return attachNormalMapSway(
+    material,
+    'brightvalePlazaTime',
+    'brightvale-plaza-sway-v1',
+    0.5,
+  );
+}
+
+function attachNormalMapSway(
+  material: THREE.MeshStandardMaterial,
+  uniformName: string,
+  cacheKey: string,
+  timeMultiplier: number,
 ): (ambience: BrightvaleAmbience) => void {
   const time = { value: 0 };
-  material.customProgramCacheKey = () => 'brightvale-canopy-sway-v3';
+  material.customProgramCacheKey = () => cacheKey;
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.brightvaleCanopyTime = time;
+    shader.uniforms[uniformName] = time;
     // Reuse Three's normal decoding/TBN path, including double-sided handling.
     // Only the normal lookup changes: never the color UVs or texture transforms.
     const normalFragment = THREE.ShaderChunk.normal_fragment_maps.replaceAll(
@@ -16,7 +42,7 @@ export function attachCanopySway(
       'texture2D( normalMap, brightvaleCanopyUv( vNormalMapUv ) )',
     );
     shader.fragmentShader = `
-      uniform float brightvaleCanopyTime;
+      uniform float ${uniformName};
       vec2 brightvaleCanopyUv(vec2 uv) {
         vec2 phase = vec2(
           dot(uv, vec2(19.0, 13.0)) + sin(uv.y * 23.0),
@@ -24,41 +50,16 @@ export function attachCanopySway(
         );
         // Different local phases and unequal periods bend patches in place.
         // Subtract the resting phase so time zero is the original normal map.
-        vec2 sway = sin(phase + brightvaleCanopyTime * vec2(0.73, 0.51))
+        vec2 sway = sin(phase + ${uniformName} * vec2(0.73, 0.51))
           - sin(phase);
         return uv + sway * vec2(0.0045, 0.0035);
       }
-      ${shader.fragmentShader}`
-      .replace('#include <normal_fragment_maps>', normalFragment)
-      // The shared three-band Toon ramp flattened canopy relief: the overhead
-      // lights stayed inside one band even at strong normalScale. Only this
-      // ground uses continuous diffuse response; all lights remain unchanged.
-      .replace(
-        '#include <gradientmap_pars_fragment>',
-        `vec3 getGradientIrradiance(vec3 normal, vec3 lightDirection) {
-          return vec3(max(dot(normal, lightDirection), 0.0));
-        }`,
-      )
-      .replace(
-        '#include <lights_fragment_end>',
-        `#include <lights_fragment_end>
-        #if defined(USE_NORMALMAP_TANGENTSPACE) && NUM_DIR_LIGHTS > 0
-          // Brightvale's first directional light is its existing warm key.
-          // The opposing fill/rim largely cancel leaf-facing contrast. Recover
-          // that contrast in this material, relative to its flat normal, without
-          // changing lights, color, emission or the unperturbed ground response.
-          float brightvaleCanopyFacing = dot(
-            normal - nonPerturbedNormal, directionalLights[0].direction
-          );
-          float brightvaleCanopyRelief = clamp(
-            1.0 + brightvaleCanopyFacing * 4.0, 0.25, 1.8
-          );
-          reflectedLight.directDiffuse *= brightvaleCanopyRelief;
-          reflectedLight.indirectDiffuse *= brightvaleCanopyRelief;
-        #endif`,
-      );
+      ${shader.fragmentShader}`.replace(
+      '#include <normal_fragment_maps>',
+      normalFragment,
+    );
   };
   return (ambience) => {
-    time.value = ambience.time;
+    time.value = ambience.time * timeMultiplier;
   };
 }

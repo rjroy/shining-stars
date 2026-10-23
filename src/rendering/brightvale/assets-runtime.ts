@@ -11,6 +11,7 @@ import twilightSkyUrl from '../../../assets/production/brightvale-sky/twilight-c
 import cityGroundUrl from '../../../assets/production/brightvale-ground/city-ground.png?url';
 import cityGroundNormalUrl from '../../../assets/production/brightvale-ground/city-ground-normal.png?url';
 import audiencePlazaUrl from '../../../assets/production/brightvale-ground/audience-plaza.png?url';
+import audiencePlazaNormalUrl from '../../../assets/production/brightvale-ground/audience-plaza-normal.png?url';
 import { BRIGHTVALE_ASSET_NAMES, loadBrightvaleAssets } from './assets';
 import type {
   BrightvaleAssetName,
@@ -56,6 +57,7 @@ async function loadGroundTextures(
     loader.loadAsync(cityGroundUrl),
     loader.loadAsync(cityGroundNormalUrl),
     loader.loadAsync(audiencePlazaUrl),
+    loader.loadAsync(audiencePlazaNormalUrl),
   ]);
   let abortHandler: (() => void) | undefined;
   const aborted = new Promise<never>((_resolve, reject) => {
@@ -69,8 +71,8 @@ async function loadGroundTextures(
     );
     const failure = results.find((result) => result.status === 'rejected');
     if (failure?.status === 'rejected') throw failure.reason;
-    const [city, cityNormal, plaza] = loaded;
-    if (!city || !cityNormal || !plaza)
+    const [city, cityNormal, plaza, plazaNormal] = loaded;
+    if (!city || !cityNormal || !plaza || !plazaNormal)
       throw new Error('Brightvale ground textures are incomplete');
     for (const texture of [city, plaza]) {
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -82,25 +84,31 @@ async function loadGroundTextures(
       texture.anisotropy = GROUND_TEXTURE_ANISOTROPY;
       texture.needsUpdate = true;
     }
-    cityNormal.colorSpace = THREE.NoColorSpace;
-    cityNormal.wrapS = city.wrapS;
-    cityNormal.wrapT = city.wrapT;
-    cityNormal.minFilter = city.minFilter;
-    cityNormal.magFilter = city.magFilter;
-    cityNormal.generateMipmaps = city.generateMipmaps;
-    cityNormal.anisotropy = city.anisotropy;
-    cityNormal.mapping = city.mapping;
-    cityNormal.channel = city.channel;
-    cityNormal.rotation = city.rotation;
-    cityNormal.center.copy(city.center);
-    cityNormal.offset.copy(city.offset);
-    cityNormal.repeat.copy(city.repeat);
-    cityNormal.needsUpdate = true;
+    for (const [normal, color] of [
+      [cityNormal, city],
+      [plazaNormal, plaza],
+    ] as const) {
+      normal.colorSpace = THREE.NoColorSpace;
+      normal.wrapS = color.wrapS;
+      normal.wrapT = color.wrapT;
+      normal.minFilter = color.minFilter;
+      normal.magFilter = color.magFilter;
+      normal.generateMipmaps = color.generateMipmaps;
+      normal.anisotropy = color.anisotropy;
+      normal.mapping = color.mapping;
+      normal.channel = color.channel;
+      normal.rotation = color.rotation;
+      normal.center.copy(color.center);
+      normal.offset.copy(color.offset);
+      normal.repeat.copy(color.repeat);
+      normal.needsUpdate = true;
+    }
     let disposed = false;
     return {
       city,
       cityNormal,
       plaza,
+      plazaNormal,
       dispose() {
         if (disposed) return;
         disposed = true;

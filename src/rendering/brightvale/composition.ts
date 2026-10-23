@@ -165,6 +165,8 @@ export function createBrightvaleComposition(
           material.normalMap = assets.groundTextures.cityNormal;
           // Deliberately legible relief; keep the canonical normal asset intact.
           material.normalScale.setScalar(5);
+        } else if (!isCity && assets.groundTextures?.plazaNormal) {
+          material.normalMap = assets.groundTextures.plazaNormal;
         }
         material.color.set(0xffffff);
         if (!isCity) {
@@ -178,7 +180,16 @@ export function createBrightvaleComposition(
       groundSources.add(new THREE.Mesh(sourceGeometry, material));
     }
     const sourceRoots = [...Object.values(assets.roots), groundSources];
-    appearance = createBrightvaleAppearance(scene, sourceRoots);
+    const gameplaySources = new Set<THREE.Material>();
+    for (const name of ['highway', 'platform'] as const)
+      for (const mesh of meshes(assets.roots[name]))
+        for (const part of sourceParts(mesh))
+          gameplaySources.add(part.material);
+    appearance = createBrightvaleAppearance(
+      scene,
+      sourceRoots,
+      gameplaySources,
+    );
 
     const addBorrowedAsset = (
       name: 'highway' | 'platform' | 'endcaps',
@@ -322,6 +333,7 @@ export function createBrightvaleComposition(
     if (assets.silhouetteCrowd) {
       silhouettes = createSilhouetteCrowd(
         assets.silhouetteCrowd,
+        assets.silhouetteCrowdTwilight,
         layout.silhouetteCrowdPlacements ?? createSilhouettePilotPlacements(),
         multisampledFramebuffer,
       );
@@ -366,6 +378,17 @@ export function createBrightvaleComposition(
           throw new Error('Brightvale composition has been disposed');
         appearanceState = state;
         appearance!.update(appearanceState, ambience);
+        const twilightAtlasBlend =
+          state.phase !== 'twilight'
+            ? 0
+            : THREE.MathUtils.clamp(
+                state.victory
+                  ? 1 - state.radiantProgress
+                  : state.transitionProgress,
+                0,
+                1,
+              );
+        silhouettes?.setAtlasBlend(twilightAtlasBlend);
         silhouettes?.update(ambience?.time ?? 0);
       },
       dispose() {

@@ -52,6 +52,18 @@ runtime PNG pixels from the canonical city diffuse texture using Python NumPy
 and ImageMagick; `--preview <path>` optionally writes a separate flat-versus-
 normal preview. No preview is part of runtime output.
 
+The plaza normal authoring controls are command-line options on
+`build-plaza-normal.py`: `--strength` controls slope (default `0.035`),
+`--broad-blur` and `--detail-blur` set Gaussian sigma in source-image pixels
+(defaults `9` and `1.4`), and `--detail-weight` controls the detail contribution
+from 0 to 1 (default `0.22`; the broad contribution is the remainder). Higher
+strength makes the normal more tilted; smaller blur scales retain finer
+variation, and a higher detail weight emphasizes that variation. For example,
+try `python3 build-plaza-normal.py --output /tmp/plaza-strong.png --strength 0.1`
+then `python3 build-plaza-normal.py --output /tmp/plaza-finer.png --broad-blur 4`.
+The optional preview's light direction and ambient/diffuse fill are separate
+preview-only constants in the script; they do not affect the saved normal map.
+
 The retained City Ground generated source was the second generated grass image
 after a first candidate showed obvious joins; it is historical and is not the
 current runtime texture. The plaza source was the first, more detailed

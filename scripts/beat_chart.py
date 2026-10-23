@@ -33,9 +33,9 @@ DEFAULT_CHART = PROJECT_ROOT / "src/game/mvp-chart.ts"
 DEFAULT_SONG_CONFIG = PROJECT_ROOT / "data/charts/song-authoring.json"
 DEFAULT_DIFFICULTY_PROFILES = PROJECT_ROOT / "data/charts/difficulty-profiles.json"
 DEFAULT_SONG_ID = "the-first-shining-star"
-DEFAULT_SOURCE_START = 107.1
-DEFAULT_DURATION = 65.8
-DEFAULT_BOUNDARY = 39.2
+DEFAULT_SOURCE_START = 0
+DEFAULT_DURATION = 100
+DEFAULT_BOUNDARY = 40
 DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
@@ -43,7 +43,8 @@ ONSET_DEFAULTS = {"algorithm": "specflux", "minioi": 0.032, "threshold": 0.40, "
 ONSET_ALGORITHMS = {
     "default", "energy", "hfc", "complex", "phase", "specdiff", "kl", "mkl", "specflux"
 }
-DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
+DEFAULT_LANE_PATTERN = (0, 1, 2, 3, 2, 1)
+DEFAULT_LANE_RULES = { "type": "pattern", "data": DEFAULT_LANE_PATTERN }
 DEFAULT_GENERATED_DIR = PROJECT_ROOT / "data/charts/generated"
 DEFAULT_ONSETS_DIR = PROJECT_ROOT / "data/charts/onsets"
 DEFAULT_PITCH_CACHE_DIR = PROJECT_ROOT / "data/charts/pitch-cache"
@@ -60,9 +61,11 @@ DIFFICULTY_AUTHORING = {
 MAX_INPUT_OFFSET_SECONDS = 0.2
 
 
-def _finite_number(value, name):
+def _finite_number(value, name, _default=None):
+    if value is None and not (_default is None):
+        return _default
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{name} must be a finite number")
+        raise ValueError(f"{name} must be a finite number {_default}")
     value = float(value)
     if not math.isfinite(value):
         raise ValueError(f"{name} must be a finite number")
@@ -216,11 +219,11 @@ parse_beats = parse_onsets
 
 def select_notes(
     onsets,
-    source_start=107.1,
-    duration=65.8,
-    boundary=39.2,
+    source_start=DEFAULT_SOURCE_START,
+    duration=DEFAULT_DURATION,
+    boundary=DEFAULT_BOUNDARY,
     stride=DEFAULT_STRIDE,
-    lane_pattern=(0, 2, 1, 3),
+    lane_pattern=DEFAULT_LANE_PATTERN,
     minimum_delta_ms=DEFAULT_MINIMUM_DELTA_MS,
     allowed_difficulties=("normal",),
 ):
@@ -300,9 +303,9 @@ def select_notes(
 
 def render_mvp_chart(
     notes,
-    source_start=107.1,
-    duration=65.8,
-    twilight_at=39.2,
+    source_start=DEFAULT_SOURCE_START,
+    duration=DEFAULT_DURATION,
+    twilight_at=DEFAULT_BOUNDARY,
     source_sha256="",
     twilight_strength=DEFAULT_TWILIGHT_STRENGTH,
     allowed_difficulties=("normal",),
@@ -401,9 +404,9 @@ def _validate_song_settings(song_id, settings):
     source = settings.get("source")
     if not isinstance(source, str) or not source.strip():
         raise ValueError(f"song {song_id!r} source must be a non-empty path")
-    start_time = _finite_number(settings.get("start_time"), "start_time")
-    twilight_time = _finite_number(settings.get("twilight_time"), "twilight_time")
-    duration = _finite_number(settings.get("duration"), "duration")
+    start_time = _finite_number(settings.get("start_time"), "start_time", DEFAULT_SOURCE_START)
+    twilight_time = _finite_number(settings.get("twilight_time"), "twilight_time", DEFAULT_BOUNDARY)
+    duration = _finite_number(settings.get("duration"), "duration", DEFAULT_DURATION)
     twilight_strength = _finite_number(
         settings.get("twilight_strength"), "twilight_strength"
     )
@@ -412,7 +415,7 @@ def _validate_song_settings(song_id, settings):
         settings.get("allowed_difficulties")
     )
     stride = settings.get("stride")
-    lane_rules = settings.get("lane_rules")
+    lane_rules = settings.get("lane_rules") or DEFAULT_LANE_RULES
     if start_time < 0:
         raise ValueError("start_time must be non-negative")
     if duration <= 0:
@@ -528,6 +531,9 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             raise ValueError(f"song {song_id!r} must specify a source path")
         _reject_song_level_lane_mapping(song_id, settings)
         _resolve_onset_recipe(song_id, settings)
+        settings["start_time"] = _finite_number(settings.get("start_time"), "start_time", DEFAULT_SOURCE_START)
+        settings["duration"] = _finite_number(settings.get("duration"), "duration", DEFAULT_DURATION)
+        settings["twilight_time"] = _finite_number(settings.get("twilight_time"), "twilight_time", DEFAULT_BOUNDARY)
         for name in ("start_time", "duration", "twilight_time"):
             value = _finite_number(settings.get(name), name)
             if value < 0 or (name != "start_time" and value <= 0) or value > 100:
@@ -536,6 +542,8 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             raise ValueError(f"song {song_id!r} excerpt exceeds source duration")
         if settings["twilight_time"] >= 100:
             raise ValueError(f"song {song_id!r} twilight_time must be below 100 percent")
+        if settings.get("laine_rules") is None:
+            settings["lane_rules"] = DEFAULT_LANE_RULES
         if not isinstance(settings.get("lane_rules"), dict) or settings["lane_rules"].get("type") != "pattern":
             raise ValueError(f"song {song_id!r} has invalid lane_rules")
         _validate_config(0, 1, 0.5, 1, settings["lane_rules"].get("data"))
@@ -826,6 +834,194 @@ def _scoring_metadata(charts):
         "fiveGoldTarget": math.ceil(normal_maximum * 0.9),
         "chartFingerprint": hashlib.sha256(fingerprint_input).hexdigest(),
     }
+
+
+def _validate_artifact_inventory(songs):
+    expected_by_directory = (
+        (DEFAULT_GENERATED_DIR, {f"{song_id}.charts.json" for song_id in songs}, "generated chart"),
+        (DEFAULT_ONSETS_DIR, {f"{song_id}.beats.json" for song_id in songs}, "onset artifact"),
+        (DEFAULT_REPORTS_DIR, {f"{song_id}.lanes.json" for song_id in songs}, "lane report"),
+    )
+    for directory, expected, label in expected_by_directory:
+        actual = {path.name for path in directory.glob("*") if path.is_file()}
+        missing = expected - actual
+        stale = actual - expected
+        if missing:
+            raise ValueError(f"missing {label} outputs: {sorted(missing)}")
+        if stale:
+            raise ValueError(f"stale {label} outputs: {sorted(stale)}")
+
+
+def _read_json_artifact(path, label):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot read {label} {path}: {error}") from error
+
+
+def _validate_pitch_metric_shapes(metrics, note_count, song_id, difficulty):
+    prefix = f"lane report for {song_id}/{difficulty}"
+    integer_fields = ("stableUnequalPitchAdjacentPairs", "unknownPitchCount", "stablePitchCount")
+    for name in integer_fields:
+        value = metrics.get(name)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{prefix} has invalid {name}")
+
+    stable_count = metrics["stablePitchCount"]
+    unknown_count = metrics["unknownPitchCount"]
+    pair_count = metrics["stableUnequalPitchAdjacentPairs"]
+    if stable_count + unknown_count != note_count or pair_count > max(stable_count - 1, 0):
+        raise ValueError(f"{prefix} has inconsistent pitch metric counts")
+
+    coverage = metrics.get("stablePitchCoverage")
+    if (
+        isinstance(coverage, bool)
+        or not isinstance(coverage, (int, float))
+        or not math.isfinite(coverage)
+        or not 0 <= coverage <= 1
+        or not math.isclose(coverage, stable_count / note_count if note_count else 0)
+    ):
+        raise ValueError(f"{prefix} has invalid stablePitchCoverage")
+
+    for name in (
+        "baselineExtractedF0DirectionAgreement",
+        "candidateExtractedF0DirectionAgreement",
+    ):
+        value = metrics.get(name)
+        if pair_count == 0:
+            valid = value is None
+        else:
+            valid = (
+                not isinstance(value, bool)
+                and isinstance(value, (int, float))
+                and math.isfinite(value)
+                and 0 <= value <= 1
+            )
+        if not valid:
+            raise ValueError(f"{prefix} has invalid {name}")
+
+
+def _check_generated_artifacts(args, runner):
+    songs = load_authoring_collection(args.song_config)
+    _validate_artifact_inventory(songs)
+    profiles = load_difficulty_profiles()
+    profile_hash = _profile_file_hash()
+
+    for song_id, settings in songs.items():
+        source = _source_path(settings).resolve(strict=True)
+        source_hash = _sha256_file(source)
+        onset_path = DEFAULT_ONSETS_DIR / f"{song_id}.beats.json"
+        onset_cache = _analysis_for_song(
+            song_id, settings, source, source_hash, runner, True, onset_path
+        )
+        expected_projection = {
+            "song": {**settings, **_resolve_onset_recipe(song_id, settings)},
+            "profile_sha256": profile_hash,
+        }
+        expected_projection = json.loads(
+            json.dumps(expected_projection, sort_keys=True, allow_nan=False)
+        )
+        if onset_cache.get("projection") != expected_projection:
+            raise ValueError(f"onset projection or profile cache is stale for {song_id}")
+        pitch_key = onset_cache.get("pitch_analysis_key")
+        if not isinstance(pitch_key, str) or not re.fullmatch(r"[0-9a-f]{64}", pitch_key):
+            raise ValueError(f"onset artifact for {song_id} lacks pitch-analysis provenance")
+
+        bundle_path = DEFAULT_GENERATED_DIR / f"{song_id}.charts.json"
+        bundle = _read_json_artifact(bundle_path, "generated chart bundle")
+        if (
+            not isinstance(bundle, dict)
+            or type(bundle.get("schemaVersion")) is not int
+            or bundle["schemaVersion"] != 1
+            or bundle.get("songId") != song_id
+            or bundle.get("source") != settings["source"]
+            or not isinstance(bundle.get("charts"), dict)
+            or set(bundle["charts"]) != set(DIFFICULTIES)
+        ):
+            raise ValueError(f"generated chart bundle is stale or malformed for {song_id}")
+
+        actual_charts = bundle["charts"]
+        fallback_lanes = {}
+        for difficulty in DIFFICULTIES:
+            expected_chart, expected_notes, _, _ = _difficulty_chart(
+                onset_cache["onsets"],
+                settings,
+                onset_cache["source_duration_seconds"],
+                profiles[difficulty],
+                difficulty,
+                song_id,
+                source_hash,
+                with_analysis=True,
+            )
+            actual_chart = actual_charts[difficulty]
+            expected_chart_fields = {
+                name: value for name, value in expected_chart.items() if name != "notes"
+            }
+            actual_chart_fields = (
+                {name: value for name, value in actual_chart.items() if name != "notes"}
+                if isinstance(actual_chart, dict)
+                else None
+            )
+            if actual_chart_fields != expected_chart_fields:
+                raise ValueError(f"generated chart is stale for {song_id}/{difficulty}")
+
+            actual_notes = actual_chart.get("notes")
+            expected_notes = expected_chart["notes"]
+            if not isinstance(actual_notes, list) or len(actual_notes) != len(expected_notes):
+                raise ValueError(f"generated chart is stale for {song_id}/{difficulty}")
+            actual_lanes = []
+            for actual_note, expected_note in zip(actual_notes, expected_notes, strict=True):
+                if (
+                    not isinstance(actual_note, dict)
+                    or set(actual_note) != {"id", "time", "lane"}
+                    or actual_note.get("id") != expected_note["id"]
+                    or actual_note.get("time") != expected_note["time"]
+                ):
+                    raise ValueError(f"generated chart is stale for {song_id}/{difficulty}")
+                lane = actual_note["lane"]
+                if isinstance(lane, bool) or not isinstance(lane, int) or lane not in (0, 1, 2, 3):
+                    raise ValueError(f"generated chart has an invalid lane for {song_id}/{difficulty}")
+                actual_lanes.append(lane)
+            fallback_lanes[difficulty] = [note["lane"] for note in expected_notes]
+
+        if bundle.get("scoring") != _scoring_metadata(actual_charts):
+            raise ValueError(f"generated scoring metadata is stale for {song_id}")
+
+        report_path = DEFAULT_REPORTS_DIR / f"{song_id}.lanes.json"
+        report = _read_json_artifact(report_path, "lane report")
+        if (
+            not isinstance(report, dict)
+            or type(report.get("schema_version")) is not int
+            or report["schema_version"] != 1
+            or report.get("song_id") != song_id
+            or report.get("source_sha256") != source_hash
+            or report.get("pitch_analysis_key") != pitch_key
+            or report.get("mapper_version") != "pitch-lanes-v1"
+            or not isinstance(report.get("controls"), dict)
+            or not isinstance(report.get("metrics"), dict)
+            or set(report["controls"]) != set(DIFFICULTIES)
+            or set(report["metrics"]) != set(DIFFICULTIES)
+        ):
+            raise ValueError(f"lane report is stale or malformed for {song_id}")
+
+        for difficulty in DIFFICULTIES:
+            expected_controls = validate_lane_mapping(
+                settings["difficulties"][difficulty].get("lane_mapping", {})
+            )
+            if report["controls"][difficulty] != expected_controls:
+                raise ValueError(f"lane report controls are stale for {song_id}/{difficulty}")
+            actual_lanes = [note["lane"] for note in actual_charts[difficulty]["notes"]]
+            layout = pitch_analysis.lane_layout_metrics(
+                fallback_lanes[difficulty], actual_lanes
+            )
+            metrics = report["metrics"][difficulty]
+            if not isinstance(metrics, dict) or any(
+                metrics.get(name) != value for name, value in layout.items()
+            ):
+                raise ValueError(f"lane report is stale for {song_id}/{difficulty}")
+            _validate_pitch_metric_shapes(
+                metrics, layout["noteCount"], song_id, difficulty
+            )
 
 
 def _analysis_for_song(song_id, settings, source, digest, runner, check, onset_path):
@@ -1207,7 +1403,12 @@ def _argument_parser():
     parser.add_argument("--boundary", type=float)
     parser.add_argument("--stride", type=int)
     parser.add_argument("--minimum-delta", type=float, help="minimum onset spacing in milliseconds")
-    parser.add_argument("--check", action="store_true", help="validate cached provenance and chart")
+    validation_mode = parser.add_mutually_exclusive_group()
+    validation_mode.add_argument("--check", action="store_true", help="validate full cached provenance and pitch-informed chart")
+    validation_mode.add_argument(
+        "--artifact-check", action="store_true",
+        help="validate committed chart artifacts without pitch-cache recomputation (requires --all)",
+    )
     parser.add_argument("--all", action="store_true", help="generate or check every v2 song")
     return parser
 
@@ -1236,6 +1437,13 @@ def main(argv=None, runner=None):
                 raise ValueError(
                     "v2 authoring does not support CLI overrides: " + ", ".join(supplied)
                 )
+        if args.artifact_check:
+            if not args.all:
+                raise ValueError("--artifact-check requires --all")
+            if not is_v2:
+                raise ValueError("--artifact-check requires a schema_version 2 authoring config")
+            _check_generated_artifacts(args, runner or subprocess.run)
+            return 0
         if args.all or is_v2:
             _bulk_run(args, runner or subprocess.run)
             return 0

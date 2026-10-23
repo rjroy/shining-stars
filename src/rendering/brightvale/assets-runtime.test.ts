@@ -144,6 +144,7 @@ function makeOverrides(): BrightvaleRuntimeOverrides {
       city: new THREE.Texture(),
       cityNormal: new THREE.Texture(),
       plaza: new THREE.Texture(),
+      plazaNormal: new THREE.Texture(),
       dispose: vi.fn(),
     })),
   };
@@ -244,14 +245,17 @@ describe('Brightvale production runtime asset boundary', () => {
     const cityNormal = new THREE.Texture();
     const cityNormalDispose = vi.spyOn(cityNormal, 'dispose');
     const plaza = new THREE.Texture();
+    const plazaNormal = new THREE.Texture();
     const groundTextures = {
       city,
       cityNormal,
       plaza,
+      plazaNormal,
       dispose: vi.fn(() => {
         city.dispose();
         cityNormal.dispose();
         plaza.dispose();
+        plazaNormal.dispose();
       }),
     };
     const overrides: BrightvaleRuntimeOverrides = {
@@ -327,6 +331,7 @@ describe('Brightvale production runtime asset boundary', () => {
           city: new THREE.Texture(),
           cityNormal: new THREE.Texture(),
           plaza: new THREE.Texture(),
+          plazaNormal: new THREE.Texture(),
           dispose() {},
         }),
       },
@@ -382,6 +387,7 @@ describe('Brightvale production runtime asset boundary', () => {
       city: new THREE.Texture(),
       cityNormal: new THREE.Texture(),
       plaza: new THREE.Texture(),
+      plazaNormal: new THREE.Texture(),
       dispose: vi.fn(),
     };
     const result = await loadBrightvaleRuntimeAssets(
