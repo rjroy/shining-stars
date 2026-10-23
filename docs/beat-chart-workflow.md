@@ -234,12 +234,28 @@ these metadata inputs and does not require chart regeneration. Regenerate after 
 `chart:check` runs no FFmpeg or aubio command and does not resolve the currently
 installed pitch-tool identity. It verifies the current source hash, validates
 the recorded onset and pitch-cache provenance/payload, and recomputes expected
-charts, scoring metadata, and reports from those recorded inputs. For `--all`,
-it rejects missing, extra, or stale onset, generated-chart, and lane-report
-outputs. Generation refreshes scoring fingerprints and targets; this offline
-check detects stale values. Runtime target presentation consumes generated
-metadata rather than scanning Normal chart notes at startup. Historical
-content-addressed pitch caches are allowed.
+pitch-informed charts, scoring metadata, and reports from those recorded inputs.
+For `--all`, it rejects missing, extra, or stale onset, generated-chart, and
+lane-report outputs. Generation refreshes scoring fingerprints and targets;
+this strict offline check detects stale pitch-informed values. It remains
+available locally and still requires the complete pitch caches.
+
+`chart:artifact-check` is a separate cache-free committed-artifact check used by
+CI. It verifies current source, onset recipe/projection, and gameplay-profile
+provenance; recomputes chart timing and note IDs from onset data; checks lane
+values are in range; recomputes scoring metadata; and checks source/key/control
+provenance plus lane-derived report statistics and output inventory. It does
+not load, create, or require pitch caches and does not run audio tools. Without
+pitch frames it cannot verify that lane assignments match pitch observations,
+nor recompute pitch-direction agreement or other pitch-dependent report values;
+the report fields are checked for internal shape/count consistency only. Thus
+this artifact check is not a substitute for strict local `chart:check` pitch
+recomputation.
+
+Pitch caches are local generated analysis data under
+`data/charts/pitch-cache/`; Git ignores this directory. Do not stage or commit
+these caches. Runtime target presentation consumes generated scoring metadata
+rather than scanning Normal chart notes at startup.
 
 Generation uses FFprobe to measure source duration, FFmpeg and `aubioonset`
 when onset analysis is missing, and FFmpeg plus `aubiopitch` when pitch

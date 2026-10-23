@@ -170,7 +170,8 @@ def _upper_bound(values, target):
     return low
 
 
-def metrics(baseline, candidate, records):
+def lane_layout_metrics(baseline, candidate):
+    """Summarize lane-only report fields without requiring pitch observations."""
     def counts(lanes):
         return [lanes.count(lane) for lane in range(4)]
 
@@ -189,16 +190,6 @@ def metrics(baseline, candidate, records):
         return max(max(lanes[start:start + 32].count(lane) / 32 for lane in range(4))
                    for start in range(len(lanes) - 31))
 
-    pairs = [(i, i + 1) for i in range(len(records) - 1)
-             if records[i]["stable"] and records[i + 1]["stable"]
-             and abs(records[i + 1]["pitch"] - records[i]["pitch"]) > 0.25]
-
-    def agreement(lanes):
-        if not pairs:
-            return None
-        return sum((lanes[j] - lanes[i]) * (records[j]["pitch"] - records[i]["pitch"]) > 0
-                   for i, j in pairs) / len(pairs)
-
     baseline_counts, candidate_counts = counts(baseline), counts(candidate)
     return {
         "noteCount": len(baseline),
@@ -213,10 +204,27 @@ def metrics(baseline, candidate, records):
         "baselineWorstRolling32Concentration": rolling32(baseline),
         "candidateWorstRolling32Concentration": rolling32(candidate),
         "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+    }
+
+
+def metrics(baseline, candidate, records):
+    result = lane_layout_metrics(baseline, candidate)
+    pairs = [(i, i + 1) for i in range(len(records) - 1)
+             if records[i]["stable"] and records[i + 1]["stable"]
+             and abs(records[i + 1]["pitch"] - records[i]["pitch"]) > 0.25]
+
+    def agreement(lanes):
+        if not pairs:
+            return None
+        return sum((lanes[j] - lanes[i]) * (records[j]["pitch"] - records[i]["pitch"]) > 0
+                   for i, j in pairs) / len(pairs)
+
+    result.update({
         "stableUnequalPitchAdjacentPairs": len(pairs),
         "baselineExtractedF0DirectionAgreement": agreement(baseline),
         "candidateExtractedF0DirectionAgreement": agreement(candidate),
         "unknownPitchCount": sum(not record["stable"] for record in records),
         "stablePitchCount": sum(record["stable"] for record in records),
         "stablePitchCoverage": sum(record["stable"] for record in records) / len(records) if records else 0,
-    }
+    })
+    return result

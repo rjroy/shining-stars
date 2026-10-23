@@ -16,6 +16,7 @@ node_modules
 /build
 /dist
 /out
+/data/charts/pitch-cache/
 
 # python
 __pycache__/

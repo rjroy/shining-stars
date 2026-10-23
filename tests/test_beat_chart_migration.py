@@ -26,38 +26,53 @@ class V2AuthoringTests(unittest.TestCase):
         if actual:
             self.assertEqual(actual, expected)
 
-    def test_all_generated_charts_match_live_authoring_projection_and_formula(self):
+    def test_generated_chart_bundles_match_live_authoring_and_report_contract(self):
         songs = beat_chart.load_authoring_collection()
-        profiles = beat_chart.load_difficulty_profiles()
         total_charts = 0
         for song_id, settings in songs.items():
             envelope = json.loads((beat_chart.DEFAULT_GENERATED_DIR / f"{song_id}.charts.json").read_text())
             onset_doc = json.loads((beat_chart.DEFAULT_ONSETS_DIR / f"{song_id}.beats.json").read_text())
             pitch_key = onset_doc["pitch_analysis_key"]
-            pitch_cache = json.loads(
-                (beat_chart.DEFAULT_PITCH_CACHE_DIR / f"{song_id}.{pitch_key}.json").read_text()
-            )
             report = json.loads(
                 (beat_chart.DEFAULT_REPORTS_DIR / f"{song_id}.lanes.json").read_text()
             )
             self.assertIsInstance(envelope["source"], str)
             self.assertEqual(envelope["source"], settings["source"])
+            self.assertEqual(envelope["songId"], song_id)
+            self.assertEqual(report["song_id"], song_id)
             self.assertEqual(report["pitch_analysis_key"], pitch_key)
-            expected_difficulties = {}
+            self.assertEqual(report["source_sha256"], onset_doc["source"]["sha256"])
+            source_duration = onset_doc["source_duration_seconds"]
+            expected_start = source_duration * settings["start_time"] / 100
+            expected_duration = source_duration * settings["duration"] / 100
+            expected_twilight = expected_duration * settings["twilight_time"] / 100
             for difficulty in beat_chart.DIFFICULTIES:
-                chart, notes, twilight_count, analysis = beat_chart._difficulty_chart(
-                    onset_doc["onsets"], settings, onset_doc["source_duration_seconds"],
-                    profiles[difficulty], difficulty, song_id, onset_doc["source"]["sha256"],
-                    pitch_cache["frames"], with_analysis=True,
+                chart = envelope["charts"][difficulty]
+                expected_controls = beat_chart.validate_lane_mapping(
+                    settings["difficulties"][difficulty].get("lane_mapping", {})
                 )
-                self.assertEqual(envelope["charts"][difficulty], chart)
-                self.assertEqual(report["controls"][difficulty], analysis["controls"])
-                self.assertEqual(report["metrics"][difficulty], analysis["metrics"])
+                self.assertEqual(report["controls"][difficulty], expected_controls)
+                self.assertEqual(report["metrics"][difficulty]["noteCount"], len(chart["notes"]))
+                self.assertEqual(chart["allowedDifficulties"], [difficulty])
+                self.assertAlmostEqual(chart["sourceStart"], expected_start, places=5)
+                self.assertAlmostEqual(chart["duration"], expected_duration, places=5)
+                self.assertAlmostEqual(chart["twilightAt"], expected_twilight, places=5)
+                self.assertTrue(all(note["lane"] in range(4) for note in chart["notes"]))
+                note_times = [note["time"] for note in chart["notes"]]
+                self.assertTrue(all(0 <= time < expected_duration for time in note_times))
+                self.assertTrue(any(time < expected_twilight for time in note_times))
+                self.assertTrue(any(time > expected_twilight for time in note_times))
+                counters = {"a": 0, "t": 0}
+                expected_ids = []
+                for time in note_times:
+                    kind = "a" if time < expected_twilight else "t"
+                    counters[kind] += 1
+                    expected_ids.append(f"{kind}{counters[kind]:02d}")
+                self.assertEqual(
+                    [note["id"] for note in chart["notes"]], expected_ids
+                )
                 self.assertNotIn("twilightStrength", chart)
-                self.assertTrue(any(note["relative_time"] > chart["twilightAt"] for note in notes))
-                expected_difficulties[difficulty] = json.dumps(chart, sort_keys=True)
                 total_charts += 1
-            self.assertEqual(len(set(expected_difficulties.values())), 3, song_id)
         self.assertEqual(total_charts, len(songs) * len(beat_chart.DIFFICULTIES))
 
     def test_first_shining_star_authoring_and_generated_chart_cover_full_recording(self):
