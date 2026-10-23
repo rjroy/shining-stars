@@ -149,7 +149,7 @@ function makeAssets(dispose = vi.fn()): BrightvaleAssets {
   roots.city.add(
     new THREE.Mesh(
       new THREE.BoxGeometry(2, 2, 2),
-      new THREE.MeshBasicMaterial(),
+      new THREE.MeshStandardMaterial(),
     ),
   );
   for (const name of ['highway', 'platform'] as const) {
@@ -589,7 +589,7 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
         base.roots[name].add(
           new THREE.Mesh(
             new THREE.BoxGeometry(2, 1, 2),
-            new THREE.MeshBasicMaterial(),
+            new THREE.MeshStandardMaterial(),
           ),
         );
       const texture = new THREE.DataTexture(

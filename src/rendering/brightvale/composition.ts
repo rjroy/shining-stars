@@ -180,7 +180,16 @@ export function createBrightvaleComposition(
       groundSources.add(new THREE.Mesh(sourceGeometry, material));
     }
     const sourceRoots = [...Object.values(assets.roots), groundSources];
-    appearance = createBrightvaleAppearance(scene, sourceRoots);
+    const gameplaySources = new Set<THREE.Material>();
+    for (const name of ['highway', 'platform'] as const)
+      for (const mesh of meshes(assets.roots[name]))
+        for (const part of sourceParts(mesh))
+          gameplaySources.add(part.material);
+    appearance = createBrightvaleAppearance(
+      scene,
+      sourceRoots,
+      gameplaySources,
+    );
 
     const addBorrowedAsset = (
       name: 'highway' | 'platform' | 'endcaps',
