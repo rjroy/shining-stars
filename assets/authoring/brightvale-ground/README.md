@@ -17,12 +17,16 @@ acceptance remains pending.
 - Original combined 3×3 repeat review (the previous city texture): [WebP presentation](ground-textures-repeat-review.webp).
 - Earlier per-texture 2×2 review images: [City Ground](city-ground-2x2.webp) · [Audience Plaza](audience-plaza-2x2.webp).
 - Reproducible source correction/review tool: [seamless-tile.py](seamless-tile.py).
+- Reproducible city normal-map recipe: [build-city-normal.py](build-city-normal.py).
 
 The canonical runtime textures are `../../production/brightvale-ground/city-ground.png`
 and `../../production/brightvale-ground/audience-plaza.png`; these are the only
 maintained final PNGs. The original generated city source is retained as
 `city-ground-source.png`, and the plaza source as `audience-plaza-source.png`.
 The city texture was later replaced by the exact approved input recorded below.
+The user approved `/home/rjroy/Downloads/canopy-normal.png` for a runtime
+experiment on 2026-10-22; it is installed as the single canonical
+`../../production/brightvale-ground/city-ground-normal.png` runtime map.
 The current runtime textures are opaque 8-bit RGB PNGs, 1254×1254, intended for
 sRGB sampling. The requested 1024×1024 was not emitted; no resizing or lossy
 conversion was applied. File and GPU-memory budgets remain unknown.
@@ -33,10 +37,20 @@ The plaza source was generated with the built-in Codex image route on
 2026-10-15. The City Ground source row records the later user-approved direct
 replacement input. Source paths and canonical runtime SHA-256 hashes:
 
-| Surface | Source/provenance | Source SHA-256 | Canonical runtime SHA-256 |
-|---|---|---|---|
-| City Ground | `/home/rjroy/Downloads/canopy-tileable.png` (user-approved exact replacement, 2026-10-22) | `d47a99fe8eb8e78465bd68399b5e27f71f184057c2578691e2dcc96315e5d09f` | `d47a99fe8eb8e78465bd68399b5e27f71f184057c2578691e2dcc96315e5d09f` |
+| Surface        | Source/provenance                                                                                                        | Source SHA-256                                                     | Canonical runtime SHA-256                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| City Ground    | `/home/rjroy/Downloads/canopy-tileable.png` (user-approved exact replacement, 2026-10-22)                                | `d47a99fe8eb8e78465bd68399b5e27f71f184057c2578691e2dcc96315e5d09f` | `d47a99fe8eb8e78465bd68399b5e27f71f184057c2578691e2dcc96315e5d09f` |
 | Audience Plaza | `/home/rjroy/.codex/generated_images/01a1405c-b408-74e1-b6b2-b643766a792d/exec-b4419dd0-46a7-4bd2-a194-ef176043cac1.png` | `bb1df477b9ffa795df019b308e099aefbda58904484737e2d6fc66915ab5854b` | `08cad37f87a9a9204d63b7faba174d9d0959cbb4cd7922fac19513a3a3b244ed` |
+
+The approved normal candidate SHA-256 is
+`f0009dc49e74439b8d8b735f6605272a9342db7e5029b781c02028d1cae8fe2`. The
+recipe derives Rec.709 luminance, combines periodic Gaussian scales (9.0 px
+base and 1.4 px detail) at 0.78/0.22, computes periodic centered gradients
+with 0.035 slope scaling, flips image-row direction into texture +V, normalizes
+and encodes tangent-space RGB. `python3 build-city-normal.py` reproduces the
+runtime PNG pixels from the canonical city diffuse texture using Python NumPy
+and ImageMagick; `--preview <path>` optionally writes a separate flat-versus-
+normal preview. No preview is part of runtime output.
 
 The retained City Ground generated source was the second generated grass image
 after a first candidate showed obvious joins; it is historical and is not the

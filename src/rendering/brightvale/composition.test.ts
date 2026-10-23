@@ -37,7 +37,7 @@ const productionFiles: Readonly<Record<BrightvaleAssetName, string>> = {
 let loadedAssets: BrightvaleAssets | undefined;
 
 async function loadProductionAssets(): Promise<BrightvaleAssets> {
-  const fetch = vi.fn(async (url: string, _signal: AbortSignal) => {
+  const fetch = vi.fn(async (url: string) => {
     const name = BRIGHTVALE_ASSET_NAMES.find(
       (candidate) => BRIGHTVALE_PRODUCTION_ASSET_URLS[candidate] === url,
     );
@@ -71,11 +71,34 @@ async function loadProductionAssets(): Promise<BrightvaleAssets> {
         },
       };
     },
-    loadGroundTextures: async () => ({
-      city: new THREE.Texture(),
-      plaza: new THREE.Texture(),
-      dispose() {},
-    }),
+    loadGroundTextures: async () => {
+      const city = new THREE.Texture();
+      city.wrapS = city.wrapT = THREE.RepeatWrapping;
+      city.minFilter = THREE.LinearMipmapLinearFilter;
+      city.magFilter = THREE.LinearFilter;
+      city.generateMipmaps = true;
+      city.anisotropy = 4;
+      const cityNormal = new THREE.Texture();
+      cityNormal.colorSpace = THREE.NoColorSpace;
+      cityNormal.wrapS = city.wrapS;
+      cityNormal.wrapT = city.wrapT;
+      cityNormal.minFilter = city.minFilter;
+      cityNormal.magFilter = city.magFilter;
+      cityNormal.generateMipmaps = city.generateMipmaps;
+      cityNormal.anisotropy = city.anisotropy;
+      cityNormal.mapping = city.mapping;
+      cityNormal.channel = city.channel;
+      cityNormal.rotation = city.rotation;
+      cityNormal.center.copy(city.center);
+      cityNormal.offset.copy(city.offset);
+      cityNormal.repeat.copy(city.repeat);
+      return {
+        city,
+        cityNormal,
+        plaza: new THREE.Texture(),
+        dispose() {},
+      };
+    },
   });
 }
 
@@ -253,7 +276,38 @@ describe('Brightvale production composition', () => {
       if ((object as THREE.Mesh).isMesh)
         groundMeshes.push(object as THREE.Mesh);
     });
-    expect(groundMeshes).toHaveLength(layout.groundSurfaces.length);
+    const apron = groundMeshes.find(
+      (mesh) => mesh.name === 'Brightvale.Ground.AudienceApron',
+    );
+    const plaza = groundMeshes.find(
+      (mesh) => mesh.name === 'Review.LocalGround.Circle',
+    );
+    expect(apron, 'runtime-only foreground extension').toBeDefined();
+    expect(apron?.material).toBe(plaza?.material);
+    expect(apron?.receiveShadow).toBe(true);
+    expect(apron?.castShadow).toBe(false);
+    expect(groundMeshes).toHaveLength(layout.groundSurfaces.length + 1);
+    const apronPositions = apron!.geometry.getAttribute('position');
+    const apronUv = apron!.geometry.getAttribute('uv');
+    const plazaMapping = BRIGHTVALE_GROUND_UV.plaza;
+    for (let index = 0; index < apronPositions.count; index += 1) {
+      const point = new THREE.Vector3().fromBufferAttribute(
+        apronPositions,
+        index,
+      );
+      const cosine = Math.cos(plazaMapping.rotationRadians);
+      const sine = Math.sin(plazaMapping.rotationRadians);
+      expect(apronUv.getX(index)).toBeCloseTo(
+        (point.x * cosine + point.z * sine) / plazaMapping.repeatWorldUnits +
+          plazaMapping.offset[0],
+        5,
+      );
+      expect(apronUv.getY(index)).toBeCloseTo(
+        (-point.x * sine + point.z * cosine) / plazaMapping.repeatWorldUnits +
+          plazaMapping.offset[1],
+        5,
+      );
+    }
     for (const surface of layout.groundSurfaces) {
       const mesh = groundMeshes.find(
         (candidate) => candidate.name === surface.name,
@@ -296,8 +350,41 @@ describe('Brightvale production composition', () => {
           ? loadedAssets?.groundTextures?.city
           : loadedAssets?.groundTextures?.plaza,
       );
-      expect(material.emissiveMap).toBe(material.map);
-      expect(material.emissiveIntensity).toBeGreaterThan(0);
+      if (surface.name === 'Review.Ground') {
+        const normalMap = loadedAssets?.groundTextures?.cityNormal;
+        expect(material.normalMap).toBe(normalMap);
+        expect(normalMap?.colorSpace).toBe(THREE.NoColorSpace);
+        expect(normalMap?.wrapS).toBe(material.map?.wrapS);
+        expect(normalMap?.wrapT).toBe(material.map?.wrapT);
+        expect(normalMap?.minFilter).toBe(material.map?.minFilter);
+        expect(normalMap?.magFilter).toBe(material.map?.magFilter);
+        expect(normalMap?.anisotropy).toBe(material.map?.anisotropy);
+        expect(normalMap?.mapping).toBe(material.map?.mapping);
+        expect(normalMap?.channel).toBe(material.map?.channel);
+        expect(normalMap?.rotation).toBe(material.map?.rotation);
+        expect(normalMap?.center.toArray()).toEqual(
+          material.map?.center.toArray(),
+        );
+        expect(normalMap?.offset.toArray()).toEqual(
+          material.map?.offset.toArray(),
+        );
+        expect(normalMap?.repeat.toArray()).toEqual(
+          material.map?.repeat.toArray(),
+        );
+        expect(material.normalScale.toArray().every(Number.isFinite)).toBe(
+          true,
+        );
+      } else {
+        expect(material.normalMap).toBeNull();
+      }
+      if (surface.name === 'Review.Ground') {
+        expect(material.emissiveMap).toBeNull();
+        expect(material.emissive.getHex()).toBe(0x000000);
+        expect(material.emissiveIntensity).toBe(0);
+      } else {
+        expect(material.emissiveMap).toBe(material.map);
+        expect(material.emissiveIntensity).toBeGreaterThan(0);
+      }
 
       const normals = mesh?.geometry.getAttribute('normal');
       expect(normals, `${surface.name} normals`).toBeDefined();
@@ -422,12 +509,12 @@ describe('Brightvale production composition', () => {
     const generatedInstances = batches.map((batch) =>
       vi.spyOn(batch, 'dispose'),
     );
-    const generatedGround = composition.root.getObjectByName('Review.Ground');
-    const groundGeometry = (generatedGround as THREE.Mesh | undefined)
-      ?.geometry;
-    if (!groundGeometry)
-      throw new Error('generated ground geometry is required');
-    const groundDispose = vi.spyOn(groundGeometry, 'dispose');
+    const generatedGround =
+      composition.root.getObjectByName('Brightvale.Ground');
+    if (!generatedGround) throw new Error('generated ground is required');
+    const groundDisposals = generatedGround.children.map((mesh) =>
+      vi.spyOn((mesh as THREE.Mesh).geometry, 'dispose'),
+    );
     const generatedMaterials = allMaterials(composition.root).filter(
       (material) => material instanceof THREE.MeshToonMaterial,
     );
@@ -448,7 +535,8 @@ describe('Brightvale production composition', () => {
 
     for (const dispose of generatedInstances)
       expect(dispose).toHaveBeenCalledTimes(1);
-    expect(groundDispose).toHaveBeenCalledTimes(1);
+    for (const dispose of groundDisposals)
+      expect(dispose).toHaveBeenCalledTimes(1);
     for (const dispose of toonDisposals)
       expect(dispose).toHaveBeenCalledTimes(1);
     for (const dispose of cityMaterialDisposals)

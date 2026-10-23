@@ -9,7 +9,11 @@ import { hideFrontPlatformCaps } from './platform';
 import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleAmbience } from './ambience';
-import type { BrightvaleRuntimeLayout } from './layout';
+import type {
+  BrightvaleGroundSurface,
+  BrightvaleRuntimeLayout,
+} from './layout';
+import { createAudienceGroundApron } from './audience-ground';
 import {
   createSilhouetteCrowd,
   createSilhouettePilotPlacements,
@@ -27,7 +31,7 @@ export interface BrightvaleComposition extends BrightvaleShellComposition {
 /** Rotated planar mapping keeps grass variation legible at grazing angles. */
 export const BRIGHTVALE_GROUND_UV = {
   city: {
-    repeatWorldUnits: 100,
+    repeatWorldUnits: 200,
     rotationRadians: Math.PI / 5,
     offset: [0.5, 0.5],
   },
@@ -157,12 +161,17 @@ export function createBrightvaleComposition(
       });
       if (texture) {
         material.map = texture;
-        material.emissiveMap = texture;
+        if (isCity && assets.groundTextures?.cityNormal) {
+          material.normalMap = assets.groundTextures.cityNormal;
+          // Deliberately legible relief; keep the canonical normal asset intact.
+          material.normalScale.setScalar(5);
+        }
         material.color.set(0xffffff);
-        material.emissive.set(isCity ? 0x78bf8f : 0xc5c1ec);
-        // A restrained texture-matched fill lifts the map from the dark toon
-        // ramp while the lit diffuse term still carries the existing shadows.
-        material.emissiveIntensity = isCity ? 0.38 : 0.42;
+        if (!isCity) {
+          material.emissiveMap = texture;
+          material.emissive.set(0xc5c1ec);
+          material.emissiveIntensity = 0.42;
+        }
         material.userData.brightvaleGround = isCity ? 'city' : 'plaza';
       }
       ownedSourceMaterials.add(material);
@@ -204,7 +213,10 @@ export function createBrightvaleComposition(
     const groundGroup = new THREE.Group();
     groundGroup.name = 'Brightvale.Ground';
     root.add(groundGroup);
-    for (const surface of layout.groundSurfaces) {
+    const addGround = (
+      surface: BrightvaleGroundSurface,
+      material: BrightvaleSurfaceMaterial,
+    ): void => {
       const geometry = new THREE.BufferGeometry();
       const isCityGround = surface.name === 'Review.Ground';
       const uv = isCityGround
@@ -231,19 +243,25 @@ export function createBrightvaleComposition(
       geometry.setIndex(surface.triangleIndices.flat());
       geometry.computeVertexNormals();
       generatedGeometries.add(geometry);
-      const sourceMaterial = [...ownedSourceMaterials][
-        layout.groundSurfaces.indexOf(surface)
-      ];
-      if (!sourceMaterial)
-        throw new Error(`Missing ground material for ${surface.name}`);
-      const mesh = new THREE.Mesh(
-        geometry,
-        appearance.materialFor(sourceMaterial),
-      );
+      const mesh = new THREE.Mesh(geometry, material);
       mesh.name = surface.name;
       mesh.matrixAutoUpdate = false;
       mesh.matrix.copy(surfaceMatrix);
       groundGroup.add(mesh);
+    };
+    const cityGround = layout.groundSurfaces.find(
+      (surface) => surface.name === 'Review.Ground',
+    );
+    for (const [index, surface] of layout.groundSurfaces.entries()) {
+      const sourceMaterial = [...ownedSourceMaterials][index];
+      if (!sourceMaterial)
+        throw new Error(`Missing ground material for ${surface.name}`);
+      const material = appearance.materialFor(sourceMaterial);
+      addGround(surface, material);
+      if (surface.name === 'Review.LocalGround.Circle' && cityGround) {
+        const apron = createAudienceGroundApron(surface, cityGround);
+        if (apron) addGround(apron, material);
+      }
     }
     setShadowParticipation(groundGroup, { cast: false, receive: true });
 
@@ -336,11 +354,7 @@ export function createBrightvaleComposition(
       throw new Error('Brightvale key light is required for scene shadows');
     fitDirectionalShadowCamera(
       key,
-      [
-        cityGroup,
-        playfield,
-        framingGroup,
-      ],
+      [cityGroup, playfield, framingGroup],
       groundGroup.children,
     );
 

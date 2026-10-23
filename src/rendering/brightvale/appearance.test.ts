@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { SceneStateProjection } from '../scene-state';
 import { createBrightvaleAppearance } from './appearance';
-import { windowAmbienceMultiplier, type BrightvaleAmbience } from './ambience';
+import {
+  projectBrightvaleAmbience,
+  windowAmbienceMultiplier,
+  type BrightvaleAmbience,
+} from './ambience';
 
 function sourceMaterial(
   role: string,
@@ -383,13 +387,24 @@ describe('Brightvale shared appearance', () => {
     roof.dispose();
   });
 
-  it('keeps borrowed ground maps and applies green/stone palette tints across modes', () => {
+  it('keeps city ground non-emissive across modes and preserves plaza emission', () => {
     const cityMap = new THREE.Texture();
+    const cityNormal = new THREE.Texture();
+    cityNormal.colorSpace = THREE.NoColorSpace;
     const city = sourceMaterial('ground_city');
     city.map = cityMap;
+    city.normalMap = cityNormal;
+    city.normalScale.set(2.3, 0.8);
     city.emissiveMap = cityMap;
     city.userData.brightvaleGround = 'city';
+    const otherCityNormal = new THREE.Texture();
+    const sameRoleCity = sourceMaterial('ground_city');
+    sameRoleCity.map = cityMap;
+    sameRoleCity.normalMap = otherCityNormal;
+    sameRoleCity.emissiveMap = cityMap;
+    sameRoleCity.userData.brightvaleGround = 'city';
     const { scene, root } = makeSourceScene(city);
+    root.add(new THREE.Mesh(new THREE.BoxGeometry(), sameRoleCity));
     const plazaMap = new THREE.Texture();
     const plaza = sourceMaterial('ground_plaza');
     plaza.map = plazaMap;
@@ -398,14 +413,29 @@ describe('Brightvale shared appearance', () => {
     root.add(new THREE.Mesh(new THREE.BoxGeometry(), plaza));
     const appearance = createBrightvaleAppearance(scene, [root]);
     const material = appearance.materialFor(city);
+    const otherMaterial = appearance.materialFor(sameRoleCity);
     const plazaMaterial = appearance.materialFor(plaza);
+    expect(otherMaterial).not.toBe(material);
+    expect(otherMaterial.normalMap).toBe(otherCityNormal);
     expect(material.map).toBe(cityMap);
-    expect(material.emissiveMap).toBe(cityMap);
+    expect(material.normalMap).toBe(cityNormal);
+    expect(material.normalMap?.colorSpace).toBe(THREE.NoColorSpace);
+    expect(material.normalScale.toArray()).toEqual([2.3, 0.8]);
+    expect(material.emissiveMap).toBeNull();
     expect(material.color.getHex()).toBe(0x77b78a);
-    expect(material.emissive.getHex()).toBe(0x78bf8f);
+    expect(material.emissive.getHex()).toBe(0x000000);
+    expect(material.emissiveIntensity).toBe(0);
     expect(plazaMaterial.map).toBe(plazaMap);
+    expect(plazaMaterial.emissiveMap).toBe(plazaMap);
     appearance.update(projection({ phase: 'twilight', transitionProgress: 1 }));
-    expect(material.emissive.getHex()).toBe(0x82c79b);
+    expect(material.emissive.getHex()).toBe(0x000000);
+    expect(material.emissiveIntensity).toBe(0);
+    expect(plazaMaterial.emissiveMap).toBe(plazaMap);
+    expect(
+      plazaMaterial.emissive.r +
+        plazaMaterial.emissive.g +
+        plazaMaterial.emissive.b,
+    ).toBeGreaterThan(0);
     expect(material.color.getHex()).toBe(0x77b78a);
     appearance.update(
       projection({
@@ -415,23 +445,85 @@ describe('Brightvale shared appearance', () => {
         radiantProgress: 0.5,
       }),
     );
-    expect(material.emissive.toArray()).toEqual(
-      new THREE.Color(0x82c79b).lerp(new THREE.Color(0xa5ca8b), 0.5).toArray(),
-    );
+    expect(material.emissive.getHex()).toBe(0x000000);
+    expect(material.emissiveIntensity).toBe(0);
     appearance.update(
       projection({ phase: 'twilight', victory: true, radiantProgress: 1 }),
     );
-    expect(material.emissive.getHex()).toBe(0xa5ca8b);
+    expect(material.emissive.getHex()).toBe(0x000000);
+    expect(material.emissiveIntensity).toBe(0);
+    expect(plazaMaterial.emissiveMap).toBe(plazaMap);
+    expect(
+      plazaMaterial.emissive.r +
+        plazaMaterial.emissive.g +
+        plazaMaterial.emissive.b,
+    ).toBeGreaterThan(0);
     expect(material.color.getHex()).toBe(0x77b78a);
     const dispose = vi.spyOn(cityMap, 'dispose');
     const plazaMapDispose = vi.spyOn(plazaMap, 'dispose');
+    const cityNormalDispose = vi.spyOn(cityNormal, 'dispose');
+    const otherCityNormalDispose = vi.spyOn(otherCityNormal, 'dispose');
     appearance.dispose();
     expect(dispose).not.toHaveBeenCalled();
     expect(plazaMapDispose).not.toHaveBeenCalled();
+    expect(cityNormalDispose).not.toHaveBeenCalled();
+    expect(otherCityNormalDispose).not.toHaveBeenCalled();
     cityMap.dispose();
+    cityNormal.dispose();
+    otherCityNormal.dispose();
     plazaMap.dispose();
     city.dispose();
+    sameRoleCity.dispose();
     plaza.dispose();
+  });
+
+  it('wires canopy time only to mapped city ground, freezes for reduced motion and releases owned materials once', () => {
+    const normal = new THREE.Texture();
+    const city = sourceMaterial('ground');
+    city.normalMap = normal;
+    city.userData.brightvaleGround = 'city';
+    const plaza = sourceMaterial('ground');
+    plaza.normalMap = normal;
+    plaza.userData.brightvaleGround = 'plaza';
+    const { scene, root, geometry } = makeSourceScene(city);
+    root.add(new THREE.Mesh(geometry, plaza));
+    const appearance = createBrightvaleAppearance(scene, [root]);
+    const state = projection();
+    // Materials can be requested after the first ambience update.
+    appearance.update(state, projectBrightvaleAmbience(state, 4, false));
+    const material = appearance.materialFor(city);
+    const shader = {
+      vertexShader: THREE.ShaderLib.toon.vertexShader,
+      fragmentShader: THREE.ShaderLib.toon.fragmentShader,
+      uniforms: {},
+    } as THREE.WebGLProgramParametersWithUniforms;
+    material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+    const time = shader.uniforms.brightvaleCanopyTime;
+    expect(time?.value).toBe(4);
+    expect(appearance.materialFor(plaza).onBeforeCompile).toBe(
+      THREE.Material.prototype.onBeforeCompile,
+    );
+    for (const sample of [4, 4, 9, 2]) {
+      appearance.update(state, projectBrightvaleAmbience(state, sample, false));
+      expect(time?.value).toBe(sample);
+    }
+    for (const sample of [5, 20]) {
+      appearance.update(state, projectBrightvaleAmbience(state, sample, true));
+      expect(time?.value).toBe(0);
+    }
+    appearance.update(state, projectBrightvaleAmbience(state, 9, false));
+    expect(time?.value).toBe(9);
+    const ownedDispose = vi.spyOn(material, 'dispose');
+    const textureDispose = vi.spyOn(normal, 'dispose');
+    appearance.dispose();
+    appearance.dispose();
+    expect(ownedDispose).toHaveBeenCalledTimes(1);
+    expect(textureDispose).not.toHaveBeenCalled();
+    expect(() => appearance.update(state)).toThrow('disposed');
+    normal.dispose();
+    city.dispose();
+    plaza.dispose();
+    geometry.dispose();
   });
 
   it('keeps pure-emission surfaces black-based while retaining their emission', () => {
