@@ -31,7 +31,7 @@ export interface BrightvaleComposition extends BrightvaleShellComposition {
 /** Rotated planar mapping keeps grass variation legible at grazing angles. */
 export const BRIGHTVALE_GROUND_UV = {
   city: {
-    repeatWorldUnits: 200,
+    repeatWorldUnits: 400,
     rotationRadians: Math.PI / 5,
     offset: [0.5, 0.5],
   },

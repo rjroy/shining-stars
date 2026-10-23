@@ -367,10 +367,8 @@ export function createBrightvaleAppearance(
         material.emissiveIntensity = emissiveIntensity * currentCityBrightness;
       }
       if (groundSurface) {
-        material.color.set(groundSurface === 'city' ? 0x77b78a : 0x33333f);
-        material.emissive.set(
-          groundSurface === 'city' ? 0x000000 : GROUND_EMISSIVE.audience.plaza,
-        );
+        material.color.set(groundSurface === 'city' ? 0x77b78a : 0x303060);
+        material.emissive.set(0x000000);
       }
       return material;
     },
