@@ -33,9 +33,9 @@ DEFAULT_CHART = PROJECT_ROOT / "src/game/mvp-chart.ts"
 DEFAULT_SONG_CONFIG = PROJECT_ROOT / "data/charts/song-authoring.json"
 DEFAULT_DIFFICULTY_PROFILES = PROJECT_ROOT / "data/charts/difficulty-profiles.json"
 DEFAULT_SONG_ID = "the-first-shining-star"
-DEFAULT_SOURCE_START = 107.1
-DEFAULT_DURATION = 65.8
-DEFAULT_BOUNDARY = 39.2
+DEFAULT_SOURCE_START = 0
+DEFAULT_DURATION = 100
+DEFAULT_BOUNDARY = 40
 DEFAULT_TWILIGHT_STRENGTH = 100
 DEFAULT_STRIDE = 2
 DEFAULT_MINIMUM_DELTA_MS = 64
@@ -43,7 +43,8 @@ ONSET_DEFAULTS = {"algorithm": "specflux", "minioi": 0.032, "threshold": 0.40, "
 ONSET_ALGORITHMS = {
     "default", "energy", "hfc", "complex", "phase", "specdiff", "kl", "mkl", "specflux"
 }
-DEFAULT_LANE_PATTERN = (0, 2, 1, 3)
+DEFAULT_LANE_PATTERN = (0, 1, 2, 3, 2, 1)
+DEFAULT_LANE_RULES = { "type": "pattern", "data": DEFAULT_LANE_PATTERN }
 DEFAULT_GENERATED_DIR = PROJECT_ROOT / "data/charts/generated"
 DEFAULT_ONSETS_DIR = PROJECT_ROOT / "data/charts/onsets"
 DEFAULT_PITCH_CACHE_DIR = PROJECT_ROOT / "data/charts/pitch-cache"
@@ -60,9 +61,11 @@ DIFFICULTY_AUTHORING = {
 MAX_INPUT_OFFSET_SECONDS = 0.2
 
 
-def _finite_number(value, name):
+def _finite_number(value, name, _default=None):
+    if value is None and not (_default is None):
+        return _default
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{name} must be a finite number")
+        raise ValueError(f"{name} must be a finite number {_default}")
     value = float(value)
     if not math.isfinite(value):
         raise ValueError(f"{name} must be a finite number")
@@ -216,11 +219,11 @@ parse_beats = parse_onsets
 
 def select_notes(
     onsets,
-    source_start=107.1,
-    duration=65.8,
-    boundary=39.2,
+    source_start=DEFAULT_SOURCE_START,
+    duration=DEFAULT_DURATION,
+    boundary=DEFAULT_BOUNDARY,
     stride=DEFAULT_STRIDE,
-    lane_pattern=(0, 2, 1, 3),
+    lane_pattern=DEFAULT_LANE_PATTERN,
     minimum_delta_ms=DEFAULT_MINIMUM_DELTA_MS,
     allowed_difficulties=("normal",),
 ):
@@ -300,9 +303,9 @@ def select_notes(
 
 def render_mvp_chart(
     notes,
-    source_start=107.1,
-    duration=65.8,
-    twilight_at=39.2,
+    source_start=DEFAULT_SOURCE_START,
+    duration=DEFAULT_DURATION,
+    twilight_at=DEFAULT_BOUNDARY,
     source_sha256="",
     twilight_strength=DEFAULT_TWILIGHT_STRENGTH,
     allowed_difficulties=("normal",),
@@ -401,9 +404,9 @@ def _validate_song_settings(song_id, settings):
     source = settings.get("source")
     if not isinstance(source, str) or not source.strip():
         raise ValueError(f"song {song_id!r} source must be a non-empty path")
-    start_time = _finite_number(settings.get("start_time"), "start_time")
-    twilight_time = _finite_number(settings.get("twilight_time"), "twilight_time")
-    duration = _finite_number(settings.get("duration"), "duration")
+    start_time = _finite_number(settings.get("start_time"), "start_time", DEFAULT_SOURCE_START)
+    twilight_time = _finite_number(settings.get("twilight_time"), "twilight_time", DEFAULT_BOUNDARY)
+    duration = _finite_number(settings.get("duration"), "duration", DEFAULT_DURATION)
     twilight_strength = _finite_number(
         settings.get("twilight_strength"), "twilight_strength"
     )
@@ -412,7 +415,7 @@ def _validate_song_settings(song_id, settings):
         settings.get("allowed_difficulties")
     )
     stride = settings.get("stride")
-    lane_rules = settings.get("lane_rules")
+    lane_rules = settings.get("lane_rules") or DEFAULT_LANE_RULES
     if start_time < 0:
         raise ValueError("start_time must be non-negative")
     if duration <= 0:
@@ -528,6 +531,9 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             raise ValueError(f"song {song_id!r} must specify a source path")
         _reject_song_level_lane_mapping(song_id, settings)
         _resolve_onset_recipe(song_id, settings)
+        settings["start_time"] = _finite_number(settings.get("start_time"), "start_time", DEFAULT_SOURCE_START)
+        settings["duration"] = _finite_number(settings.get("duration"), "duration", DEFAULT_DURATION)
+        settings["twilight_time"] = _finite_number(settings.get("twilight_time"), "twilight_time", DEFAULT_BOUNDARY)
         for name in ("start_time", "duration", "twilight_time"):
             value = _finite_number(settings.get(name), name)
             if value < 0 or (name != "start_time" and value <= 0) or value > 100:
@@ -536,6 +542,8 @@ def load_authoring_collection(path=DEFAULT_SONG_CONFIG):
             raise ValueError(f"song {song_id!r} excerpt exceeds source duration")
         if settings["twilight_time"] >= 100:
             raise ValueError(f"song {song_id!r} twilight_time must be below 100 percent")
+        if settings.get("laine_rules") is None:
+            settings["lane_rules"] = DEFAULT_LANE_RULES
         if not isinstance(settings.get("lane_rules"), dict) or settings["lane_rules"].get("type") != "pattern":
             raise ValueError(f"song {song_id!r} has invalid lane_rules")
         _validate_config(0, 1, 0.5, 1, settings["lane_rules"].get("data"))
@@ -982,9 +990,9 @@ def _bulk_run(args, runner):
 
 def _chart_config(args, song_id, settings):
     source_start, duration, boundary, lane_pattern = _validate_config(
-        settings["start_time"] if args.source_start is None else args.source_start,
-        settings["duration"] if args.duration is None else args.duration,
-        settings["twilight_time"] if args.boundary is None else args.boundary,
+        settings["start_time"] if args.source_start is DEFAULT_SOURCE_START else args.source_start,
+        settings["duration"] if args.duration is DEFAULT_DURATION else args.duration,
+        settings["twilight_time"] if args.boundary is DEFAULT_BOUNDARY else args.boundary,
         settings["stride"] if args.stride is None else args.stride,
         settings["lane_rules"]["data"],
     )

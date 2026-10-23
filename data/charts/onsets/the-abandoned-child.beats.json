@@ -942,7 +942,7 @@
     412.269379,
     413.718781
   ],
-  "pitch_analysis_key": "1e7720527de25ff14988eb49977b848d1db5980a9608918ee3e68f61be9f3223",
+  "pitch_analysis_key": "21825bf109a08dd3a909a31132f7879f017a6d8a4af79cf9f2c3d2fc9d426cba",
   "projection": {
     "profile_sha256": "a1571310427f6ff595a75847429d36aff3e179d4834ab3ce89bd9bdaefe96da0",
     "song": {
@@ -965,9 +965,11 @@
       "lane_rules": {
         "data": [
           0,
-          2,
           1,
-          3
+          2,
+          3,
+          2,
+          1
         ],
         "type": "pattern"
       },

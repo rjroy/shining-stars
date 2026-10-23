@@ -3,63 +3,63 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.519650655021834,
+      "baselineExtractedF0DirectionAgreement": 0.5414847161572053,
       "baselineHandCounts": [
         218,
         217
       ],
       "baselineLaneCounts": [
-        109,
-        109,
-        109,
-        108
+        73,
+        145,
+        145,
+        72
       ],
       "baselineLaneShares": [
-        0.25057471264367814,
-        0.25057471264367814,
-        0.25057471264367814,
-        0.2482758620689655
+        0.167816091954023,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.16551724137931034
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.8034934497816594,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7991266375545851,
       "candidateHandCounts": [
-        218,
-        217
+        219,
+        216
       ],
       "candidateLaneCounts": [
-        108,
+        109,
         110,
         109,
-        108
+        107
       ],
       "candidateLaneShares": [
-        0.2482758620689655,
+        0.25057471264367814,
         0.25287356321839083,
         0.25057471264367814,
-        0.2482758620689655
+        0.24597701149425288
       ],
       "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.375,
@@ -71,44 +71,44 @@
       "unknownPitchCount": 71
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.49702380952380953,
+      "baselineExtractedF0DirectionAgreement": 0.5029761904761905,
       "baselineHandCounts": [
         354,
         354
       ],
       "baselineLaneCounts": [
-        177,
-        177,
-        177,
-        177
+        118,
+        236,
+        236,
+        118
       ],
       "baselineLaneShares": [
-        0.25,
-        0.25,
-        0.25,
-        0.25
+        0.16666666666666666,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.16666666666666666
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7797619047619048,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7738095238095238,
       "candidateHandCounts": [
-        355,
-        353
+        357,
+        351
       ],
       "candidateLaneCounts": [
         179,
-        176,
+        178,
         177,
-        176
+        174
       ],
       "candidateLaneShares": [
         0.2528248587570621,
-        0.24858757062146894,
+        0.2514124293785311,
         0.25,
-        0.24858757062146894
+        0.2457627118644068
       ],
-      "candidateLongestLaneRun": 4,
-      "candidateWorstRolling32Concentration": 0.4375,
+      "candidateLongestLaneRun": 7,
+      "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 708,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 599,
@@ -117,43 +117,43 @@
       "unknownPitchCount": 109
     },
     "normal": {
-      "baselineExtractedF0DirectionAgreement": 0.4891304347826087,
+      "baselineExtractedF0DirectionAgreement": 0.5108695652173914,
       "baselineHandCounts": [
-        277,
-        277
-      ],
-      "baselineLaneCounts": [
-        139,
-        138,
-        139,
-        138
-      ],
-      "baselineLaneShares": [
-        0.2509025270758123,
-        0.2490974729241877,
-        0.2509025270758123,
-        0.2490974729241877
-      ],
-      "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7753623188405797,
-      "candidateHandCounts": [
         278,
         276
       ],
+      "baselineLaneCounts": [
+        93,
+        185,
+        184,
+        92
+      ],
+      "baselineLaneShares": [
+        0.16787003610108303,
+        0.33393501805054154,
+        0.33212996389891697,
+        0.16606498194945848
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7572463768115942,
+      "candidateHandCounts": [
+        277,
+        277
+      ],
       "candidateLaneCounts": [
         139,
-        139,
         138,
+        139,
         138
       ],
       "candidateLaneShares": [
         0.2509025270758123,
-        0.2509025270758123,
         0.2490974729241877,
+        0.2509025270758123,
         0.2490974729241877
       ],
-      "candidateLongestLaneRun": 4,
+      "candidateLongestLaneRun": 5,
       "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 554,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -163,7 +163,7 @@
       "unknownPitchCount": 93
     }
   },
-  "pitch_analysis_key": "414350bde6c043926fd68c338a038d5aa7746334c9c14a07df3b3c8a7d4a6ca6",
+  "pitch_analysis_key": "a1bf47273a1efc879198f90c99c3a5bfb73af6463430da9a4227913fc9a2b41e",
   "schema_version": 1,
   "song_id": "the-first-shining-star",
   "source_sha256": "c395916d92c8fc8b3bb329eff7eee83799ee3cd19b8e7d235fcd1fd88b65a0bc"

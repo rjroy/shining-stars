@@ -3,10 +3,6 @@
   "songs": {
     "beautiful-disaster": {
       "source": "data/music/Beautiful Disaster.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -15,10 +11,6 @@
     },
     "coal-makers-mistake": {
       "source": "data/music/Coal Maker's Mistake.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -27,10 +19,6 @@
     },
     "december-light": {
       "source": "data/music/December Light.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -39,10 +27,6 @@
     },
     "everythings-different-this-year": {
       "source": "data/music/Everything's Different This Year.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -51,12 +35,8 @@
     },
     "first-light-of-december": {
       "source": "data/music/First Light of December.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -65,10 +45,6 @@
     },
     "glitch-in-the-bell": {
       "source": "data/music/Glitch in the Bell.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -77,10 +53,6 @@
     },
     "grylas-lullaby": {
       "source": "data/music/Grýla's Lullaby.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -89,12 +61,8 @@
     },
     "hope-came-down": {
       "source": "data/music/Hope Came Down.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.15,
       "silence": -100,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -103,12 +71,8 @@
     },
     "hymn-of-the-breathing-rebellion": {
       "source": "data/music/Hymn of the Breathing Rebellion.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.5,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 352, "stride": 1 },
         "normal": { "minimum_delta": 224, "stride": 1 },
@@ -117,12 +81,8 @@
     },
     "the-eternal-march": {
       "source": "data/music/The Eternal March.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -131,12 +91,8 @@
     },
     "the-ferrymans-coin": {
       "source": "data/music/The Ferryman’s Coin.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -60,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -145,10 +101,6 @@
     },
     "the-first-shining-star": {
       "source": "data/music/The First Shining Star (Remastered).mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -157,10 +109,6 @@
     },
     "the-game": {
       "source": "data/music/The Game.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -169,10 +117,6 @@
     },
     "the-gravediggers-warning": {
       "source": "data/music/The Gravedigger’s Warning.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -181,12 +125,8 @@
     },
     "the-midnight-bells": {
       "source": "data/music/The Midnight Bells.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -195,12 +135,8 @@
     },
     "the-necromancers-duet": {
       "source": "data/music/The Necromancer’s Duet.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "silence": -40,
       "threshold": 0.4,
       "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -209,10 +145,6 @@
     },
     "the-prophets-transmission": {
       "source": "data/music/The Prophet's Transmission.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -221,12 +153,8 @@
     },
     "the-return-of-light": {
       "source": "data/music/The Return of Light.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -235,10 +163,6 @@
     },
     "the-smallest-light": {
       "source": "data/music/The Smallest Light.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -247,12 +171,8 @@
     },
     "the-star-that-followed-us": {
       "source": "data/music/The Star That Followed Us.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -261,10 +181,6 @@
     },
     "the-year-we-knew": {
       "source": "data/music/The Year We Knew.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -273,10 +189,6 @@
     },
     "twenty-seven-times": {
       "source": "data/music/Twenty Seven Times.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -285,12 +197,8 @@
     },
     "where-candles-meet-the-dark": {
       "source": "data/music/Where Candles Meet the Dark.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -90,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -299,10 +207,6 @@
     },
     "workshop-warriors": {
       "source": "data/music/Workshop Warriors.mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -311,13 +215,9 @@
     },
     "never-again": {
       "source": "data/music/Never Again (Remastered).mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "algorithm": "hfc",
       "threshold": 0.4,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -326,12 +226,8 @@
     },
     "the-abandoned-child": {
       "source": "data/music/The Abandoned Child (Remastered).mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -340,10 +236,6 @@
     },
     "the-commodity": {
       "source": "data/music/The Commodity (Remastered).mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -352,12 +244,8 @@
     },
     "the-last-true-performer": {
       "source": "data/music/The Last True Performer (Remastered).mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
       "threshold": 0.3,
       "silence": -80,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },
@@ -366,10 +254,6 @@
     },
     "the-rising-star": {
       "source": "data/music/The Rising Star (Remastered).mp3",
-      "start_time": 0,
-      "duration": 100,
-      "twilight_time": 40,
-      "lane_rules": { "type": "pattern", "data": [ 0, 2, 1, 3 ] },
       "difficulties": {
         "easy": { "minimum_delta": 384, "stride": 1 },
         "normal": { "minimum_delta": 256, "stride": 1 },

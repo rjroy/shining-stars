@@ -3,65 +3,65 @@
     "easy": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "hard": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     },
     "normal": {
       "adaptation_block_notes": 32,
       "lane_balance": 1,
-      "pitch_following": 2,
-      "repetition_avoidance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
       "wide_jump_avoidance": 0.5
     }
   },
   "mapper_version": "pitch-lanes-v1",
   "metrics": {
     "easy": {
-      "baselineExtractedF0DirectionAgreement": 0.5793650793650794,
+      "baselineExtractedF0DirectionAgreement": 0.5396825396825397,
       "baselineHandCounts": [
-        109,
-        109
+        110,
+        108
       ],
       "baselineLaneCounts": [
-        55,
-        54,
-        55,
-        54
+        37,
+        73,
+        72,
+        36
       ],
       "baselineLaneShares": [
-        0.25229357798165136,
-        0.24770642201834864,
-        0.25229357798165136,
-        0.24770642201834864
+        0.16972477064220184,
+        0.3348623853211009,
+        0.3302752293577982,
+        0.1651376146788991
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.753968253968254,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7222222222222222,
       "candidateHandCounts": [
         111,
         107
       ],
       "candidateLaneCounts": [
-        55,
-        56,
-        55,
-        52
+        54,
+        57,
+        54,
+        53
       ],
       "candidateLaneShares": [
-        0.25229357798165136,
-        0.25688073394495414,
-        0.25229357798165136,
-        0.23853211009174313
+        0.24770642201834864,
+        0.26146788990825687,
+        0.24770642201834864,
+        0.24311926605504589
       ],
-      "candidateLongestLaneRun": 3,
+      "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.375,
       "noteCount": 218,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -71,26 +71,26 @@
       "unknownPitchCount": 46
     },
     "hard": {
-      "baselineExtractedF0DirectionAgreement": 0.38974358974358975,
+      "baselineExtractedF0DirectionAgreement": 0.4205128205128205,
       "baselineHandCounts": [
         194,
         194
       ],
       "baselineLaneCounts": [
-        97,
-        97,
-        97,
-        97
+        65,
+        129,
+        129,
+        65
       ],
       "baselineLaneShares": [
-        0.25,
-        0.25,
-        0.25,
-        0.25
+        0.16752577319587628,
+        0.3324742268041237,
+        0.3324742268041237,
+        0.16752577319587628
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.7589743589743589,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7282051282051282,
       "candidateHandCounts": [
         194,
         194
@@ -107,8 +107,8 @@
         0.25257731958762886,
         0.24742268041237114
       ],
-      "candidateLongestLaneRun": 3,
-      "candidateWorstRolling32Concentration": 0.40625,
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.4375,
       "noteCount": 388,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
       "stablePitchCount": 304,
@@ -117,26 +117,26 @@
       "unknownPitchCount": 84
     },
     "normal": {
-      "baselineExtractedF0DirectionAgreement": 0.45625,
+      "baselineExtractedF0DirectionAgreement": 0.46875,
       "baselineHandCounts": [
-        156,
-        155
+        155,
+        156
       ],
       "baselineLaneCounts": [
-        78,
-        78,
-        78,
-        77
+        52,
+        103,
+        104,
+        52
       ],
       "baselineLaneShares": [
-        0.2508038585209003,
-        0.2508038585209003,
-        0.2508038585209003,
-        0.24758842443729903
+        0.16720257234726688,
+        0.3311897106109325,
+        0.33440514469453375,
+        0.16720257234726688
       ],
       "baselineLongestLaneRun": 1,
-      "baselineWorstRolling32Concentration": 0.25,
-      "candidateExtractedF0DirectionAgreement": 0.73125,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.71875,
       "candidateHandCounts": [
         156,
         155
@@ -144,16 +144,16 @@
       "candidateLaneCounts": [
         77,
         79,
-        78,
-        77
+        79,
+        76
       ],
       "candidateLaneShares": [
         0.24758842443729903,
         0.2540192926045016,
-        0.2508038585209003,
-        0.24758842443729903
+        0.2540192926045016,
+        0.24437299035369775
       ],
-      "candidateLongestLaneRun": 3,
+      "candidateLongestLaneRun": 4,
       "candidateWorstRolling32Concentration": 0.40625,
       "noteCount": 311,
       "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
@@ -163,7 +163,7 @@
       "unknownPitchCount": 73
     }
   },
-  "pitch_analysis_key": "3d90f74dedeadd512549c611a3aea2dd68236e23da25ea1ef9e156b63a512176",
+  "pitch_analysis_key": "23e2366f713c51c01df207cf648ac915b5e9bb90a2eeafce1332b943e6b7b123",
   "schema_version": 1,
   "song_id": "the-star-that-followed-us",
   "source_sha256": "8eb576a411def42a1a17bd01272a04e939c958c3b0eec034b3d126cd06614f5d"

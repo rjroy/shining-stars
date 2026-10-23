@@ -535,7 +535,7 @@
     224.558075,
     224.739548
   ],
-  "pitch_analysis_key": "821fbc981cc4cc456dc10f41ea7a0d45a75c71de44eebbe679cedbbef7e2d54a",
+  "pitch_analysis_key": "e05d2aab9c7ef968d160883c221aec2ee137e9b10ba34d7da5026f4ee21ddc64",
   "projection": {
     "profile_sha256": "a1571310427f6ff595a75847429d36aff3e179d4834ab3ce89bd9bdaefe96da0",
     "song": {
@@ -558,9 +558,11 @@
       "lane_rules": {
         "data": [
           0,
-          2,
           1,
-          3
+          2,
+          3,
+          2,
+          1
         ],
         "type": "pattern"
       },
