@@ -96,6 +96,7 @@ async function loadProductionAssets(): Promise<BrightvaleAssets> {
         city,
         cityNormal,
         plaza: new THREE.Texture(),
+        plazaNormal: new THREE.Texture(),
         dispose() {},
       };
     },
@@ -375,7 +376,10 @@ describe('Brightvale production composition', () => {
           true,
         );
       } else {
-        expect(material.normalMap).toBeNull();
+        const normalMap = loadedAssets?.groundTextures?.plazaNormal;
+        expect(material.normalMap).toBe(normalMap);
+        expect(normalMap?.colorSpace).toBe(THREE.NoColorSpace);
+        expect(normalMap?.repeat.toArray()).toEqual(material.map?.repeat.toArray());
       }
       if (surface.name === 'Review.Ground') {
         expect(material.emissiveMap).toBeNull();

@@ -58,6 +58,7 @@ export interface BrightvaleGroundTextures {
   readonly city: THREE.Texture;
   readonly cityNormal: THREE.Texture;
   readonly plaza: THREE.Texture;
+  readonly plazaNormal: THREE.Texture;
   dispose(): void;
 }
 

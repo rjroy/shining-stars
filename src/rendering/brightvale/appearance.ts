@@ -6,7 +6,7 @@ import {
   type BrightvaleAmbience,
 } from './ambience';
 import { attachWaterShimmer } from './water-shimmer';
-import { attachCanopySway } from './canopy-sway';
+import { attachCanopySway, attachPlazaSway } from './canopy-sway';
 
 /** Physical materials inherit MeshStandardMaterial; non-city surfaces remain Toon. */
 export type BrightvaleSurfaceMaterial =
@@ -146,6 +146,7 @@ export function createBrightvaleAppearance(
   const windowGroups = new Map<BrightvaleSurfaceMaterial, string>();
   const waterUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
   const canopyUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
+  const plazaUpdates: ((ambience: BrightvaleAmbience) => void)[] = [];
   const groundMaterials = new Map<THREE.MeshToonMaterial, 'city' | 'plaza'>();
   const hemisphere = new THREE.HemisphereLight(
     PRESETS.audience.sky,
@@ -232,6 +233,7 @@ export function createBrightvaleAppearance(
     currentAmbience = ambience;
     for (const updateWater of waterUpdates) updateWater(ambience);
     for (const updateCanopy of canopyUpdates) updateCanopy(ambience);
+    for (const updatePlaza of plazaUpdates) updatePlaza(ambience);
     for (const [material, baseline] of cityEmissionBaselines)
       material.emissiveIntensity =
         baseline *
@@ -358,6 +360,10 @@ export function createBrightvaleAppearance(
           const updateCanopy = attachCanopySway(material);
           canopyUpdates.push(updateCanopy);
           updateCanopy(currentAmbience);
+        } else if (groundSurface === 'plaza' && normalMap) {
+          const updatePlaza = attachPlazaSway(material);
+          plazaUpdates.push(updatePlaza);
+          updatePlaza(currentAmbience);
         }
       }
 

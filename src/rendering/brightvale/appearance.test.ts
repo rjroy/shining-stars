@@ -479,11 +479,12 @@ describe('Brightvale shared appearance', () => {
 
   it('wires canopy time only to mapped city ground, freezes for reduced motion and releases owned materials once', () => {
     const normal = new THREE.Texture();
+    const plazaNormal = new THREE.Texture();
     const city = sourceMaterial('ground');
     city.normalMap = normal;
     city.userData.brightvaleGround = 'city';
     const plaza = sourceMaterial('ground');
-    plaza.normalMap = normal;
+    plaza.normalMap = plazaNormal;
     plaza.userData.brightvaleGround = 'plaza';
     const { scene, root, geometry } = makeSourceScene(city);
     root.add(new THREE.Mesh(geometry, plaza));
@@ -500,27 +501,44 @@ describe('Brightvale shared appearance', () => {
     material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
     const time = shader.uniforms.brightvaleCanopyTime;
     expect(time?.value).toBe(4);
-    expect(appearance.materialFor(plaza).onBeforeCompile).toBe(
-      THREE.Material.prototype.onBeforeCompile,
+    const plazaMaterial = appearance.materialFor(plaza);
+    expect(plazaMaterial.normalMap).toBe(plazaNormal);
+    const plazaShader = {
+      vertexShader: THREE.ShaderLib.toon.vertexShader,
+      fragmentShader: THREE.ShaderLib.toon.fragmentShader,
+      uniforms: {},
+    } as THREE.WebGLProgramParametersWithUniforms;
+    plazaMaterial.onBeforeCompile(plazaShader, {} as THREE.WebGLRenderer);
+    const plazaTime = plazaShader.uniforms.brightvalePlazaTime;
+    expect(plazaTime?.value).toBe(2);
+    expect(plazaShader.fragmentShader).toContain('brightvalePlazaTime');
+    expect(plazaShader.fragmentShader).toContain(
+      '#include <gradientmap_pars_fragment>',
     );
+    expect(plazaShader.fragmentShader).not.toContain('brightvaleCanopyRelief');
     for (const sample of [4, 4, 9, 2]) {
       appearance.update(state, projectBrightvaleAmbience(state, sample, false));
       expect(time?.value).toBe(sample);
+      expect(plazaTime?.value).toBe(sample * 0.5);
     }
     for (const sample of [5, 20]) {
       appearance.update(state, projectBrightvaleAmbience(state, sample, true));
       expect(time?.value).toBe(0);
+      expect(plazaTime?.value).toBe(0);
     }
     appearance.update(state, projectBrightvaleAmbience(state, 9, false));
     expect(time?.value).toBe(9);
     const ownedDispose = vi.spyOn(material, 'dispose');
     const textureDispose = vi.spyOn(normal, 'dispose');
+    const plazaTextureDispose = vi.spyOn(plazaNormal, 'dispose');
     appearance.dispose();
     appearance.dispose();
     expect(ownedDispose).toHaveBeenCalledTimes(1);
     expect(textureDispose).not.toHaveBeenCalled();
+    expect(plazaTextureDispose).not.toHaveBeenCalled();
     expect(() => appearance.update(state)).toThrow('disposed');
     normal.dispose();
+    plazaNormal.dispose();
     city.dispose();
     plaza.dispose();
     geometry.dispose();
