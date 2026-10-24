@@ -1,9 +1,13 @@
 import './ui/styles.css';
+import {
+  advanceCosmeticClock,
+  animationFrameDeltaSeconds,
+} from './app/cosmetic-clock';
+import { createSaveStore } from './app/save-data';
 import { createBrowserAudioContextAdapter } from './audio/browser-audio';
 import { parseSongOutputVolume } from './audio/song-volume';
 import { getSongChart, SONG_CATALOG } from './catalog/catalog';
 import { createProgressionMembership } from './catalog/progression-catalog';
-import { createSaveStore } from './app/save-data';
 import type { ChartConfig } from './game/chart';
 import type { Difficulty } from './game/game-balance';
 import { projectGameplayFrame } from './rendering/gameplay-frame';
@@ -40,6 +44,7 @@ let activeChart: ChartConfig | null = null;
 let animationFrame = 0;
 let disposed = false;
 let elapsedSeconds = 0;
+let cosmeticAmbienceSeconds = 0;
 let previousFrameTime = 0;
 let sceneStatus: 'loading' | 'rendered' | 'suspended' | 'unavailable' =
   'loading';
@@ -172,6 +177,7 @@ function paintGameplay(
   const audioNow = performance?.snapshot().audioNow ?? 0;
   const status = scene.updateFrame({
     city: projectSceneState(controllerSnapshot, chart, reducedMotion),
+    ambienceTime: cosmeticAmbienceSeconds,
     gameplay: projectGameplayFrame(
       controllerSnapshot,
       chart,
@@ -512,6 +518,9 @@ function onWindowFocus(): void {
 }
 
 function onVisibilityChange(): void {
+  // RAF may be suspended in a hidden tab. Start a fresh visible interval so
+  // neither transport-side elapsed time nor cosmetic time includes that gap.
+  previousFrameTime = 0;
   if (document.visibilityState === 'hidden') {
     syncTouchPresentation();
     performance?.pause();
@@ -525,13 +534,19 @@ function onReducedMotionChange(event: MediaQueryListEvent): void {
 
 function frame(now: number): void {
   if (disposed) return;
-  const delta =
-    previousFrameTime === 0
-      ? 0
-      : Math.min(0.05, (now - previousFrameTime) / 1000);
+  const delta = animationFrameDeltaSeconds(previousFrameTime, now);
   previousFrameTime = now;
   if (!reducedMotion) elapsedSeconds += delta;
   const gameplayActive = isGameplayActive();
+  cosmeticAmbienceSeconds = advanceCosmeticClock(
+    cosmeticAmbienceSeconds,
+    delta,
+    {
+      active: gameplayActive,
+      visible: document.visibilityState !== 'hidden',
+      reducedMotion,
+    },
+  );
   if (!gameplayActive) {
     paintObservatory();
   } else if (performance !== null) {

@@ -13,6 +13,7 @@ import {
 import { BRIGHTVALE_RUNTIME_LAYOUT } from './brightvale/layout';
 import * as brightvaleProjection from './brightvale/projection';
 import * as silhouetteCrowd from './brightvale/silhouette-crowd';
+import type { BrightvaleAmbience } from './brightvale/ambience';
 import type { BrightvaleShellComposition } from './brightvale/scene-shell';
 import type {
   BrightvaleRendererStatus,
@@ -799,6 +800,83 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
     expect(bundleDispose).toHaveBeenCalledTimes(1);
     expect(bundle.skyTextures?.dispose).toHaveBeenCalledTimes(1);
     expect(disposalOrder).toEqual(['composition', 'assets', 'renderer']);
+  });
+
+  it('advances rendered ambience independently of fixed gameplay and transition state', async () => {
+    installSceneGlobals();
+    const renderer = makeRenderer();
+    const assets = makeAssets();
+    const captured: Array<{
+      state: SceneStateProjection;
+      ambience: BrightvaleAmbience | undefined;
+    }> = [];
+    const updateAppearance = vi.fn(
+      (state: SceneStateProjection, ambience?: BrightvaleAmbience) => {
+        captured.push({ state, ambience });
+      },
+    );
+    const scene = makeScene(makeHost(), vi.fn(), () => renderer.renderer, {
+      loadAssets: vi.fn(async () => assets),
+      createComposition: vi.fn(() => ({
+        root: new THREE.Group(),
+        updateAppearance,
+        dispose: vi.fn(),
+      })),
+    });
+    if (scene === null) throw new Error('scene did not initialize');
+    try {
+      const fixedCity: SceneStateProjection = {
+        ...city,
+        phase: 'twilight',
+        victory: true,
+        transitionProgress: 0.4,
+        radiantProgress: 0.3,
+        twilightConsumed: true,
+      };
+      const gameplay = {
+        ...makeFrame().gameplay,
+        transportTime: 42,
+        playing: true,
+      };
+      const frame = (ambienceTime: number, reducedMotion = false) => ({
+        city: fixedCity,
+        ambienceTime,
+        gameplay: { ...gameplay, reducedMotion },
+      });
+
+      expect(scene.updateFrame(frame(6))).toBe('loading');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(scene.updateFrame(frame(6))).toBe('rendered');
+      const gameplayCamera = renderer.calls[0]?.camera;
+      if (gameplayCamera === undefined)
+        throw new Error('gameplay camera was not rendered');
+      const cameraPosition = gameplayCamera.position.clone();
+      const firstAmbience = captured.at(-1)?.ambience;
+
+      expect(scene.updateFrame(frame(12))).toBe('rendered');
+      const secondAmbience = captured.at(-1)?.ambience;
+      expect(gameplay.transportTime).toBe(42);
+      expect(gameplayCamera.position.toArray()).toEqual(cameraPosition.toArray());
+      expect(captured.map(({ state }) => [
+        state.transitionProgress,
+        state.radiantProgress,
+        state.twilightConsumed,
+      ])).toEqual([[0.4, 0.3, true], [0.4, 0.3, true]]);
+      expect(firstAmbience?.time).toBe(6);
+      expect(secondAmbience?.time).toBe(12);
+      expect(secondAmbience?.cloudGradeColor).not.toEqual(
+        firstAmbience?.cloudGradeColor,
+      );
+
+      expect(scene.updateFrame(frame(12, true))).toBe('rendered');
+      const reducedAmbience = captured.at(-1)?.ambience;
+      expect(reducedAmbience?.time).toBe(0);
+      expect(scene.updateFrame(frame(12, true))).toBe('rendered');
+      expect(captured.at(-1)?.ambience).toEqual(reducedAmbience);
+    } finally {
+      scene.destroy();
+    }
   });
 
   it('initializes Observatory directly through one renderer and shared sky', async () => {
