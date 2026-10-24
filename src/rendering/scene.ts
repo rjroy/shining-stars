@@ -51,6 +51,8 @@ export interface BrightvaleScene {
   updateFrame(frame: {
     readonly city: SceneStateProjection;
     readonly gameplay: GameplayFrame;
+    /** Cosmetic ambience clock; gameplay transport remains authoritative elsewhere. */
+    readonly ambienceTime?: number;
   }): BrightvaleRendererStatus;
   updateObservatoryFrame(frame: {
     readonly width: number;
@@ -108,6 +110,7 @@ export interface BrightvaleSceneDependencies {
 interface FrameState {
   readonly city: SceneStateProjection;
   readonly gameplay: GameplayFrame;
+  readonly ambienceTime?: number;
 }
 
 interface OverlayLabel {
@@ -793,7 +796,7 @@ export function createBrightvaleScene(
     if (!composition.projection.usable) return;
     const ambience = projectBrightvaleAmbience(
       frame.city,
-      frame.gameplay.transportTime,
+      frame.ambienceTime ?? frame.gameplay.transportTime,
       frame.gameplay.reducedMotion,
     );
     composition.current.updateAppearance?.(frame.city, ambience);
