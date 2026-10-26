@@ -43,149 +43,187 @@ async function waitFor<T>(
   throw new Error(`Timed out waiting for ${label}.`);
 }
 
+interface BrowserHarnessResources {
+  browser: ChildProcess | undefined;
+  devServer: Awaited<ReturnType<typeof createServer>> | undefined;
+  socket: WebSocket | undefined;
+  profile: string | undefined;
+}
+
+interface BrowserHarness {
+  url: string;
+  command(
+    method: string,
+    params?: Record<string, unknown>,
+  ): Promise<Record<string, any>>;
+  evaluate(expression: string): Promise<any>;
+  click(selector: string): Promise<void>;
+}
+
+async function createBrowserHarness(
+  resources: BrowserHarnessResources,
+  songVolume: string,
+  profilePrefix: string,
+): Promise<BrowserHarness> {
+  const chromium = process.env.CHROMIUM_BIN ?? '/usr/bin/chromium';
+  await access(chromium);
+  const profile = await mkdtemp(path.join(scratchParent, profilePrefix));
+  resources.profile = profile;
+  const vitePort = await freePort();
+  const debugPort = await freePort();
+  const server = await createServer({
+    configFile: false,
+    root: process.cwd(),
+    define: { 'import.meta.env.VITE_SONG_VOLUME': JSON.stringify(songVolume) },
+    server: { host: '127.0.0.1', port: vitePort, strictPort: true },
+  });
+  resources.devServer = server;
+  await server.listen();
+  resources.browser = spawn(
+    chromium,
+    [
+      '--headless=new',
+      '--mute-audio',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--remote-allow-origins=*',
+      `--remote-debugging-port=${debugPort}`,
+      `--user-data-dir=${profile}`,
+      'about:blank',
+    ],
+    { stdio: 'ignore' },
+  );
+  const targets = await waitFor(async () => {
+    const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
+    return response.ok
+      ? ((await response.json()) as {
+          type: string;
+          webSocketDebuggerUrl: string;
+        }[])
+      : false;
+  }, 'Chromium DevTools');
+  const page = targets.find((target) => target.type === 'page');
+  if (page === undefined) throw new Error('Chromium did not expose a page.');
+  const socket = new WebSocket(page.webSocketDebuggerUrl);
+  resources.socket = socket;
+  await new Promise<void>((resolve, reject) => {
+    socket.addEventListener('open', () => resolve(), { once: true });
+    socket.addEventListener(
+      'error',
+      () => reject(new Error('CDP connection failed.')),
+      { once: true },
+    );
+  });
+  let nextId = 0;
+  const pending = new Map<
+    number,
+    { resolve(value: Record<string, any>): void; reject(error: Error): void }
+  >();
+  socket.addEventListener('message', (event) => {
+    const message = JSON.parse(String(event.data)) as {
+      id?: number;
+      result?: Record<string, any>;
+      error?: { message: string };
+    };
+    if (message.id === undefined) return;
+    const request = pending.get(message.id);
+    if (request === undefined) return;
+    pending.delete(message.id);
+    if (message.error !== undefined)
+      request.reject(new Error(message.error.message));
+    else request.resolve(message.result ?? {});
+  });
+  const command = (method: string, params: Record<string, unknown> = {}) => {
+    const id = ++nextId;
+    socket.send(JSON.stringify({ id, method, params }));
+    return new Promise<Record<string, any>>((resolve, reject) =>
+      pending.set(id, { resolve, reject }),
+    );
+  };
+  const evaluate = async (expression: string): Promise<any> => {
+    const result = await command('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+      userGesture: true,
+    });
+    if (result.exceptionDetails !== undefined)
+      throw new Error(
+        result.exceptionDetails.exception?.description ??
+          result.exceptionDetails.text ??
+          'Page evaluation failed.',
+      );
+    return result.result?.value;
+  };
+  const click = async (selector: string): Promise<void> => {
+    const rect = await waitFor(
+      async () =>
+        (await evaluate(
+          `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled||e.getClientRects().length===0||getComputedStyle(e).visibility==='hidden')return false;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
+        )) || false,
+      `visible control ${selector}`,
+    );
+    await command('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: rect.x,
+      y: rect.y,
+    });
+    await command('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x: rect.x,
+      y: rect.y,
+      button: 'left',
+      clickCount: 1,
+    });
+    await command('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: rect.x,
+      y: rect.y,
+      button: 'left',
+      clickCount: 1,
+    });
+  };
+  return { url: `http://127.0.0.1:${vitePort}/`, command, evaluate, click };
+}
+
 describe('real app Observatory-to-gameplay integration', () => {
-  let browser: ChildProcess | undefined;
-  let devServer: Awaited<ReturnType<typeof createServer>> | undefined;
-  let socket: WebSocket | undefined;
-  let profile: string | undefined;
+  const resources: BrowserHarnessResources = {
+    browser: undefined,
+    devServer: undefined,
+    socket: undefined,
+    profile: undefined,
+  };
 
   afterEach(async () => {
-    socket?.close();
-    socket = undefined;
-    if (browser !== undefined && browser.exitCode === null) {
-      browser.kill('SIGTERM');
+    resources.socket?.close();
+    resources.socket = undefined;
+    if (resources.browser !== undefined && resources.browser.exitCode === null) {
+      resources.browser.kill('SIGTERM');
       await Promise.race([
-        new Promise<void>((resolve) => browser?.once('exit', () => resolve())),
+        new Promise<void>((resolve) =>
+          resources.browser?.once('exit', () => resolve()),
+        ),
         new Promise<void>((resolve) => setTimeout(resolve, 3000)),
       ]);
-      if (browser.exitCode === null) browser.kill('SIGKILL');
+      if (resources.browser.exitCode === null)
+        resources.browser.kill('SIGKILL');
     }
-    browser = undefined;
-    await devServer?.close();
-    devServer = undefined;
-    if (profile !== undefined)
-      await rm(profile, { recursive: true, force: true });
-    profile = undefined;
+    resources.browser = undefined;
+    await resources.devServer?.close();
+    resources.devServer = undefined;
+    if (resources.profile !== undefined)
+      await rm(resources.profile, { recursive: true, force: true });
+    resources.profile = undefined;
   });
 
   it('keeps browsing audio-free, pairs the chosen song, and returns from loading and gameplay', async () => {
-    const chromium = process.env.CHROMIUM_BIN ?? '/usr/bin/chromium';
-    await access(chromium);
-    profile = await mkdtemp(path.join(scratchParent, 'observatory-main-'));
-    const vitePort = await freePort();
-    const debugPort = await freePort();
-    devServer = await createServer({
-      configFile: false,
-      root: process.cwd(),
-      define: { 'import.meta.env.VITE_SONG_VOLUME': JSON.stringify('0') },
-      server: { host: '127.0.0.1', port: vitePort, strictPort: true },
-    });
-    await devServer.listen();
-    browser = spawn(
-      chromium,
-      [
-        '--headless=new',
-        '--mute-audio',
-        '--no-sandbox',
-        '--disable-dev-shm-usage',
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--remote-allow-origins=*',
-        `--remote-debugging-port=${debugPort}`,
-        `--user-data-dir=${profile}`,
-        'about:blank',
-      ],
-      { stdio: 'ignore' },
+    const { url, command, evaluate, click } = await createBrowserHarness(
+      resources,
+      '0',
+      'observatory-main-',
     );
-    const targets = await waitFor(async () => {
-      const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
-      return response.ok
-        ? ((await response.json()) as {
-            type: string;
-            webSocketDebuggerUrl: string;
-          }[])
-        : false;
-    }, 'Chromium DevTools');
-    const page = targets.find((target) => target.type === 'page');
-    if (page === undefined) throw new Error('Chromium did not expose a page.');
-    socket = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise<void>((resolve, reject) => {
-      socket!.addEventListener('open', () => resolve(), { once: true });
-      socket!.addEventListener(
-        'error',
-        () => reject(new Error('CDP connection failed.')),
-        { once: true },
-      );
-    });
-    let nextId = 0;
-    const pending = new Map<
-      number,
-      { resolve(value: Record<string, any>): void; reject(error: Error): void }
-    >();
-    socket.addEventListener('message', (event) => {
-      const message = JSON.parse(String(event.data)) as {
-        id?: number;
-        result?: Record<string, any>;
-        error?: { message: string };
-      };
-      if (message.id === undefined) return;
-      const request = pending.get(message.id);
-      if (request === undefined) return;
-      pending.delete(message.id);
-      if (message.error !== undefined)
-        request.reject(new Error(message.error.message));
-      else request.resolve(message.result ?? {});
-    });
-    const command = (method: string, params: Record<string, unknown> = {}) => {
-      const id = ++nextId;
-      socket!.send(JSON.stringify({ id, method, params }));
-      return new Promise<Record<string, any>>((resolve, reject) =>
-        pending.set(id, { resolve, reject }),
-      );
-    };
-    const evaluate = async (expression: string): Promise<any> => {
-      const result = await command('Runtime.evaluate', {
-        expression,
-        awaitPromise: true,
-        returnByValue: true,
-        userGesture: true,
-      });
-      if (result.exceptionDetails !== undefined)
-        throw new Error(
-          result.exceptionDetails.exception?.description ??
-            result.exceptionDetails.text ??
-            'Page evaluation failed.',
-        );
-      return result.result?.value;
-    };
-    const click = async (selector: string): Promise<void> => {
-      const rect = await waitFor(
-        async () =>
-          (await evaluate(
-            `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled||e.getClientRects().length===0||getComputedStyle(e).visibility==='hidden')return false;e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
-          )) || false,
-        `visible control ${selector}`,
-      );
-      await command('Input.dispatchMouseEvent', {
-        type: 'mouseMoved',
-        x: rect.x,
-        y: rect.y,
-      });
-      await command('Input.dispatchMouseEvent', {
-        type: 'mousePressed',
-        x: rect.x,
-        y: rect.y,
-        button: 'left',
-        clickCount: 1,
-      });
-      await command('Input.dispatchMouseEvent', {
-        type: 'mouseReleased',
-        x: rect.x,
-        y: rect.y,
-        button: 'left',
-        clickCount: 1,
-      });
-    };
     const screenshot = async (name: string): Promise<void> => {
       const result = await command('Page.captureScreenshot', {
         format: 'png',
@@ -292,7 +330,7 @@ describe('real app Observatory-to-gameplay integration', () => {
       deviceScaleFactor: 1,
       mobile: false,
     });
-    await command('Page.navigate', { url: `http://127.0.0.1:${vitePort}/` });
+    await command('Page.navigate', { url });
     await waitFor(
       async () =>
         (await evaluate(
@@ -971,123 +1009,11 @@ describe('real app Observatory-to-gameplay integration', () => {
   }, 300_000);
 
   it('applies a nonzero environment multiplier to the chosen user volume without native playback', async () => {
-    const chromium = process.env.CHROMIUM_BIN ?? '/usr/bin/chromium';
-    await access(chromium);
-    profile = await mkdtemp(path.join(scratchParent, 'music-volume-main-'));
-    const vitePort = await freePort();
-    const debugPort = await freePort();
-    devServer = await createServer({
-      configFile: false,
-      root: process.cwd(),
-      define: { 'import.meta.env.VITE_SONG_VOLUME': JSON.stringify('0.5') },
-      server: { host: '127.0.0.1', port: vitePort, strictPort: true },
-    });
-    await devServer.listen();
-    browser = spawn(
-      chromium,
-      [
-        '--headless=new',
-        '--mute-audio',
-        '--no-sandbox',
-        '--disable-dev-shm-usage',
-        '--no-first-run',
-        '--no-default-browser-check',
-        '--remote-allow-origins=*',
-        `--remote-debugging-port=${debugPort}`,
-        `--user-data-dir=${profile}`,
-        'about:blank',
-      ],
-      { stdio: 'ignore' },
+    const { url, command, evaluate, click } = await createBrowserHarness(
+      resources,
+      '0.5',
+      'music-volume-main-',
     );
-    const targets = await waitFor(async () => {
-      const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
-      return response.ok
-        ? ((await response.json()) as {
-            type: string;
-            webSocketDebuggerUrl: string;
-          }[])
-        : false;
-    }, 'Chromium DevTools for nonzero music volume');
-    const page = targets.find((target) => target.type === 'page');
-    if (page === undefined) throw new Error('Chromium did not expose a page.');
-    socket = new WebSocket(page.webSocketDebuggerUrl);
-    await new Promise<void>((resolve, reject) => {
-      socket!.addEventListener('open', () => resolve(), { once: true });
-      socket!.addEventListener(
-        'error',
-        () => reject(new Error('CDP connection failed.')),
-        { once: true },
-      );
-    });
-    let nextId = 0;
-    const pending = new Map<
-      number,
-      { resolve(value: Record<string, any>): void; reject(error: Error): void }
-    >();
-    socket.addEventListener('message', (event) => {
-      const message = JSON.parse(String(event.data)) as {
-        id?: number;
-        result?: Record<string, any>;
-        error?: { message: string };
-      };
-      if (message.id === undefined) return;
-      const request = pending.get(message.id);
-      if (request === undefined) return;
-      pending.delete(message.id);
-      if (message.error !== undefined)
-        request.reject(new Error(message.error.message));
-      else request.resolve(message.result ?? {});
-    });
-    const command = (method: string, params: Record<string, unknown> = {}) => {
-      const id = ++nextId;
-      socket!.send(JSON.stringify({ id, method, params }));
-      return new Promise<Record<string, any>>((resolve, reject) =>
-        pending.set(id, { resolve, reject }),
-      );
-    };
-    const evaluate = async (expression: string): Promise<any> => {
-      const result = await command('Runtime.evaluate', {
-        expression,
-        awaitPromise: true,
-        returnByValue: true,
-        userGesture: true,
-      });
-      if (result.exceptionDetails !== undefined)
-        throw new Error(
-          result.exceptionDetails.exception?.description ??
-            result.exceptionDetails.text ??
-            'Page evaluation failed.',
-        );
-      return result.result?.value;
-    };
-    const click = async (selector: string): Promise<void> => {
-      const rect = await waitFor(
-        async () =>
-          (await evaluate(
-            `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled||e.getClientRects().length===0)return false;const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
-          )) || false,
-        `visible control ${selector}`,
-      );
-      await command('Input.dispatchMouseEvent', {
-        type: 'mouseMoved',
-        x: rect.x,
-        y: rect.y,
-      });
-      await command('Input.dispatchMouseEvent', {
-        type: 'mousePressed',
-        x: rect.x,
-        y: rect.y,
-        button: 'left',
-        clickCount: 1,
-      });
-      await command('Input.dispatchMouseEvent', {
-        type: 'mouseReleased',
-        x: rect.x,
-        y: rect.y,
-        button: 'left',
-        clickCount: 1,
-      });
-    };
 
     await command('Page.enable');
     await command('Runtime.enable');
@@ -1141,7 +1067,7 @@ describe('real app Observatory-to-gameplay integration', () => {
       deviceScaleFactor: 1,
       mobile: false,
     });
-    await command('Page.navigate', { url: `http://127.0.0.1:${vitePort}/` });
+    await command('Page.navigate', { url });
     await waitFor(
       async () =>
         await evaluate(
