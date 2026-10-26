@@ -39,7 +39,6 @@ const saveStore = createSaveStore();
 const songRatings = saveStore.songRatings;
 const progressionMembership = createProgressionMembership(SONG_CATALOG);
 const audioPreferences = createAudioPreferencesStore();
-let musicVolume = audioPreferences.read();
 const songVolumeMultiplier = parseSongOutputVolume(
   import.meta.env.VITE_SONG_VOLUME,
 );
@@ -65,10 +64,10 @@ function effectiveSongVolume(state: MusicVolumeState): number {
 }
 
 function onMusicVolumeChange(state: MusicVolumeState): void {
-  musicVolume = audioPreferences.write(state);
-  activeAudioAdapter?.setOutputVolume(effectiveSongVolume(musicVolume));
-  observatory.setMusicVolume(musicVolume);
-  gameplay?.setMusicVolume(musicVolume);
+  const current = audioPreferences.write(state);
+  activeAudioAdapter?.setOutputVolume(effectiveSongVolume(current));
+  observatory.setMusicVolume(current);
+  gameplay?.setMusicVolume(current);
 }
 
 function touchEligibility() {
@@ -286,7 +285,7 @@ function onPlay(request: {
       },
     },
     {
-      musicVolume,
+      musicVolume: audioPreferences.read(),
       onMusicVolumeChange,
     },
   );
@@ -328,7 +327,7 @@ function beginSelectedPerformance(): void {
         const context = new window.AudioContext();
         const adapter = createBrowserAudioContextAdapter(
           context,
-          effectiveSongVolume(musicVolume),
+          effectiveSongVolume(audioPreferences.read()),
         );
         activeAudioAdapter = adapter;
         return adapter;
@@ -615,7 +614,7 @@ const observatory = createObservatoryUI(
     saveStore,
     getSongRating: (songId) => songRatings.get(songId),
     getRatingNotice: () => songRatings.snapshot().notice,
-    musicVolume,
+    musicVolume: audioPreferences.read(),
     onMusicVolumeChange,
   },
 );
