@@ -3,6 +3,7 @@ import {
   advanceCosmeticClock,
   animationFrameDeltaSeconds,
 } from './app/cosmetic-clock';
+import { createAudioPreferencesStore } from './app/audio-preferences';
 import { createSaveStore } from './app/save-data';
 import { createBrowserAudioContextAdapter } from './audio/browser-audio';
 import { parseSongOutputVolume } from './audio/song-volume';
@@ -16,6 +17,7 @@ import { loadBrightvaleGameplayAssets } from './rendering/brightvale/silhouette-
 import { projectSceneState } from './rendering/scene-state';
 import { createObservatoryUI } from './ui/observatory-ui';
 import { createGameUI, type GameUI } from './ui/ui';
+import type { MusicVolumeState } from './ui/music-volume-control';
 import { ensureExperienceShell } from './ui/experience-shell';
 import {
   createPerformanceCoordinator,
@@ -36,8 +38,14 @@ let scene: BrightvaleScene | null = null;
 const saveStore = createSaveStore();
 const songRatings = saveStore.songRatings;
 const progressionMembership = createProgressionMembership(SONG_CATALOG);
+const audioPreferences = createAudioPreferencesStore();
+let musicVolume = audioPreferences.read();
+const songVolumeMultiplier = parseSongOutputVolume(
+  import.meta.env.VITE_SONG_VOLUME,
+);
 let gameplay: GameUI | null = null;
 let performance: PerformanceCoordinator | null = null;
+let activeAudioAdapter: { setOutputVolume(volume: number): void } | null = null;
 let activeSongId: string | null = null;
 let activeDifficulty: Difficulty | null = null;
 let activeChart: ChartConfig | null = null;
@@ -51,6 +59,17 @@ let sceneStatus: 'loading' | 'rendered' | 'suspended' | 'unavailable' =
 let returning = false;
 const coarsePointerQuery = window.matchMedia('(any-pointer: coarse)');
 let windowFocused = true;
+
+function effectiveSongVolume(state: MusicVolumeState): number {
+  return (state.muted ? 0 : state.volume) * songVolumeMultiplier;
+}
+
+function onMusicVolumeChange(state: MusicVolumeState): void {
+  musicVolume = audioPreferences.write(state);
+  activeAudioAdapter?.setOutputVolume(effectiveSongVolume(musicVolume));
+  observatory.setMusicVolume(musicVolume);
+  gameplay?.setMusicVolume(musicVolume);
+}
 
 function touchEligibility() {
   return getTouchGameplayEligibility({
@@ -199,6 +218,7 @@ async function returnToBrowser(): Promise<void> {
   try {
     const previous = performance;
     performance = null;
+    activeAudioAdapter = null;
     if (previous !== null) await previous.returnToBrowser();
     gameplay?.destroy();
     gameplay = null;
@@ -233,34 +253,43 @@ function onPlay(request: {
   activeSongId = song.id;
   activeDifficulty = request.difficulty;
   activeChart = getSongChart(song, request.difficulty);
-  gameplay = createGameUI(applicationRoot, song, activeChart, {
-    start: () => beginSelectedPerformance(),
-    resume: () => {
-      if (performance === null) return;
-      syncTouchPresentation();
-      void performance.resume().then(publishPerformanceState);
+  gameplay = createGameUI(
+    applicationRoot,
+    song,
+    activeChart,
+    {
+      start: () => beginSelectedPerformance(),
+      resume: () => {
+        if (performance === null) return;
+        syncTouchPresentation();
+        void performance.resume().then(publishPerformanceState);
+      },
+      restart: () => {
+        if (performance === null) return;
+        syncTouchPresentation();
+        void performance.restart().then(publishPerformanceState);
+      },
+      returnToBrowser: () => void returnToBrowser(),
+      onRendererRetry: retryRenderer,
+      onLaneDown: (lane) => {
+        performance?.laneDown(lane);
+      },
+      onLaneUp: (lane) => {
+        performance?.laneUp(lane);
+      },
+      onPause: () => {
+        performance?.pause();
+        publishPerformanceState();
+      },
+      onOrientationBlocked: () => {
+        performance?.setGameplayAllowed(false);
+      },
     },
-    restart: () => {
-      if (performance === null) return;
-      syncTouchPresentation();
-      void performance.restart().then(publishPerformanceState);
+    {
+      musicVolume,
+      onMusicVolumeChange,
     },
-    returnToBrowser: () => void returnToBrowser(),
-    onRendererRetry: retryRenderer,
-    onLaneDown: (lane) => {
-      performance?.laneDown(lane);
-    },
-    onLaneUp: (lane) => {
-      performance?.laneUp(lane);
-    },
-    onPause: () => {
-      performance?.pause();
-      publishPerformanceState();
-    },
-    onOrientationBlocked: () => {
-      performance?.setGameplayAllowed(false);
-    },
-  });
+  );
   gameplay.setRendererStatus(
     sceneStatus,
     sceneStatus === 'unavailable' ? RENDERER_ERROR : undefined,
@@ -297,10 +326,12 @@ function beginSelectedPerformance(): void {
         if (typeof window.AudioContext !== 'function')
           throw new Error('This browser does not provide Web Audio playback.');
         const context = new window.AudioContext();
-        return createBrowserAudioContextAdapter(
+        const adapter = createBrowserAudioContextAdapter(
           context,
-          parseSongOutputVolume(import.meta.env.VITE_SONG_VOLUME),
+          effectiveSongVolume(musicVolume),
         );
+        activeAudioAdapter = adapter;
+        return adapter;
       },
       fetchAudio: async (url, signal) => {
         const response = await fetch(url, { signal });
@@ -584,6 +615,8 @@ const observatory = createObservatoryUI(
     saveStore,
     getSongRating: (songId) => songRatings.get(songId),
     getRatingNotice: () => songRatings.snapshot().notice,
+    musicVolume,
+    onMusicVolumeChange,
   },
 );
 createRenderer();
@@ -612,6 +645,7 @@ function dispose(): void {
   coarsePointerQuery.removeEventListener('change', onTouchEnvironmentChange);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   reducedMotionQuery.removeEventListener('change', onReducedMotionChange);
+  activeAudioAdapter = null;
   scene?.destroy();
   scene = null;
   gameplay?.destroy();

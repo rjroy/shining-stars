@@ -9,6 +9,10 @@ import type { ControllerSnapshot } from '../game/controller';
 // parses its REAL markup. It supplies events/capture bookkeeping, never input
 // policy. Browser geometry, native capture and trusted touch remain untested.
 class TestElement extends EventTarget {
+  constructor(readonly tagName = 'div') {
+    super();
+  }
+
   dataset: Record<string, string> = {};
   attributes = new Map<string, string>();
   children: TestElement[] = [];
@@ -45,9 +49,9 @@ class TestElement extends EventTarget {
   };
   set innerHTML(value: string) {
     this.children = [];
-    for (const match of value.matchAll(/<[a-z][\w-]*\b([^>]*)>/gi)) {
-      const element = new TestElement();
-      for (const attribute of match[1].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) {
+    for (const match of value.matchAll(/<([a-z][\w-]*)\b([^>]*)>/gi)) {
+      const element = new TestElement(match[1]);
+      for (const attribute of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) {
         element.setAttribute(attribute[1], attribute[2] ?? '');
       }
       this.append(element);
@@ -77,6 +81,7 @@ class TestElement extends EventTarget {
           this.attributes.has(name) &&
           (value === undefined || this.attributes.get(name) === value),
       );
+    if (selector === this.tagName) return true;
     if (selector.startsWith('.'))
       return this.className.split(' ').includes(selector.slice(1));
     return false;

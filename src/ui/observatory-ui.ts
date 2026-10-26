@@ -27,6 +27,11 @@ import { createUnlockDialog } from './unlock-dialog';
 import { createSaveDataDialog } from './save-data-dialog';
 import type { SongRating } from '../catalog/song-ratings';
 import { ensureExperienceShell } from './experience-shell';
+import {
+  createMusicVolumeControl,
+  type MusicVolumeOptions,
+  type MusicVolumeState,
+} from './music-volume-control';
 import type { BrightvaleRendererStatus } from '../rendering/brightvale/viewport';
 import {
   createBrowsePreferenceStore,
@@ -45,7 +50,7 @@ export interface ObservatoryUIActions {
   readonly onRendererRetry?: () => void;
 }
 
-export interface ObservatoryUIOptions {
+export interface ObservatoryUIOptions extends MusicVolumeOptions {
   readonly saveStore?: SaveStore;
   readonly getSongRating?: (songId: string) => SongRating | null;
   readonly getRatingNotice?: () => string | null;
@@ -71,6 +76,7 @@ export interface ObservatorySelectionSnapshot {
 }
 
 export interface ObservatoryUI {
+  setMusicVolume(state: MusicVolumeState): void;
   refreshSavedData(): void;
   getSelectionSnapshot(): ObservatorySelectionSnapshot;
   getViewportSize(): { readonly width: number; readonly height: number };
@@ -257,7 +263,11 @@ export function createObservatoryUI(
           <span class="wordmark-copy"><strong>Shining Stars</strong><small>Observatory</small></span>
         </div>
         <div class="observatory-save-utility"><span class="observatory-credits" data-credits></span>
-        <button class="observatory-save-entry" type="button" data-action="save-data">Save data</button></div>
+        <button class="observatory-save-entry" type="button" data-action="save-data">Save data</button>
+        <div class="observatory-music-utility">
+          <button class="observatory-save-entry observatory-music-entry" type="button" data-music-toggle aria-expanded="false" aria-controls="observatory-music">Music</button>
+          <div class="observatory-music-panel" id="observatory-music" data-music-panel hidden><div data-music-control></div></div>
+        </div></div>
         <nav class="observatory-tools" aria-label="Song navigation">
           <button class="observatory-nav-button is-active" type="button" data-action="all-songs">All Songs</button>
           <label class="observatory-search">
@@ -350,6 +360,27 @@ export function createObservatoryUI(
     </div>`;
 
   shell.activate('observatory');
+
+  const musicToggle = root.querySelector<HTMLButtonElement>(
+    '[data-music-toggle]',
+  )!;
+  const musicPanel = root.querySelector<HTMLElement>('[data-music-panel]')!;
+  const musicControl = createMusicVolumeControl(
+    root.querySelector<HTMLElement>('[data-music-control]')!,
+    options,
+  );
+  function closeMusic(restoreFocus = false): void {
+    if (musicPanel.hidden) return;
+    musicPanel.hidden = true;
+    musicToggle.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) musicToggle.focus();
+  }
+  function onMusicToggle(): void {
+    const open = musicPanel.hidden;
+    musicPanel.hidden = !open;
+    musicToggle.setAttribute('aria-expanded', String(open));
+  }
+  musicToggle.addEventListener('click', onMusicToggle);
 
   const searchInput = root.querySelector<HTMLInputElement>('[data-search]')!;
   const overview = root.querySelector<HTMLElement>(
@@ -1170,6 +1201,12 @@ export function createObservatoryUI(
   }
 
   function onKeyDown(event: KeyboardEvent): void {
+    if (event.key === escapeKey && !musicPanel.hidden) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeMusic(true);
+      return;
+    }
     if (event.key !== escapeKey || screen !== 'browser') return;
     const target = event.target;
     if (
@@ -1182,8 +1219,10 @@ export function createObservatoryUI(
   }
 
   function onDocumentClick(event: MouseEvent): void {
-    if (!filtersOpen && !sortOpen) return;
     const path = event.composedPath();
+    if (!path.includes(musicPanel) && !path.includes(musicToggle))
+      closeMusic(musicPanel.contains(root.ownerDocument.activeElement));
+    if (!filtersOpen && !sortOpen) return;
     const toggle = root.querySelector('[data-action="toggle-filters"]');
     const sortPanel = root.querySelector('[data-sort-panel]')!;
     const sortToggle = root.querySelector('[data-action="toggle-sort"]')!;
@@ -1207,6 +1246,7 @@ export function createObservatoryUI(
   render();
 
   return {
+    setMusicVolume: musicControl.setState,
     refreshSavedData,
     getSelectionSnapshot: snapshot,
     getViewportSize() {
@@ -1267,6 +1307,8 @@ export function createObservatoryUI(
     destroy() {
       if (disposed) return;
       disposed = true;
+      musicControl.destroy();
+      musicToggle.removeEventListener('click', onMusicToggle);
       saveDialog?.destroy();
       unlockDialog?.destroy();
       root.removeEventListener('click', onClick);

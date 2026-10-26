@@ -201,7 +201,90 @@ describe('real app Observatory-to-gameplay integration', () => {
     await command('Page.enable');
     await command('Runtime.enable');
     await command('Page.addScriptToEvaluateOnNewDocument', {
-      source: `(()=>{const Native=window.AudioContext;window.__audioContextCount=0;window.__audioRequests=[];window.__holdAudio=false;window.__frameClearSamples=[];window.__frameClearCount=0;window.__insideAppFrame=false;if(Native)window.AudioContext=new Proxy(Native,{construct(target,args){window.__audioContextCount++;return Reflect.construct(target,args)}});const nativeFetch=window.fetch.bind(window);window.fetch=(input,init={})=>{const url=String(input);if(/\\.mp3(?:$|\\?)/i.test(url)){window.__audioRequests.push(url);if(window.__holdAudio)return new Promise((resolve,reject)=>{const signal=init.signal;if(signal?.aborted){reject(new DOMException('Aborted','AbortError'));return}signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true})})}return nativeFetch(input,init)};for(const proto of new Set([window.WebGLRenderingContext?.prototype,window.WebGL2RenderingContext?.prototype])){if(!proto||!Object.prototype.hasOwnProperty.call(proto,'clear'))continue;const clear=proto.clear;proto.clear=function(...args){if(window.__insideAppFrame)window.__frameClearCount++;return clear.apply(this,args)}}const nativeRaf=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=(callback)=>nativeRaf((now)=>{window.__insideAppFrame=true;window.__frameClearCount=0;try{callback(now)}finally{window.__insideAppFrame=false;if(document.querySelector('[data-experience-screen=gameplay]')?.hidden===false){window.__frameClearSamples.push(window.__frameClearCount);if(window.__frameClearSamples.length>40)window.__frameClearSamples.shift()}}})})()`,
+      source: `(() => {
+        const NativeAudioContext = window.AudioContext;
+        window.__audioContextCount = 0;
+        window.__audioResumeCalls = 0;
+        window.__sourceStartCalls = 0;
+        window.__musicGainTargets = [];
+        window.__audioRequests = [];
+        window.__holdAudio = false;
+        window.__frameClearSamples = [];
+        window.__frameClearCount = 0;
+        window.__insideAppFrame = false;
+        if (NativeAudioContext) {
+          window.AudioContext = new Proxy(NativeAudioContext, {
+            construct(target, args) {
+              window.__audioContextCount++;
+              const context = Reflect.construct(target, args);
+              const resume = context.resume.bind(context);
+              context.resume = (...resumeArgs) => {
+                window.__audioResumeCalls++;
+                return resume(...resumeArgs);
+              };
+              const createGain = context.createGain.bind(context);
+              context.createGain = () => {
+                const node = createGain();
+                const parameter = node.gain;
+                const setTargetAtTime = parameter.setTargetAtTime.bind(parameter);
+                parameter.setTargetAtTime = (targetValue, startTime, timeConstant) => {
+                  window.__musicGainTargets.push(targetValue);
+                  return setTargetAtTime(targetValue, startTime, timeConstant);
+                };
+                return node;
+              };
+              return context;
+            },
+          });
+        }
+        const sourcePrototype = window.AudioBufferSourceNode?.prototype;
+        if (sourcePrototype) {
+          const start = sourcePrototype.start;
+          sourcePrototype.start = function (...args) {
+            window.__sourceStartCalls++;
+            return start.apply(this, args);
+          };
+        }
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = (input, init = {}) => {
+          const url = String(input);
+          if (/\\.mp3(?:$|\\?)/i.test(url)) {
+            window.__audioRequests.push(url);
+            if (window.__holdAudio)
+              return new Promise((resolve, reject) => {
+                const signal = init.signal;
+                if (signal?.aborted) {
+                  reject(new DOMException('Aborted', 'AbortError'));
+                  return;
+                }
+                signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+              });
+          }
+          return nativeFetch(input, init);
+        };
+        for (const proto of new Set([window.WebGLRenderingContext?.prototype, window.WebGL2RenderingContext?.prototype])) {
+          if (!proto || !Object.prototype.hasOwnProperty.call(proto, 'clear')) continue;
+          const clear = proto.clear;
+          proto.clear = function (...args) {
+            if (window.__insideAppFrame) window.__frameClearCount++;
+            return clear.apply(this, args);
+          };
+        }
+        const nativeRaf = window.requestAnimationFrame.bind(window);
+        window.requestAnimationFrame = (callback) => nativeRaf((now) => {
+          window.__insideAppFrame = true;
+          window.__frameClearCount = 0;
+          try {
+            callback(now);
+          } finally {
+            window.__insideAppFrame = false;
+            if (document.querySelector('[data-experience-screen=gameplay]')?.hidden === false) {
+              window.__frameClearSamples.push(window.__frameClearCount);
+              if (window.__frameClearSamples.length > 40) window.__frameClearSamples.shift();
+            }
+          }
+        });
+      })()`,
     });
     await command('Emulation.setDeviceMetricsOverride', {
       width: 1440,
@@ -238,6 +321,114 @@ describe('real app Observatory-to-gameplay integration', () => {
     ).toBe(true);
     expect(await evaluate('window.__audioContextCount')).toBe(0);
     expect(await evaluate('window.__audioRequests')).toEqual([]);
+    const musicControlReport = await evaluate(`(() => {
+      const saveButton = document.querySelector('[data-action="save-data"]');
+      const utility = saveButton?.closest('.observatory-save-utility');
+      const disclosure = [...(utility?.querySelectorAll('button[aria-expanded], summary') ?? [])]
+        .find((element) => /^music$/i.test(element.textContent?.trim() ?? ''));
+      return {
+        disclosure: disclosure !== undefined,
+        besideSaveData: disclosure !== undefined && utility?.contains(saveButton) === true,
+        slider: (() => {
+          const range = document.querySelector('input[type="range"][aria-label="Music volume"]');
+          return !!range && range.min === '0' && range.max === '100';
+        })(),
+        muteButton: [...document.querySelectorAll('button')].some((button) => /^mute\\b/i.test(button.getAttribute('aria-label') ?? button.textContent?.trim() ?? '')),
+      };
+    })()`);
+    expect(musicControlReport).toEqual({
+      disclosure: true,
+      besideSaveData: true,
+      slider: true,
+      muteButton: true,
+    });
+    const volumePersistence = await evaluate(`(() => {
+      const utility = document.querySelector('.observatory-save-utility');
+      const disclosure = [...(utility?.querySelectorAll('button[aria-expanded], summary') ?? [])]
+        .find((element) => /^music$/i.test(element.textContent?.trim() ?? ''));
+      disclosure?.click();
+      const slider = document.querySelector('input[type="range"][aria-label="Music volume"]');
+      const setVolume = (value) => {
+        if (!slider) return;
+        slider.value = String(value);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        slider.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      const findMute = (unmute) => [...document.querySelectorAll('button')].find((button) => {
+        const name = button.getAttribute('aria-label') ?? button.textContent?.trim() ?? '';
+        return unmute ? /^unmute\\b/i.test(name) : /^mute\\b/i.test(name);
+      });
+      const savedBefore = localStorage.getItem('shining-stars.save');
+      setVolume(42);
+      findMute(false)?.click();
+      const muted = JSON.parse(localStorage.getItem('shining-stars.audio-preferences') ?? 'null');
+      findMute(true)?.click();
+      const unmuted = JSON.parse(localStorage.getItem('shining-stars.audio-preferences') ?? 'null');
+      setVolume(0);
+      const sliderMuted = JSON.parse(localStorage.getItem('shining-stars.audio-preferences') ?? 'null');
+      setVolume(42);
+      const sliderRestored = JSON.parse(localStorage.getItem('shining-stars.audio-preferences') ?? 'null');
+      return {
+        muted,
+        unmuted,
+        sliderMuted,
+        sliderRestored,
+        percentageOutput: [...(utility?.querySelectorAll('output') ?? [])]
+          .some((output) => output.textContent?.trim() === '42%'),
+        progressSaveUnchanged: localStorage.getItem('shining-stars.save') === savedBefore,
+      };
+    })()`);
+    expect(volumePersistence).toMatchObject({
+      muted: {
+        version: 1,
+        preferences: { volume: 0, muted: true, lastAudibleVolume: 0.42 },
+      },
+      unmuted: {
+        version: 1,
+        preferences: { volume: 0.42, muted: false, lastAudibleVolume: 0.42 },
+      },
+      sliderMuted: {
+        version: 1,
+        preferences: { volume: 0, muted: true, lastAudibleVolume: 0.42 },
+      },
+      sliderRestored: {
+        version: 1,
+        preferences: { volume: 0.42, muted: false, lastAudibleVolume: 0.42 },
+      },
+      percentageOutput: true,
+      progressSaveUnchanged: true,
+    });
+    await evaluate('window.__oldMusicPreferencesDocument = true');
+    await command('Page.reload', { ignoreCache: true });
+    await waitFor(
+      async () =>
+        (await evaluate('window.__oldMusicPreferencesDocument === undefined')) ||
+        false,
+      'new document after music preference reload',
+    );
+    await waitFor(
+      async () =>
+        await evaluate(
+          "document.querySelector('.observatory-app')?.isConnected === true && document.querySelector('[data-renderer-notice]')?.hidden === true",
+        ),
+      'mounted Observatory and rendered scene after music preference reload',
+    );
+    await evaluate(`(() => {
+      const utility = document.querySelector('.observatory-save-utility');
+      [...(utility?.querySelectorAll('button[aria-expanded], summary') ?? [])]
+        .find((element) => /^music$/i.test(element.textContent?.trim() ?? ''))?.click();
+    })()`);
+    await waitFor(
+      async () =>
+        (await evaluate(
+          "document.querySelector('input[type=range][aria-label=\\\"Music volume\\\"]')?.value === '42'",
+        )) || false,
+      'reloaded music volume control state',
+    );
+    const reloadedVolume = await evaluate(
+      "document.querySelector('input[type=range][aria-label=\\\"Music volume\\\"]')?.value ?? null",
+    );
+    expect(reloadedVolume).toBe('42');
     const fallbackReport = await evaluate(
       `(async()=>{const {createObservatoryUI}=await import('/src/ui/observatory-ui.ts');const {createSaveStore}=await import('/src/app/save-data.ts');const favorites=createSaveStore(null).favorites;const host=document.createElement('div');host.id='unillustrated-collection-test';host.style.cssText='position:fixed;left:-10000px;top:0;width:700px;height:700px';document.body.append(host);const catalog={songs:[],collections:[{id:'new-curation',title:'New Curation',sortOrder:10,songIds:[]}],chartIssues:new Map()};const ui=createObservatoryUI(host,catalog,{onPlay:()=>{}},favorites);const anchor=host.querySelector('[data-action=select-collection]');const accessibleLabel=anchor.getAttribute('aria-label');const anchorHasArtwork=!!anchor.querySelector('img[data-collection-artwork]');const anchorFallback=!!anchor.querySelector('.song-glyph');const detailFallback=!!host.querySelector('.detail-emblem > svg');anchor.click();const selected=host.querySelector('.detail-emblem').dataset.collectionId;host.querySelector('[data-action=browse-collection]').click();const empty=host.querySelector('.song-list-empty')?.textContent;ui.destroy();host.remove();return {accessibleLabel,anchorHasArtwork,anchorFallback,detailFallback,selected,empty}})()`,
     );
@@ -635,6 +826,47 @@ describe('real app Observatory-to-gameplay integration', () => {
         ),
       'gameplay pause',
     );
+    const pauseVolumeReport = await evaluate(`(() => {
+      const panel = document.querySelector('[data-panel="pause"]');
+      const slider = panel?.querySelector('input[type="range"][aria-label="Music volume"]');
+      const muteButton = [...(panel?.querySelectorAll('button') ?? [])]
+        .find((button) => /mute/i.test(button.getAttribute('aria-label') ?? button.textContent ?? ''));
+      const initialValue = slider?.value ?? null;
+      const before = {
+        contexts: window.__audioContextCount,
+        resumes: window.__audioResumeCalls,
+        sourceStarts: window.__sourceStartCalls,
+      };
+      if (slider) {
+        slider.value = '64';
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        slider.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      const stored = JSON.parse(localStorage.getItem('shining-stars.audio-preferences') ?? 'null');
+      return {
+        initialValue,
+        currentValue: slider?.value ?? null,
+        muteButton: muteButton !== undefined,
+        latestEffectiveGain: window.__musicGainTargets.at(-1) ?? null,
+        unchangedContext: window.__audioContextCount === before.contexts,
+        unchangedResumeCount: window.__audioResumeCalls === before.resumes,
+        unchangedSourceStarts: window.__sourceStartCalls === before.sourceStarts,
+        stored,
+      };
+    })()`);
+    expect(pauseVolumeReport).toMatchObject({
+      initialValue: '42',
+      currentValue: '64',
+      muteButton: true,
+      latestEffectiveGain: 0,
+      unchangedContext: true,
+      unchangedResumeCount: true,
+      unchangedSourceStarts: true,
+      stored: {
+        version: 1,
+        preferences: { volume: 0.64, muted: false, lastAudibleVolume: 0.64 },
+      },
+    });
     const pausedTime = await evaluate(
       "document.querySelector('[data-time]')?.textContent",
     );
@@ -737,4 +969,210 @@ describe('real app Observatory-to-gameplay integration', () => {
       ),
     ).toBe(0);
   }, 300_000);
+
+  it('applies a nonzero environment multiplier to the chosen user volume without native playback', async () => {
+    const chromium = process.env.CHROMIUM_BIN ?? '/usr/bin/chromium';
+    await access(chromium);
+    profile = await mkdtemp(path.join(scratchParent, 'music-volume-main-'));
+    const vitePort = await freePort();
+    const debugPort = await freePort();
+    devServer = await createServer({
+      configFile: false,
+      root: process.cwd(),
+      define: { 'import.meta.env.VITE_SONG_VOLUME': JSON.stringify('0.5') },
+      server: { host: '127.0.0.1', port: vitePort, strictPort: true },
+    });
+    await devServer.listen();
+    browser = spawn(
+      chromium,
+      [
+        '--headless=new',
+        '--mute-audio',
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--remote-allow-origins=*',
+        `--remote-debugging-port=${debugPort}`,
+        `--user-data-dir=${profile}`,
+        'about:blank',
+      ],
+      { stdio: 'ignore' },
+    );
+    const targets = await waitFor(async () => {
+      const response = await fetch(`http://127.0.0.1:${debugPort}/json/list`);
+      return response.ok
+        ? ((await response.json()) as {
+            type: string;
+            webSocketDebuggerUrl: string;
+          }[])
+        : false;
+    }, 'Chromium DevTools for nonzero music volume');
+    const page = targets.find((target) => target.type === 'page');
+    if (page === undefined) throw new Error('Chromium did not expose a page.');
+    socket = new WebSocket(page.webSocketDebuggerUrl);
+    await new Promise<void>((resolve, reject) => {
+      socket!.addEventListener('open', () => resolve(), { once: true });
+      socket!.addEventListener(
+        'error',
+        () => reject(new Error('CDP connection failed.')),
+        { once: true },
+      );
+    });
+    let nextId = 0;
+    const pending = new Map<
+      number,
+      { resolve(value: Record<string, any>): void; reject(error: Error): void }
+    >();
+    socket.addEventListener('message', (event) => {
+      const message = JSON.parse(String(event.data)) as {
+        id?: number;
+        result?: Record<string, any>;
+        error?: { message: string };
+      };
+      if (message.id === undefined) return;
+      const request = pending.get(message.id);
+      if (request === undefined) return;
+      pending.delete(message.id);
+      if (message.error !== undefined)
+        request.reject(new Error(message.error.message));
+      else request.resolve(message.result ?? {});
+    });
+    const command = (method: string, params: Record<string, unknown> = {}) => {
+      const id = ++nextId;
+      socket!.send(JSON.stringify({ id, method, params }));
+      return new Promise<Record<string, any>>((resolve, reject) =>
+        pending.set(id, { resolve, reject }),
+      );
+    };
+    const evaluate = async (expression: string): Promise<any> => {
+      const result = await command('Runtime.evaluate', {
+        expression,
+        awaitPromise: true,
+        returnByValue: true,
+        userGesture: true,
+      });
+      if (result.exceptionDetails !== undefined)
+        throw new Error(
+          result.exceptionDetails.exception?.description ??
+            result.exceptionDetails.text ??
+            'Page evaluation failed.',
+        );
+      return result.result?.value;
+    };
+    const click = async (selector: string): Promise<void> => {
+      const rect = await waitFor(
+        async () =>
+          (await evaluate(
+            `(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled||e.getClientRects().length===0)return false;const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
+          )) || false,
+        `visible control ${selector}`,
+      );
+      await command('Input.dispatchMouseEvent', {
+        type: 'mouseMoved',
+        x: rect.x,
+        y: rect.y,
+      });
+      await command('Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        x: rect.x,
+        y: rect.y,
+        button: 'left',
+        clickCount: 1,
+      });
+      await command('Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        x: rect.x,
+        y: rect.y,
+        button: 'left',
+        clickCount: 1,
+      });
+    };
+
+    await command('Page.enable');
+    await command('Runtime.enable');
+    await command('Page.addScriptToEvaluateOnNewDocument', {
+      source: `(() => {
+        window.__musicGainNodes = [];
+        class FakeSource extends EventTarget {
+          buffer = null;
+          connect() {}
+          start() {}
+          stop() { this.dispatchEvent(new Event('ended')); }
+          disconnect() {}
+        }
+        class FakeAudioContext extends EventTarget {
+          currentTime = 0;
+          state = 'suspended';
+          destination = {};
+          createGain() {
+            const node = {
+              gain: {
+                value: 1,
+                cancelScheduledValues() {},
+                setTargetAtTime(value) { this.value = value; },
+              },
+              connect() {},
+            };
+            window.__musicGainNodes.push(node);
+            return node;
+          }
+          createBufferSource() { return new FakeSource(); }
+          async decodeAudioData() { return { duration: 300, sampleRate: 48000 }; }
+          async resume() {
+            this.state = 'running';
+            this.dispatchEvent(new Event('statechange'));
+          }
+          async close() {
+            this.state = 'closed';
+            this.dispatchEvent(new Event('statechange'));
+          }
+        }
+        window.AudioContext = FakeAudioContext;
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => /\\.mp3(?:$|\\?)/i.test(String(input))
+          ? Promise.resolve(new Response(new ArrayBuffer(8)))
+          : nativeFetch(input, init);
+      })()`,
+    });
+    await command('Emulation.setDeviceMetricsOverride', {
+      width: 1280,
+      height: 800,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await command('Page.navigate', { url: `http://127.0.0.1:${vitePort}/` });
+    await waitFor(
+      async () =>
+        await evaluate(
+          "document.querySelector('.observatory-app')?.isConnected === true && document.querySelector('[data-renderer-notice]')?.hidden === true",
+        ),
+      'rendered Observatory with mocked audio context',
+    );
+
+    await click('[data-action="all-songs"]');
+    await click(
+      'button[data-action="select-song"][data-song-id="never-again"]',
+    );
+    await click('[data-music-toggle]');
+    await evaluate(`(() => {
+      const slider = document.querySelector('input[type="range"][aria-label="Music volume"]');
+      slider.value = '40';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`);
+    expect(
+      await evaluate(
+        "document.querySelector('input[type=range][aria-label=\\\"Music volume\\\"]')?.value",
+      ),
+    ).toBe('40');
+    await click('button[data-action="play"]');
+    await waitFor(
+      async () =>
+        (await evaluate('window.__musicGainNodes.length === 1')) || false,
+      'music output gain node creation',
+    );
+    expect(
+      await evaluate('window.__musicGainNodes[0].gain.value'),
+    ).toBeCloseTo(0.2);
+  }, 120_000);
 });

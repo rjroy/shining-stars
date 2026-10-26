@@ -943,6 +943,61 @@ button:disabled {
   flex-wrap: wrap;
   gap: 10px;
 }
+.music-volume-control {
+  min-width: 0;
+}
+.music-volume-heading,
+.music-volume-inputs {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.music-volume-heading {
+  justify-content: space-between;
+  margin-bottom: 4px;
+  color: var(--cream);
+  font-size: 0.86rem;
+}
+.music-volume-heading output {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.music-volume-inputs input[type='range'] {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.music-volume-inputs input[type='range']:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.music-volume-mute {
+  flex: 0 0 auto;
+  min-width: 78px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 224 167 / 58%);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--cream);
+  font-size: 0.82rem;
+}
+.music-volume-mute:hover {
+  background: rgb(255 255 255 / 8%);
+}
+.pause-music-controls {
+  margin: 22px 0 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+#pause-title:focus {
+  outline: none;
+}
 .loading-message,
 .error-message {
   margin: 12px 0 0 !important;
