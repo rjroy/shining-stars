@@ -1314,12 +1314,14 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
   });
 
   it.each([
-    ['desktop', 1280, 757],
-    ['narrow', 900, 700],
-    ['portrait', 390, 844],
+    ['desktop', 1280, 757, null],
+    ['narrow', 900, 700, null],
+    ['portrait', 390, 844, null],
+    ['compact shifted frustum', 320, 200, 0],
+    ['shifted frustum with bottom HUD', 640, 360, 180],
   ] as const)(
     'centers lane lettering on the front face without changing its styling or projection at %s',
-    async (_name, width, height) => {
+    async (_name, width, height, bottomHud) => {
       const fillText = vi.fn();
       const context = {
         clearRect: vi.fn(),
@@ -1334,10 +1336,25 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           getContext: () => context,
         }),
       });
-      const rendered = await renderWithProductionAssets(
-        makeLayout(width, height),
-      );
+      const layout: BrightvaleViewportLayout =
+        bottomHud === null
+          ? makeLayout(width, height)
+          : {
+              width,
+              height,
+              persistentHudExclusions: bottomHud
+                ? [{ x: 0, y: height - bottomHud, width, height: bottomHud }]
+                : [],
+              labels: {
+                time: { x: 0, y: 0, width: 0, height: 0 },
+                countdown: { x: 0, y: 0, width: 0, height: 0 },
+                legend: { x: 0, y: 0, width: 0, height: 0 },
+                feedback: { x: 0, y: 0, width: 0, height: 0 },
+              },
+            };
+      const rendered = await renderWithProductionAssets(layout);
       try {
+        expect(rendered.status).toBe('rendered');
         if (rendered.camera === undefined)
           throw new Error('missing gameplay camera');
         const camera = rendered.camera;
@@ -1358,13 +1375,10 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
             width) /
           6;
         const centerOffset = Math.min(9, lanePitch / 16);
-        if (width === 390) {
-          expect(centerOffset).toBeGreaterThan(0);
-          expect(centerOffset).toBeLessThan(6);
-        } else {
-          expect(centerOffset).toBeGreaterThan(7);
-          expect(centerOffset).toBeLessThanOrEqual(9);
-        }
+        const obstacles = [
+          ...layout.persistentHudExclusions,
+          ...Object.values(layout.labels),
+        ];
         for (const [lane, key] of ['D', 'F', 'J', 'K'].entries()) {
           const calls = fillText.mock.calls.filter(([text]) => text === key);
           expect(calls).toHaveLength(1);
@@ -1374,17 +1388,41 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           const label = rendered.overlay?.getObjectByName(
             `Brightvale.Label.lane-${lane}`,
           );
-          expect(label?.visible).toBe(true);
-          expect(label?.scale.x).toBe(36);
-          expect(label?.scale.y).toBe(24);
+          if (label === undefined)
+            throw new Error(`missing rendered lane label ${lane}`);
+          expect(label.visible).toBe(true);
+          expect(label.scale.x).toBe(36);
+          expect(label.scale.y).toBe(24);
           const anchor = playfield
             .point(lane, frontProgress)
             .project(rendered.camera);
           const x = ((anchor.x + 1) * width) / 2;
           const y = ((1 - anchor.y) * height) / 2;
-          expect(label?.position.x).toBeCloseTo(x, 5);
+          expect(label.position.x).toBeCloseTo(x, 5);
           // Perspective changes the face depth, never the label's font/size.
-          expect(label?.position.y).toBeCloseTo(y + centerOffset, 5);
+          expect(label.position.y).toBeCloseTo(y + centerOffset, 5);
+          // Check the consumer's actual rectangles, not the fitter's separate
+          // anchor.y + 4 .. +28 reservation or a viewport-specific offset floor.
+          const rect = {
+            x: label.position.x - label.scale.x / 2,
+            y: label.position.y - label.scale.y / 2,
+            width: label.scale.x,
+            height: label.scale.y,
+          };
+          expect(rect.x).toBeGreaterThanOrEqual(0);
+          expect(rect.y).toBeGreaterThanOrEqual(0);
+          expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+          expect(rect.y + rect.height).toBeLessThanOrEqual(height);
+          for (const obstacle of obstacles) {
+            const overlaps =
+              rect.x < obstacle.x + obstacle.width &&
+              rect.x + rect.width > obstacle.x &&
+              rect.y < obstacle.y + obstacle.height &&
+              rect.y + rect.height > obstacle.y;
+            expect(overlaps).toBe(false);
+          }
+          // Each following lane must also avoid all previously checked labels.
+          obstacles.push(rect);
         }
       } finally {
         rendered.scene.destroy();
@@ -1877,7 +1915,13 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
           feedback: { x: 10, y: 128, width: 100, height: 24 },
         },
       };
-      const status = rendered.scene.updateFrame(makeFrame(tooNarrow));
+      // Resize only: makeFrame's default timing windows differ from the real
+      // easy windows used to initialize this production-geometry fixture.
+      const resizedFrame = (layout: BrightvaleViewportLayout): SceneFrame => ({
+        ...rendered.frame,
+        gameplay: { ...rendered.frame.gameplay, layout },
+      });
+      const status = rendered.scene.updateFrame(resizedFrame(tooNarrow));
       let slotEvidence = 'scene did not render an overlay at the tiny viewport';
       if (status === 'rendered') {
         const overlay = rendered.renderer.calls.at(-1)?.scene;
@@ -1918,9 +1962,9 @@ describe('Brightvale scene facade and renderer lifecycle', () => {
       expect(rendered.unavailable).not.toHaveBeenCalled();
       expect(resourceDispose).not.toHaveBeenCalled();
 
-      expect(rendered.scene.updateFrame(makeFrame(makeLayout(1120, 700)))).toBe(
-        'rendered',
-      );
+      expect(
+        rendered.scene.updateFrame(resizedFrame(makeLayout(1120, 700))),
+      ).toBe('rendered');
       expect(rendered.renderer.calls).toHaveLength(initialRenderCount + 2);
       expect(rendered.renderer.calls.at(-2)?.scene).toBe(originalWorld);
       expect(rendered.fetch).toHaveBeenCalledTimes(initialFetchCount);
