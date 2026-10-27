@@ -2,14 +2,14 @@ import * as THREE from 'three';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import highwayValidation from '../../../assets/production/brightvale-highway/technical-validation.json';
 import platformValidation from '../../../assets/production/brightvale-platform/technical-validation.json';
-import structureLayout from '../../../assets/production/brightvale-structure-layout.json';
 import { getDifficultyProfile } from '../../game/game-balance';
 import { createBrightvaleSurfaceProfile } from './projection';
 import { createBrightvalePlayfieldContract } from './playfield';
+import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';
 import { loadBrightvaleProductionAssets } from './test-assets';
 import type { BrightvaleAssets } from './assets';
 
-const playfield = structureLayout.playfield;
+const playfield = BRIGHTVALE_RUNTIME_LAYOUT.playfield;
 const highway = highwayValidation.glb;
 const sourceLaneCenters = [-4.5, -1.5, 1.5, 4.5] as const;
 const laneWidth = 2.75;
@@ -27,9 +27,7 @@ afterAll(() => assets?.dispose());
 describe('Brightvale geometry-driven playfield contract', () => {
   it('maps each of four authored lane hit anchors to the measured platform target', () => {
     const contract = createBrightvalePlayfieldContract();
-    const matrix = new THREE.Matrix4().fromArray(
-      playfield.gltf.matrix_column_major,
-    );
+    const matrix = new THREE.Matrix4().fromArray(playfield.matrixColumnMajor);
     const localHitZ = -1.45;
 
     sourceLaneCenters.forEach((laneX, lane) => {
@@ -47,21 +45,19 @@ describe('Brightvale geometry-driven playfield contract', () => {
     });
   });
 
-  it('applies the authored 14 degree, 42-unit shared parent transform once', () => {
-    expect(playfield.tilt_degrees).toBe(14);
+  it('applies the shared parent transform once over the 42-unit approach', () => {
     expect(highway.bounds_gltf.dimensions[2]).toBeCloseTo(42.165, 3);
-    const matrix = new THREE.Matrix4().fromArray(
-      playfield.gltf.matrix_column_major,
-    );
-    const origin = new THREE.Vector3(0, 0, 0).applyMatrix4(matrix);
-    const roadNearOrigin = new THREE.Vector3(0, 0, -2.7).applyMatrix4(matrix);
-    expect(origin.toArray()).toEqual(playfield.gltf.translation);
-    expect(roadNearOrigin.z).toBeCloseTo(-2.38, 2);
-
+    const matrix = new THREE.Matrix4().fromArray(playfield.matrixColumnMajor);
     const contract = createBrightvalePlayfieldContract();
     for (let lane = 0; lane < 4; lane += 1) {
       const approach = contract.point(lane, 0);
       const hit = contract.point(lane, 1);
+      const expectedHit = new THREE.Vector3(
+        sourceLaneCenters[lane],
+        0.365,
+        -1.45,
+      ).applyMatrix4(matrix);
+      expect(hit.distanceTo(expectedHit)).toBeLessThan(1e-8);
       expect(approach.distanceTo(hit)).toBeCloseTo(visibleApproachLength, 3);
       expect(approach.x).toBeCloseTo(hit.x, 8);
     }

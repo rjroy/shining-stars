@@ -1,5 +1,9 @@
 # Brightvale outer framing — reusable production modules
 
+The structure JSON referenced below was retired; the described assembly is
+historical. Current runtime layout is maintained in
+`src/rendering/brightvale/layout.data.ts`.
+
 Authorized structural lane of `shining-stars-4f4.31`; **production candidate,
 combined browser review pending**. The original approved reusable pieces stay
 editable and immutable in [authoring](../../authoring/brightvale-outer-framing/README.md).

@@ -54,6 +54,6 @@ export interface BrightvaleSilhouetteCrowdPlacement extends BrightvaleMatrixLayo
   readonly stickColor?: number;
 }
 
-/** Versioned projection of the authoritative layout and approved review fill. */
+/** Maintained runtime layout, including current gameplay tuning. */
 export const BRIGHTVALE_RUNTIME_LAYOUT: BrightvaleRuntimeLayout =
   BRIGHTVALE_RUNTIME_LAYOUT_DATA;

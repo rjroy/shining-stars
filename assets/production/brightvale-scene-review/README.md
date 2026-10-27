@@ -1,6 +1,6 @@
 # Brightvale shared-scene browser review
 
-This isolated Three.js 0.186.1 harness reviews the shared city, highway, platform, endcaps, framing and ground assets against `../brightvale-structure-layout.json`. Crowd GLB loading, placement, visibility and batching have been retired; crowd is reviewed through the current waist-up atlas/runtime pipeline instead. This harness remains useful for the shared city and playfield appearance/structure, not game integration, final runtime acceptance, or a target-device benchmark.
+This historical Three.js 0.186.1 harness reviewed the shared city, highway, platform, endcaps, framing and ground assets against a structure JSON that has since been retired. Its default layout input is no longer available; current gameplay layout is maintained in `src/rendering/brightvale/layout.data.ts`. Crowd GLB loading, placement, visibility and batching have been retired; crowd is reviewed through the current waist-up atlas/runtime pipeline instead. The historical review is not game integration, final runtime acceptance, or a target-device benchmark.
 
 ## Current harness
 

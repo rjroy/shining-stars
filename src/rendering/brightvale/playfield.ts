@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import layout from '../../../assets/production/brightvale-structure-layout.json';
+import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';
 
 const LANE_CENTERS = [-4.5, -1.5, 1.5, 4.5] as const;
 const HIT_LOCAL = { y: 0.365, z: -1.45 } as const;
@@ -7,7 +7,7 @@ const APPROACH_LENGTH = 42;
 const NOTE_HALF_THICKNESS = 0.04;
 const SURFACE_GAP = 0.055;
 const MATRIX = new THREE.Matrix4().fromArray(
-  layout.playfield.gltf.matrix_column_major,
+  BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
 );
 
 export interface BrightvalePlayfieldContract {
