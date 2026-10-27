@@ -312,7 +312,7 @@ export function createBrightvaleAppearance(
             material.emissiveMap = null;
             material.emissiveIntensity = 0;
           } else material.emissive.set(0);
-          material.color.set(groundSurface === 'city' ? 0x77b78a : 0x303060);
+          material.color.set(groundSurface === 'city' ? 0x77b78a : 0x606090);
           if (groundSurface === 'city' && material.normalMap) {
             const updateCanopy = attachCanopySway(material);
             canopyUpdates.push(updateCanopy);

@@ -24,7 +24,7 @@ import type {
 import * as THREE from 'three';
 
 // Conservative fixed filtering; this loader has no renderer capability handle.
-const GROUND_TEXTURE_ANISOTROPY = 4;
+const GROUND_TEXTURE_ANISOTROPY = 10;
 
 /** Vite rewrites these explicit production assets to deployment-aware URLs. */
 export const BRIGHTVALE_PRODUCTION_ASSET_URLS: BrightvaleAssetUrls = {

@@ -12,7 +12,7 @@ export interface SilhouetteCrowd {
 /** Staggered side banks for the authorized waist-up crowd composition. */
 export function createSilhouettePilotPlacements(): readonly BrightvaleSilhouetteCrowdPlacement[] {
   const stickColors = [0x55ddff, 0xff65c7, 0xc39aff, 0xffce69];
-  return [-1, 1].flatMap((side, sideIndex) =>
+  return [-1.05, 1].flatMap((side, sideIndex) =>
     [0, 1, 2, 3, 4, 5].flatMap((row) =>
       Array.from({ length: 10 }, (_, column) => {
         const index = sideIndex * 60 + row * 10 + column;
@@ -25,12 +25,12 @@ export function createSilhouettePilotPlacements(): readonly BrightvaleSilhouette
           seed = Math.imul(seed ^ (seed >>> 16), 0x7feb352d);
           return ((seed ^ (seed >>> 15)) >>> 0) / 0x100000000;
         };
-        const x = side * (9.15 + row * 1.25 + (variation(0) - 0.5) * 0.78);
-        const z = -1.5 - column * 2.7 - row * 0.83 + (variation(1) - 0.5) * 2;
-        const scale = 1.76 + variation(2) * 0.18;
+        const x = side * (9 + row * 2 + (variation(0) - 0.5) * 2);
+        const z = 1 - column * 2.7 - row * 0.83 + (variation(1) - 0.5) * 2.1;
+        const scale = 1.78 + variation(2) * 0.3;
         const quaternion = new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(0, 1, 0),
-          Math.atan2(-x, 15 - z),
+          Math.atan2(-x, 45 - z),
         );
         return {
           id: `pilot-${index}`,

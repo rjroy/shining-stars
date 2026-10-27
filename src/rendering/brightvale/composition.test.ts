@@ -19,10 +19,16 @@ import {
   type BrightvaleAssets,
 } from './assets';
 import {
+  BRIGHTVALE_CITY_SCENERY_SCALE,
+  BRIGHTVALE_FENCE_EXTENSION_SECTIONS_PER_SIDE,
   BRIGHTVALE_GROUND_UV,
   createBrightvaleComposition,
+  createBrightvaleFenceContinuations,
 } from './composition';
-import { BRIGHTVALE_RUNTIME_LAYOUT } from './layout';
+import {
+  BRIGHTVALE_RUNTIME_LAYOUT,
+  type BrightvaleFramingPlacement,
+} from './layout';
 import type { SceneStateProjection } from '../scene-state';
 
 const productionFiles: Readonly<Record<BrightvaleAssetName, string>> = {
@@ -181,6 +187,79 @@ function allMaterials(root: THREE.Object3D): THREE.Material[] {
   return [...result];
 }
 
+describe('fence tangent continuations', () => {
+  // Test-owned placement, pitch and count; deliberately unlike live scene tuning.
+  function fixtures(): BrightvaleFramingPlacement[] {
+    return [
+      [-8, -9, Math.PI / 2],
+      [-8, -11.5, 0],
+      [8, -11.5, 0],
+      [8, -9, -Math.PI / 2],
+    ].map(([x, z, yaw], index) => ({
+      name: `test-post-${index}`,
+      module: 'post',
+      matrixColumnMajor: new THREE.Matrix4()
+        .makeRotationY(yaw!)
+        .setPosition(x!, 3, z!)
+        .toArray(),
+    }));
+  }
+
+  it.each([0, 2, 5])(
+    'adds %i sections and complete posts per side without duplicating the joint post',
+    (sectionsPerSide) => {
+      const source = fixtures();
+      const original = structuredClone(source);
+      const added = createBrightvaleFenceContinuations(source, sectionsPerSide);
+      expect(added).toHaveLength(2 * 2 * sectionsPerSide);
+      expect(source).toEqual(original);
+      expect(new Set(added.map((p) => p.name)).size).toBe(added.length);
+      for (const [sideIndex, x] of [-8, 8].entries()) {
+        const endpoint = new THREE.Vector3(x, 3, -9);
+        let previous = endpoint;
+        for (let step = 0; step < sectionsPerSide; step += 1) {
+          const offset = sideIndex * sectionsPerSide * 2 + step * 2;
+          const section = added[offset]!;
+          const post = added[offset + 1]!;
+          expect(section.module).toBe('long');
+          expect(post.module).toBe('post');
+          const sectionMatrix = new THREE.Matrix4().fromArray([
+            ...section.matrixColumnMajor,
+          ]);
+          const postMatrix = new THREE.Matrix4().fromArray([
+            ...post.matrixColumnMajor,
+          ]);
+          const next = new THREE.Vector3().setFromMatrixPosition(postMatrix);
+          expect(next.x).toBeCloseTo(x);
+          expect(next.y).toBe(3);
+          expect(next.z).toBeCloseTo(-9 + (step + 1) * 2.5);
+          expect(next.distanceTo(previous)).toBeCloseTo(2.5);
+          expect(
+            new THREE.Vector3()
+              .setFromMatrixPosition(sectionMatrix)
+              .distanceTo(previous.clone().add(next).multiplyScalar(0.5)),
+          ).toBeLessThan(1e-6);
+          // Local X follows the wing; the complete post's +Z lens faces inward.
+          const along = new THREE.Vector3(1, 0, 0).transformDirection(
+            sectionMatrix,
+          );
+          const inward = new THREE.Vector3(0, 0, 1).transformDirection(postMatrix);
+          expect(Math.abs(along.z)).toBeCloseTo(1);
+          expect(inward.x * x).toBeLessThan(0);
+          expect(
+            new THREE.Vector3().setFromMatrixScale(postMatrix).toArray(),
+          ).toEqual([1, 1, 1]);
+          previous = next;
+        }
+      }
+    },
+  );
+
+  it('leaves an absent fence alone', () => {
+    expect(createBrightvaleFenceContinuations([], 3)).toEqual([]);
+  });
+});
+
 describe('Brightvale production composition', () => {
   beforeAll(async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
@@ -195,7 +274,7 @@ describe('Brightvale production composition', () => {
     loadedAssets = undefined;
   });
 
-  it('applies the canonical whole-playfield and city matrices exactly once', () => {
+  it('keeps the canonical playfield and scales city scenery without moving its anchor', () => {
     const assets = requireAssets();
     const scene = new THREE.Scene();
     const composition = createBrightvaleComposition(
@@ -218,6 +297,18 @@ describe('Brightvale production composition', () => {
     expect(city.matrix.toArray()).toEqual(
       new THREE.Matrix4()
         .fromArray([...BRIGHTVALE_RUNTIME_LAYOUT.city.matrixColumnMajor])
+        .scale(new THREE.Vector3().setScalar(BRIGHTVALE_CITY_SCENERY_SCALE))
+        .toArray(),
+    );
+    expect(
+      new THREE.Vector3().setFromMatrixPosition(city.matrix).toArray(),
+    ).toEqual(
+      new THREE.Vector3()
+        .setFromMatrixPosition(
+          new THREE.Matrix4().fromArray([
+            ...BRIGHTVALE_RUNTIME_LAYOUT.city.matrixColumnMajor,
+          ]),
+        )
         .toArray(),
     );
     for (const assetName of ['platform', 'highway', 'endcaps']) {
@@ -265,10 +356,23 @@ describe('Brightvale production composition', () => {
 
     expectBoundsClose(
       new THREE.Box3().setFromObject(cityGroup),
-      boundsForPlacedRoot(assets.roots.city, layout.city.matrixColumnMajor),
+      boundsForPlacedRoot(
+        assets.roots.city,
+        new THREE.Matrix4()
+          .fromArray([...layout.city.matrixColumnMajor])
+          .scale(new THREE.Vector3().setScalar(BRIGHTVALE_CITY_SCENERY_SCALE))
+          .toArray(),
+      ),
     );
+    const expectedFramingPlacements = [
+      ...layout.framingInstances,
+      ...createBrightvaleFenceContinuations(
+        layout.framingInstances,
+        BRIGHTVALE_FENCE_EXTENSION_SECTIONS_PER_SIDE,
+      ),
+    ];
     const expectedFraming = unionBounds(
-      layout.framingInstances.map((placement) =>
+      expectedFramingPlacements.map((placement) =>
         boundsForPlacedRoot(
           assets.roots[
             placement.module === 'long' ? 'framingLong' : 'framingPost'
@@ -449,7 +553,16 @@ describe('Brightvale production composition', () => {
     expect(framingBatches).toHaveLength(10);
     expect(cityBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(2304);
     expect(framingBatches.reduce((sum, batch) => sum + batch.count, 0)).toBe(
-      266,
+      expectedFramingPlacements.reduce(
+        (sum, placement) =>
+          sum +
+          allMaterials(
+            assets.roots[
+              placement.module === 'long' ? 'framingLong' : 'framingPost'
+            ],
+          ).length,
+        0,
+      ),
     );
 
     const allBatches = [...cityBatches, ...framingBatches];

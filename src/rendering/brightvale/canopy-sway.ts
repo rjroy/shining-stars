@@ -21,7 +21,7 @@ export function attachPlazaSway(
     material,
     'brightvalePlazaTime',
     'brightvale-plaza-sway-v1',
-    0.5,
+    2,
   );
 }
 

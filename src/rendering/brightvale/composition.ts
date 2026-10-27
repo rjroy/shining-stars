@@ -10,6 +10,7 @@ import type { BrightvaleShellComposition } from './scene-shell';
 import type { SceneStateProjection } from '../scene-state';
 import type { BrightvaleAmbience } from './ambience';
 import type {
+  BrightvaleFramingPlacement,
   BrightvaleGroundSurface,
   BrightvaleRuntimeLayout,
 } from './layout';
@@ -19,6 +20,12 @@ import {
   createSilhouettePilotPlacements,
   type SilhouetteCrowd,
 } from './silhouette-crowd';
+
+/** Temporary scenery-size experiment; 1 restores the authored city size. */
+export const BRIGHTVALE_CITY_SCENERY_SCALE = 1.15;
+
+/** Runtime-only side wings; zero restores the authored rear semicircle. */
+export const BRIGHTVALE_FENCE_EXTENSION_SECTIONS_PER_SIDE = 4;
 
 export interface BrightvaleComposition extends BrightvaleShellComposition {
   /** Applies visual state without rebuilding the assembled scene. */
@@ -38,7 +45,7 @@ export const BRIGHTVALE_GROUND_UV = {
   plaza: {
     repeatWorldUnits: 22.5,
     rotationRadians: Math.PI / 10,
-    offset: [0, 0],
+    offset: [0.5, 0.5],
   },
 } as const;
 
@@ -50,6 +57,48 @@ interface BatchSource {
 
 function matrix(values: readonly number[]): THREE.Matrix4 {
   return new THREE.Matrix4().fromArray([...values]);
+}
+
+/** Continue the ordered rear arc along each endpoint's existing local-X tangent. */
+export function createBrightvaleFenceContinuations(
+  placements: readonly BrightvaleFramingPlacement[],
+  sectionsPerSide: number,
+): BrightvaleFramingPlacement[] {
+  const posts = placements.filter((placement) => placement.module === 'post');
+  if (posts.length < 2) return [];
+  const result: BrightvaleFramingPlacement[] = [];
+  for (const [endpoint, neighbor] of [
+    [posts[0]!, posts[1]!],
+    [posts.at(-1)!, posts.at(-2)!],
+  ] as const) {
+    const transform = matrix(endpoint.matrixColumnMajor);
+    const origin = new THREE.Vector3().setFromMatrixPosition(transform);
+    // Preserve the authored post/section pitch (3.26 in the current layout).
+    const pitch = origin.distanceTo(
+      new THREE.Vector3().setFromMatrixPosition(
+        matrix(neighbor.matrixColumnMajor),
+      ),
+    );
+    const tangent = new THREE.Vector3()
+      .setFromMatrixColumn(transform, 0)
+      .normalize();
+    // The two ends have opposite local-X directions; both wings face the player (+Z).
+    if (tangent.z < 0) tangent.negate();
+    for (let step = 1; step <= sectionsPerSide; step += 1) {
+      for (const module of ['long', 'post'] as const) {
+        const distance = pitch * (module === 'long' ? step - 0.5 : step);
+        result.push({
+          name: `${endpoint.name}.continuation.${module}.${step}`,
+          module,
+          matrixColumnMajor: transform
+            .clone()
+            .setPosition(origin.clone().addScaledVector(tangent, distance))
+            .toArray(),
+        });
+      }
+    }
+  }
+  return result;
 }
 
 function relativeMatrix(
@@ -167,12 +216,13 @@ export function createBrightvaleComposition(
           material.normalScale.setScalar(5);
         } else if (!isCity && assets.groundTextures?.plazaNormal) {
           material.normalMap = assets.groundTextures.plazaNormal;
+          material.normalScale.setScalar(2);
         }
         material.color.set(0xffffff);
         if (!isCity) {
           material.emissiveMap = texture;
           material.emissive.set(0xc5c1ec);
-          material.emissiveIntensity = 0.42;
+          material.emissiveIntensity = 4;
         }
         material.userData.brightvaleGround = isCity ? 'city' : 'plaza';
       }
@@ -212,6 +262,11 @@ export function createBrightvaleComposition(
     cityGroup.name = 'Brightvale.City';
     cityGroup.matrixAutoUpdate = false;
     cityGroup.matrix.copy(matrix(layout.city.matrixColumnMajor));
+    // Scale about the authored city origin, preserving its ground/placement anchor.
+    // Do not scale the composition root: gameplay and plaza stay independent.
+    cityGroup.matrix.scale(
+      new THREE.Vector3().setScalar(BRIGHTVALE_CITY_SCENERY_SCALE),
+    );
     root.add(cityGroup);
 
     const framingGroup = new THREE.Group();
@@ -323,7 +378,14 @@ export function createBrightvaleComposition(
       long: assets.roots.framingLong,
       post: assets.roots.framingPost,
     };
-    for (const placement of layout.framingInstances)
+    const framingPlacements = [
+      ...layout.framingInstances,
+      ...createBrightvaleFenceContinuations(
+        layout.framingInstances,
+        BRIGHTVALE_FENCE_EXTENSION_SECTIONS_PER_SIDE,
+      ),
+    ];
+    for (const placement of framingPlacements)
       addPlacement(
         framingGroup,
         framingRoots[placement.module],

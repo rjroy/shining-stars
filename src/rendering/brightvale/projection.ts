@@ -514,6 +514,18 @@ export function createBrightvaleCameraProjection(
       nextLayout.width > 0 && nextLayout.height > 0
         ? nextLayout.width / nextLayout.height
         : authored.aspect;
+
+    const width = nextLayout.width;
+    const height = nextLayout.height;
+
+    if (width > 0 && height > 0) {
+      camera.setViewOffset(
+        width, height,
+        0, -height * 0.3,
+        width, height,
+      );
+    }
+
     camera.updateProjectionMatrix();
     usable = false;
     if (
