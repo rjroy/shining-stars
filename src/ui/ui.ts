@@ -31,6 +31,11 @@ import {
 import { ensureExperienceShell } from './experience-shell';
 import type { SongCatalogEntry } from '../catalog/catalog';
 import { createSongProgress } from './song-progress';
+import {
+  createMusicVolumeControl,
+  type MusicVolumeOptions,
+  type MusicVolumeState,
+} from './music-volume-control';
 
 export interface UIActions {
   readonly start: () => void;
@@ -52,6 +57,7 @@ export interface TouchPresentation {
 }
 
 export interface GameUI {
+  setMusicVolume(state: MusicVolumeState): void;
   setCompletedScore(runId: number, comparison: PersonalBestScoreResult): void;
   setTouchPresentation(presentation: TouchPresentation): void;
   render(snapshot: ControllerSnapshot, audioNow: number): void;
@@ -353,6 +359,7 @@ export function createGameUI(
   song: SongCatalogEntry,
   chart: ChartConfig,
   actions: UIActions,
+  options: MusicVolumeOptions = {},
 ): GameUI {
   const shell = ensureExperienceShell(applicationRoot);
   const root = shell.createScreen('gameplay', 'Rhythm performance');
@@ -437,9 +444,10 @@ export function createGameUI(
 
         <section class="dialog-panel pause-panel" data-panel="pause" aria-labelledby="pause-title" hidden>
           <p class="dialog-overline">The song is held</p>
-          <h2 id="pause-title">Take your time.</h2>
+          <h2 id="pause-title" tabindex="-1">Take your time.</h2>
           <p>Your place in the song is saved. The chart will wait through a short count-in.</p>
           <p class="error-message recovery-notice" data-recovery-notice role="status" hidden></p>
+          <div class="pause-music-controls" data-music-control></div>
           <div class="dialog-actions"><button class="primary-button" type="button" data-action="resume" disabled>Resume <span aria-hidden="true">↗</span></button><button class="secondary-button" type="button" data-action="restart" disabled>Start over</button></div>
           <button class="secondary-button return-to-songs" type="button" data-action="return">Return to songs</button>
         </section>
@@ -485,6 +493,11 @@ export function createGameUI(
       </div>`;
 
   shell.activate('gameplay');
+  const musicControl = createMusicVolumeControl(
+    root.querySelector<HTMLElement>('[data-music-control]')!,
+    options,
+  );
+  const pausePanel = root.querySelector<HTMLElement>('[data-panel="pause"]')!;
   const songProgress = createSongProgress(root, chart);
   setText(
     root,
@@ -894,6 +907,7 @@ export function createGameUI(
     previousScoreFrame = { ...game };
     for (const echo of echoes) scoreEchoes.play(echo);
     playSurface?.setAttribute('aria-busy', String(pendingPlaybackRequests));
+    const focusPause = isPaused && pausePanel.hidden;
     showPanel(
       isResults
         ? 'results'
@@ -923,6 +937,15 @@ export function createGameUI(
                 rendererStatus !== 'rendered' ||
                 busyMessage !== null;
       if (actionButton.disabled !== disabled) actionButton.disabled = disabled;
+    }
+    if (focusPause && !touch.showGuard) {
+      const resume = pausePanel.querySelector<HTMLButtonElement>(
+        '[data-action="resume"]',
+      );
+      (resume !== null && !resume.disabled
+        ? resume
+        : pausePanel.querySelector<HTMLElement>('#pause-title')
+      )?.focus();
     }
     const rendererStatusNode = root.querySelector<HTMLElement>(
       '[data-renderer-status]',
@@ -1088,6 +1111,7 @@ export function createGameUI(
   }
 
   return {
+    setMusicVolume: musicControl.setState,
     setTouchPresentation,
     setCompletedScore(runId, comparison) {
       completedScore.record(runId, comparison);
@@ -1127,6 +1151,7 @@ export function createGameUI(
       if (message !== null) showPanel('error');
     },
     destroy() {
+      musicControl.destroy();
       songProgress.destroy();
       if (!touchDisposed) resetTouch();
       touchDisposed = true;

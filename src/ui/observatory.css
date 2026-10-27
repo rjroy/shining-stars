@@ -60,9 +60,47 @@
 .observatory-save-utility {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  max-width: 100%;
   margin-left: auto;
+}
+.observatory-music-utility {
+  position: relative;
+  flex: 0 0 auto;
+}
+.observatory-music-entry[aria-expanded='true'] {
+  border-color: #ffe3a1;
+  background: #322849;
+}
+.observatory-music-panel {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 24px));
+  padding: 16px;
+  border: 1px solid #d9ba77;
+  border-radius: 12px;
+  background: #12122d;
+  box-shadow: 0 12px 32px rgb(2 4 16 / 50%);
+  color: #fff5df;
+  font:
+    0.9rem/1.5 Georgia,
+    'Times New Roman',
+    serif;
+}
+.observatory-music-panel[hidden] {
+  display: none;
+}
+@media (max-width: 1200px) {
+  .observatory-topbar {
+    flex-wrap: wrap;
+  }
+  .observatory-tools {
+    flex-basis: 100%;
+  }
 }
 .observatory-credits {
   max-width: 12ch;

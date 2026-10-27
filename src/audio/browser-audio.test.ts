@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type {
   AudioBufferPort,
   AudioContextPort,
@@ -16,7 +16,11 @@ class FakeBuffer implements AudioBufferPort {
 class FakeDestination {}
 
 class FakeGain extends FakeDestination {
-  readonly gain = { value: 1 };
+  readonly gain = {
+    value: 1,
+    cancelScheduledValues: vi.fn<(startTime: number) => void>(),
+    setTargetAtTime: vi.fn<(target: number, startTime: number, timeConstant: number) => void>(),
+  };
   readonly connections: FakeDestination[] = [];
 
   connect(destination: FakeDestination): void {
@@ -102,22 +106,38 @@ describe('browser audio context adapter', () => {
     ]);
   });
 
-  it('sets output volume before source connection and preserves it through playback lifecycle', () => {
+  it('smoothly applies live output volume changes to the existing gain stage', () => {
     const nativeContext = new FakeNativeContext();
     const adapter = createBrowserAudioContextAdapter(nativeContext, 0);
     expect(nativeContext.gains[0]?.gain.value).toBe(0);
 
     const first = adapter.createBufferSource();
     expect(first.connections).toEqual([nativeContext.gains[0]]);
-    expect(nativeContext.gains[0]?.gain.value).toBe(0);
 
+    nativeContext.currentTime = 12.5;
     adapter.setOutputVolume(0.4);
-    expect(adapter.createBufferSource().connections).toEqual([
-      nativeContext.gains[0],
-    ]);
-    expect(nativeContext.gains[0]?.gain.value).toBe(0.4);
+    adapter.setOutputVolume(0.7);
     adapter.setOutputVolume(0);
-    expect(nativeContext.gains[0]?.gain.value).toBe(0);
+
+    const gain = nativeContext.gains[0]?.gain;
+    expect(gain?.cancelScheduledValues.mock.calls).toEqual([
+      [12.5],
+      [12.5],
+      [12.5],
+    ]);
+    expect(gain?.setTargetAtTime.mock.calls).toHaveLength(3);
+    expect(gain?.setTargetAtTime.mock.calls.map(([target]) => target)).toEqual([
+      0.4,
+      0.7,
+      0,
+    ]);
+    for (const [, startTime, timeConstant] of gain?.setTargetAtTime.mock.calls ?? []) {
+      expect(startTime).toBe(12.5);
+      expect(timeConstant).toBeGreaterThan(0);
+      expect(timeConstant).toBeLessThanOrEqual(0.1);
+    }
+    expect(first.connections).toEqual([nativeContext.gains[0]]);
+    expect(nativeContext.sources).toHaveLength(1);
   });
 
   it('delegates decode and lifecycle calls while exposing live clock and state', async () => {

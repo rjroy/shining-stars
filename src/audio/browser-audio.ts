@@ -18,7 +18,15 @@ export interface NativeAudioContextPort<
   },
   TDestination,
   TOutput extends {
-    readonly gain: { value: number };
+    readonly gain: {
+      value: number;
+      cancelScheduledValues(startTime: number): unknown;
+      setTargetAtTime(
+        target: number,
+        startTime: number,
+        timeConstant: number,
+      ): unknown;
+    };
     connect(destination: TDestination): unknown;
   },
 > extends AudioContextPort<TBuffer, TSource> {
@@ -38,7 +46,15 @@ export function createBrowserAudioContextAdapter<
   TBuffer extends AudioBufferPort,
   TDestination,
   TOutput extends {
-    readonly gain: { value: number };
+    readonly gain: {
+      value: number;
+      cancelScheduledValues(startTime: number): unknown;
+      setTargetAtTime(
+        target: number,
+        startTime: number,
+        timeConstant: number,
+      ): unknown;
+    };
     connect(destination: TDestination): unknown;
   },
   TSource extends AudioSourcePort<TBuffer> & {
@@ -60,6 +76,7 @@ export function createBrowserAudioContextAdapter<
   ) {
     throw new RangeError('Song output volume must be between 0 and 1.');
   }
+  const outputVolumeTimeConstant = 0.03;
   const output = nativeContext.createGain();
   output.gain.value = initialOutputVolume;
   output.connect(nativeContext.destination);
@@ -68,7 +85,9 @@ export function createBrowserAudioContextAdapter<
       if (!Number.isFinite(volume) || volume < 0 || volume > 1) {
         throw new RangeError('Song output volume must be between 0 and 1.');
       }
-      output.gain.value = volume;
+      const now = nativeContext.currentTime;
+      output.gain.cancelScheduledValues(now);
+      output.gain.setTargetAtTime(volume, now, outputVolumeTimeConstant);
     },
     get currentTime() {
       return nativeContext.currentTime;
