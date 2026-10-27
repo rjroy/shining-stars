@@ -535,7 +535,9 @@ describe('Brightvale gameplay appearance', () => {
     } as THREE.WebGLProgramParametersWithUniforms;
     plazaMaterial.onBeforeCompile(plazaShader, {} as THREE.WebGLRenderer);
     const plazaTime = plazaShader.uniforms.brightvalePlazaTime;
-    expect(plazaTime?.value).toBe(2);
+    expect(plazaTime).toBeDefined();
+    const initialPlazaTime = plazaTime?.value as number;
+    expect(Number.isFinite(initialPlazaTime)).toBe(true);
     expect(plazaShader.fragmentShader).toContain('brightvalePlazaTime');
     expect(plazaShader.fragmentShader).not.toContain(
       '#include <gradientmap_pars_fragment>',
@@ -544,7 +546,8 @@ describe('Brightvale gameplay appearance', () => {
     for (const sample of [4, 4, 9, 2]) {
       appearance.update(state, projectBrightvaleAmbience(state, sample, false));
       expect(time?.value).toBe(sample);
-      expect(plazaTime?.value).toBe(sample * 0.5);
+      // Check linear forwarding without freezing the independently tuned speed.
+      expect(plazaTime?.value).toBeCloseTo((initialPlazaTime * sample) / 4);
     }
     for (const sample of [5, 20]) {
       appearance.update(state, projectBrightvaleAmbience(state, sample, true));
@@ -553,6 +556,7 @@ describe('Brightvale gameplay appearance', () => {
     }
     appearance.update(state, projectBrightvaleAmbience(state, 9, false));
     expect(time?.value).toBe(9);
+    expect(plazaTime?.value).toBeCloseTo((initialPlazaTime * 9) / 4);
     const ownedDispose = vi.spyOn(material, 'dispose');
     const textureDispose = vi.spyOn(normal, 'dispose');
     const plazaTextureDispose = vi.spyOn(plazaNormal, 'dispose');

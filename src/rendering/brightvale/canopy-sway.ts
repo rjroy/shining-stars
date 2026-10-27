@@ -13,7 +13,7 @@ export function attachCanopySway(
   );
 }
 
-/** Plaza uses the same normal-only motion at half time. */
+/** Plaza uses the same normal-only motion with its own time scaling. */
 export function attachPlazaSway(
   material: THREE.MeshStandardMaterial,
 ): (ambience: BrightvaleAmbience) => void {
