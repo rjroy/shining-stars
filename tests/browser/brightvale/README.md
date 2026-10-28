@@ -57,12 +57,9 @@ and completed playback counts. They use muted output, trusted Play clicks, and
 native `AudioContext.currentTime`; they do not alter judgment timing or bypass
 autoplay policy. Playback does not establish listening approval.
 
-Runtime-layout data is regenerated from the authoritative structure JSON and
-accepted review source with:
-
-```sh
-node tools/brightvale-layout/generate.mjs
-```
+Runtime layout and gameplay tuning are maintained in
+`src/rendering/brightvale/layout.data.ts`. The old layout generator is historical
+and must not be used to regenerate the maintained runtime data.
 
 The unit/DOM test suite remains `npm test`; browser checks are explicit because
 they require Chromium and take real audio-clock time.

@@ -71,12 +71,13 @@
     },
     "hymn-of-the-breathing-rebellion": {
       "source": "data/music/Hymn of the Breathing Rebellion.mp3",
-      "threshold": 0.5,
+      "threshold": 0.8,
       "silence": -80,
+      "twilight_time": 50,
       "difficulties": {
-        "easy": { "minimum_delta": 352, "stride": 1 },
-        "normal": { "minimum_delta": 224, "stride": 1 },
-        "hard": { "minimum_delta": 96, "stride": 1 }
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
       }
     },
     "the-eternal-march": {

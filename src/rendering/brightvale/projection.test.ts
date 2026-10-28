@@ -167,6 +167,78 @@ function measuredEnvelopePoints(
 }
 
 describe('Brightvale source-geometry projection', () => {
+  it.each([
+    { name: 'compact viewport', width: 320, height: 200, bottomHud: 0 },
+    { name: 'bottom HUD exclusion', width: 640, height: 360, bottomHud: 180 },
+  ])(
+    'fits measured geometry and lane labels with the shifted frustum in a $name',
+    ({ width, height, bottomHud }) => {
+      // Integration boundary: real geometry/optics, test-owned viewport and
+      // timing range. Assert containment, never a particular pose or tuning.
+      const layout: BrightvaleViewportLayout = {
+        width,
+        height,
+        persistentHudExclusions: bottomHud
+          ? [{ x: 0, y: height - bottomHud, width, height: bottomHud }]
+          : [],
+        labels: {
+          time: { x: 0, y: 0, width: 0, height: 0 },
+          countdown: { x: 0, y: 0, width: 0, height: 0 },
+          legend: { x: 0, y: 0, width: 0, height: 0 },
+          feedback: { x: 0, y: 0, width: 0, height: 0 },
+        },
+      };
+      const range = { minimum: -0.07, maximum: 1.07 };
+      const profile = createBrightvaleSurfaceProfile(assets.roots);
+      const playfield = createBrightvalePlayfieldContract(profile);
+      const projection = createBrightvaleCameraProjection(
+        playfield,
+        layout,
+        range,
+        profile,
+      );
+      expect(projection.usable).toBe(true);
+      expect(projection.camera.view?.enabled).toBe(true);
+      expect(projection.camera.view?.offsetY).not.toBe(0);
+
+      const expectContained = (rect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }): void => {
+        expect([rect.x, rect.y].every(Number.isFinite)).toBe(true);
+        expect(rect.x).toBeGreaterThanOrEqual(0);
+        expect(rect.y).toBeGreaterThanOrEqual(0);
+        expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+        expect(rect.y + rect.height).toBeLessThanOrEqual(height);
+        for (const exclusion of layout.persistentHudExclusions)
+          expect(rectanglesOverlap(rect, exclusion)).toBe(false);
+      };
+      const requiredPoints = [
+        ...Object.values(profile.essentialGeometryPoints).flat(),
+        ...measuredEnvelopePoints(playfield, profile, range).points,
+      ];
+      for (const point of requiredPoints) {
+        const clip = point.clone().project(projection.camera);
+        expect(clip.z).toBeGreaterThanOrEqual(-1);
+        expect(clip.z).toBeLessThanOrEqual(1);
+        expectContained({ ...projection.project(point), width: 0, height: 0 });
+      }
+      const frontProgress = getFrontPlatformProgress(playfield, profile);
+      const laneLabels = [0, 1, 2, 3].map((lane) => {
+        const anchor = projection.project(playfield.point(lane, frontProgress));
+        // The fitter reserves a fixed 36×24 key-label slot below each lip.
+        return { x: anchor.x - 18, y: anchor.y + 4, width: 36, height: 24 };
+      });
+      for (const [index, label] of laneLabels.entries()) {
+        expectContained(label);
+        for (const other of laneLabels.slice(index + 1))
+          expect(rectanglesOverlap(label, other)).toBe(false);
+      }
+    },
+  );
+
   it('rejects a viewport fully covered by overlapping persistent HUD regions without searching camera fits', () => {
     const layout = viewport(1600, 900, 500, 500);
     const projection = createBrightvaleCameraProjection(
@@ -663,6 +735,11 @@ describe('Brightvale source-geometry projection', () => {
         }
         expect(projection.camera.matrixWorld.elements).toEqual(pose.elements);
       }
+      expect(projection.usable).toBe(true);
+      const playfieldMatrix = new THREE.Matrix4().fromArray([
+        ...BRIGHTVALE_RUNTIME_LAYOUT.playfield.matrixColumnMajor,
+      ]);
+      const inversePlayfield = playfieldMatrix.clone().invert();
       for (let lane = 0; lane < 4; lane += 1) {
         for (let index = 0; index <= 32; index += 1) {
           const p = THREE.MathUtils.lerp(
@@ -670,10 +747,22 @@ describe('Brightvale source-geometry projection', () => {
             progress.maximum,
             index / 32,
           );
-          const center = playfield.point(lane, p);
-          for (const xOffset of [-1.375, 0, 1.375]) {
+          const center = playfield
+            .point(lane, p)
+            .applyMatrix4(inversePlayfield);
+          for (const xOffset of [
+            -ENVELOPE_HALF_WIDTH,
+            0,
+            ENVELOPE_HALF_WIDTH,
+          ]) {
+            // scene.updateEnvelope raises missing-surface samples by 0.025
+            // in playfield-local Y; logical points above test pose stability,
+            // but are not the envelope geometry whose visibility matters.
             const point = projection.project(
-              center.clone().add(new THREE.Vector3(xOffset, 0, 0)),
+              center
+                .clone()
+                .add(new THREE.Vector3(xOffset, 0.025, 0))
+                .applyMatrix4(playfieldMatrix),
             );
             expect(Number.isFinite(point.x) && Number.isFinite(point.y)).toBe(
               true,
@@ -682,12 +771,16 @@ describe('Brightvale source-geometry projection', () => {
             expect(point.x).toBeLessThanOrEqual(layout.width);
             expect(point.y).toBeGreaterThanOrEqual(0);
             expect(point.y).toBeLessThanOrEqual(layout.height);
-            expect(
-              rectanglesOverlap(
-                { x: point.x, y: point.y, width: 0.01, height: 0.01 },
-                layout.persistentHudExclusions[0]!,
-              ),
-            ).toBe(false);
+            for (const exclusion of [
+              ...layout.persistentHudExclusions,
+              ...Object.values(layout.labels),
+            ])
+              expect(
+                rectanglesOverlap(
+                  { x: point.x, y: point.y, width: 0.01, height: 0.01 },
+                  exclusion,
+                ),
+              ).toBe(false);
           }
         }
       }

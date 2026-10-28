@@ -1,5 +1,6 @@
 import type { BrightvaleRuntimeLayout } from './layout';
 
+/** Maintained runtime authority; historical layout export scripts are not a regeneration path. */
 export const BRIGHTVALE_RUNTIME_LAYOUT_DATA = {
   "schemaVersion": "brightvale-runtime-layout-v1",
   "coordinateSystem": "gltf-y-up",
@@ -6535,10 +6536,16 @@ export const BRIGHTVALE_RUNTIME_LAYOUT_DATA = {
       15
     ],
     "quaternionXyzw": [
+      Math.sin(-22.5 * Math.PI / 180 / 2),
+       0,
+       0,
+       Math.cos(-22.5 * Math.PI / 180 / 2),
+      /*
       -0.0574067197740078,
       0,
       0,
       0.9983508586883545
+      */
     ],
     "referenceResolution": [
       1600,

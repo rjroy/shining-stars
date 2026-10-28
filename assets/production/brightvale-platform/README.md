@@ -1,5 +1,9 @@
 # Brightvale platform — production transfer
 
+The structure JSON referenced below was retired; its layout and verification
+references are historical. Current runtime layout is maintained in
+`src/rendering/brightvale/layout.data.ts`.
+
 Current derivative: **approved shining-stars-ixp slot-cue model revision**.
 The user approved the exact authoring `slot-cues-approved.png` model and
 authorized production export and in-game verification. **Technical transfer is

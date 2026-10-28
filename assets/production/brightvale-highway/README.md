@@ -1,5 +1,9 @@
 # Brightvale highway — 42-unit production transfer
 
+The assembly layout references and layout-script commands below are historical;
+their structure JSON was retired. Current runtime layout is maintained in
+`src/rendering/brightvale/layout.data.ts`.
+
 Authorized structural lane of `shining-stars-4f4.31`; **production candidate,
 combined browser review pending**. This exports the detailed **42-unit road in
 the current [scene-review.blend](../../authoring/brightvale-scene-review/scene-review.blend)**,

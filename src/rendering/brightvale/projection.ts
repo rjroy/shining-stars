@@ -375,7 +375,8 @@ export function createBrightvaleCameraProjection(
     camera.position.copy(target).addScaledVector(cameraRay, scale);
     camera.updateMatrixWorld(true);
     const inverseCamera = camera.matrixWorld.clone().invert();
-    const verticalTangent = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const verticalScale = camera.projectionMatrix.elements[5];
+    const verticalOffset = camera.projectionMatrix.elements[9];
     let minimum = Number.NEGATIVE_INFINITY;
     let maximum = Number.POSITIVE_INFINITY;
     const constrainPoint = (
@@ -386,9 +387,13 @@ export function createBrightvaleCameraProjection(
       const view = worldPoint.clone().applyMatrix4(inverseCamera);
       const depth = -view.z;
       if (depth < camera.near || depth > camera.far) return false;
+      // Moving along camera-up subtracts shift from view.y without changing
+      // depth. Solve ndcY = verticalScale * (view.y - shift) / depth
+      // - verticalOffset using the actual (possibly off-center) projection.
       const shiftForY = (screenY: number) =>
         view.y +
-        depth * verticalTangent * ((2 * screenY) / nextLayout.height - 1);
+        (depth / verticalScale) *
+          ((2 * screenY) / nextLayout.height - 1 - verticalOffset);
       minimum = Math.max(minimum, shiftForY(top));
       maximum = Math.min(maximum, shiftForY(bottom));
       return minimum <= maximum;
@@ -514,6 +519,18 @@ export function createBrightvaleCameraProjection(
       nextLayout.width > 0 && nextLayout.height > 0
         ? nextLayout.width / nextLayout.height
         : authored.aspect;
+
+    const width = nextLayout.width;
+    const height = nextLayout.height;
+
+    if (width > 0 && height > 0) {
+      camera.setViewOffset(
+        width, height,
+        0, -height * 0.3,
+        width, height,
+      );
+    }
+
     camera.updateProjectionMatrix();
     usable = false;
     if (
