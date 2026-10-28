@@ -65,12 +65,15 @@ function attachNormalMapSway(
       uniform float ${uniformName};
       vec2 brightvaleCanopyUv(vec2 uv) {
         vec2 phase = vec2(
-          dot(uv, vec2(19.0, 13.0)) + sin(uv.y * 23.0),
-          dot(uv, vec2(-11.0, 21.0)) + sin(uv.x * 17.0)
+          // dot product defines the period (N/2pi phase cycles per tile)
+          // the sin defines the irregularity (N/2pi cycles per tile)
+          dot(uv, vec2(7.0, 5.0)) + sin(uv.y * 7.0) + sin(uv.y * 11.0) - sin(uv.x * 5.0),
+          dot(uv, vec2(-5.0, 7.0)) + sin(uv.x * 17.0) + sin(uv.x * 13.0) - sin(uv.x * 3.0)
         );
         // Different local phases and unequal periods bend patches in place.
         // Subtract the resting phase so time zero uses the original UVs.
-        vec2 sway = sin(phase + ${uniformName} * vec2(0.73, 0.51))
+        // radians/second so a cycle length of
+        vec2 sway = sin(phase + ${uniformName} * vec2(0.571, 0.483))
           - sin(phase);
         return uv + sway * vec2(0.0045, 0.0035);
       }
