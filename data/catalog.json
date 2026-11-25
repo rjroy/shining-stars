@@ -232,6 +232,86 @@
       "segmentKind": "full",
       "availability": "available",
       "chartStatus": "candidate"
+    },
+    {
+      "id": "it-was-just-a-game",
+      "title": "It Was Just a Game",
+      "sortOrder": 300,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "march-of-scarecrows",
+      "title": "March of Scarecrows",
+      "sortOrder": 310,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "only-for-tonight",
+      "title": "Only For Tonight",
+      "sortOrder": 320,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "set-it-out-again",
+      "title": "Set It Out Again",
+      "sortOrder": 330,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "someone-must-lead",
+      "title": "Someone Must Lead",
+      "sortOrder": 340,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-little-crooked-window",
+      "title": "The Little Crooked Window",
+      "sortOrder": 350,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-shadows-night",
+      "title": "The Shadow's Night",
+      "sortOrder": 360,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "the-thirteenth-shift",
+      "title": "The Thirteenth Shift",
+      "sortOrder": 370,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "when-the-storm-brings-the-damned",
+      "title": "When the Storm Brings the Damned",
+      "sortOrder": 380,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
+    },
+    {
+      "id": "you-will-remain",
+      "title": "You Will Remain",
+      "sortOrder": 390,
+      "segmentKind": "full",
+      "availability": "available",
+      "chartStatus": "candidate"
     }
   ],
   "collections": [
@@ -286,6 +366,24 @@
         "the-ferrymans-coin",
         "the-gravediggers-warning",
         "the-necromancers-duet"
+      ]
+    },
+    {
+      "id": "halloween",
+      "title": "Halloween",
+      "sortOrder": 40,
+      "artwork": "halloween.webp",
+      "songIds": [
+        "it-was-just-a-game",
+        "march-of-scarecrows",
+        "only-for-tonight",
+        "set-it-out-again",
+        "someone-must-lead",
+        "the-little-crooked-window",
+        "the-shadows-night",
+        "the-thirteenth-shift",
+        "when-the-storm-brings-the-damned",
+        "you-will-remain"
       ]
     }
   ]

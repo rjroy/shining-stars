@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.5570175438596491,
+      "baselineHandCounts": [
+        242,
+        243
+      ],
+      "baselineLaneCounts": [
+        81,
+        161,
+        162,
+        81
+      ],
+      "baselineLaneShares": [
+        0.1670103092783505,
+        0.3319587628865979,
+        0.334020618556701,
+        0.1670103092783505
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.8114035087719298,
+      "candidateHandCounts": [
+        245,
+        240
+      ],
+      "candidateLaneCounts": [
+        123,
+        122,
+        122,
+        118
+      ],
+      "candidateLaneShares": [
+        0.2536082474226804,
+        0.2515463917525773,
+        0.2515463917525773,
+        0.24329896907216494
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 485,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 378,
+      "stablePitchCoverage": 0.7793814432989691,
+      "stableUnequalPitchAdjacentPairs": 228,
+      "unknownPitchCount": 107
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.4985507246376812,
+      "baselineHandCounts": [
+        382,
+        381
+      ],
+      "baselineLaneCounts": [
+        128,
+        254,
+        254,
+        127
+      ],
+      "baselineLaneShares": [
+        0.16775884665792923,
+        0.3328964613368283,
+        0.3328964613368283,
+        0.16644823066841416
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.8,
+      "candidateHandCounts": [
+        384,
+        379
+      ],
+      "candidateLaneCounts": [
+        192,
+        192,
+        191,
+        188
+      ],
+      "candidateLaneShares": [
+        0.2516382699868938,
+        0.2516382699868938,
+        0.2503276539973788,
+        0.24639580602883354
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 763,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 597,
+      "stablePitchCoverage": 0.7824377457404981,
+      "stableUnequalPitchAdjacentPairs": 345,
+      "unknownPitchCount": 166
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.5163398692810458,
+      "baselineHandCounts": [
+        323,
+        323
+      ],
+      "baselineLaneCounts": [
+        108,
+        215,
+        215,
+        108
+      ],
+      "baselineLaneShares": [
+        0.16718266253869968,
+        0.3328173374613003,
+        0.3328173374613003,
+        0.16718266253869968
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.8464052287581699,
+      "candidateHandCounts": [
+        325,
+        321
+      ],
+      "candidateLaneCounts": [
+        162,
+        163,
+        161,
+        160
+      ],
+      "candidateLaneShares": [
+        0.25077399380804954,
+        0.25232198142414863,
+        0.24922600619195046,
+        0.2476780185758514
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 646,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 509,
+      "stablePitchCoverage": 0.7879256965944272,
+      "stableUnequalPitchAdjacentPairs": 306,
+      "unknownPitchCount": 137
+    }
+  },
+  "pitch_analysis_key": "fa2f1a1e962d6ef816b39d9efcea6b0df98857506b57b0753ba98e575a1b3462",
+  "schema_version": 1,
+  "song_id": "it-was-just-a-game",
+  "source_sha256": "0c01deab260281f8f5a58dcad03bd2b182a9b4481d35c966008fcd2ae2153b15"
+}

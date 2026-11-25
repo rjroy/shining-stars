@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.562753036437247,
+      "baselineHandCounts": [
+        322,
+        321
+      ],
+      "baselineLaneCounts": [
+        108,
+        214,
+        214,
+        107
+      ],
+      "baselineLaneShares": [
+        0.16796267496111975,
+        0.3328149300155521,
+        0.3328149300155521,
+        0.16640746500777606
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7854251012145749,
+      "candidateHandCounts": [
+        324,
+        319
+      ],
+      "candidateLaneCounts": [
+        161,
+        163,
+        160,
+        159
+      ],
+      "candidateLaneShares": [
+        0.25038880248833595,
+        0.2534992223950233,
+        0.24883359253499224,
+        0.24727838258164853
+      ],
+      "candidateLongestLaneRun": 6,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 643,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 472,
+      "stablePitchCoverage": 0.7340590979782271,
+      "stableUnequalPitchAdjacentPairs": 247,
+      "unknownPitchCount": 171
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.47883597883597884,
+      "baselineHandCounts": [
+        437,
+        435
+      ],
+      "baselineLaneCounts": [
+        146,
+        291,
+        290,
+        145
+      ],
+      "baselineLaneShares": [
+        0.16743119266055045,
+        0.33371559633027525,
+        0.33256880733944955,
+        0.16628440366972477
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7195767195767195,
+      "candidateHandCounts": [
+        438,
+        434
+      ],
+      "candidateLaneCounts": [
+        219,
+        219,
+        218,
+        216
+      ],
+      "candidateLaneShares": [
+        0.2511467889908257,
+        0.2511467889908257,
+        0.25,
+        0.24770642201834864
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 872,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 667,
+      "stablePitchCoverage": 0.7649082568807339,
+      "stableUnequalPitchAdjacentPairs": 378,
+      "unknownPitchCount": 205
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.4840989399293286,
+      "baselineHandCounts": [
+        341,
+        340
+      ],
+      "baselineLaneCounts": [
+        114,
+        227,
+        227,
+        113
+      ],
+      "baselineLaneShares": [
+        0.16740088105726872,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.16593245227606462
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7491166077738516,
+      "candidateHandCounts": [
+        341,
+        340
+      ],
+      "candidateLaneCounts": [
+        170,
+        171,
+        170,
+        170
+      ],
+      "candidateLaneShares": [
+        0.24963289280469897,
+        0.2511013215859031,
+        0.24963289280469897,
+        0.24963289280469897
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.4375,
+      "noteCount": 681,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 512,
+      "stablePitchCoverage": 0.7518355359765051,
+      "stableUnequalPitchAdjacentPairs": 283,
+      "unknownPitchCount": 169
+    }
+  },
+  "pitch_analysis_key": "e07ed7d93dc8c7f9b427ae71a861b15ae253d89147b5f4ebd85f16da00d2f59b",
+  "schema_version": 1,
+  "song_id": "when-the-storm-brings-the-damned",
+  "source_sha256": "b94a4648fe825541f3050ecb8794c26e81bde05f2556ad74b69d65e91d649111"
+}
