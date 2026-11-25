@@ -200,6 +200,37 @@ test('growing collection grids support native scroll, keyboard reveal and Browse
         features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
       });
 
+      await t.test('Halloween audio assets play in the browser', async () => {
+        // A real user gesture grants the same media permission as starting a song.
+        await command('Input.dispatchMouseEvent', {
+          type: 'mousePressed', x: 5, y: 5, button: 'left', clickCount: 1,
+        });
+        await command('Input.dispatchMouseEvent', {
+          type: 'mouseReleased', x: 5, y: 5, button: 'left', clickCount: 1,
+        });
+        const results = await evaluate(`(async () => {
+          const { SONG_CATALOG } = await import('/src/catalog/catalog.ts');
+          const collection = SONG_CATALOG.collections.find(item => item.id === 'halloween');
+          return Promise.all(collection.songIds.map(async id => {
+            const song = SONG_CATALOG.songs.find(item => item.id === id);
+            const audio = new Audio(song.audioUrl);
+            audio.muted = true;
+            try {
+              await audio.play();
+              return { id, playing: !audio.paused && audio.readyState >= 2 };
+            } catch (error) {
+              return { id, playing: false, error: String(error) };
+            } finally {
+              audio.pause();
+              audio.removeAttribute('src');
+              audio.load();
+            }
+          }));
+        })()`);
+        assert.equal(results.length, 10);
+        assert.deepEqual(results.filter(result => !result.playing), []);
+      });
+
       for (const scenario of [
         { count: 13, width: 1440, height: 900, mobile: false, status: 'rendered' },
         { count: 31, width: 390, height: 844, mobile: true, status: 'unavailable' },

@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.4306569343065693,
+      "baselineHandCounts": [
+        134,
+        132
+      ],
+      "baselineLaneCounts": [
+        45,
+        89,
+        88,
+        44
+      ],
+      "baselineLaneShares": [
+        0.16917293233082706,
+        0.33458646616541354,
+        0.3308270676691729,
+        0.16541353383458646
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.8540145985401459,
+      "candidateHandCounts": [
+        134,
+        132
+      ],
+      "candidateLaneCounts": [
+        67,
+        67,
+        66,
+        66
+      ],
+      "candidateLaneShares": [
+        0.2518796992481203,
+        0.2518796992481203,
+        0.24812030075187969,
+        0.24812030075187969
+      ],
+      "candidateLongestLaneRun": 4,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 266,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 205,
+      "stablePitchCoverage": 0.7706766917293233,
+      "stableUnequalPitchAdjacentPairs": 137,
+      "unknownPitchCount": 61
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.5082508250825083,
+      "baselineHandCounts": [
+        300,
+        300
+      ],
+      "baselineLaneCounts": [
+        100,
+        200,
+        200,
+        100
+      ],
+      "baselineLaneShares": [
+        0.16666666666666666,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.16666666666666666
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.8184818481848185,
+      "candidateHandCounts": [
+        299,
+        301
+      ],
+      "candidateLaneCounts": [
+        149,
+        150,
+        151,
+        150
+      ],
+      "candidateLaneShares": [
+        0.24833333333333332,
+        0.25,
+        0.25166666666666665,
+        0.25
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 600,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 478,
+      "stablePitchCoverage": 0.7966666666666666,
+      "stableUnequalPitchAdjacentPairs": 303,
+      "unknownPitchCount": 122
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.5159574468085106,
+      "baselineHandCounts": [
+        185,
+        185
+      ],
+      "baselineLaneCounts": [
+        62,
+        123,
+        123,
+        62
+      ],
+      "baselineLaneShares": [
+        0.16756756756756758,
+        0.3324324324324324,
+        0.3324324324324324,
+        0.16756756756756758
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7553191489361702,
+      "candidateHandCounts": [
+        185,
+        185
+      ],
+      "candidateLaneCounts": [
+        92,
+        93,
+        93,
+        92
+      ],
+      "candidateLaneShares": [
+        0.24864864864864866,
+        0.25135135135135134,
+        0.25135135135135134,
+        0.24864864864864866
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 370,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 296,
+      "stablePitchCoverage": 0.8,
+      "stableUnequalPitchAdjacentPairs": 188,
+      "unknownPitchCount": 74
+    }
+  },
+  "pitch_analysis_key": "34b51c63c9c1ab214bf10f1b08705b94fc9c0007cc266f8d9e2f9d1632319423",
+  "schema_version": 1,
+  "song_id": "the-little-crooked-window",
+  "source_sha256": "08918f67bdffdfa51b693f498c797a293d99453572a4e8749cd0d46df029377d"
+}

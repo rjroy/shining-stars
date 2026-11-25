@@ -1,6 +1,86 @@
 {
   "schema_version": 2,
   "songs": {
+    "it-was-just-a-game": {
+      "source": "data/music/It Was Just a Game.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "march-of-scarecrows": {
+      "source": "data/music/March of Scarecrows.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "only-for-tonight": {
+      "source": "data/music/Only For Tonight.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "set-it-out-again": {
+      "source": "data/music/Set It Out Again.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "someone-must-lead": {
+      "source": "data/music/Someone Must Lead.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "the-little-crooked-window": {
+      "source": "data/music/The Little Crooked Window.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "the-shadows-night": {
+      "source": "data/music/The Shadow's Night.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "the-thirteenth-shift": {
+      "source": "data/music/The Thirteenth Shift.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "when-the-storm-brings-the-damned": {
+      "source": "data/music/When the Storm Brings the Damned.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
+    "you-will-remain": {
+      "source": "data/music/You Will Remain.mp3",
+      "difficulties": {
+        "easy": { "minimum_delta": 384, "stride": 1 },
+        "normal": { "minimum_delta": 256, "stride": 1 },
+        "hard": { "minimum_delta": 128, "stride": 1 }
+      }
+    },
     "beautiful-disaster": {
       "source": "data/music/Beautiful Disaster.mp3",
       "difficulties": {

@@ -598,6 +598,9 @@ async function runAcceptance() {
   );
   await click('[data-action="back-overview"]');
   await click('[data-action="all-songs"]');
+  const authoredCatalog = JSON.parse(
+    await readFile(path.join(repositoryRoot, 'data/catalog.json'), 'utf8'),
+  );
   assert.equal(
     await cdp.evaluate(
       "document.querySelector('[data-breadcrumb]')?.textContent",
@@ -606,7 +609,7 @@ async function runAcceptance() {
   );
   assert.equal(
     await cdp.evaluate("document.querySelectorAll('.song-row').length"),
-    29,
+    authoredCatalog.songs.length,
     'The explicit All Songs route must still expose all catalog songs.',
   );
   await click('[data-action="all-songs"]');
@@ -623,7 +626,30 @@ async function runAcceptance() {
     }));
   })()`);
   const catalogRows = catalogState;
-  assert.equal(catalogRows.length, 29);
+  assert.deepEqual(
+    catalogRows.map((song) => song.id).sort(),
+    authoredCatalog.songs.map((song) => song.id).sort(),
+    'Runtime catalog must contain exactly the authored songs.',
+  );
+  const authoredVariants = await Promise.all(
+    authoredCatalog.songs.map(async (song) => {
+      const bundle = JSON.parse(
+        await readFile(
+          path.join(repositoryRoot, 'data/charts/generated', `${song.id}.charts.json`),
+          'utf8',
+        ),
+      );
+      return [song.id, Object.keys(bundle.charts).sort()];
+    }),
+  );
+  const variantsBySong = new Map(authoredVariants);
+  for (const song of catalogRows) {
+    assert.deepEqual(
+      [...song.difficulties].sort(),
+      variantsBySong.get(song.id),
+      `${song.id} must expose its generated difficulty variants.`,
+    );
+  }
   const staticVariants = catalogRows.reduce(
     (sum, song) => sum + song.difficulties.length,
     0,
@@ -639,8 +665,8 @@ async function runAcceptance() {
   );
   assert.equal(
     staticVariants,
-    87,
-    'All 29 catalog songs must have three generated difficulty variants.',
+    authoredVariants.reduce((sum, [, variants]) => sum + variants.length, 0),
+    'Runtime catalog must expose every generated difficulty variant.',
   );
   assert.deepEqual(
     invalidVariants,
@@ -714,7 +740,7 @@ async function runAcceptance() {
   await click('[data-action="all-songs"]');
   assert.equal(
     await cdp.evaluate("document.querySelectorAll('.song-row').length"),
-    29,
+    authoredCatalog.songs.length,
   );
   assert.equal(await cdp.evaluate('window.__audioContextCount'), 0);
   assert.deepEqual(await cdp.evaluate('window.__audioRequests'), []);

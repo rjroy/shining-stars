@@ -4,6 +4,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createServer } from 'vite';
+import catalog from '../data/catalog.json';
 import proposedCollections from '../data/proposed-collections.json';
 
 const scratchParent = '/tmp/opencode';
@@ -345,10 +346,19 @@ describe('real app Observatory-to-gameplay integration', () => {
         ),
       'rendered Observatory scene',
     );
+    const orderedCollections = [...catalog.collections].sort(
+      (a, b) => a.sortOrder - b.sortOrder,
+    );
+    const illustratedCount = orderedCollections.filter(
+      (collection) => 'artwork' in collection,
+    ).length;
+    const initialArtworkCount =
+      illustratedCount +
+      (orderedCollections[0] && 'artwork' in orderedCollections[0] ? 1 : 0);
     await waitFor(
       async () =>
         await evaluate(
-          "[...document.querySelectorAll('[data-collection-artwork]')].length === 4 && [...document.querySelectorAll('[data-collection-artwork]')].every(image => image.complete && image.naturalWidth === 1024 && image.naturalHeight === 1024)",
+          `[...document.querySelectorAll('[data-collection-artwork]')].length === ${initialArtworkCount} && [...document.querySelectorAll('[data-collection-artwork]')].every(image => image.complete && image.naturalWidth === 1024 && image.naturalHeight === 1024)`,
         ),
       'decoded collection medallions',
     );
@@ -498,15 +508,21 @@ describe('real app Observatory-to-gameplay integration', () => {
       await evaluate(
         "[...document.querySelectorAll('[data-action=select-collection]')].map(e=>e.dataset.collectionId)",
       ),
-    ).toEqual(['lyra-of-brightvale', 'christmas-star', 'outside-worlds']);
+    ).toEqual(orderedCollections.map((collection) => collection.id));
     const authoredSongIds = Object.values(proposedCollections).flat();
-    expect(authoredSongIds).toHaveLength(29);
-    expect(new Set(authoredSongIds).size).toBe(29);
+    expect(new Set(authoredSongIds).size).toBe(authoredSongIds.length);
+    expect([...authoredSongIds].sort()).toEqual(
+      catalog.songs.map((song) => song.id).sort(),
+    );
     expect(
       await evaluate(
         "[...document.querySelectorAll('.song-row-main')].map(e=>e.dataset.songId).sort()",
       ),
     ).toEqual([...authoredSongIds].sort());
+    expect(orderedCollections.find((item) => item.id === 'halloween')).toMatchObject({
+      artwork: 'halloween.webp',
+    });
+    expect(Object.keys(proposedCollections)).toContain('Halloween');
     for (const [title, songIds] of Object.entries(proposedCollections)) {
       const collectionId = title
         .toLowerCase()
@@ -530,19 +546,36 @@ describe('real app Observatory-to-gameplay integration', () => {
           "document.querySelector('[data-collection-title]')?.textContent",
         ),
       ).toBe(title);
-      const selectedArtwork = await evaluate(
-        `(()=>{const button=document.querySelector('[data-collection-id="${collectionId}"]');const buttonImage=button.querySelector('img[data-collection-artwork]');const buttonBox=button.getBoundingClientRect(),buttonArt=buttonImage.getBoundingClientRect();const detail=document.querySelector('.detail-emblem');const detailImage=detail.querySelector('img[data-collection-artwork]');const detailBox=detail.getBoundingClientRect(),detailArt=detailImage.getBoundingClientRect();return {button:buttonImage?.dataset.artworkUrl,buttonLoaded:buttonImage?.complete&&buttonImage.naturalWidth===1024,buttonFit:getComputedStyle(buttonImage).objectFit,buttonBounds:buttonArt.left>=buttonBox.left&&buttonArt.right<=buttonBox.right&&buttonArt.top>=buttonBox.top&&buttonArt.bottom<=buttonBox.bottom,detailId:detail.dataset.collectionId,detail:detailImage?.dataset.artworkUrl,detailLoaded:detailImage?.complete&&detailImage.naturalWidth===1024,detailFit:getComputedStyle(detailImage).objectFit,detailBounds:detailArt.left>=detailBox.left&&detailArt.right<=detailBox.right&&detailArt.top>=detailBox.top&&detailArt.bottom<=detailBox.bottom,fallbackIcon:getComputedStyle(button.querySelector('.song-glyph')).display}})()`,
+      const collection = orderedCollections.find(
+        (item) => item.id === collectionId,
       );
-      expect(selectedArtwork.button).toContain(`${collectionId}.webp`);
-      expect(selectedArtwork.buttonLoaded).toBe(true);
-      expect(selectedArtwork.buttonFit).toBe('contain');
-      expect(selectedArtwork.buttonBounds).toBe(true);
-      expect(selectedArtwork.detailId).toBe(collectionId);
-      expect(selectedArtwork.detail).toContain(`${collectionId}.webp`);
-      expect(selectedArtwork.detailLoaded).toBe(true);
-      expect(selectedArtwork.detailFit).toBe('contain');
-      expect(selectedArtwork.detailBounds).toBe(true);
-      expect(selectedArtwork.fallbackIcon).toBe('none');
+      expect(collection).toBeDefined();
+      if (collection && 'artwork' in collection) {
+        const selectedArtwork = await evaluate(
+          `(()=>{const button=document.querySelector('[data-collection-id="${collectionId}"]');const buttonImage=button.querySelector('img[data-collection-artwork]');const buttonBox=button.getBoundingClientRect(),buttonArt=buttonImage.getBoundingClientRect();const detail=document.querySelector('.detail-emblem');const detailImage=detail.querySelector('img[data-collection-artwork]');const detailBox=detail.getBoundingClientRect(),detailArt=detailImage.getBoundingClientRect();return {button:buttonImage?.dataset.artworkUrl,buttonLoaded:buttonImage?.complete&&buttonImage.naturalWidth===1024,buttonFit:getComputedStyle(buttonImage).objectFit,buttonBounds:buttonArt.left>=buttonBox.left&&buttonArt.right<=buttonBox.right&&buttonArt.top>=buttonBox.top&&buttonArt.bottom<=buttonBox.bottom,detailId:detail.dataset.collectionId,detail:detailImage?.dataset.artworkUrl,detailLoaded:detailImage?.complete&&detailImage.naturalWidth===1024,detailFit:getComputedStyle(detailImage).objectFit,detailBounds:detailArt.left>=detailBox.left&&detailArt.right<=detailBox.right&&detailArt.top>=detailBox.top&&detailArt.bottom<=detailBox.bottom,fallbackIcon:getComputedStyle(button.querySelector('.song-glyph')).display}})()`,
+        );
+        expect(selectedArtwork.button).toContain(`${collectionId}.webp`);
+        expect(selectedArtwork.buttonLoaded).toBe(true);
+        expect(selectedArtwork.buttonFit).toBe('contain');
+        expect(selectedArtwork.buttonBounds).toBe(true);
+        expect(selectedArtwork.detailId).toBe(collectionId);
+        expect(selectedArtwork.detail).toContain(`${collectionId}.webp`);
+        expect(selectedArtwork.detailLoaded).toBe(true);
+        expect(selectedArtwork.detailFit).toBe('contain');
+        expect(selectedArtwork.detailBounds).toBe(true);
+        expect(selectedArtwork.fallbackIcon).toBe('none');
+      } else {
+        const fallback = await evaluate(
+          `(()=>{const button=document.querySelector('[data-collection-id="${collectionId}"]');const detail=document.querySelector('.detail-emblem');return {buttonArtwork:!!button.querySelector('img[data-collection-artwork]'),buttonFallback:getComputedStyle(button.querySelector('.song-glyph')).display !== 'none',detailId:detail.dataset.collectionId,detailArtwork:!!detail.querySelector('img[data-collection-artwork]'),detailFallback:!!detail.querySelector('svg')};})()`,
+        );
+        expect(fallback).toEqual({
+          buttonArtwork: false,
+          buttonFallback: true,
+          detailId: collectionId,
+          detailArtwork: false,
+          detailFallback: true,
+        });
+      }
       await click('[data-action="browse-collection"]');
       await waitFor(
         async () =>
@@ -701,13 +734,13 @@ describe('real app Observatory-to-gameplay integration', () => {
       await evaluate(
         "document.querySelector('[data-result-count]')?.textContent",
       ),
-    ).toBe('29 songs');
+    ).toBe(`${catalog.songs.length} songs`);
 
     await click('[data-action="all-songs"]');
     await click('[data-action="toggle-filters"]');
     expect(
       await evaluate("document.querySelectorAll('.song-row').length"),
-    ).toBe(29);
+    ).toBe(catalog.songs.length);
     const headerCheck = async (
       width: number,
       height: number,
@@ -746,7 +779,7 @@ describe('real app Observatory-to-gameplay integration', () => {
       await evaluate(
         "document.querySelector('[data-result-count]')?.textContent",
       ),
-    ).toBe('29 songs');
+    ).toBe(`${catalog.songs.length} songs`);
     await command('Emulation.setDeviceMetricsOverride', {
       width: 1440,
       height: 900,

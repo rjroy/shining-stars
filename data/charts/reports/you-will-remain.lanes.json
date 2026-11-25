@@ -1,0 +1,170 @@
+{
+  "controls": {
+    "easy": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "hard": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    },
+    "normal": {
+      "adaptation_block_notes": 32,
+      "lane_balance": 1,
+      "pitch_following": 3,
+      "repetition_avoidance": 0.25,
+      "wide_jump_avoidance": 0.5
+    }
+  },
+  "mapper_version": "pitch-lanes-v1",
+  "metrics": {
+    "easy": {
+      "baselineExtractedF0DirectionAgreement": 0.559322033898305,
+      "baselineHandCounts": [
+        139,
+        138
+      ],
+      "baselineLaneCounts": [
+        47,
+        92,
+        92,
+        46
+      ],
+      "baselineLaneShares": [
+        0.16967509025270758,
+        0.33212996389891697,
+        0.33212996389891697,
+        0.16606498194945848
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7288135593220338,
+      "candidateHandCounts": [
+        138,
+        139
+      ],
+      "candidateLaneCounts": [
+        70,
+        68,
+        71,
+        68
+      ],
+      "candidateLaneShares": [
+        0.2527075812274368,
+        0.24548736462093862,
+        0.2563176895306859,
+        0.24548736462093862
+      ],
+      "candidateLongestLaneRun": 4,
+      "candidateWorstRolling32Concentration": 0.375,
+      "noteCount": 277,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 213,
+      "stablePitchCoverage": 0.7689530685920578,
+      "stableUnequalPitchAdjacentPairs": 118,
+      "unknownPitchCount": 64
+    },
+    "hard": {
+      "baselineExtractedF0DirectionAgreement": 0.494949494949495,
+      "baselineHandCounts": [
+        256,
+        255
+      ],
+      "baselineLaneCounts": [
+        86,
+        170,
+        170,
+        85
+      ],
+      "baselineLaneShares": [
+        0.16829745596868884,
+        0.33268101761252444,
+        0.33268101761252444,
+        0.16634050880626222
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7474747474747475,
+      "candidateHandCounts": [
+        255,
+        256
+      ],
+      "candidateLaneCounts": [
+        127,
+        128,
+        129,
+        127
+      ],
+      "candidateLaneShares": [
+        0.24853228962818003,
+        0.25048923679060664,
+        0.25244618395303325,
+        0.24853228962818003
+      ],
+      "candidateLongestLaneRun": 6,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 511,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 398,
+      "stablePitchCoverage": 0.7788649706457925,
+      "stableUnequalPitchAdjacentPairs": 198,
+      "unknownPitchCount": 113
+    },
+    "normal": {
+      "baselineExtractedF0DirectionAgreement": 0.4900662251655629,
+      "baselineHandCounts": [
+        191,
+        191
+      ],
+      "baselineLaneCounts": [
+        64,
+        127,
+        127,
+        64
+      ],
+      "baselineLaneShares": [
+        0.16753926701570682,
+        0.3324607329842932,
+        0.3324607329842932,
+        0.16753926701570682
+      ],
+      "baselineLongestLaneRun": 1,
+      "baselineWorstRolling32Concentration": 0.34375,
+      "candidateExtractedF0DirectionAgreement": 0.7549668874172185,
+      "candidateHandCounts": [
+        192,
+        190
+      ],
+      "candidateLaneCounts": [
+        96,
+        96,
+        96,
+        94
+      ],
+      "candidateLaneShares": [
+        0.2513089005235602,
+        0.2513089005235602,
+        0.2513089005235602,
+        0.24607329842931938
+      ],
+      "candidateLongestLaneRun": 5,
+      "candidateWorstRolling32Concentration": 0.40625,
+      "noteCount": 382,
+      "rolling32Definition": "maximum lane share over every complete sliding window of 32 notes; no complete windows => null; trailing partial windows excluded",
+      "stablePitchCount": 292,
+      "stablePitchCoverage": 0.7643979057591623,
+      "stableUnequalPitchAdjacentPairs": 151,
+      "unknownPitchCount": 90
+    }
+  },
+  "pitch_analysis_key": "abfe216eb2536cc38ace1718cd78cb88438bef4fad98b0c6af3464579b46951d",
+  "schema_version": 1,
+  "song_id": "you-will-remain",
+  "source_sha256": "b4f1266951031c5c7aafd7848ba22277a7b9dc3c026f0f569f8e530c0a6baf3d"
+}
